@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/opt/homebrew/bin/cloudflared tunnel *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" https://api.smhachieverslifegroup.com/api/auth/me)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" https://app.smhachieverslifegroup.com/)",
+      "Bash(lsof -ti :5173 -sTCP:LISTEN)",
+      "Bash(curl -s -o /dev/null -w \"app: HTTP %{http_code} in %{time_total}s\\\\n\" https://app.smhachieverslifegroup.com/)",
+      "Bash(chmod +x /Users/saadsaqib/Documents/CRM/scripts/go-live.sh /Users/saadsaqib/Documents/CRM/scripts/stop-live.sh)",
+      "Bash(ls -lt ~/Downloads/ 2>/dev/null | head -10)",
+      "Read(//Users/saadsaqib/Downloads/**)",
+      "Bash(mkdir -p ~/.ssh)",
+      "Bash(mv ~/Downloads/LightsailDefaultKey-ap-south-1.pem ~/.ssh/lightsail.pem)",
+      "Bash(chmod 600 ~/.ssh/lightsail.pem)",
+      "Read(//Users/saadsaqib/.ssh/**)",
+      "Bash(ssh -i ~/.ssh/lightsail.pem -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@13.127.227.148 \"echo === connected ===; whoami; uname -a; free -h; df -h /\")",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && echo \"/swapfile none swap sw 0 0\" | sudo tee -a /etc/fstab && echo === swap on === && swapon --show && free -h')",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'set -e *)",
+      "Bash(rsync -az --info=stats1 -e 'ssh -i ~/.ssh/lightsail.pem -o StrictHostKeyChecking=no' --exclude node_modules --exclude bin --exclude obj --exclude .git --exclude dist --exclude *.db --exclude *.db-shm --exclude *.db-wal --exclude App_Data --exclude .vs --exclude .vscode --exclude .claude ./ ubuntu@13.127.227.148:/home/ubuntu/CRM/)",
+      "Bash(rsync -az --stats -e 'ssh -i /Users/saadsaqib/.ssh/lightsail.pem -o StrictHostKeyChecking=no' --exclude node_modules --exclude bin --exclude obj --exclude .git --exclude dist --exclude *.db --exclude *.db-shm --exclude *.db-wal --exclude App_Data --exclude .vs --exclude .vscode --exclude .claude ./ ubuntu@13.127.227.148:/home/ubuntu/CRM/)",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'du -sh /home/ubuntu/CRM; ls /home/ubuntu/CRM/')",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'cd /home/ubuntu/CRM/frontend && npm ci --no-audit --no-fund --prefer-offline 2>&1 | tail -5 && echo === build === && npm run build 2>&1 | tail -10')",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'cd /home/ubuntu/CRM/frontend && npm install --no-audit --no-fund 2>&1 | tail -10')",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'cd /home/ubuntu/CRM/frontend && npm run build 2>&1 | tail -10')",
+      "Bash(ssh -i ~/.ssh/lightsail.pem ubuntu@13.127.227.148 'cd /home/ubuntu/CRM/backend && dotnet publish src/CRM.Api/CRM.Api.csproj -c Release -o /home/ubuntu/CRM/api-publish --nologo 2>&1 | tail -8')",
+      "Bash(openssl rand *)",
+      "Bash(ssh -i *)",
+      "Bash(scp -i ~/.ssh/lightsail.pem ~/.cloudflared/cert.pem ~/.cloudflared/6075a471-7c84-4bb7-bfeb-2aa35d468737.json ubuntu@13.127.227.148:/tmp/)",
+      "Bash(curl -s -o /dev/null -w \"api: HTTP %{http_code} in %{time_total}s\\\\n\" https://api.smhachieverslifegroup.com/api/auth/me)",
+      "Bash(lsof -ti :5293 -sTCP:LISTEN)",
+      "Bash(pkill -f \"cloudflared tunnel run crm\")"
+    ]
+  }
+}

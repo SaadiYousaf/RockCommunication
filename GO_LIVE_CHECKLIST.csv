@@ -1,0 +1,35 @@
+Priority,Category,Item,Status,Monthly Cost,Where to Get It,Where to Configure,Notes
+1,Infrastructure,Domain Name,DONE,$0.83 (~$10/yr),GoDaddy,Cloudflare DNS,smhachieverslifegroup.com - already registered and pointed at Cloudflare
+1,Infrastructure,DNS Hosting + SSL,DONE,$0,Cloudflare (free plan),Cloudflare dashboard,Nameservers mario/samara.ns.cloudflare.com - HTTPS auto-issued
+1,Infrastructure,Tunnel to laptop (testing only),DONE,$0,Cloudflare Tunnel,~/.cloudflared/config.yml,Works while laptop is open - NOT production
+1,Infrastructure,Production server (24/7 VM),TODO,$0-$24,DigitalOcean / Oracle Cloud Always Free / AWS,N/A,REQUIRED - laptop cannot be production. Pick one before anything else
+1,Infrastructure,Server OS hardening (firewall ufw fail2ban),TODO,$0,Ubuntu defaults,Server,Open ports 22 80 443 only - disable root SSH after setup
+1,Backend,JWT signing secret,TODO,$0,Run: openssl rand -base64 48,appsettings.Production.json Jwt:Secret,Current value is the dev placeholder - replace before going live
+1,Backend,Database (Postgres recommended),TODO,$0-$60,DigitalOcean Managed Postgres / self-hosted on VM,appsettings.Production.json ConnectionStrings:Default,Currently SQLite for dev. Switch Database:Provider to Postgres
+1,Backend,Database backups,TODO,~$5,Backblaze B2 / AWS S3 / DO Spaces,Cron job on server,Automated daily pg_dump shipped offsite. Test restore monthly
+1,Backend,Email/SMTP for password resets + 2FA,PARTIAL,$0 free tier,Brevo / Postmark / AWS SES / SendGrid,appsettings.Production.json Integrations:Email,Code wired to Brevo. Just need to paste real Brevo creds
+1,Backend,CORS allowed origins for production domain,TODO,$0,N/A,appsettings.Production.json Cors:Origins,Set to https://app.smhachieverslifegroup.com only
+1,Backend,App URL for email links,TODO,$0,N/A,appsettings.Production.json Integrations:Email:AppUrl,Set to https://app.smhachieverslifegroup.com so reset-password links work
+1,Frontend,Production API URL baked into bundle,DONE,$0,N/A,frontend/.env.production VITE_API_URL,Already set to https://api.smhachieverslifegroup.com
+1,Frontend,Vite preview allowed hosts,DONE,$0,N/A,frontend/vite.config.ts,app.smhachieverslifegroup.com whitelisted
+1,Security,Change seeded superadmin password,TODO,$0,Built-in,First login after deploy,Default credentials are public knowledge - change IMMEDIATELY
+1,Security,Set ASPNETCORE_ENVIRONMENT=Production on server,TODO,$0,N/A,systemd unit env,Hides Swagger UI and enables production-only middleware
+1,Security,Disable Seed:DummyData in production,TODO,$0,N/A,appsettings.Production.json,Already false in the existing Production file - verify before launch
+2,Operations,Error tracking (Sentry),TODO,$0 free tier,https://sentry.io,Add Sentry SDK package (not currently wired),Free 5k events/month. Without this you fly blind on bugs
+2,Operations,Uptime monitoring,TODO,$0,UptimeRobot / Better Stack,External service pings /healthz,Get paged when site goes down
+2,Operations,Application logs (centralised),TODO,$0-$5,Better Stack / Loki,docker logs or journalctl piped out,Otherwise logs vanish on server restart
+2,Operations,Rate limits review,DONE,$0,N/A,appsettings.json RateLimits,Already wired - tune values once you see real traffic
+2,Operations,IP allowlist for admin endpoints,TODO,$0,Built-in,Admin > IP Allowlist page,Optional but recommended for /admin/* routes
+2,Telephony,Vici dialer (calls),OPTIONAL,$20-$300,Self-host on $20 VPS OR managed (CallShaper Convoso),appsettings.Production.json Integrations:Dialer,Skip if you are not making calls yet
+2,Telephony,Webhook secret for dialer,OPTIONAL,$0,openssl rand -base64 32,appsettings.Production.json Webhooks:Dialer:Secret,Required if Vici is wired - matches the Vici outbound webhook config
+2,Telephony,SMS provider (Twilio or GHL),OPTIONAL,$0+per-msg,https://twilio.com,appsettings.Production.json Integrations:Sms,Per-SMS pricing. $1/mo per phone number on Twilio
+3,Multi-instance,Redis (SignalR backplane),OPTIONAL,$0-$15,Upstash / DO Managed Redis,appsettings.Production.json SignalR:Redis,Only needed if you run more than one API replica
+3,Multi-instance,Hangfire durable job storage,OPTIONAL,$0,Reuses your Postgres,appsettings.Production.json BackgroundJobs:Storage,Switch from Memory to Postgres only if multi-instance
+3,Compliance,Jornaya LeadiD (TCPA),OPTIONAL,~$0.10/lookup,https://jornaya.com,appsettings.Production.json Integrations:Jornaya,Only required if you call US insurance leads and want litigation protection
+3,Compliance,Carrier APIs (Aetna UHC Cigna etc),OPTIONAL,$0 once contracted,Direct with each carrier,appsettings.Production.json Integrations:Carriers:Endpoints,Stub carriers ship by default and return realistic mock quotes
+3,Compliance,Funding provider,OPTIONAL,$0,Your provider,appsettings.Production.json Integrations:Funding,Stub auto-accepts in dev
+3,Compliance,BLA lead-quality scoring,OPTIONAL,Contracted,BLA vendor,appsettings.Production.json Integrations:Bla,Skip unless you buy leads from BLA specifically
+3,Integrations,Trello ops board,OPTIONAL,$0,https://trello.com/app-key,appsettings.Production.json Integrations:Trello,Only if your ops team already uses Trello
+4,Polish,Brand the login screen,OPTIONAL,$0,N/A,frontend assets,Logo+colours customisation
+4,Polish,Custom email templates,OPTIONAL,$0,N/A,Backend email sender,Default templates work - tune wording later
+4,Polish,Code-splitting frontend bundle (1.2MB warning),OPTIONAL,$0,N/A,vite.config.ts,Performance improvement - not blocking launch

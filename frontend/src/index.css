@@ -1,0 +1,247 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 248 250 252;          /* slate-50 */
+    --surface: 255 255 255;
+    --surface-muted: 241 245 249; /* slate-100 */
+    --border: 226 232 240;       /* slate-200 */
+    --text: 15 23 42;            /* slate-900 */
+    --text-muted: 100 116 139;   /* slate-500 */
+    --brand: 14 165 233;         /* sky-500 */
+    --accent: 139 92 246;        /* violet-500 */
+    --radius-card: 0.875rem;
+    --radius-lg: 1.125rem;
+    --shadow-card: 0 1px 2px 0 rgba(15,23,42,0.04), 0 1px 3px 0 rgba(15,23,42,0.06);
+  }
+
+  html, body, #root { height: 100%; }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Default scroll behavior across the app */
+    scroll-behavior: smooth;
+    /* Base type scale. Tailwind sizes are rem-relative, so changing this
+       proportionally scales padding, font-sizes, gaps, icon boxes — the whole
+       UI — without touching individual components. */
+    font-size: 16px;
+  }
+  /* Upscale the design on FHD+ displays. The CRM's components were tuned for
+     ~1280px laptops; on 1440/1920+ they read as small. Bumping root font-size
+     in two steps gives a noticeably "1080p-native" density. */
+  @media (min-width: 1440px) { html { font-size: 17px; } }
+  @media (min-width: 1680px) { html { font-size: 18px; } }
+  @media (min-width: 2200px) { html { font-size: 19px; } }
+  body {
+    @apply text-ink-900 antialiased font-sans;
+    /* Atmospheric backdrop — barely-perceptible color radial halos that lift the
+       app off a flat #fff. Strong enough to feel premium, subtle enough to not
+       fight content. */
+    background:
+      radial-gradient(1200px 800px at 110% -10%, rgba(14,165,233,0.08), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(139,92,246,0.05), transparent 60%),
+      radial-gradient(600px 400px at 50% 50%, rgba(14,165,233,0.025), transparent 60%),
+      #f8fafc;
+    background-attachment: fixed;
+    /* Inter feature flags for a more deliberate, modern feel */
+    font-feature-settings: "cv11","ss01","ss03","cv02";
+    /* Slight optical letterspacing on body */
+    letter-spacing: -0.005em;
+  }
+
+  /* Universal focus ring — softer, clearer */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500/45 ring-offset-2 ring-offset-white rounded;
+  }
+
+  /* Premium scrollbar */
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-200/70 rounded-full border-[3px] border-transparent bg-clip-padding;
+    transition: background-color 0.15s;
+  }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-ink-300; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  /* Heading rhythm — decisively tight tracking, weighted toward semibold */
+  h1 { @apply text-display-md text-ink-900; }
+  h2 { @apply text-display-sm text-ink-900; }
+  h3 { @apply text-lg font-semibold tracking-tight text-ink-900; }
+  h4 { @apply text-base font-semibold tracking-tight text-ink-900; }
+
+  a { @apply text-brand-600 transition-colors; }
+  a:hover { @apply text-brand-700; }
+
+  /* Selection */
+  ::selection { background: rgba(14,165,233,0.22); color: #0f172a; }
+
+  /* Soften default disabled controls */
+  :where(button, input, select, textarea):disabled { @apply cursor-not-allowed; }
+}
+
+@layer components {
+  /* ---- Surfaces ----
+   * Cards / panels share a subtle inner-top sheen so they feel lit-from-above
+   * without needing an extra wrapper element. The sheen is rendered via the
+   * background-image stack so it composes cleanly with hover/active states.
+   */
+  .surface {
+    @apply bg-white border border-ink-200/70 rounded-[var(--radius-card)] shadow-card;
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 28%);
+    background-color: #fff;
+  }
+  .surface-elevated {
+    @apply bg-white border border-ink-200/60 rounded-2xl shadow-pop;
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 30%);
+    background-color: #fff;
+  }
+  .surface-glass {
+    @apply backdrop-blur-md bg-white/70 border border-white/60 rounded-xl shadow-card;
+  }
+  .surface-muted {
+    @apply bg-ink-50/60 border border-ink-200/60 rounded-xl;
+  }
+  .hairline { @apply border-ink-200/70; }
+
+  /* Chip — used by Badge */
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* ---- Form control base ----
+   * A more deliberate hover/focus stack — softer ring, clearer focus border,
+   * inner shadow on focus to "lift" the field.
+   */
+  .input-base {
+    @apply w-full bg-white border border-ink-200 rounded-lg px-3 py-2 text-sm
+           text-ink-900 placeholder-ink-400 shadow-xs
+           transition-[border-color,box-shadow,background-color,color] duration-150 ease-out
+           hover:border-ink-300
+           focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:shadow-card
+           disabled:bg-ink-50 disabled:text-ink-400 disabled:cursor-not-allowed;
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-600 via-brand-700 to-accent-600;
+  }
+
+  /* Subtle dot grid — for hero panels (dark) */
+  .bg-grid {
+    background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  /* Light-mode dot grid — for empty-state and light hero areas */
+  .bg-grid-light {
+    background-image: radial-gradient(rgba(15,23,42,0.05) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Tiny "press F to" key hint pill */
+  .kbd {
+    @apply inline-flex items-center justify-center px-1.5 h-5 min-w-[20px]
+           rounded-md border border-ink-200 bg-white text-[10.5px] font-semibold
+           text-ink-600 shadow-[0_1px_0_0_rgba(15,23,42,0.05)] tracking-wider;
+  }
+
+  /* Uppercase section eyebrow */
+  .section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500;
+  }
+
+  /* Section headline used at the top of a card body — bigger than eyebrow,
+     pairs with a hairline divider for air. */
+  .section-headline {
+    @apply text-[13px] font-semibold uppercase tracking-[0.10em] text-ink-700;
+  }
+
+  /* Faint horizontal divider */
+  .divider-soft {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-ink-200/70 to-transparent;
+  }
+
+  /* Light dotted noise — gives stat tiles and hero strips a tactile surface */
+  .bg-noise {
+    background-image: radial-gradient(rgba(15,23,42,0.025) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+
+  /* Inner-glow ring for active / focused panels */
+  .ring-inset-glow {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.6),
+      inset 0 0 0 1px rgba(14,165,233,0.08),
+      0 6px 18px -8px rgba(14,165,233,0.18);
+  }
+
+  /* Sticky table header */
+  .thead-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    backdrop-filter: saturate(1.4) blur(6px);
+    background: rgba(247, 248, 250, 0.92);
+  }
+
+  /* ---- Animation primitives ---- */
+
+  /* Used to stagger child animations on a list mount.
+     Apply `.stagger-children` on the parent and `.stagger-item` on each child. */
+  .stagger-children .stagger-item { @apply animate-fade-up; opacity: 0; }
+  .stagger-children .stagger-item:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children .stagger-item:nth-child(2) { animation-delay: 40ms; }
+  .stagger-children .stagger-item:nth-child(3) { animation-delay: 80ms; }
+  .stagger-children .stagger-item:nth-child(4) { animation-delay: 120ms; }
+  .stagger-children .stagger-item:nth-child(5) { animation-delay: 160ms; }
+  .stagger-children .stagger-item:nth-child(6) { animation-delay: 200ms; }
+  .stagger-children .stagger-item:nth-child(n+7) { animation-delay: 240ms; }
+
+  /* Hero "card-with-glow" — strongly lit gradient panel with brand-blue accents.
+     Use for KPI/dashboard hero sections that should pop. */
+  .hero-panel {
+    @apply relative overflow-hidden rounded-2xl border border-ink-200/60 bg-white shadow-pop;
+  }
+  .hero-panel::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 60% at 100% 0%, rgba(14,165,233,0.10), transparent 70%),
+      radial-gradient(50% 50% at 0% 100%, rgba(124,58,237,0.08), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Status-dot — small colored circle for status indicators in lists */
+  .status-dot { @apply inline-block w-2 h-2 rounded-full; }
+
+  /* Reduced-motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .backdrop-saturate-160 { backdrop-filter: saturate(1.6) blur(10px); }
+  .backdrop-saturate-200 { backdrop-filter: saturate(2)   blur(14px); }
+
+  /* Tabular figures — for numeric columns / stats / timestamps */
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+  /* Muted body text — slightly darker than ink-500 for better contrast on
+     long-form copy (descriptions, hints). */
+  .text-muted { @apply text-ink-600; }
+
+  /* Standard page rhythm — small/medium/large gaps between sections */
+  .pg-stack > * + * { margin-top: 1.25rem; }
+  .pg-stack-lg > * + * { margin-top: 1.75rem; }
+}
