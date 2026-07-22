@@ -42,9 +42,13 @@ jobs:
       - name: Publish backend
         run: dotnet publish backend/src/CRM.Api/CRM.Api.csproj -c Release -o api-publish
 
-      # ---- Build frontend (VITE_API_URL comes from frontend/.env.production) ----
+      # ---- Build frontend. VITE_API_URL is set explicitly here because
+      #      frontend/.env.production is gitignored (absent on a fresh CI checkout),
+      #      and vite would otherwise fall back to the localhost dev default. ----
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_API_URL: https://api.smhachieverslifegroup.com
         run: |
           npm ci || npm install   # lockfile may be out of sync; fall back to install
           npm run build
