@@ -1,0 +1,91 @@
+name: Deploy to Lightsail
+
+# Builds the backend + frontend on the CI runner and pushes the artifacts to the
+# AWS Lightsail box over SSH, then restarts the services. Mirrors the manual
+# deploy: publish -> rsync (preserving the box's prod config + SQLite DB) -> restart.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   SSH_PRIVATE_KEY  contents of the lightsail .pem private key
+#   SSH_HOST         the box's public IP (e.g. 13.127.227.148)
+#   SSH_USER         ubuntu
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}      # allow manual runs from the Actions tab
+
+concurrency:
+  group: deploy-production    # never run two deploys at once
+  cancel-in-progress: false
+
+env:
+  BOX_REPO: /home/ubuntu/CRM  # repo root on the Lightsail box
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ---- Build backend (framework-dependent = portable to the box's runtime) ----
+      - name: Publish backend
+        run: dotnet publish backend/src/CRM.Api/CRM.Api.csproj -c Release -o api-publish
+
+      # ---- Build frontend (VITE_API_URL comes from frontend/.env.production) ----
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci || npm install   # lockfile may be out of sync; fall back to install
+          npm run build
+
+      # ---- Prepare SSH ----
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      # ---- Deploy: rsync artifacts, preserving the box's prod config + DB ----
+      - name: Sync backend
+        run: |
+          rsync -az --delete --exclude 'appsettings.Production.json' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            api-publish/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/api-publish/"
+
+      - name: Sync frontend
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            frontend/dist/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/frontend/dist/"
+
+      # ---- Restart services (EF migrations auto-apply on backend startup) ----
+      - name: Restart services
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" '
+              sudo systemctl restart crm-api
+              sudo systemctl reload nginx || sudo systemctl restart nginx
+              for i in $(seq 1 30); do
+                [ "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5293/health)" = "200" ] && { echo "backend healthy"; exit 0; }
+                sleep 1
+              done
+              echo "backend did not become healthy" >&2; exit 1
+            '
+
+      - name: Smoke test
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 https://api.smhachieverslifegroup.com/api/admin/horizontals)
+          echo "api/admin/horizontals -> HTTP $code (expect 401)"
+          [ "$code" = "401" ] || { echo "unexpected status"; exit 1; }
