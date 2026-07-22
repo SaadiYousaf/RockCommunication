@@ -74,6 +74,22 @@ public static class DbSeeder
                 await users.AddToRoleAsync(superAdmin, Roles.SuperAdmin);
         }
 
+        // Recovery-account guarantee: the built-in admin + superadmin must never be
+        // lockable or deactivated. Otherwise a burst of failed sign-ins (Identity locks
+        // after N attempts) or an accidental toggle can permanently wall off the only
+        // accounts that can fix everything else. Re-assert on every startup so any such
+        // state self-heals on the next deploy/restart.
+        foreach (var privileged in new[] { admin, superAdmin })
+        {
+            if (privileged is null) continue;
+            var changed = false;
+            if (privileged.LockoutEnabled) { privileged.LockoutEnabled = false; changed = true; }
+            if (!privileged.IsActive) { privileged.IsActive = true; changed = true; }
+            if (privileged.LockoutEnd is not null) { privileged.LockoutEnd = null; changed = true; }
+            if (privileged.AccessFailedCount != 0) { privileged.AccessFailedCount = 0; changed = true; }
+            if (changed) await users.UpdateAsync(privileged);
+        }
+
         await SeedPermissionsAsync(db, roles);
         await SeedModulesAsync(db, roles);
 
