@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using System.Security.Claims;
 
 namespace CRM.Api.Services;
@@ -7,7 +8,7 @@ public class CurrentUserService : ICurrentUser
 {
     private readonly IHttpContextAccessor _accessor;
 
-    public CurrentUserService(IHttpContextAccessor accessor) => _accessor = accessor;
+    public CurrentUserService(IHttpContextAccessor accessor) => _accessor = Guard.AgainstNull(accessor);
 
     private ClaimsPrincipal? User => _accessor.HttpContext?.User;
 

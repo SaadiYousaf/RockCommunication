@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +22,11 @@ public class WallboardHandler : IRequestHandler<GetWallboardQuery, WallboardSnap
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
-    public WallboardHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity) { _db = db; _user = user; _identity = identity; }
+    public WallboardHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity); }
 
     public async Task<WallboardSnapshot> Handle(GetWallboardQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var aid = _user.AgencyId.Value;
         var todayUtc = DateTime.UtcNow.Date;
@@ -83,10 +85,11 @@ public class LeaderboardHandler : IRequestHandler<GetLeaderboardQuery, IReadOnly
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
-    public LeaderboardHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity) { _db = db; _user = user; _identity = identity; }
+    public LeaderboardHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity); }
 
     public async Task<IReadOnlyList<AgentLeaderboardDto>> Handle(GetLeaderboardQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var aid = _user.AgencyId.Value;
         var since = request.Period switch

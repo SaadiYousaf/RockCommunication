@@ -1,3 +1,5 @@
+using CRM.Domain.Common;
+
 namespace CRM.Api.Middleware;
 
 /// <summary>
@@ -16,12 +18,13 @@ public class PaginationCapMiddleware
 
     public PaginationCapMiddleware(RequestDelegate next, IConfiguration config)
     {
-        _next = next;
-        _maxTake = config.GetValue("Pagination:MaxTake", 200);
+        _next = Guard.AgainstNull(next);
+        _maxTake = Guard.AgainstNull(config).GetValue("Pagination:MaxTake", 200);
     }
 
     public async Task Invoke(HttpContext ctx)
     {
+        Guard.AgainstNull(ctx);
         // Only inspect API requests; webhooks / static files don't need this.
         if (ctx.Request.Path.StartsWithSegments("/api"))
         {

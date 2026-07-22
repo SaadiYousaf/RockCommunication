@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +17,15 @@ public class SalesController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IFileStorage _files;
     public SalesController(IMediator mediator, IFileStorage files)
-    { _mediator = mediator; _files = files; }
+    { _mediator = Guard.AgainstNull(mediator); _files = Guard.AgainstNull(files); }
 
     [HttpPost]
     [HasPermission(Permissions.SalesRecord)]
     public async Task<ActionResult<SaleDto>> Record([FromBody] RecordSaleDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new RecordSaleCommand(dto), ct));
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new RecordSaleCommand(dto), ct));
+    }
 
     private const long MaxRecordingBytes = 100L * 1024 * 1024; // 100 MB
     private static readonly HashSet<string> AllowedRecordingExt = new(StringComparer.OrdinalIgnoreCase)
@@ -69,7 +73,10 @@ public class SalesController : ControllerBase
     [HttpPost("{id:guid}/validate")]
     [HasPermission(Permissions.SalesValidate)]
     public async Task<ActionResult<SaleDto>> Validate(Guid id, [FromBody] ValidateBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new ValidateSaleCommand(id, body.Approve, body.Notes), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new ValidateSaleCommand(id, body.Approve, body.Notes), ct));
+    }
 
     [HttpPost("{id:guid}/fund")]
     [HasPermission(Permissions.SalesFund)]
@@ -80,7 +87,10 @@ public class SalesController : ControllerBase
     [HttpPost("{id:guid}/self-validate")]
     [HasPermission(Permissions.SalesValidate)]
     public async Task<ActionResult<SaleDto>> SelfValidate(Guid id, [FromBody] SelfValidateBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new SelfValidateSaleCommand(id, body.Notes), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SelfValidateSaleCommand(id, body.Notes), ct));
+    }
 
     [HttpGet("payroll-export")]
     [HasPermission(Permissions.PayrollProcess)]
@@ -88,6 +98,7 @@ public class SalesController : ControllerBase
         [FromServices] IMediator mediator,
         [FromQuery] Guid? runId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct = default)
     {
+        Guard.AgainstNull(mediator);
         var rows = await mediator.Send(new CRM.Application.Sales.Queries.ExportPayrollQuery(runId, from, to), ct);
         var csv = BuildCsv(rows);
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"payroll-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
@@ -124,5 +135,8 @@ public class SalesController : ControllerBase
     [HttpPost("payroll-runs")]
     [HasPermission(Permissions.PayrollProcess)]
     public async Task<ActionResult<PayrollRunDto>> CreateRun([FromBody] CreatePayrollBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new CreatePayrollRunCommand(body.PeriodStart, body.PeriodEnd), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new CreatePayrollRunCommand(body.PeriodStart, body.PeriodEnd), ct));
+    }
 }

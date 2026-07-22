@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,10 +17,11 @@ public class ListQaReviewsHandler : IRequestHandler<ListQaReviewsQuery, IReadOnl
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ListQaReviewsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ListQaReviewsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<QaReviewSummaryDto>> Handle(ListQaReviewsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.QaReviews.Where(r => r.AgencyId == _user.AgencyId);
         if (request.AgentUserId is { } a) q = q.Where(r => r.AgentUserId == a);
@@ -45,10 +47,11 @@ public class AgentScorecardHandler : IRequestHandler<AgentScorecardQuery, IReadO
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public AgentScorecardHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public AgentScorecardHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<AgentScorecardDto>> Handle(AgentScorecardQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var rows = await _db.QaReviews
             .Where(r => r.AgencyId == _user.AgencyId && r.ReviewedAt >= request.From && r.ReviewedAt < request.To)

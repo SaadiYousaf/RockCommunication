@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Infrastructure.Integrations.Carrier;
@@ -6,12 +7,13 @@ namespace CRM.Infrastructure.Integrations.Carrier;
 public abstract class CarrierProviderBase : ICarrierProvider
 {
     private readonly ILogger _logger;
-    protected CarrierProviderBase(ILogger logger) => _logger = logger;
+    protected CarrierProviderBase(ILogger logger) => _logger = Guard.AgainstNull(logger);
 
     public abstract string CarrierCode { get; }
 
     public virtual Task<CarrierApplicationResult> SubmitApplicationAsync(CarrierApplicationRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         _logger.LogInformation("{Carrier} submit app for {First} {Last}", CarrierCode, request.FirstName, request.LastName);
         return Task.FromResult(new CarrierApplicationResult(
             Accepted: true,
@@ -44,7 +46,7 @@ public class CarrierRegistry : ICarrierRegistry
 
     public CarrierRegistry(IEnumerable<ICarrierProvider> providers)
     {
-        _byCode = providers.ToDictionary(p => p.CarrierCode, StringComparer.OrdinalIgnoreCase);
+        _byCode = Guard.AgainstNull(providers).ToDictionary(p => p.CarrierCode, StringComparer.OrdinalIgnoreCase);
     }
 
     public ICarrierProvider Get(string carrierCode) =>

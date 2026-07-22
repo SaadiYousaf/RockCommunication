@@ -1,5 +1,6 @@
 using CRM.Application.Common.Authorization;
 using CRM.Application.Roles.Dtos;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,9 @@ public class ModuleAccessService : IModuleAccessService
 
     public ModuleAccessService(AppDbContext db, UserManager<ApplicationUser> users, RoleManager<ApplicationRole> roles)
     {
-        _db = db;
-        _users = users;
-        _roles = roles;
+        _db = Guard.AgainstNull(db);
+        _users = Guard.AgainstNull(users);
+        _roles = Guard.AgainstNull(roles);
     }
 
     public async Task<IReadOnlyList<ModuleDto>> ListAllAsync(CancellationToken ct = default)

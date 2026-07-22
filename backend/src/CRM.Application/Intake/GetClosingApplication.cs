@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using MediatR;
@@ -38,10 +39,11 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public GetClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public GetClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<ClosingApplicationView> Handle(GetClosingApplicationQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(

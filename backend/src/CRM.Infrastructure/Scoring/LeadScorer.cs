@@ -1,5 +1,6 @@
 using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Scoring;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ public class HighValueStateRule : IScoringRule
 public class DncDeductionRule : IScoringRule
 {
     private readonly IDncChecker _dnc;
-    public DncDeductionRule(IDncChecker dnc) => _dnc = dnc;
+    public DncDeductionRule(IDncChecker dnc) => _dnc = Guard.AgainstNull(dnc);
     public string Name => "dnc-deduction";
     public int Priority => 1;
 
@@ -71,12 +72,14 @@ public class LeadScorer : ILeadScorer
 
     public LeadScorer(IEnumerable<IScoringRule> rules, AppDbContext db)
     {
-        _rules = rules.OrderBy(r => r.Priority).ToList();
-        _db = db;
+        _rules = Guard.AgainstNull(rules).OrderBy(r => r.Priority).ToList();
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task<ScoringResult> ScoreAsync(Lead lead, CancellationToken ct = default)
     {
+        Guard.AgainstNull(lead);
+
         var ctx = new ScoringContext(lead, BuildFacts(lead));
         var breakdown = new List<(string, int, string?)>();
         var total = 0;

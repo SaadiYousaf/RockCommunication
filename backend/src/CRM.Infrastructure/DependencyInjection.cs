@@ -6,6 +6,7 @@ using CRM.Application.Common.Metrics;
 using CRM.Application.Common.Notifications;
 using CRM.Application.Sales.Commands;
 using CRM.Application.Users.Commands;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Assignment;
 using CRM.Infrastructure.BackgroundJobs;
 using CRM.Infrastructure.Commission;
@@ -38,6 +39,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
+        Guard.AgainstNull(services);
+        Guard.AgainstNull(config);
+
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<TenantInterceptor>();
 
@@ -77,6 +81,12 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<AppDbContext>()
         .AddDefaultTokenProviders();
 
+        // Password-reset / email-confirmation tokens expire in 30 minutes (the reset email
+        // states 30 min; the framework default is 24 h, leaving a stolen link valid far
+        // longer than advertised).
+        services.Configure<Microsoft.AspNetCore.Identity.DataProtectionTokenProviderOptions>(
+            o => o.TokenLifespan = TimeSpan.FromMinutes(30));
+
         var jwtSection = config.GetSection("Jwt");
         services.Configure<JwtOptions>(jwtSection);
         var jwt = jwtSection.Get<JwtOptions>() ?? new JwtOptions();
@@ -95,7 +105,21 @@ public static class DependencyInjection
             if (Encoding.UTF8.GetByteCount(jwt.Secret) < 32)
                 throw new InvalidOperationException(
                     "Jwt:Secret is too short. Use at least 32 bytes (256 bits) of random material.");
+            // Reject the known repo-committed placeholder: a long-but-public value passes the
+            // length check yet lets anyone with repo access forge tokens.
+            if (jwt.Secret.Contains("REPLACE-WITH", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    "Jwt:Secret is the committed placeholder. Supply a real random secret via JWT__SECRET.");
         }
+
+        // PII-at-rest encryption key (SSN / driver's licence). Prefer a dedicated
+        // Encryption:Key; otherwise derive deterministically from the JWT secret so there is
+        // no extra secret to manage. A stable source keeps previously-encrypted values readable.
+        var encKeySource = config["Encryption:Key"];
+        if (string.IsNullOrEmpty(encKeySource)) encKeySource = jwt.Secret;
+        if (!string.IsNullOrEmpty(encKeySource))
+            Security.PiiProtector.Configure(
+                System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(encKeySource + "|pii-v1")));
 
         services.AddAuthentication(opts =>
         {

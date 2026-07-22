@@ -1,4 +1,5 @@
 using CRM.Application.Sales.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,11 @@ namespace CRM.Infrastructure.Sales;
 public class InternalSaleChecker : IInternalSaleChecker
 {
     private readonly AppDbContext _db;
-    public InternalSaleChecker(AppDbContext db) => _db = db;
+    public InternalSaleChecker(AppDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<(bool IsInternal, string? Reason)> CheckAsync(Lead lead, Guid closerUserId, CancellationToken ct = default)
     {
+        Guard.AgainstNull(lead);
         var phoneMatch = await _db.Users
             .Where(u => u.AgencyId == lead.AgencyId && u.PhoneNumber == lead.PhoneNumber)
             .AnyAsync(ct);

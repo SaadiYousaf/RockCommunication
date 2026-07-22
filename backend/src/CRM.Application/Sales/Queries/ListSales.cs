@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,11 +39,12 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
 
     public ListSalesHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db; _user = user; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<PagedSalesResult> Handle(ListSalesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.Sales.AsNoTracking().Where(s => s.AgencyId == _user.AgencyId);

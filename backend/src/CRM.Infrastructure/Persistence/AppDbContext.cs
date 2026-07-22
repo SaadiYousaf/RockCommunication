@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Identity;
 using EmailOtpCode = CRM.Infrastructure.Identity.EmailOtpCode;
@@ -15,7 +16,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser) : base(options)
     {
-        _currentUser = currentUser;
+        _currentUser = Guard.AgainstNull(currentUser);
     }
 
     /// <summary>
@@ -160,6 +161,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.HasIndex(x => new { x.AgencyId, x.LeadId }).IsUnique();
             e.Property(x => x.FaceAmount).HasPrecision(18, 2);
             e.Property(x => x.Premium).HasPrecision(18, 2);
+            // Encrypt the most sensitive PII at rest (SSN + driver's licence) so a stolen DB
+            // file / backup doesn't expose them in cleartext. Existing plaintext rows read
+            // fine and re-encrypt on their next write.
+            var enc = new Security.EncryptedStringConverter();
+            e.Property(x => x.Social).HasConversion(enc);
+            e.Property(x => x.DriversLicense).HasConversion(enc);
             e.HasOne<Lead>().WithOne(l => l.Application).HasForeignKey<LeadApplication>(x => x.LeadId).OnDelete(DeleteBehavior.Cascade);
         });
 

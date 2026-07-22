@@ -1,4 +1,5 @@
 using CRM.Application.Common.RealTime;
+using CRM.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
@@ -34,7 +35,7 @@ public class AgentHub : Hub
 public class AgentNotifier : IAgentNotifier
 {
     private readonly IHubContext<AgentHub> _hub;
-    public AgentNotifier(IHubContext<AgentHub> hub) => _hub = hub;
+    public AgentNotifier(IHubContext<AgentHub> hub) => _hub = Guard.AgainstNull(hub);
 
     public Task PushAsync(Guid userId, string eventName, object payload, CancellationToken ct = default)
         => _hub.Clients.Group(AgentHub.GroupName(userId)).SendAsync(eventName, payload, ct);

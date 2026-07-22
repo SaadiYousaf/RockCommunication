@@ -1,5 +1,6 @@
 using CRM.Api.Hubs;
 using CRM.Application.CallCenter;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 
@@ -13,8 +14,8 @@ public class SupervisorBroadcaster : BackgroundService
 
     public SupervisorBroadcaster(IServiceProvider sp, ILogger<SupervisorBroadcaster> logger)
     {
-        _sp = sp;
-        _logger = logger;
+        _sp = Guard.AgainstNull(sp);
+        _logger = Guard.AgainstNull(logger);
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)

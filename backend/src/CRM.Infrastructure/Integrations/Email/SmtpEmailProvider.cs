@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Integrations;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -17,12 +18,13 @@ public class SmtpEmailProvider : IEmailProvider
 
     public SmtpEmailProvider(IOptions<IntegrationOptions> opts, ILogger<SmtpEmailProvider> logger)
     {
-        _opts = opts.Value.Email;
-        _logger = logger;
+        _opts = Guard.AgainstNull(opts).Value.Email;
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task<EmailResult> SendAsync(EmailMessage message, CancellationToken ct = default)
     {
+        Guard.AgainstNull(message);
         if (string.IsNullOrEmpty(_opts.SmtpHost) || string.IsNullOrEmpty(_opts.Username))
         {
             // Dev fallback: surface confirm/reset links to the log so a developer can click them

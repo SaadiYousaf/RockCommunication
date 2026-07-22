@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,8 +20,8 @@ public class AuthController : ControllerBase
 
     public AuthController(IIdentityService identity, ICurrentUser user)
     {
-        _identity = identity;
-        _user = user;
+        _identity = Guard.AgainstNull(identity);
+        _user = Guard.AgainstNull(user);
     }
 
     /// <summary>AgencyId is optional — defaults to the calling admin's agency. Only a SuperAdmin can target a different agency.</summary>
@@ -35,9 +36,16 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<UserSummaryDto>> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         // Cross-tenant defense: a regular Admin can only invite into their own agency.
         // A SuperAdmin (no agency in token) may target any agency explicitly.
         var isSuperAdmin = _user.Roles.Contains(Roles.SuperAdmin);
+
+        // Privilege-escalation defense: only a SuperAdmin may mint a SuperAdmin. Otherwise
+        // any agency admin (who holds UsersManage) could register a global cross-tenant admin.
+        if (!isSuperAdmin && req.Roles.Any(r => string.Equals(r, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)))
+            return Forbid();
+
         Guid agencyId;
         if (req.AgencyId is { } requested)
         {
@@ -57,6 +65,7 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         if (_user.UserId is null) return Forbid();
         await _identity.ChangePasswordAsync(_user.UserId.Value, req.CurrentPassword, req.NewPassword, ct);
         return NoContent();
@@ -64,11 +73,17 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
-        => Ok(await _identity.LoginAsync(req.UserNameOrEmail, req.Password, ct));
+    {
+        Guard.AgainstNull(req);
+        return Ok(await _identity.LoginAsync(req.UserNameOrEmail, req.Password, ct));
+    }
 
     [HttpPost("2fa/verify")]
     public async Task<ActionResult<LoginResponse>> Verify2Fa([FromBody] TwoFactorVerifyRequest req, CancellationToken ct)
-        => Ok(await _identity.VerifyTwoFactorAsync(req.TwoFactorToken, req.Code, ct));
+    {
+        Guard.AgainstNull(req);
+        return Ok(await _identity.VerifyTwoFactorAsync(req.TwoFactorToken, req.Code, ct));
+    }
 
     [Authorize]
     [HttpPost("2fa/setup")]
@@ -82,6 +97,7 @@ public class AuthController : ControllerBase
     [HttpPost("2fa/enable")]
     public async Task<IActionResult> Enable2Fa([FromBody] TwoFactorEnableRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         if (_user.UserId is null) return Forbid();
         await _identity.EnableTwoFactorAsync(_user.UserId.Value, req.Code, ct);
         return NoContent();
@@ -107,6 +123,7 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResult>> Refresh([FromBody] RefreshRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         var result = await _identity.RefreshTokenAsync(req.RefreshToken, ct);
         return result is null ? Unauthorized() : Ok(result);
     }
@@ -114,6 +131,7 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         await _identity.LogoutAsync(req.RefreshToken, ct);
         return NoContent();
     }
@@ -127,6 +145,8 @@ public class AuthController : ControllerBase
         [FromServices] MediatR.IMediator mediator,
         CancellationToken ct)
     {
+        Guard.AgainstNull(body);
+        Guard.AgainstNull(mediator);
         if (_user.UserId is null) return Forbid();
         await mediator.Send(new CRM.Application.Users.Commands.SetPreferred2FaCommand(_user.UserId.Value, body.Method), ct);
         return NoContent();
@@ -138,6 +158,7 @@ public class AuthController : ControllerBase
         [FromServices] CRM.Infrastructure.Identity.SecondFactorRegistry registry,
         CancellationToken ct)
     {
+        Guard.AgainstNull(registry);
         if (_user.UserId is null) return Forbid();
         var method = registry.Get(CRM.Application.Common.Interfaces.SecondFactorKind.EmailOtp);
         await method.ChallengeAsync(_user.UserId.Value, ct);
@@ -152,6 +173,7 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         // Always 204 — never reveal whether the email is registered.
         await _identity.ForgotPasswordAsync(req.Email, ct);
         return NoContent();
@@ -160,6 +182,7 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         await _identity.ResetPasswordAsync(req.Email, req.Token, req.NewPassword, ct);
         return NoContent();
     }
@@ -167,6 +190,7 @@ public class AuthController : ControllerBase
     [HttpPost("email/confirm")]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         await _identity.ConfirmEmailAsync(req.UserId, req.Token, ct);
         return NoContent();
     }
@@ -174,6 +198,7 @@ public class AuthController : ControllerBase
     [HttpPost("email/resend-confirmation")]
     public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         await _identity.SendEmailConfirmationAsync(req.Email, ct);
         return NoContent();
     }

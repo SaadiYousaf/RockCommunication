@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using Roles = CRM.Domain.Enums.Roles;
@@ -23,11 +24,12 @@ public class SelfValidateSaleHandler : IRequestHandler<SelfValidateSaleCommand, 
 
     public SelfValidateSaleHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db; _user = user;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user);
     }
 
     public async Task<SaleDto> Handle(SelfValidateSaleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains(CRM.Domain.Enums.Roles.SelfValidator))
             throw new ForbiddenAccessException("SelfValidator role required.");

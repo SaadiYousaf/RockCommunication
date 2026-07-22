@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,8 +17,8 @@ public class PermissionsController : ControllerBase
 
     public PermissionsController(IPermissionService permissions, ICurrentUser currentUser)
     {
-        _permissions = permissions;
-        _currentUser = currentUser;
+        _permissions = Guard.AgainstNull(permissions);
+        _currentUser = Guard.AgainstNull(currentUser);
     }
 
     public sealed record PermissionDef(string Code, string Group);
@@ -54,6 +55,7 @@ public class PermissionsController : ControllerBase
     [HasPermission(Permissions.PermissionsManage)]
     public async Task<IActionResult> SetForRole(Guid roleId, [FromBody] SetRolePermissionsRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         await _permissions.SetForRoleAsync(roleId, req.PermissionCodes ?? Array.Empty<string>(), ct);
         return NoContent();
     }

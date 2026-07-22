@@ -1,6 +1,7 @@
 using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using FluentValidation;
 using MediatR;
 
@@ -29,12 +30,13 @@ public class CommissionConfigHandler :
 
     public CommissionConfigHandler(IAgencyCommissionConfigProvider config, ICurrentUser user)
     {
-        _config = config;
-        _user = user;
+        _config = Guard.AgainstNull(config);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<IReadOnlyList<AgencyCommissionRuleDto>> Handle(ListCommissionConfigQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var rules = await _config.GetAllAsync(_user.AgencyId!.Value, ct);
         return rules.Select(r => new AgencyCommissionRuleDto(r.RuleName, r.Amount, r.Threshold, r.Enabled)).ToList();
@@ -42,6 +44,7 @@ public class CommissionConfigHandler :
 
     public async Task<AgencyCommissionRuleDto> Handle(UpsertCommissionConfigCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var input = request.Input;
         await _config.UpsertAsync(_user.AgencyId!.Value,

@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -44,12 +45,13 @@ public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, Lead
 
     public TransitionLeadHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<LeadDto> Handle(TransitionLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null)
             throw new ForbiddenAccessException();
 

@@ -1,4 +1,5 @@
 using CRM.Application.Common.Ai;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
@@ -21,9 +22,9 @@ public class HttpOpenAiCompletionProvider : IAiCompletionProvider
 
     public HttpOpenAiCompletionProvider(HttpClient http, IOptions<AiOptions> opts, ILogger<HttpOpenAiCompletionProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value;
+        _logger = Guard.AgainstNull(logger);
 
         _http.BaseAddress = new Uri(string.IsNullOrEmpty(_opts.BaseUrl) ? "https://api.openai.com" : _opts.BaseUrl.TrimEnd('/'));
         if (!string.IsNullOrEmpty(_opts.ApiKey))
@@ -33,6 +34,8 @@ public class HttpOpenAiCompletionProvider : IAiCompletionProvider
 
     public async Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
+        Guard.AgainstNull(systemPrompt);
+        Guard.AgainstNull(userPrompt);
         if (string.IsNullOrEmpty(_opts.ApiKey))
         {
             _logger.LogWarning("OpenAI provider hit but Ai:ApiKey not configured — returning placeholder.");

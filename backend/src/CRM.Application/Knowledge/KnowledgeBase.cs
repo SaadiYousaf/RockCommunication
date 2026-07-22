@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -34,10 +35,11 @@ public class KbHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public KbHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public KbHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<KbArticleDto>> Handle(SearchKbQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.KnowledgeArticles.AsNoTracking().Where(a => a.AgencyId == _user.AgencyId);
         if (request.PublishedOnly) q = q.Where(a => a.IsPublished);
@@ -55,6 +57,7 @@ public class KbHandler :
 
     public async Task<KbArticleDto?> Handle(GetKbArticleQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var article = await _db.KnowledgeArticles
             .FirstOrDefaultAsync(a => a.AgencyId == _user.AgencyId && a.Slug == request.Slug, ct);
@@ -66,6 +69,7 @@ public class KbHandler :
 
     public async Task<KbArticleDto> Handle(UpsertKbArticleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         KnowledgeArticle a;
         if (request.Id is { } id)

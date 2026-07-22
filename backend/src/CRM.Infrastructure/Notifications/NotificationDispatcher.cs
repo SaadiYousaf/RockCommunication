@@ -1,4 +1,5 @@
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Infrastructure.Notifications;
@@ -10,12 +11,14 @@ public class NotificationDispatcher : INotificationDispatcher
 
     public NotificationDispatcher(IEnumerable<INotificationChannel> channels, ILogger<NotificationDispatcher> logger)
     {
-        _channels = channels.ToDictionary(c => c.ChannelType);
-        _logger = logger;
+        _channels = Guard.AgainstNull(channels).ToDictionary(c => c.ChannelType);
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task DispatchAsync(NotificationPayload payload, IEnumerable<NotificationChannelType> channels, CancellationToken ct = default)
     {
+        Guard.AgainstNull(channels);
+
         foreach (var ch in channels.Distinct())
         {
             if (!_channels.TryGetValue(ch, out var channel))

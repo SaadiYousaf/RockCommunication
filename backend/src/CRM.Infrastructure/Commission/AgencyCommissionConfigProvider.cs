@@ -1,4 +1,5 @@
 using CRM.Application.Common.Commission;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ namespace CRM.Infrastructure.Commission;
 public class AgencyCommissionConfigProvider : IAgencyCommissionConfigProvider
 {
     private readonly AppDbContext _db;
-    public AgencyCommissionConfigProvider(AppDbContext db) => _db = db;
+    public AgencyCommissionConfigProvider(AppDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<AgencyCommissionRule?> GetAsync(Guid agencyId, string ruleName, CancellationToken ct = default)
     {
@@ -28,6 +29,8 @@ public class AgencyCommissionConfigProvider : IAgencyCommissionConfigProvider
 
     public async Task UpsertAsync(Guid agencyId, AgencyCommissionRule rule, CancellationToken ct = default)
     {
+        Guard.AgainstNull(rule);
+
         var existing = await _db.AgencyCommissionConfigs
             .FirstOrDefaultAsync(c => c.AgencyId == agencyId && c.RuleName == rule.RuleName, ct);
 

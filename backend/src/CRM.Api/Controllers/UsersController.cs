@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +19,8 @@ public class UsersController : ControllerBase
 
     public UsersController(IIdentityService identity, ICurrentUser user)
     {
-        _identity = identity;
-        _user = user;
+        _identity = Guard.AgainstNull(identity);
+        _user = Guard.AgainstNull(user);
     }
 
     /// <summary>
@@ -42,7 +43,13 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserSummaryDto>> Get(Guid id, CancellationToken ct)
     {
         var u = await _identity.GetUserAsync(id, ct);
-        return u is null ? NotFound() : Ok(u);
+        if (u is null) return NotFound();
+        // Tenant scoping (the Identity store has no global query filter): a non-SuperAdmin
+        // may only read users in their own agency. Prevents cross-tenant PII disclosure via
+        // a guessed/leaked user GUID.
+        if (!_user.Roles.Contains(Roles.SuperAdmin) && u.AgencyId != _user.AgencyId)
+            return NotFound();
+        return Ok(u);
     }
 
     // Lightweight {id, userName} list used to render sender names in chat,

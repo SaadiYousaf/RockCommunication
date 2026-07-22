@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Integrations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,9 +15,9 @@ public class AuthEmailSender
 
     public AuthEmailSender(IEmailProvider email, IOptions<IntegrationOptions> opts, ILogger<AuthEmailSender> logger)
     {
-        _email = email;
-        _opts = opts.Value.Email;
-        _logger = logger;
+        _email = Guard.AgainstNull(email);
+        _opts = Guard.AgainstNull(opts).Value.Email;
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task SendEmailConfirmationAsync(string to, string userName, Guid userId, string token, CancellationToken ct)

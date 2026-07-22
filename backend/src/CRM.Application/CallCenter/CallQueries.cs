@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,10 +18,11 @@ public class FindCallByProviderHandler : IRequestHandler<FindCallByProviderQuery
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public FindCallByProviderHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public FindCallByProviderHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<CallSummaryDto?> Handle(FindCallByProviderQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var c = await _db.CallRecords.AsNoTracking()
             .FirstOrDefaultAsync(c => c.AgencyId == _user.AgencyId
@@ -37,10 +39,11 @@ public class MyRecentCallsHandler : IRequestHandler<MyRecentCallsQuery, IReadOnl
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public MyRecentCallsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public MyRecentCallsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<CallSummaryDto>> Handle(MyRecentCallsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.CallRecords
             .Where(c => c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId)

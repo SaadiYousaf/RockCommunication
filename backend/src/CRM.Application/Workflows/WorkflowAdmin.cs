@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -57,11 +58,12 @@ public class WorkflowAdminHandler :
 
     public WorkflowAdminHandler(IApplicationDbContext db, ICurrentUser user, IWorkflowActionRegistry actions)
     {
-        _db = db; _user = user; _actions = actions;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _actions = Guard.AgainstNull(actions);
     }
 
     public async Task<IReadOnlyList<WorkflowRuleDto>> Handle(ListWorkflowRulesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var q = _db.WorkflowRules.Include(r => r.Actions).Where(r => r.AgencyId == _user.AgencyId);
         if (!string.IsNullOrEmpty(request.EventType)) q = q.Where(r => r.EventType == request.EventType);
@@ -70,6 +72,7 @@ public class WorkflowAdminHandler :
 
     public async Task<WorkflowRuleDto> Handle(GetWorkflowRuleQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var r = await _db.WorkflowRules.Include(x => x.Actions)
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)
@@ -79,6 +82,7 @@ public class WorkflowAdminHandler :
 
     public async Task<WorkflowRuleDto> Handle(UpsertWorkflowRuleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var input = request.Input;
         WorkflowRule r;
@@ -119,6 +123,7 @@ public class WorkflowAdminHandler :
 
     public async Task<Unit> Handle(DeleteWorkflowRuleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var r = await _db.WorkflowRules.FirstOrDefaultAsync(x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(WorkflowRule), request.Id);
@@ -138,12 +143,14 @@ public class WorkflowAdminHandler :
 
     public Task<IReadOnlyList<string>> Handle(AvailableActionTypesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         return Task.FromResult(_actions.AvailableActions);
     }
 
     public async Task<IReadOnlyList<WorkflowExecutionDto>> Handle(ListExecutionsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var q = _db.WorkflowExecutions.Where(e => e.AgencyId == _user.AgencyId);
         if (request.RuleId is { } rid) q = q.Where(e => e.RuleId == rid);

@@ -1,3 +1,4 @@
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 {
     private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
 
-    public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger) => _logger = logger;
+    public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger) => _logger = Guard.AgainstNull(logger);
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {

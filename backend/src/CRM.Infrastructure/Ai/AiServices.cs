@@ -1,6 +1,7 @@
 using CRM.Application.Common.Ai;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ public class StubAiCompletionProvider : IAiCompletionProvider
 {
     public Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
     {
+        Guard.AgainstNull(userPrompt);
         var trimmed = userPrompt.Length > 240 ? userPrompt.Substring(0, 240) + "…" : userPrompt;
         return Task.FromResult($"[stub-summary] {trimmed}");
     }
@@ -33,10 +35,11 @@ public class StubAiCompletionProvider : IAiCompletionProvider
 public class CallSummarizer : ICallSummarizer
 {
     private readonly IAiCompletionProvider _ai;
-    public CallSummarizer(IAiCompletionProvider ai) => _ai = ai;
+    public CallSummarizer(IAiCompletionProvider ai) => _ai = Guard.AgainstNull(ai);
 
     public async Task<CallSummaryResult> SummarizeAsync(string transcriptOrNotes, CancellationToken ct = default)
     {
+        Guard.AgainstNull(transcriptOrNotes);
         const string system = """
             You are a call-center QA assistant. Given a call transcript or agent notes,
             return ONLY a JSON object with this exact shape — no prose before or after:
@@ -84,10 +87,11 @@ public class CallSummarizer : ICallSummarizer
 public class LeadAiScorer : ILeadAiScorer
 {
     private readonly IAiCompletionProvider _ai;
-    public LeadAiScorer(IAiCompletionProvider ai) => _ai = ai;
+    public LeadAiScorer(IAiCompletionProvider ai) => _ai = Guard.AgainstNull(ai);
 
     public async Task<AiLeadScoreResult> ScoreLeadAsync(IReadOnlyDictionary<string, object?> leadFacts, CancellationToken ct = default)
     {
+        Guard.AgainstNull(leadFacts);
         const string system = """
             You are a sales-ops assistant scoring leads for an insurance call center.
             Given the lead facts, return ONLY a JSON object with this exact shape — no other prose:
@@ -133,10 +137,10 @@ public class RecommendationService : IRecommendationService
     public RecommendationService(AppDbContext db, ILeadScorer scorer, IAiCompletionProvider ai,
         ILogger<RecommendationService> logger)
     {
-        _db = db;
-        _scorer = scorer;
-        _ai = ai;
-        _logger = logger;
+        _db = Guard.AgainstNull(db);
+        _scorer = Guard.AgainstNull(scorer);
+        _ai = Guard.AgainstNull(ai);
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task<RecommendationResult> RecommendForLeadAsync(Guid leadId, CancellationToken ct = default)

@@ -2,6 +2,7 @@ using CRM.Application.Common.Assignment;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -29,13 +30,14 @@ public class AssignLeadHandler : IRequestHandler<AssignLeadCommand, LeadDto>
 
     public AssignLeadHandler(IApplicationDbContext db, IAssignmentService assignment, ICurrentUser user)
     {
-        _db = db;
-        _assignment = assignment;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _assignment = Guard.AgainstNull(assignment);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<LeadDto> Handle(AssignLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(

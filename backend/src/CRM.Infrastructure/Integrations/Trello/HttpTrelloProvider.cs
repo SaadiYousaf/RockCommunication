@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -16,9 +17,10 @@ public class TrelloOptions
 public class StubTrelloProvider : ITrelloProvider
 {
     private readonly ILogger<StubTrelloProvider> _logger;
-    public StubTrelloProvider(ILogger<StubTrelloProvider> logger) => _logger = logger;
+    public StubTrelloProvider(ILogger<StubTrelloProvider> logger) => _logger = Guard.AgainstNull(logger);
     public Task<TrelloCardResult> CreateCardAsync(TrelloCardRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         _logger.LogInformation("Trello stub: create card '{Title}' on {ListId}", request.Title, request.ListId);
         var id = Guid.NewGuid().ToString("N");
         return Task.FromResult(new TrelloCardResult(true, id, $"https://trello.com/c/{id}", null));
@@ -33,14 +35,15 @@ public class HttpTrelloProvider : ITrelloProvider
 
     public HttpTrelloProvider(HttpClient http, IOptions<TrelloOptions> opts, ILogger<HttpTrelloProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value;
+        _logger = Guard.AgainstNull(logger);
         _http.BaseAddress = new Uri(_opts.BaseUrl);
     }
 
     public async Task<TrelloCardResult> CreateCardAsync(TrelloCardRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         if (string.IsNullOrEmpty(_opts.Key) || string.IsNullOrEmpty(_opts.Token))
             return new TrelloCardResult(false, null, null, "Trello key/token not configured");
         try

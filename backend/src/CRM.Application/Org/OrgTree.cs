@@ -1,6 +1,7 @@
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using DomainRoles = CRM.Domain.Enums.Roles;
@@ -49,13 +50,14 @@ public class OrgTreeHandler : IRequestHandler<GetOrgTreeQuery, OrgTreeDto>
 
     public OrgTreeHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db;
-        _user = user;
-        _identity = identity;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<OrgTreeDto> Handle(GetOrgTreeQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var isSuperAdmin = _user.Roles.Contains(DomainRoles.SuperAdmin);
 
         // Resolve which agency we're rendering. SuperAdmin can target any; everyone else

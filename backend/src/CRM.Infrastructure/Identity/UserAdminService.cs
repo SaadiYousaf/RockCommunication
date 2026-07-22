@@ -2,7 +2,9 @@ using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Users.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
+using CRM.Domain.Enums;
 using CRM.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -15,27 +17,54 @@ public class UserAdminService : IUserAdminService
     private readonly RoleManager<ApplicationRole> _roles;
     private readonly AppDbContext _db;
     private readonly IJwtTokenService _jwt;
+    private readonly ICurrentUser _current;
 
     public UserAdminService(
         UserManager<ApplicationUser> users,
         RoleManager<ApplicationRole> roles,
         AppDbContext db,
-        IJwtTokenService jwt)
+        IJwtTokenService jwt,
+        ICurrentUser current)
     {
-        _users = users;
-        _roles = roles;
-        _db = db;
-        _jwt = jwt;
+        _users = Guard.AgainstNull(users);
+        _roles = Guard.AgainstNull(roles);
+        _db = Guard.AgainstNull(db);
+        _jwt = Guard.AgainstNull(jwt);
+        _current = Guard.AgainstNull(current);
+    }
+
+    private bool CallerIsSuperAdmin => _current.Roles?.Contains(Roles.SuperAdmin) == true;
+
+    /// <summary>
+    /// Tenant + privilege guard for user-admin operations. A non-SuperAdmin caller may
+    /// only act on users inside their own agency, and never on a SuperAdmin account.
+    /// SuperAdmin bypasses (it is the cross-tenant operator).
+    /// </summary>
+    private async Task AuthorizeTargetAsync(ApplicationUser target)
+    {
+        if (CallerIsSuperAdmin) return;
+        if (_current.AgencyId is null || target.AgencyId != _current.AgencyId)
+            throw new ForbiddenAccessException("You can only manage users in your own agency.");
+        if (await _users.IsInRoleAsync(target, Roles.SuperAdmin))
+            throw new ForbiddenAccessException("You are not permitted to manage this account.");
     }
 
     public async Task<UserSummaryDto> UpdateRolesAsync(Guid userId, IReadOnlyList<string> roles, CancellationToken ct = default)
     {
+        Guard.AgainstNull(roles);
+
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
 
+        // Role allow-list. A non-SuperAdmin caller may never grant the global SuperAdmin
+        // role (it bypasses both the permission framework and the multi-tenant filter).
+        // Roles are never auto-created here — they must be provisioned via role management.
+        if (!CallerIsSuperAdmin && roles.Any(r => string.Equals(r, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)))
+            throw new ForbiddenAccessException("You are not permitted to assign the SuperAdmin role.");
         foreach (var role in roles)
             if (!await _roles.RoleExistsAsync(role))
-                await _roles.CreateAsync(new ApplicationRole(role));
+                throw new ConflictException($"Role '{role}' does not exist.");
 
         var existing = await _users.GetRolesAsync(user);
         var toRemove = existing.Except(roles, StringComparer.OrdinalIgnoreCase).ToList();
@@ -60,6 +89,7 @@ public class UserAdminService : IUserAdminService
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
         user.IsActive = isActive;
         var result = await _users.UpdateAsync(user);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
@@ -83,6 +113,7 @@ public class UserAdminService : IUserAdminService
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
         var token = await _users.GeneratePasswordResetTokenAsync(user);
         var result = await _users.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));

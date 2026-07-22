@@ -3,6 +3,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -73,16 +74,17 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
     public RecordSaleHandler(IApplicationDbContext db, ICurrentUser user, ICommissionEngine commission,
         IInternalSaleChecker checker, IWorkflowEngine workflow, ILyonsBankingValidator lyons)
     {
-        _db = db;
-        _user = user;
-        _commission = commission;
-        _checker = checker;
-        _workflow = workflow;
-        _lyons = lyons;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _commission = Guard.AgainstNull(commission);
+        _checker = Guard.AgainstNull(checker);
+        _workflow = Guard.AgainstNull(workflow);
+        _lyons = Guard.AgainstNull(lyons);
     }
 
     public async Task<SaleDto> Handle(RecordSaleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var input = request.Input;

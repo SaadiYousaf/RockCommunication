@@ -1,6 +1,7 @@
 using CRM.Application.Common.Assignment;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -36,10 +37,11 @@ public class BulkLeadHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<BulkLeadActionResult> Handle(BulkAssignLeadsCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var leads = await _db.Leads
             .Where(l => request.LeadIds.Contains(l.Id) && l.AgencyId == _user.AgencyId)
@@ -58,6 +60,7 @@ public class BulkLeadHandler :
 
     public async Task<BulkLeadActionResult> Handle(BulkSetStageCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var leads = await _db.Leads
             .Where(l => request.LeadIds.Contains(l.Id) && l.AgencyId == _user.AgencyId)
@@ -93,6 +96,7 @@ public class BulkLeadHandler :
 
     public async Task<BulkLeadActionResult> Handle(BulkEnrollCadenceCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var cadence = await _db.Cadences.Include(c => c.Steps)
             .FirstOrDefaultAsync(c => c.Id == request.CadenceId && c.AgencyId == _user.AgencyId, ct)

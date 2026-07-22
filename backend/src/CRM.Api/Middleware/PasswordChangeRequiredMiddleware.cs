@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using System.Net;
 using System.Text.Json;
 
@@ -24,10 +25,11 @@ public class PasswordChangeRequiredMiddleware
         "/health",
     };
 
-    public PasswordChangeRequiredMiddleware(RequestDelegate next) => _next = next;
+    public PasswordChangeRequiredMiddleware(RequestDelegate next) => _next = Guard.AgainstNull(next);
 
     public async Task Invoke(HttpContext ctx)
     {
+        Guard.AgainstNull(ctx);
         var user = ctx.User;
         if (user?.Identity?.IsAuthenticated == true &&
             string.Equals(user.FindFirst(CustomJwtClaims.PasswordChangeRequired)?.Value, "true",

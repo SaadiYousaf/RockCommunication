@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ public class IntakeQueueHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public IntakeQueueHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public IntakeQueueHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public Task<IReadOnlyList<IntakeQueueItem>> Handle(VerifierQueueQuery request, CancellationToken ct)
         => QueueAsync(WorkflowStage.Fronted, request.Take, ct);

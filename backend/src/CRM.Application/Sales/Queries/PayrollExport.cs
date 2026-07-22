@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,11 +19,12 @@ public class ExportPayrollHandler : IRequestHandler<ExportPayrollQuery, IReadOnl
 
     public ExportPayrollHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db; _user = user; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<IReadOnlyList<PayrollExportRow>> Handle(ExportPayrollQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
             throw new ForbiddenAccessException();

@@ -1,5 +1,6 @@
 using CRM.Application.Common.Assignment;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Identity;
 using CRM.Infrastructure.Persistence;
@@ -13,10 +14,12 @@ public class RoundRobinStrategy : IAssignmentStrategy
     public string Name => "round-robin";
     private readonly IApplicationDbContext _db;
 
-    public RoundRobinStrategy(IApplicationDbContext db) => _db = db;
+    public RoundRobinStrategy(IApplicationDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<Guid?> PickAsync(AssignmentContext context, CancellationToken ct = default)
     {
+        Guard.AgainstNull(context);
+
         if (context.EligibleUserIds.Count == 0) return null;
 
         var counts = await _db.Leads
@@ -36,10 +39,12 @@ public class LeastBusyStrategy : IAssignmentStrategy
     public string Name => "least-busy";
     private readonly IApplicationDbContext _db;
 
-    public LeastBusyStrategy(IApplicationDbContext db) => _db = db;
+    public LeastBusyStrategy(IApplicationDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<Guid?> PickAsync(AssignmentContext context, CancellationToken ct = default)
     {
+        Guard.AgainstNull(context);
+
         if (context.EligibleUserIds.Count == 0) return null;
 
         var openCounts = await _db.Leads
@@ -70,7 +75,7 @@ public class AssignmentStrategyRegistry : IAssignmentStrategyRegistry
 
     public AssignmentStrategyRegistry(IEnumerable<IAssignmentStrategy> strategies)
     {
-        _byName = strategies.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
+        _byName = Guard.AgainstNull(strategies).ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
     }
 
     public IAssignmentStrategy Get(string name) =>
@@ -88,13 +93,15 @@ public class AssignmentService : IAssignmentService
 
     public AssignmentService(IAssignmentStrategyRegistry registry, UserManager<ApplicationUser> users, AppDbContext db)
     {
-        _registry = registry;
-        _users = users;
-        _db = db;
+        _registry = Guard.AgainstNull(registry);
+        _users = Guard.AgainstNull(users);
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task<Guid?> AssignAsync(Lead lead, string targetRole, string strategyName, CancellationToken ct = default)
     {
+        Guard.AgainstNull(lead);
+
         var roleUsers = await (from ur in _db.UserRoles
                                join r in _db.Roles on ur.RoleId equals r.Id
                                join u in _db.Users on ur.UserId equals u.Id

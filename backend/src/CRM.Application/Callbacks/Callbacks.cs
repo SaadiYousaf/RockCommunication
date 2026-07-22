@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -28,12 +29,13 @@ public class ScheduleCallbackHandler : IRequestHandler<ScheduleCallbackCommand, 
 
     public ScheduleCallbackHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<CallbackDto> Handle(ScheduleCallbackCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var input = request.Input;
@@ -64,11 +66,12 @@ public class CompleteCallbackHandler : IRequestHandler<CompleteCallbackCommand, 
 
     public CompleteCallbackHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db; _user = user;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user);
     }
 
     public async Task<CallbackDto> Handle(CompleteCallbackCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var cb = await _db.ScheduledCallbacks.FirstOrDefaultAsync(
             x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)
@@ -88,11 +91,12 @@ public class MyCallbacksHandler : IRequestHandler<MyCallbacksQuery, IReadOnlyLis
 
     public MyCallbacksHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db; _user = user;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user);
     }
 
     public async Task<IReadOnlyList<CallbackDto>> Handle(MyCallbacksQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.ScheduledCallbacks.Where(c => c.AgencyId == _user.AgencyId && c.AssignedUserId == _user.UserId);
         if (!request.IncludeCompleted) q = q.Where(c => !c.Completed);

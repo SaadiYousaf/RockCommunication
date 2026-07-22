@@ -1,4 +1,5 @@
 using CRM.Application.Chat;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -11,7 +12,7 @@ public class ChatHub : Hub
 {
     private readonly IMediator _mediator;
 
-    public ChatHub(IMediator mediator) => _mediator = mediator;
+    public ChatHub(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     public async Task JoinRoom(Guid roomId) =>
         await Groups.AddToGroupAsync(Context.ConnectionId, RoomName(roomId));
@@ -21,6 +22,7 @@ public class ChatHub : Hub
 
     public async Task<ChatMessageDto> Send(Guid roomId, string body)
     {
+        Guard.AgainstNull(body);
         var msg = await _mediator.Send(new SendMessageCommand(roomId, body));
         await Clients.Group(RoomName(roomId)).SendAsync("MessageReceived", msg);
         return msg;

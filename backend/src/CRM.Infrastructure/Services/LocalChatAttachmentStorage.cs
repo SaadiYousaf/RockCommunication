@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -17,6 +18,8 @@ public class LocalChatAttachmentStorage : IChatAttachmentStorage
 
     public LocalChatAttachmentStorage(IHostEnvironment env, IConfiguration config)
     {
+        Guard.AgainstNull(env);
+        Guard.AgainstNull(config);
         var configured = config["Storage:ChatAttachmentsRoot"];
         _root = string.IsNullOrWhiteSpace(configured)
             ? Path.Combine(env.ContentRootPath, "App_Data", "chat-attachments")
@@ -26,6 +29,8 @@ public class LocalChatAttachmentStorage : IChatAttachmentStorage
 
     public async Task<string> SaveAsync(Guid roomId, string originalFileName, Stream content, CancellationToken ct = default)
     {
+        Guard.AgainstNull(originalFileName);
+        Guard.AgainstNull(content);
         var ext = Path.GetExtension(originalFileName);
         // Sanity-strip any path components from the original name. We only keep
         // the extension; the canonical name lives in the message metadata.
@@ -44,6 +49,7 @@ public class LocalChatAttachmentStorage : IChatAttachmentStorage
 
     public Task<Stream> OpenReadAsync(string storageKey, CancellationToken ct = default)
     {
+        Guard.AgainstNull(storageKey);
         // Defence-in-depth: refuse traversal even though keys are server-generated.
         if (storageKey.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(storageKey))
             throw new FileNotFoundException(storageKey);

@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using MediatR;
@@ -22,12 +23,13 @@ public class LeadTimelineHandler : IRequestHandler<LeadTimelineQuery, LeadTimeli
 
     public LeadTimelineHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<LeadTimelineDto> Handle(LeadTimelineQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(

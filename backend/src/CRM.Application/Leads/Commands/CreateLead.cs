@@ -3,6 +3,7 @@ using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
 using CRM.Application.Common.Workflow;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -32,14 +33,15 @@ public class CreateLeadHandler : IRequestHandler<CreateLeadCommand, LeadDto>
 
     public CreateLeadHandler(IApplicationDbContext db, ICurrentUser user, ILeadScorer scorer, IWorkflowEngine workflow)
     {
-        _db = db;
-        _user = user;
-        _scorer = scorer;
-        _workflow = workflow;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _scorer = Guard.AgainstNull(scorer);
+        _workflow = Guard.AgainstNull(workflow);
     }
 
     public async Task<LeadDto> Handle(CreateLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null)
             throw new ForbiddenAccessException("No agency context.");
 

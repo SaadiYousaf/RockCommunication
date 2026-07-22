@@ -17,7 +17,7 @@ namespace CRM.Infrastructure.Persistence.Interceptors;
 public class TenantInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUser _user;
-    public TenantInterceptor(ICurrentUser user) => _user = user;
+    public TenantInterceptor(ICurrentUser user) => _user = Guard.AgainstNull(user);
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct = default)

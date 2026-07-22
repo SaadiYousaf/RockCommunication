@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Callbacks;
 using CRM.Application.Common.Authorization;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +14,15 @@ namespace CRM.Api.Controllers;
 public class CallbacksController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public CallbacksController(IMediator mediator) => _mediator = mediator;
+    public CallbacksController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     [HttpPost]
     [HasPermission(Permissions.CallbacksWrite)]
     public async Task<ActionResult<CallbackDto>> Schedule([FromBody] ScheduleCallbackDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new ScheduleCallbackCommand(dto), ct));
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new ScheduleCallbackCommand(dto), ct));
+    }
 
     [HttpPost("{id:guid}/complete")]
     [HasPermission(Permissions.CallbacksWrite)]

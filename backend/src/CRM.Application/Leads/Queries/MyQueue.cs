@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -16,12 +17,13 @@ public class MyQueueHandler : IRequestHandler<MyQueueQuery, IReadOnlyList<LeadDt
 
     public MyQueueHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<IReadOnlyList<LeadDto>> Handle(MyQueueQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.Leads.Where(l => l.AgencyId == _user.AgencyId && l.AssignedUserId == _user.UserId);

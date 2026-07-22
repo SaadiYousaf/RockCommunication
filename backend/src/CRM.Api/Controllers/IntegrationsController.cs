@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Leads.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using MediatR;
@@ -23,10 +24,10 @@ public class IntegrationsController : ControllerBase
 
     public IntegrationsController(IMediator mediator, IDialerProvider dialer, ICarrierRegistry carriers, AppDbContext db)
     {
-        _mediator = mediator;
-        _dialer = dialer;
-        _carriers = carriers;
-        _db = db;
+        _mediator = Guard.AgainstNull(mediator);
+        _dialer = Guard.AgainstNull(dialer);
+        _carriers = Guard.AgainstNull(carriers);
+        _db = Guard.AgainstNull(db);
     }
 
     [HttpPost("jornaya/verify/{leadId:guid}")]
@@ -39,6 +40,8 @@ public class IntegrationsController : ControllerBase
     [HasPermission(Permissions.AgentPanelUse)]
     public async Task<IActionResult> Dial([FromBody] DialBody body, [FromServices] CRM.Application.Common.Interfaces.ICurrentUser user, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
+        Guard.AgainstNull(user);
         if (user.UserId is null || user.AgencyId is null) return Forbid();
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == body.LeadId && l.AgencyId == user.AgencyId, ct);
         if (lead is null) return NotFound();

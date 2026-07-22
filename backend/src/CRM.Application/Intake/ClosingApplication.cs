@@ -2,6 +2,7 @@ using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -94,14 +95,15 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
 
     public SubmitClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user, IMediator mediator, IPhoneNormalizer phone)
     {
-        _db = db;
-        _user = user;
-        _mediator = mediator;
-        _phone = phone;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _mediator = Guard.AgainstNull(mediator);
+        _phone = Guard.AgainstNull(phone);
     }
 
     public async Task<ClosingApplicationResult> Handle(SubmitClosingApplicationCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(

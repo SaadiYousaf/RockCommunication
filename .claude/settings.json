@@ -28,7 +28,22 @@
       "Bash(scp -i ~/.ssh/lightsail.pem ~/.cloudflared/cert.pem ~/.cloudflared/6075a471-7c84-4bb7-bfeb-2aa35d468737.json ubuntu@13.127.227.148:/tmp/)",
       "Bash(curl -s -o /dev/null -w \"api: HTTP %{http_code} in %{time_total}s\\\\n\" https://api.smhachieverslifegroup.com/api/auth/me)",
       "Bash(lsof -ti :5293 -sTCP:LISTEN)",
-      "Bash(pkill -f \"cloudflared tunnel run crm\")"
+      "Bash(pkill -f \"cloudflared tunnel run crm\")",
+      "Read(//Users/saadsaqib/**)",
+      "Read(//Users/saadsaqib/.aws/**)",
+      "Read(//Users/saadsaqib/.cloudflared/**)",
+      "Bash(ssh -i ~/.ssh/lightsail.pem -o ConnectTimeout=10 -o BatchMode=yes ubuntu@13.127.227.148 ' *)",
+      "Bash(curl -sv --max-time 15 https://app.smhachieverslifegroup.com/)",
+      "Bash(curl -s -o /dev/null -w '  OPTIONS → HTTP %{http_code}\\\\n' -X OPTIONS https://api.smhachieverslifegroup.com/api/auth/login -H 'Origin: https://app.smhachieverslifegroup.com' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' --max-time 15)",
+      "Bash(cat)",
+      "Bash(node ./scratch_t.cjs)",
+      "Bash(rm -f ./scratch_t.cjs)",
+      "Bash(grep -iA30 \"environment\\\\|backend\\\\|api\")",
+      "Bash(python3 - /private/tmp/claude-501/-Users-saadsaqib-Documents-CRM/bf59db4e-4c65-4120-91b5-589009a08608/tasks/w53o3t6mn.output)",
+      "Bash(grep -nA6 '\"Jwt\"' backend/src/CRM.Api/appsettings.json)",
+      "Bash(awk 'NR>=60 && NR<=110' src/CRM.Application/Sales/Commands/Payroll.cs)",
+      "Bash(grep -v ':0$')",
+      "Bash(grep -vE \"^\\\\s*M?\\\\s*\\(\\\\.claude/settings\\\\.json|backend/src/CRM.Infrastructure/Identity/UserAdminService\\\\.cs\\)$\")"
     ]
   }
 }

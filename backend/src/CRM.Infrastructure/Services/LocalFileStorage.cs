@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -15,6 +16,8 @@ public class LocalFileStorage : IFileStorage
 
     public LocalFileStorage(IHostEnvironment env, IConfiguration config)
     {
+        Guard.AgainstNull(env);
+        Guard.AgainstNull(config);
         var configured = config["Storage:FilesRoot"];
         _root = string.IsNullOrWhiteSpace(configured)
             ? Path.Combine(env.ContentRootPath, "App_Data", "files")
@@ -24,6 +27,9 @@ public class LocalFileStorage : IFileStorage
 
     public async Task<string> SaveAsync(string container, string originalFileName, Stream content, CancellationToken ct = default)
     {
+        Guard.AgainstNull(container);
+        Guard.AgainstNull(originalFileName);
+        Guard.AgainstNull(content);
         // Keep only a sane extension; the canonical name lives in entity metadata.
         var ext = Path.GetExtension(originalFileName);
         if (ext.Length > 16) ext = "";
@@ -43,6 +49,7 @@ public class LocalFileStorage : IFileStorage
 
     public Task<Stream> OpenReadAsync(string storageKey, CancellationToken ct = default)
     {
+        Guard.AgainstNull(storageKey);
         var fullPath = Resolve(storageKey);
         if (!File.Exists(fullPath)) throw new FileNotFoundException(storageKey);
         Stream s = File.OpenRead(fullPath);

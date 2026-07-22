@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Sales.Commands;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,10 +27,11 @@ public class LyonsOptions
 public class StubLyonsBankingValidator : ILyonsBankingValidator
 {
     private readonly ILogger<StubLyonsBankingValidator> _logger;
-    public StubLyonsBankingValidator(ILogger<StubLyonsBankingValidator> logger) => _logger = logger;
+    public StubLyonsBankingValidator(ILogger<StubLyonsBankingValidator> logger) => _logger = Guard.AgainstNull(logger);
 
     public Task<LyonsValidationResult> ValidateAsync(LyonsValidationRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         var routing = new string((request.RoutingNumber ?? "").Where(char.IsDigit).ToArray());
         var account = new string((request.AccountNumber ?? "").Where(char.IsDigit).ToArray());
         var reference = $"LYONS-STUB-{Guid.NewGuid():N}".Substring(0, 18);
@@ -73,9 +75,9 @@ public class HttpLyonsBankingValidator : ILyonsBankingValidator
 
     public HttpLyonsBankingValidator(HttpClient http, IOptions<LyonsOptions> opts, ILogger<HttpLyonsBankingValidator> logger)
     {
-        _http = http;
-        _opts = opts.Value;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value;
+        _logger = Guard.AgainstNull(logger);
         if (!string.IsNullOrEmpty(_opts.BaseUrl)) _http.BaseAddress = new Uri(_opts.BaseUrl);
         if (!string.IsNullOrEmpty(_opts.ApiKey)) _http.DefaultRequestHeaders.Add("X-Api-Key", _opts.ApiKey);
         _http.Timeout = TimeSpan.FromSeconds(_opts.TimeoutSeconds);
@@ -89,6 +91,7 @@ public class HttpLyonsBankingValidator : ILyonsBankingValidator
 
     public async Task<LyonsValidationResult> ValidateAsync(LyonsValidationRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         try
         {
             var resp = await _http.PostAsJsonAsync("/verify", request, ct);

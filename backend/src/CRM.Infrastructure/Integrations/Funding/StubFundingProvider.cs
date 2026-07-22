@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Infrastructure.Integrations.Funding;
@@ -6,10 +7,11 @@ namespace CRM.Infrastructure.Integrations.Funding;
 public class StubFundingProvider : IFundingProvider
 {
     private readonly ILogger<StubFundingProvider> _logger;
-    public StubFundingProvider(ILogger<StubFundingProvider> logger) => _logger = logger;
+    public StubFundingProvider(ILogger<StubFundingProvider> logger) => _logger = Guard.AgainstNull(logger);
 
     public Task<FundingResult> SubmitAsync(FundingRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         _logger.LogInformation("Funding submit policy={Policy} amount={Amount}", request.PolicyNumber, request.Amount);
         return Task.FromResult(new FundingResult(true, Guid.NewGuid().ToString("N"), "Pending", null));
     }

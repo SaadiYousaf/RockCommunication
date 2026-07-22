@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,12 +32,13 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
 
     public ListLeadsHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<PagedLeadsResult> Handle(ListLeadsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.Leads.AsNoTracking().Where(l => l.AgencyId == _user.AgencyId);

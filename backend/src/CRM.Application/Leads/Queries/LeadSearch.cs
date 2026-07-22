@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +14,11 @@ public class LeadSearchHandler : IRequestHandler<LeadSearchQuery, IReadOnlyList<
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public LeadSearchHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public LeadSearchHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<LeadDto>> Handle(LeadSearchQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.Leads.Where(l => l.AgencyId == _user.AgencyId);
@@ -52,10 +54,11 @@ public class DuplicateScanHandler : IRequestHandler<DuplicateScanQuery, IReadOnl
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public DuplicateScanHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public DuplicateScanHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<DuplicateGroup>> Handle(DuplicateScanQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var leads = await _db.Leads

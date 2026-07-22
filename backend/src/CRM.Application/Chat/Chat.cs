@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -36,10 +37,11 @@ public class CreateRoomHandler : IRequestHandler<CreateRoomCommand, ChatRoomDto>
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public CreateRoomHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public CreateRoomHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<ChatRoomDto> Handle(CreateRoomCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var room = new ChatRoom
         {
@@ -76,11 +78,12 @@ public class StartDirectMessageHandler : IRequestHandler<StartDirectMessageComma
 
     public StartDirectMessageHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db; _user = user; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<ChatRoomDto> Handle(StartDirectMessageCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var me = _user.UserId.Value;
         if (request.OtherUserId == me) throw new ConflictException("You can't message yourself.");
@@ -148,11 +151,12 @@ public class SendMessageHandler : IRequestHandler<SendMessageCommand, ChatMessag
 
     public SendMessageHandler(IApplicationDbContext db, ICurrentUser user, IChatBroadcaster broadcaster)
     {
-        _db = db; _user = user; _broadcaster = broadcaster;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _broadcaster = Guard.AgainstNull(broadcaster);
     }
 
     public async Task<ChatMessageDto> Handle(SendMessageCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var hasAttachment = !string.IsNullOrEmpty(request.AttachmentUrl);
         if (string.IsNullOrWhiteSpace(request.Body) && !hasAttachment)
@@ -191,10 +195,11 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ListMyRoomsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ListMyRoomsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<ChatRoomDto>> Handle(ListMyRoomsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var roomIds = await _db.ChatRoomMembers
             .Where(m => m.UserId == _user.UserId).Select(m => m.RoomId).ToListAsync(ct);
@@ -217,10 +222,11 @@ public class GetAttachmentHandler : IRequestHandler<GetAttachmentQuery, Attachme
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public GetAttachmentHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public GetAttachmentHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<AttachmentInfo> Handle(GetAttachmentQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         var msg = await _db.ChatMessages
             .Where(m => m.Id == request.MessageId)
@@ -243,10 +249,11 @@ public class RoomMessagesHandler : IRequestHandler<RoomMessagesQuery, IReadOnlyL
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public RoomMessagesHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public RoomMessagesHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<ChatMessageDto>> Handle(RoomMessagesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         var member = await _db.ChatRoomMembers.AnyAsync(
             m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct);

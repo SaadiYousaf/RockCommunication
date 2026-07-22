@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -32,11 +33,12 @@ public class TransferCallHandler : IRequestHandler<TransferCallCommand, Unit>
 
     public TransferCallHandler(IApplicationDbContext db, ICurrentUser user, IDialerProvider dialer, INotificationDispatcher notify)
     {
-        _db = db; _user = user; _dialer = dialer; _notify = notify;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer); _notify = Guard.AgainstNull(notify);
     }
 
     public async Task<Unit> Handle(TransferCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var call = await _db.CallRecords.FirstOrDefaultAsync(
             c => c.Id == request.CallRecordId && c.AgencyId == _user.AgencyId, ct)
@@ -71,10 +73,11 @@ public class GetEffectiveDialModeHandler : IRequestHandler<GetEffectiveDialModeQ
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public GetEffectiveDialModeHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public GetEffectiveDialModeHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<string> Handle(GetEffectiveDialModeQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (request.CampaignId is null) return "Manual";
         var campaign = await _db.Campaigns.AsNoTracking()

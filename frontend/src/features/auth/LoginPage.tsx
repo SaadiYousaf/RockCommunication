@@ -170,14 +170,6 @@ export function LoginPage() {
                 <Button type="submit" loading={loggingIn} fullWidth size="lg">
                   Sign in
                 </Button>
-
-                <button
-                  type="button"
-                  onClick={() => { setU("admin"); setP("Admin@123!"); }}
-                  className="block mx-auto text-[11px] text-ink-500 hover:text-brand-700 hover:underline pt-2 transition-colors"
-                >
-                  Use demo admin credentials
-                </button>
               </form>
             </>
           )}

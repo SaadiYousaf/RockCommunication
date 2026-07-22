@@ -1,5 +1,6 @@
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 
 namespace CRM.Infrastructure.Notifications;
@@ -9,10 +10,12 @@ public class InAppNotificationChannel : INotificationChannel
     private readonly IApplicationDbContext _db;
     public NotificationChannelType ChannelType => NotificationChannelType.InApp;
 
-    public InAppNotificationChannel(IApplicationDbContext db) => _db = db;
+    public InAppNotificationChannel(IApplicationDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task SendAsync(NotificationPayload payload, CancellationToken ct = default)
     {
+        Guard.AgainstNull(payload);
+
         if (payload.UserId is null) return;
         _db.Notifications.Add(new Notification
         {

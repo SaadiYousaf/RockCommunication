@@ -3,6 +3,7 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Roles.Commands;
 using CRM.Application.Roles.Dtos;
 using CRM.Application.Roles.Queries;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ public class RolesController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public RolesController(IMediator mediator) => _mediator = mediator;
+    public RolesController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     public record CreateRoleRequest(string Name, IReadOnlyList<string> ModuleCodes);
     public record RenameRoleRequest(string Name);
@@ -36,6 +37,7 @@ public class RolesController : ControllerBase
     [HasPermission(Permissions.RolesManage)]
     public async Task<ActionResult<RoleDto>> Create([FromBody] CreateRoleRequest req, CancellationToken ct)
     {
+        Guard.AgainstNull(req);
         var dto = await _mediator.Send(new CreateRoleCommand(req.Name, req.ModuleCodes ?? Array.Empty<string>()), ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
@@ -43,12 +45,18 @@ public class RolesController : ControllerBase
     [HttpPut("{id:guid}/name")]
     [HasPermission(Permissions.RolesManage)]
     public async Task<ActionResult<RoleDto>> Rename(Guid id, [FromBody] RenameRoleRequest req, CancellationToken ct)
-        => Ok(await _mediator.Send(new RenameRoleCommand(id, req.Name), ct));
+    {
+        Guard.AgainstNull(req);
+        return Ok(await _mediator.Send(new RenameRoleCommand(id, req.Name), ct));
+    }
 
     [HttpPut("{id:guid}/modules")]
     [HasPermission(Permissions.RolesManage)]
     public async Task<ActionResult<RoleDto>> SetModules(Guid id, [FromBody] SetModulesRequest req, CancellationToken ct)
-        => Ok(await _mediator.Send(new SetRoleModulesCommand(id, req.ModuleCodes ?? Array.Empty<string>()), ct));
+    {
+        Guard.AgainstNull(req);
+        return Ok(await _mediator.Send(new SetRoleModulesCommand(id, req.ModuleCodes ?? Array.Empty<string>()), ct));
+    }
 
     [HttpDelete("{id:guid}")]
     [HasPermission(Permissions.RolesManage)]
@@ -65,7 +73,7 @@ public class RolesController : ControllerBase
 public class ModulesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public ModulesController(IMediator mediator) => _mediator = mediator;
+    public ModulesController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     // Module catalog is metadata only (codes/labels) — any authenticated user
     // who can see Role Management needs it. Don't gate on a permission code.

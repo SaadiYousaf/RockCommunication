@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Web;
@@ -15,15 +16,16 @@ public class HttpViciDialerProvider : IDialerProvider
 
     public HttpViciDialerProvider(HttpClient http, IOptions<IntegrationOptions> opts, ILogger<HttpViciDialerProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value.Dialer;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value.Dialer;
+        _logger = Guard.AgainstNull(logger);
         if (!string.IsNullOrEmpty(_opts.BaseUrl)) _http.BaseAddress = new Uri(_opts.BaseUrl);
         _http.Timeout = TimeSpan.FromSeconds(_opts.TimeoutSeconds);
     }
 
     public async Task<DialResult> DialAsync(Guid agentId, string phoneNumber, Guid leadId, CancellationToken ct = default)
     {
+        Guard.AgainstNullOrWhiteSpace(phoneNumber);
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["function"] = "external_dial";
         query["agent_user"] = agentId.ToString();
@@ -53,6 +55,7 @@ public class HttpViciDialerProvider : IDialerProvider
 
     public async Task HangupAsync(string callId, CancellationToken ct = default)
     {
+        Guard.AgainstNullOrWhiteSpace(callId);
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["function"] = "external_hangup";
         query["agent_user"] = callId;

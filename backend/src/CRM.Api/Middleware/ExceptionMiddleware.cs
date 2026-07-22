@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using CRM.Domain.Common;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Text.Json;
@@ -12,12 +13,13 @@ public class ExceptionMiddleware
 
     public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
     {
-        _next = next;
-        _logger = logger;
+        _next = Guard.AgainstNull(next);
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task Invoke(HttpContext ctx)
     {
+        Guard.AgainstNull(ctx);
         try
         {
             await _next(ctx);

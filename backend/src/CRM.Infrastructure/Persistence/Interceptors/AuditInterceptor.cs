@@ -13,7 +13,7 @@ public class AuditInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUser _user;
 
-    public AuditInterceptor(ICurrentUser user) => _user = user;
+    public AuditInterceptor(ICurrentUser user) => _user = Guard.AgainstNull(user);
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct = default)

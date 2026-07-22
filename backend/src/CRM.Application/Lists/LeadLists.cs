@@ -2,6 +2,7 @@ using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -40,11 +41,12 @@ public class LeadListHandler :
 
     public LeadListHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone, IDncChecker dnc, ILeadScorer scorer)
     {
-        _db = db; _user = user; _phone = phone; _dnc = dnc; _scorer = scorer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _phone = Guard.AgainstNull(phone); _dnc = Guard.AgainstNull(dnc); _scorer = Guard.AgainstNull(scorer);
     }
 
     public async Task<IReadOnlyList<LeadListDto>> Handle(ListLeadListsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         return await _db.LeadLists.Where(l => l.AgencyId == _user.AgencyId)
             .OrderBy(l => l.Name)
@@ -54,6 +56,7 @@ public class LeadListHandler :
 
     public async Task<LeadListDto> Handle(UpsertLeadListCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         LeadList list;
         if (request.Id is { } id)
@@ -70,6 +73,7 @@ public class LeadListHandler :
 
     public async Task<ImportBatchDto> Handle(ImportLeadsCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var list = await _db.LeadLists.FirstOrDefaultAsync(l => l.Id == request.LeadListId && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(LeadList), request.LeadListId);
@@ -144,6 +148,7 @@ public class LeadListHandler :
 
     public async Task<IReadOnlyList<ImportBatchDto>> Handle(ListImportBatchesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         return await _db.LeadImportBatches
             .Where(b => b.AgencyId == _user.AgencyId && b.LeadListId == request.LeadListId)

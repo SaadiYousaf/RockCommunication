@@ -1,4 +1,5 @@
 using CRM.Application.Common.Assignment;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +10,12 @@ public class SkillBasedStrategy : IAssignmentStrategy
     public string Name => "skill-based";
     private readonly AppDbContext _db;
 
-    public SkillBasedStrategy(AppDbContext db) => _db = db;
+    public SkillBasedStrategy(AppDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<Guid?> PickAsync(AssignmentContext context, CancellationToken ct = default)
     {
+        Guard.AgainstNull(context);
+
         if (context.EligibleUserIds.Count == 0) return null;
 
         var requiredSkill = context.Lead.RequiredSkillCode;

@@ -1,3 +1,4 @@
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
@@ -9,10 +10,11 @@ public class IpAllowlistMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public IpAllowlistMiddleware(RequestDelegate next) => _next = next;
+    public IpAllowlistMiddleware(RequestDelegate next) => _next = Guard.AgainstNull(next);
 
     public async Task Invoke(HttpContext ctx, AppDbContext db)
     {
+        Guard.AgainstNull(ctx);
         var path = ctx.Request.Path.Value ?? string.Empty;
         if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||

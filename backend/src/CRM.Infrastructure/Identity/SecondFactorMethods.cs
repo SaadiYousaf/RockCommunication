@@ -1,5 +1,6 @@
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +17,8 @@ public class TotpSecondFactor : ISecondFactorMethod
 
     public TotpSecondFactor(UserManager<ApplicationUser> users, ITwoFactorService totp)
     {
-        _users = users;
-        _totp = totp;
+        _users = Guard.AgainstNull(users);
+        _totp = Guard.AgainstNull(totp);
     }
 
     public async Task<SecondFactorEnrollment> BeginEnrollmentAsync(Guid userId, CancellationToken ct = default)
@@ -55,9 +56,9 @@ public class EmailOtpSecondFactor : ISecondFactorMethod
 
     public EmailOtpSecondFactor(UserManager<ApplicationUser> users, IEmailProvider email, AppDbContext db)
     {
-        _users = users;
-        _email = email;
-        _db = db;
+        _users = Guard.AgainstNull(users);
+        _email = Guard.AgainstNull(email);
+        _db = Guard.AgainstNull(db);
     }
 
     public Task<SecondFactorEnrollment> BeginEnrollmentAsync(Guid userId, CancellationToken ct = default)
@@ -114,7 +115,7 @@ public class SecondFactorRegistry
     private readonly Dictionary<SecondFactorKind, ISecondFactorMethod> _methods;
     public SecondFactorRegistry(IEnumerable<ISecondFactorMethod> methods)
     {
-        _methods = methods.ToDictionary(m => m.Kind);
+        _methods = Guard.AgainstNull(methods).ToDictionary(m => m.Kind);
     }
     public ISecondFactorMethod Get(SecondFactorKind kind) =>
         _methods.TryGetValue(kind, out var m) ? m

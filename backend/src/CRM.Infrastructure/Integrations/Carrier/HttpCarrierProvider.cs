@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -15,9 +16,9 @@ public abstract class HttpCarrierProvider : ICarrierProvider
 
     protected HttpCarrierProvider(HttpClient http, IOptions<IntegrationOptions> opts, ILogger logger)
     {
-        Http = http;
-        Logger = logger;
-        Endpoint = opts.Value.Carriers.Endpoints.TryGetValue(CarrierCode, out var ep) ? ep : new CarrierEndpoint();
+        Http = Guard.AgainstNull(http);
+        Logger = Guard.AgainstNull(logger);
+        Endpoint = Guard.AgainstNull(opts).Value.Carriers.Endpoints.TryGetValue(CarrierCode, out var ep) ? ep : new CarrierEndpoint();
         if (!string.IsNullOrEmpty(Endpoint.BaseUrl)) Http.BaseAddress = new Uri(Endpoint.BaseUrl);
         if (!string.IsNullOrEmpty(Endpoint.ApiKey))
             Http.DefaultRequestHeaders.Add("X-Api-Key", Endpoint.ApiKey);
@@ -26,6 +27,7 @@ public abstract class HttpCarrierProvider : ICarrierProvider
 
     public virtual async Task<CarrierApplicationResult> SubmitApplicationAsync(CarrierApplicationRequest request, CancellationToken ct = default)
     {
+        Guard.AgainstNull(request);
         if (string.IsNullOrEmpty(Endpoint.BaseUrl))
         {
             Logger.LogInformation("{Carrier} endpoint not configured; returning stub", CarrierCode);
@@ -46,6 +48,7 @@ public abstract class HttpCarrierProvider : ICarrierProvider
 
     public virtual async Task<CarrierApplicationResult> GetStatusAsync(string carrierReferenceId, CancellationToken ct = default)
     {
+        Guard.AgainstNullOrWhiteSpace(carrierReferenceId);
         if (string.IsNullOrEmpty(Endpoint.BaseUrl))
             return new CarrierApplicationResult(true, null, carrierReferenceId, "InReview", null, DateTime.UtcNow);
 

@@ -1,5 +1,6 @@
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Documents;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,7 @@ public class DocumentsController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IFileStorage _files;
     public DocumentsController(IMediator mediator, IFileStorage files)
-    { _mediator = mediator; _files = files; }
+    { _mediator = Guard.AgainstNull(mediator); _files = Guard.AgainstNull(files); }
 
     private const long MaxBytes = 30L * 1024 * 1024; // 30 MB
 
@@ -27,7 +28,11 @@ public class DocumentsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<DocumentDto>>> List(CancellationToken ct)
         => Ok(await _mediator.Send(new ListDocumentsQuery(), ct));
 
+    // Upload is restricted to trusted roles: a document rendered in the protected viewer
+    // (mammoth/xlsx → HTML) is a stored-XSS vector, so untrusted users must not be able to
+    // plant one that executes in a higher-privileged user's session.
     [HttpPost("upload")]
+    [Authorize(Roles = "Admin,ProgramManager,SuperAdmin")]
     [RequestSizeLimit(MaxBytes + 1024 * 1024)]
     public async Task<ActionResult<DocumentDto>> Upload(
         [FromForm] string? name, IFormFile file, CancellationToken ct)
@@ -61,6 +66,7 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin,ProgramManager,SuperAdmin")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _mediator.Send(new DeleteDocumentCommand(id), ct);
@@ -75,5 +81,8 @@ public class DocumentsController : ControllerBase
 
     [HttpPost("{id:guid}/notes")]
     public async Task<ActionResult<DocumentNoteDto>> AddNote(Guid id, [FromBody] AddNoteBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new AddDocumentNoteCommand(id, body.Body), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new AddDocumentNoteCommand(id, body.Body), ct));
+    }
 }

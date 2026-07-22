@@ -2,6 +2,7 @@ using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using FluentValidation;
 using MediatR;
 
@@ -41,22 +42,25 @@ public class UserAdminHandler :
     private readonly IPermissionService _permissions;
 
     public UserAdminHandler(IUserAdminService admin, ICurrentUser user, IPermissionService permissions)
-    { _admin = admin; _user = user; _permissions = permissions; }
+    { _admin = Guard.AgainstNull(admin); _user = Guard.AgainstNull(user); _permissions = Guard.AgainstNull(permissions); }
 
     public async Task<UserSummaryDto> Handle(UpdateUserRolesCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.UsersManage, ct);
         return await _admin.UpdateRolesAsync(request.UserId, request.Roles, ct);
     }
 
     public async Task<UserSummaryDto> Handle(SetActiveCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.UsersManage, ct);
         return await _admin.SetActiveAsync(request.UserId, request.IsActive, ct);
     }
 
     public async Task<Unit> Handle(ResetPasswordCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.UsersManage, ct);
         await _admin.ResetPasswordAsync(request.UserId, request.NewPassword, ct);
         return Unit.Value;
@@ -64,6 +68,7 @@ public class UserAdminHandler :
 
     public async Task<UserSummaryDto> Handle(SetPreferred2FaCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         // A user can always change their own 2FA; admins can change anyone's.
         if (_user.UserId != request.UserId)
@@ -73,12 +78,14 @@ public class UserAdminHandler :
 
     public async Task<UserSummaryDto> Handle(SetUserTeamCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.TeamWrite, ct);
         return await _admin.SetTeamAsync(request.UserId, request.TeamId, ct);
     }
 
     public async Task<Unit> Handle(SetTeamLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.TeamWrite, ct);
         await _admin.SetTeamLeadAsync(request.TeamId, request.UserId, ct);
         return Unit.Value;

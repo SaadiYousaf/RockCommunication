@@ -2,6 +2,7 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Roles.Dtos;
+using CRM.Domain.Common;
 using MediatR;
 
 namespace CRM.Application.Roles.Queries;
@@ -23,22 +24,32 @@ public class RoleQueriesHandler :
 
     public RoleQueriesHandler(IRoleManagementService roles, IModuleAccessService modules, ICurrentUser user)
     {
-        _roles = roles;
-        _modules = modules;
-        _user = user;
+        _roles = Guard.AgainstNull(roles);
+        _modules = Guard.AgainstNull(modules);
+        _user = Guard.AgainstNull(user);
     }
 
     public Task<IReadOnlyList<RoleDto>> Handle(ListRolesQuery request, CancellationToken ct)
-        => _roles.ListAsync(ct);
+    {
+        Guard.AgainstNull(request);
+        return _roles.ListAsync(ct);
+    }
 
     public Task<RoleDto> Handle(GetRoleQuery request, CancellationToken ct)
-        => _roles.GetAsync(request.RoleId, ct);
+    {
+        Guard.AgainstNull(request);
+        return _roles.GetAsync(request.RoleId, ct);
+    }
 
     public Task<IReadOnlyList<ModuleDto>> Handle(ListModulesQuery request, CancellationToken ct)
-        => _modules.ListAllAsync(ct);
+    {
+        Guard.AgainstNull(request);
+        return _modules.ListAllAsync(ct);
+    }
 
     public Task<IReadOnlyList<string>> Handle(GetMyModulesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         return _modules.GetCodesForUserAsync(_user.UserId.Value, ct);
     }

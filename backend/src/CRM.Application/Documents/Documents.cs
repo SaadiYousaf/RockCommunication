@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -88,7 +89,7 @@ public class DocumentsHandler :
 
     public DocumentsHandler(IApplicationDbContext db, ICurrentUser user, IFileStorage files)
     {
-        _db = db; _user = user; _files = files;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _files = Guard.AgainstNull(files);
     }
 
     // Upload/delete are manager-only; viewing is open to anyone in the agency.
@@ -102,6 +103,7 @@ public class DocumentsHandler :
 
     public async Task<DocumentDto> Handle(CreateDocumentCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         if (!DocumentKinds.IsAllowed(request.OriginalFileName))
             throw new ConflictException("Only Word documents and spreadsheets are allowed.");
@@ -124,6 +126,7 @@ public class DocumentsHandler :
 
     public async Task<IReadOnlyList<DocumentDto>> Handle(ListDocumentsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         // TenantEntity global filter already scopes to the caller's agency/office.
         return await _db.Documents
@@ -135,6 +138,7 @@ public class DocumentsHandler :
 
     public async Task<DocumentContentInfo> Handle(GetDocumentContentQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         var d = await _db.Documents.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Document), request.Id);
@@ -143,6 +147,7 @@ public class DocumentsHandler :
 
     public async Task<Unit> Handle(DeleteDocumentCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var d = await _db.Documents.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Document), request.Id);
@@ -154,6 +159,7 @@ public class DocumentsHandler :
 
     public async Task<IReadOnlyList<DocumentNoteDto>> Handle(ListDocumentNotesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         // Ensure the document exists & is visible to this agency before exposing notes.
         var exists = await _db.Documents.AnyAsync(x => x.Id == request.DocumentId, ct);
@@ -168,6 +174,7 @@ public class DocumentsHandler :
 
     public async Task<DocumentNoteDto> Handle(AddDocumentNoteCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var doc = await _db.Documents.FirstOrDefaultAsync(x => x.Id == request.DocumentId, ct)
             ?? throw new NotFoundException(nameof(Document), request.DocumentId);

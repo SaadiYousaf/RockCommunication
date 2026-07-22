@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -47,10 +48,11 @@ public class CadenceHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public CadenceHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public CadenceHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<CadenceDto> Handle(UpsertCadenceCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         Cadence c;
         if (request.Id is { } id)
@@ -84,6 +86,7 @@ public class CadenceHandler :
 
     public async Task<IReadOnlyList<CadenceDto>> Handle(ListCadencesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var list = await _db.Cadences.Include(c => c.Steps)
             .Where(c => c.AgencyId == _user.AgencyId)
@@ -93,6 +96,7 @@ public class CadenceHandler :
 
     public async Task<Unit> Handle(EnrollLeadInCadenceCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var cadence = await _db.Cadences.Include(c => c.Steps)
             .FirstOrDefaultAsync(c => c.Id == request.CadenceId && c.AgencyId == _user.AgencyId, ct)
@@ -127,6 +131,7 @@ public class CadenceHandler :
 
     public async Task<Unit> Handle(StopCadenceEnrollmentCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var en = await _db.CadenceEnrollments
             .FirstOrDefaultAsync(e => e.Id == request.EnrollmentId && e.AgencyId == _user.AgencyId, ct)
@@ -140,6 +145,7 @@ public class CadenceHandler :
 
     public async Task<IReadOnlyList<CadenceEnrollmentDto>> Handle(ListEnrollmentsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var q = _db.CadenceEnrollments.Where(e => e.AgencyId == _user.AgencyId);
         if (request.CadenceId is { } cid) q = q.Where(e => e.CadenceId == cid);

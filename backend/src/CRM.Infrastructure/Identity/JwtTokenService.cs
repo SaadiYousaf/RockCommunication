@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -26,8 +27,8 @@ public class JwtTokenService : IJwtTokenService
 
     public JwtTokenService(IOptions<JwtOptions> opts, AppDbContext db)
     {
-        _opts = opts.Value;
-        _db = db;
+        _opts = Guard.AgainstNull(opts).Value;
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task<TokenResult> IssueAsync(
@@ -35,6 +36,8 @@ public class JwtTokenService : IJwtTokenService
         IReadOnlyDictionary<string, string>? extraClaims = null,
         CancellationToken ct = default)
     {
+        Guard.AgainstNull(roles);
+
         var expires = DateTime.UtcNow.AddMinutes(_opts.AccessTokenMinutes);
         var claims = new List<Claim>
         {

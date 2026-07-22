@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -35,11 +36,12 @@ public class CreateRubricHandler : IRequestHandler<CreateRubricCommand, RubricDt
 
     public CreateRubricHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db; _user = user;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user);
     }
 
     public async Task<RubricDto> Handle(CreateRubricCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var input = request.Input;
         var rubric = new QaRubric
@@ -74,10 +76,11 @@ public class ListRubricsHandler : IRequestHandler<ListRubricsQuery, IReadOnlyLis
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ListRubricsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ListRubricsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<RubricDto>> Handle(ListRubricsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var rubrics = await _db.QaRubrics.Include(r => r.Items)
             .Where(r => r.AgencyId == _user.AgencyId)
@@ -102,11 +105,12 @@ public class SubmitReviewHandler : IRequestHandler<SubmitReviewCommand, ReviewDt
 
     public SubmitReviewHandler(IApplicationDbContext db, ICurrentUser user)
     {
-        _db = db; _user = user;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user);
     }
 
     public async Task<ReviewDto> Handle(SubmitReviewCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var input = request.Input;
 

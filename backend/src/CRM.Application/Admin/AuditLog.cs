@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,10 +30,11 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public ListAuditHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ListAuditHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<PagedAuditResult> Handle(ListAuditQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
 
         var q = _db.AuditEntries.AsNoTracking().AsQueryable();
@@ -88,10 +90,11 @@ public class DistinctAuditFiltersHandler : IRequestHandler<DistinctAuditFiltersQ
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public DistinctAuditFiltersHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public DistinctAuditFiltersHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<DistinctAuditFiltersDto> Handle(DistinctAuditFiltersQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
             throw new ForbiddenAccessException();

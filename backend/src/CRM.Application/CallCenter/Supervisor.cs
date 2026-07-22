@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,11 +23,12 @@ public class LiveAgentBoardHandler : IRequestHandler<LiveAgentBoardQuery, IReadO
 
     public LiveAgentBoardHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db; _user = user; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<IReadOnlyList<LiveAgentDto>> Handle(LiveAgentBoardQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var openSessions = await _db.AgentSessions
@@ -63,10 +65,11 @@ public class ForceAgentStatusHandler : IRequestHandler<ForceAgentStatusCommand, 
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ForceAgentStatusHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ForceAgentStatusHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<Unit> Handle(ForceAgentStatusCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
             throw new ForbiddenAccessException();
@@ -105,10 +108,11 @@ public class CoachCallHandler : IRequestHandler<CoachCallCommand, Unit>
 {
     private readonly ICurrentUser _user;
     private readonly IDialerProvider _dialer;
-    public CoachCallHandler(ICurrentUser user, IDialerProvider dialer) { _user = user; _dialer = dialer; }
+    public CoachCallHandler(ICurrentUser user, IDialerProvider dialer) { _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer); }
 
     public Task<Unit> Handle(CoachCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
             throw new ForbiddenAccessException();

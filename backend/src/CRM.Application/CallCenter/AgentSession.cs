@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -40,13 +41,14 @@ public class AgentSessionHandler :
 
     public AgentSessionHandler(IApplicationDbContext db, ICurrentUser user, IWorkflowEngine workflow)
     {
-        _db = db;
-        _user = user;
-        _workflow = workflow;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _workflow = Guard.AgainstNull(workflow);
     }
 
     public async Task<AgentSessionDto> Handle(ClockInCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAuthenticated();
         var open = await CurrentSessionAsync(ct);
         if (open is not null) return await ToDto(open, ct);
@@ -71,6 +73,7 @@ public class AgentSessionHandler :
 
     public async Task<AgentSessionDto> Handle(ClockOutCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAuthenticated();
         var session = await CurrentSessionAsync(ct)
             ?? throw new ConflictException("Not clocked in.");
@@ -97,6 +100,7 @@ public class AgentSessionHandler :
 
     public async Task<AgentSessionDto> Handle(SetAgentStatusCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAuthenticated();
         var session = await CurrentSessionAsync(ct)
             ?? throw new ConflictException("Not clocked in.");
@@ -134,6 +138,7 @@ public class AgentSessionHandler :
 
     public async Task<Unit> Handle(WrapUpCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAuthenticated();
         var call = await _db.CallRecords.FirstOrDefaultAsync(
             c => c.Id == request.CallRecordId && c.AgentUserId == _user.UserId
@@ -165,6 +170,7 @@ public class AgentSessionHandler :
 
     public async Task<AgentSessionDto?> Handle(GetMySessionQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAuthenticated();
         var session = await CurrentSessionAsync(ct);
         return session is null ? null : await ToDto(session, ct);

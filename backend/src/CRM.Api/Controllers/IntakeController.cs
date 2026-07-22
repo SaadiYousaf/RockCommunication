@@ -1,4 +1,5 @@
 using CRM.Application.Intake;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -20,13 +21,16 @@ namespace CRM.Api.Controllers;
 public class IntakeController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public IntakeController(IMediator mediator) => _mediator = mediator;
+    public IntakeController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     // ---- Fronter ----
     [HttpPost("leads")]
     [Authorize(Roles = Roles.Fronter + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<IntakeLeadResult>> Capture([FromBody] IntakeLeadDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new CaptureIntakeLeadCommand(dto), ct));
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new CaptureIntakeLeadCommand(dto), ct));
+    }
 
     // ---- Verifier ----
     [HttpGet("verify/queue")]
@@ -39,7 +43,10 @@ public class IntakeController : ControllerBase
     [HttpPost("verify/{leadId:guid}/status")]
     [Authorize(Roles = Roles.Verifier + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<VerifierStatusResult>> SetVerifierStatus(Guid leadId, [FromBody] VerifierStatusBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new SetVerifierStatusCommand(leadId, body.Status, body.Notes, body.CallbackAt), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetVerifierStatusCommand(leadId, body.Status, body.Notes, body.CallbackAt), ct));
+    }
 
     // ---- Closer ----
     [HttpGet("close/queue")]
@@ -57,5 +64,8 @@ public class IntakeController : ControllerBase
     [HttpPost("close/{leadId:guid}")]
     [Authorize(Roles = Roles.Closer + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<ClosingApplicationResult>> SubmitClosing(Guid leadId, [FromBody] SubmitClosingBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new SubmitClosingApplicationCommand(leadId, body.Status, body.Application), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SubmitClosingApplicationCommand(leadId, body.Status, body.Application), ct));
+    }
 }

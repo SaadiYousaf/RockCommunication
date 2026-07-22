@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using MediatR;
@@ -18,13 +19,14 @@ public class FundSaleHandler : IRequestHandler<FundSaleCommand, SaleDto>
 
     public FundSaleHandler(IApplicationDbContext db, ICurrentUser user, IFundingProvider funding)
     {
-        _db = db;
-        _user = user;
-        _funding = funding;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _funding = Guard.AgainstNull(funding);
     }
 
     public async Task<SaleDto> Handle(FundSaleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var sale = await _db.Sales.FirstOrDefaultAsync(

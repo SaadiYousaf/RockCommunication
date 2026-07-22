@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Chat;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ public class ChatController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IChatAttachmentStorage _storage;
     public ChatController(IMediator mediator, IChatAttachmentStorage storage)
-    { _mediator = mediator; _storage = storage; }
+    { _mediator = Guard.AgainstNull(mediator); _storage = Guard.AgainstNull(storage); }
 
     private const long MaxAttachmentBytes = 25L * 1024 * 1024;
     // Refused at the gate. Server-side enforcement; client can show a friendlier
@@ -35,7 +36,10 @@ public class ChatController : ControllerBase
     [HttpPost("rooms")]
     [HasPermission(Permissions.ChatWrite)]
     public async Task<ActionResult<ChatRoomDto>> CreateRoom([FromBody] CreateRoomDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new CreateRoomCommand(dto), ct));
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new CreateRoomCommand(dto), ct));
+    }
 
     /// <summary>Open (or reuse) a 1:1 direct conversation with a colleague in the same office.</summary>
     [HttpPost("direct/{userId:guid}")]
@@ -53,7 +57,10 @@ public class ChatController : ControllerBase
     [HttpPost("rooms/{id:guid}/messages")]
     [HasPermission(Permissions.ChatWrite)]
     public async Task<ActionResult<ChatMessageDto>> Send(Guid id, [FromBody] SendBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new SendMessageCommand(id, body.Body), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SendMessageCommand(id, body.Body), ct));
+    }
 
     [HttpPost("rooms/{id:guid}/messages/upload")]
     [HasPermission(Permissions.ChatWrite)]

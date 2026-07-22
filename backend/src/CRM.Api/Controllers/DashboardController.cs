@@ -2,6 +2,7 @@ using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Metrics;
 using CRM.Application.Dashboard;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using CRM.Infrastructure.Identity;
 using CRM.Infrastructure.Persistence;
@@ -21,7 +22,7 @@ public class DashboardController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly AppDbContext _db;
-    public DashboardController(IMediator mediator, AppDbContext db) { _mediator = mediator; _db = db; }
+    public DashboardController(IMediator mediator, AppDbContext db) { _mediator = Guard.AgainstNull(mediator); _db = Guard.AgainstNull(db); }
 
     public record StageBucket(string Stage, int Count);
     public record ActivityItem(Guid LeadId, string LeadName, string FromStage, string ToStage, string? Notes, string Disposition, DateTime OccurredAt, string? UserName);

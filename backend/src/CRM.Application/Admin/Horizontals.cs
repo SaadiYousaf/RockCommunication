@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -26,10 +27,11 @@ public class HorizontalHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public HorizontalHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public HorizontalHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<HorizontalDto>> Handle(ListHorizontalsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.Horizontals
             .Where(v => v.AgencyId == _user.AgencyId)
@@ -40,6 +42,7 @@ public class HorizontalHandler :
 
     public async Task<HorizontalDto> Handle(CreateHorizontalCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var v = new Horizontal
         {
@@ -54,6 +57,7 @@ public class HorizontalHandler :
 
     public async Task<HorizontalDto> Handle(UpdateHorizontalCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var v = await _db.Horizontals.FirstOrDefaultAsync(
             x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)

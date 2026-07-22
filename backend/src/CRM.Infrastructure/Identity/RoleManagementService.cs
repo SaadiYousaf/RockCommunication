@@ -2,6 +2,7 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Roles.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using CRM.Infrastructure.Persistence;
@@ -45,9 +46,9 @@ public class RoleManagementService : IRoleManagementService
 
     public RoleManagementService(RoleManager<ApplicationRole> roles, AppDbContext db, ICurrentUser user)
     {
-        _roles = roles;
-        _db = db;
-        _user = user;
+        _roles = Guard.AgainstNull(roles);
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
     }
 
     private bool IsSuperAdmin => _user.Roles.Contains(Roles.SuperAdmin);
@@ -99,6 +100,9 @@ public class RoleManagementService : IRoleManagementService
 
     public async Task<RoleDto> CreateAsync(string name, IEnumerable<string> moduleCodes, CancellationToken ct = default)
     {
+        Guard.AgainstNull(name);
+        Guard.AgainstNull(moduleCodes);
+
         // Roles created by an agency user are owned by that agency; SuperAdmin creates
         // system templates (AgencyId == null) unless we later expose an explicit param.
         var ownerAgency = IsSuperAdmin ? (Guid?)null : CallerAgencyId
@@ -121,6 +125,8 @@ public class RoleManagementService : IRoleManagementService
 
     public async Task<RoleDto> RenameAsync(Guid roleId, string newName, CancellationToken ct = default)
     {
+        Guard.AgainstNull(newName);
+
         var role = await _roles.FindByIdAsync(roleId.ToString())
             ?? throw new NotFoundException("Role", roleId);
 
@@ -140,6 +146,8 @@ public class RoleManagementService : IRoleManagementService
 
     public async Task<RoleDto> SetModulesAsync(Guid roleId, IEnumerable<string> moduleCodes, CancellationToken ct = default)
     {
+        Guard.AgainstNull(moduleCodes);
+
         var role = await _roles.FindByIdAsync(roleId.ToString())
             ?? throw new NotFoundException("Role", roleId);
 

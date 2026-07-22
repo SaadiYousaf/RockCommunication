@@ -1,4 +1,5 @@
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Identity;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -32,10 +33,11 @@ public class ActiveUserGateMiddleware
 
     private readonly RequestDelegate _next;
 
-    public ActiveUserGateMiddleware(RequestDelegate next) => _next = next;
+    public ActiveUserGateMiddleware(RequestDelegate next) => _next = Guard.AgainstNull(next);
 
     public async Task Invoke(HttpContext ctx, ICurrentUser current, AppDbContext db)
     {
+        Guard.AgainstNull(ctx);
         // Anonymous endpoints (login, password-reset, public webhooks…) are skipped.
         if (current.UserId is null)
         {

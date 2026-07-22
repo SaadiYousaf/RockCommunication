@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +14,11 @@ public class UnreadCountsHandler : IRequestHandler<UnreadCountsQuery, IReadOnlyL
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public UnreadCountsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public UnreadCountsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<UnreadInfo>> Handle(UnreadCountsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
         var memberships = await _db.ChatRoomMembers
@@ -51,10 +53,11 @@ public class MarkRoomReadHandler : IRequestHandler<MarkRoomReadCommand, Unit>
     private readonly ICurrentUser _user;
     private readonly IChatBroadcaster _broadcaster;
     public MarkRoomReadHandler(IApplicationDbContext db, ICurrentUser user, IChatBroadcaster broadcaster)
-    { _db = db; _user = user; _broadcaster = broadcaster; }
+    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _broadcaster = Guard.AgainstNull(broadcaster); }
 
     public async Task<Unit> Handle(MarkRoomReadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
         var member = await _db.ChatRoomMembers.FirstOrDefaultAsync(
             m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct)

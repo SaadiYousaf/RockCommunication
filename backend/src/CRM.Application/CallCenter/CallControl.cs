@@ -3,6 +3,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.RealTime;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -54,11 +55,12 @@ public class CallControlHandler :
     public CallControlHandler(IApplicationDbContext db, ICurrentUser user, IDialerProvider dialer,
         ISmsProvider sms, IComplianceGuard compliance, IAgentNotifier notifier)
     {
-        _db = db; _user = user; _dialer = dialer; _sms = sms; _compliance = compliance; _notifier = notifier;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer); _sms = Guard.AgainstNull(sms); _compliance = Guard.AgainstNull(compliance); _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<ActiveCallDto> Handle(StartOutboundCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAgent();
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
@@ -93,6 +95,7 @@ public class CallControlHandler :
 
     public async Task<ActiveCallDto> Handle(AnswerCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (call, lead) = await LoadAsync(request.CallId, ct);
         if (call.AnsweredAt is null)
         {
@@ -107,6 +110,7 @@ public class CallControlHandler :
 
     public async Task<ActiveCallDto> Handle(HangupCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (call, lead) = await LoadAsync(request.CallId, ct);
         try { await _dialer.HangupAsync(call.ProviderCallId, ct); } catch { }
 
@@ -125,6 +129,7 @@ public class CallControlHandler :
 
     public async Task<ActiveCallDto> Handle(ToggleHoldCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (call, lead) = await LoadAsync(request.CallId, ct);
         var s = _state.GetOrAdd(call.Id, _ => new());
         s.IsHeld = request.Hold;
@@ -135,6 +140,7 @@ public class CallControlHandler :
 
     public async Task<ActiveCallDto> Handle(ToggleMuteCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (call, lead) = await LoadAsync(request.CallId, ct);
         var s = _state.GetOrAdd(call.Id, _ => new());
         s.IsMuted = request.Mute;
@@ -147,6 +153,7 @@ public class CallControlHandler :
 
     public async Task<Unit> Handle(SendQuickSmsCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAgent();
         var lead = await _db.Leads.AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
@@ -158,6 +165,7 @@ public class CallControlHandler :
 
     public async Task<ActiveCallDto?> Handle(GetMyActiveCallQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var call = await _db.CallRecords
             .Where(c => c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId && c.EndedAt == null)

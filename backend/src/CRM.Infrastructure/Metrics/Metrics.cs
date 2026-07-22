@@ -1,5 +1,6 @@
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Metrics;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace CRM.Infrastructure.Metrics;
 public abstract class MetricBase : IMetric
 {
     protected readonly IApplicationDbContext Db;
-    protected MetricBase(IApplicationDbContext db) => Db = db;
+    protected MetricBase(IApplicationDbContext db) => Db = Guard.AgainstNull(db);
     public abstract string Key { get; }
     public abstract string Label { get; }
     public virtual string? Group => null;
@@ -125,7 +126,7 @@ public class FundedSalesMetric : MetricBase
 public class DashboardService : IDashboardService
 {
     private readonly IReadOnlyList<IMetric> _metrics;
-    public DashboardService(IEnumerable<IMetric> metrics) => _metrics = metrics.ToList();
+    public DashboardService(IEnumerable<IMetric> metrics) => _metrics = Guard.AgainstNull(metrics).ToList();
 
     public IReadOnlyList<(string Key, string Label, string? Group)> AvailableMetrics =>
         _metrics.Select(m => (m.Key, m.Label, m.Group)).ToList();

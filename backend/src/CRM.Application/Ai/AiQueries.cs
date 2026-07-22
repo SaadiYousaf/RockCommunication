@@ -1,6 +1,7 @@
 using CRM.Application.Common.Ai;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,11 +17,12 @@ public class SummarizeCallHandler : IRequestHandler<SummarizeCallCommand, CallSu
 
     public SummarizeCallHandler(IApplicationDbContext db, ICurrentUser user, ICallSummarizer summarizer)
     {
-        _db = db; _user = user; _summarizer = summarizer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _summarizer = Guard.AgainstNull(summarizer);
     }
 
     public async Task<CallSummaryResult> Handle(SummarizeCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var call = await _db.CallRecords.FirstOrDefaultAsync(
             c => c.Id == request.CallId && c.AgencyId == _user.AgencyId, ct);
@@ -40,11 +42,12 @@ public class AiScoreLeadHandler : IRequestHandler<AiScoreLeadQuery, AiLeadScoreR
 
     public AiScoreLeadHandler(IApplicationDbContext db, ICurrentUser user, ILeadAiScorer scorer)
     {
-        _db = db; _user = user; _scorer = scorer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _scorer = Guard.AgainstNull(scorer);
     }
 
     public async Task<AiLeadScoreResult> Handle(AiScoreLeadQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var lead = await _db.Leads.FirstOrDefaultAsync(
             l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct);
@@ -67,8 +70,11 @@ public record RecommendForLeadQuery(Guid LeadId) : IRequest<RecommendationResult
 public class RecommendForLeadHandler : IRequestHandler<RecommendForLeadQuery, RecommendationResult>
 {
     private readonly IRecommendationService _recs;
-    public RecommendForLeadHandler(IRecommendationService recs) => _recs = recs;
+    public RecommendForLeadHandler(IRecommendationService recs) => _recs = Guard.AgainstNull(recs);
 
-    public Task<RecommendationResult> Handle(RecommendForLeadQuery request, CancellationToken ct) =>
-        _recs.RecommendForLeadAsync(request.LeadId, ct);
+    public Task<RecommendationResult> Handle(RecommendForLeadQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        return _recs.RecommendForLeadAsync(request.LeadId, ct);
+    }
 }

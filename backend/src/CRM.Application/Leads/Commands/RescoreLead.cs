@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -20,11 +21,12 @@ public class RescoreLeadHandler : IRequestHandler<RescoreLeadCommand, LeadScoreD
 
     public RescoreLeadHandler(IApplicationDbContext db, ICurrentUser user, ILeadScorer scorer)
     {
-        _db = db; _user = user; _scorer = scorer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _scorer = Guard.AgainstNull(scorer);
     }
 
     public async Task<LeadScoreDto> Handle(RescoreLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var lead = await _db.Leads.FirstOrDefaultAsync(
             l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)

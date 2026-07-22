@@ -1,5 +1,6 @@
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,12 +14,14 @@ public class EmailNotificationChannel : INotificationChannel
 
     public EmailNotificationChannel(IEmailProvider email, AppDbContext db)
     {
-        _email = email;
-        _db = db;
+        _email = Guard.AgainstNull(email);
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task SendAsync(NotificationPayload payload, CancellationToken ct = default)
     {
+        Guard.AgainstNull(payload);
+
         if (payload.UserId is null) return;
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == payload.UserId, ct);
         if (user?.Email is null) return;
@@ -34,12 +37,14 @@ public class SmsNotificationChannel : INotificationChannel
 
     public SmsNotificationChannel(ISmsProvider sms, AppDbContext db)
     {
-        _sms = sms;
-        _db = db;
+        _sms = Guard.AgainstNull(sms);
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task SendAsync(NotificationPayload payload, CancellationToken ct = default)
     {
+        Guard.AgainstNull(payload);
+
         if (payload.UserId is null) return;
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == payload.UserId, ct);
         if (string.IsNullOrWhiteSpace(user?.PhoneNumber)) return;

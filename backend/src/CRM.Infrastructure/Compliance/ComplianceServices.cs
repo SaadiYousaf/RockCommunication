@@ -1,4 +1,5 @@
 using CRM.Application.Common.Compliance;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,8 +23,8 @@ public class DncChecker : IDncChecker
 
     public DncChecker(AppDbContext db, IPhoneNormalizer normalizer)
     {
-        _db = db;
-        _normalizer = normalizer;
+        _db = Guard.AgainstNull(db);
+        _normalizer = Guard.AgainstNull(normalizer);
     }
 
     public async Task<bool> IsBlockedAsync(Guid agencyId, string phone, CancellationToken ct = default)
@@ -85,12 +86,13 @@ public class ComplianceGuard : IComplianceGuard
 
     public ComplianceGuard(IDncChecker dnc, ITcpaWindowChecker tcpa)
     {
-        _dnc = dnc;
-        _tcpa = tcpa;
+        _dnc = Guard.AgainstNull(dnc);
+        _tcpa = Guard.AgainstNull(tcpa);
     }
 
     public async Task<ComplianceCheck> CheckOutboundDialAsync(Guid agencyId, string phone, string? state, CancellationToken ct = default)
     {
+        Guard.AgainstNullOrWhiteSpace(phone);
         var warnings = new List<string>();
 
         if (await _dnc.IsBlockedAsync(agencyId, phone, ct))

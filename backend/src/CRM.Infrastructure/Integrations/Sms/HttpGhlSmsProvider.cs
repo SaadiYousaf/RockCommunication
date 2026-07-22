@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -15,9 +16,9 @@ public class HttpGhlSmsProvider : ISmsProvider
 
     public HttpGhlSmsProvider(HttpClient http, IOptions<IntegrationOptions> opts, ILogger<HttpGhlSmsProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value.Sms;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value.Sms;
+        _logger = Guard.AgainstNull(logger);
         if (!string.IsNullOrEmpty(_opts.BaseUrl)) _http.BaseAddress = new Uri(_opts.BaseUrl);
         if (!string.IsNullOrEmpty(_opts.ApiKey))
             _http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _opts.ApiKey);
@@ -25,6 +26,7 @@ public class HttpGhlSmsProvider : ISmsProvider
 
     public async Task<SmsResult> SendAsync(SmsMessage message, CancellationToken ct = default)
     {
+        Guard.AgainstNull(message);
         try
         {
             var response = await _http.PostAsJsonAsync("/v1/conversations/messages", new

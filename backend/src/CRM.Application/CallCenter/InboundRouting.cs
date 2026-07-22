@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.RealTime;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -37,12 +38,13 @@ public class RouteInboundCallHandler : IRequestHandler<RouteInboundCallCommand, 
     private readonly IAgentNotifier _notifier;
     public RouteInboundCallHandler(IApplicationDbContext db, IAgentNotifier notifier)
     {
-        _db = db;
-        _notifier = notifier;
+        _db = Guard.AgainstNull(db);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<RouteInboundCallResult> Handle(RouteInboundCallCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var queue = await _db.InboundQueues
             .Where(q => q.AgencyId == request.AgencyId && q.IsActive
                 && (request.DialedNumber == null || q.PhoneNumber == null || q.PhoneNumber == request.DialedNumber))

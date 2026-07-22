@@ -4,6 +4,7 @@ using CRM.Application.CallCenter;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Knowledge;
 using CRM.Application.Lists;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,7 @@ namespace CRM.Api.Controllers;
 public class CallCenterPlusController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public CallCenterPlusController(IMediator mediator) => _mediator = mediator;
+    public CallCenterPlusController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     // ===== Lead lists =====
     [HttpGet("lists")]
@@ -28,7 +29,10 @@ public class CallCenterPlusController : ControllerBase
     [HttpPut("lists")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertList([FromBody] UpsertLeadListCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     [HttpPost("lists/{id:guid}/import")]
     [HasPermission(Permissions.LeadsImport)]
@@ -87,12 +91,16 @@ public class CallCenterPlusController : ControllerBase
     [HttpPut("cadences")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertCadence([FromBody] UpsertCadenceCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     public record EnrollBody(Guid CadenceId, Guid LeadId);
     [HttpPost("cadences/enroll")]
     public async Task<IActionResult> EnrollCadence([FromBody] EnrollBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new EnrollLeadInCadenceCommand(body.CadenceId, body.LeadId), ct);
         return NoContent();
     }
@@ -101,6 +109,7 @@ public class CallCenterPlusController : ControllerBase
     [HttpPost("cadences/enrollments/{id:guid}/stop")]
     public async Task<IActionResult> StopEnroll(Guid id, [FromBody] StopEnrollBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new StopCadenceEnrollmentCommand(id, body.Reason), ct);
         return NoContent();
     }
@@ -118,12 +127,18 @@ public class CallCenterPlusController : ControllerBase
     [HttpPut("voicemails")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertVoicemail([FromBody] UpsertVoicemailAssetCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     public record DropBody(Guid LeadId, Guid VoicemailAssetId, Guid? CallRecordId);
     [HttpPost("voicemails/drop")]
     public async Task<IActionResult> DropVoicemail([FromBody] DropBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new DropVoicemailCommand(body.LeadId, body.VoicemailAssetId, body.CallRecordId), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new DropVoicemailCommand(body.LeadId, body.VoicemailAssetId, body.CallRecordId), ct));
+    }
 
     // ===== Inbound queues =====
     [HttpGet("queues")]
@@ -133,7 +148,10 @@ public class CallCenterPlusController : ControllerBase
     [HttpPut("queues")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertQueue([FromBody] UpsertInboundQueueCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     [HttpGet("queues/{id:guid}/ivr")]
     public async Task<IActionResult> GetIvr(Guid id, CancellationToken ct)
@@ -145,13 +163,17 @@ public class CallCenterPlusController : ControllerBase
     [HttpPut("queues/ivr")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertIvr([FromBody] UpsertIvrMenuCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     // ===== Call transfer + dial mode =====
     public record TransferBody(Guid TargetAgentUserId, string TransferType, string? Note);
     [HttpPost("calls/{id:guid}/transfer")]
     public async Task<IActionResult> Transfer(Guid id, [FromBody] TransferBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new TransferCallCommand(id, body.TargetAgentUserId, body.TransferType, body.Note), ct);
         return NoContent();
     }

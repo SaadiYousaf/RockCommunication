@@ -1,4 +1,5 @@
 using CRM.Application.Ai;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,7 @@ namespace CRM.Api.Controllers;
 public class AiController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AiController(IMediator mediator) => _mediator = mediator;
+    public AiController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     [HttpPost("calls/{id:guid}/summary")]
     public async Task<IActionResult> SummarizeCall(Guid id, CancellationToken ct)

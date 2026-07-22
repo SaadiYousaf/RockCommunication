@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -35,10 +36,11 @@ public class DialerEventValidator : AbstractValidator<DialerEventCommand>
 public class DialerEventHandler : IRequestHandler<DialerEventCommand, Unit>
 {
     private readonly IApplicationDbContext _db;
-    public DialerEventHandler(IApplicationDbContext db) => _db = db;
+    public DialerEventHandler(IApplicationDbContext db) => _db = Guard.AgainstNull(db);
 
     public async Task<Unit> Handle(DialerEventCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var record = await _db.CallRecords
             .FirstOrDefaultAsync(c => c.Provider == request.Provider && c.ProviderCallId == request.ProviderCallId, ct);
 

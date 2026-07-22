@@ -1,5 +1,6 @@
 using CRM.Application.Chat;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CRM.Api.Hubs;
@@ -14,7 +15,7 @@ public class ChatBroadcaster : IChatBroadcaster
 {
     private readonly IHubContext<ChatHub> _hub;
 
-    public ChatBroadcaster(IHubContext<ChatHub> hub) => _hub = hub;
+    public ChatBroadcaster(IHubContext<ChatHub> hub) => _hub = Guard.AgainstNull(hub);
 
     public Task BroadcastMessageAsync(Guid roomId, ChatMessageDto message, CancellationToken ct = default)
         => _hub.Clients.Group($"room:{roomId}").SendAsync("MessageReceived", message, ct);

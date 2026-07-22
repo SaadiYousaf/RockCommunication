@@ -4,6 +4,7 @@ using CRM.Application.Leads.Commands;
 using CRM.Application.Leads.Dtos;
 using CRM.Application.Leads.Queries;
 using CRM.Application.Ai;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -18,7 +19,7 @@ public class LeadsController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public LeadsController(IMediator mediator) => _mediator = mediator;
+    public LeadsController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     /// <summary>"Lead troubleshooting" — full diagnostic for why a lead may be stuck.</summary>
     [HttpGet("{id:guid}/diagnostics")]
@@ -86,6 +87,7 @@ public class LeadsController : ControllerBase
     [HasPermission(Permissions.LeadsWrite)]
     public async Task<IActionResult> UpdateNotes(Guid id, [FromBody] NotesBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new UpdateLeadNotesCommand(id, body.Notes), ct);
         return NoContent();
     }
@@ -95,19 +97,28 @@ public class LeadsController : ControllerBase
     [HttpPost("bulk/assign")]
     [HasPermission(Permissions.LeadsAssign)]
     public async Task<IActionResult> BulkAssign([FromBody] BulkAssignBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new BulkAssignLeadsCommand(body.LeadIds, body.AssigneeUserId), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new BulkAssignLeadsCommand(body.LeadIds, body.AssigneeUserId), ct));
+    }
 
     public record BulkStageBody(Guid[] LeadIds, WorkflowStage ToStage, LeadDisposition Disposition, string? Notes);
     [HttpPost("bulk/stage")]
     [HasPermission(Permissions.LeadsTransition)]
     public async Task<IActionResult> BulkStage([FromBody] BulkStageBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new BulkSetStageCommand(body.LeadIds, body.ToStage, body.Disposition, body.Notes), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new BulkSetStageCommand(body.LeadIds, body.ToStage, body.Disposition, body.Notes), ct));
+    }
 
     public record BulkCadenceBody(Guid[] LeadIds, Guid CadenceId);
     [HttpPost("bulk/enroll-cadence")]
     [HasPermission(Permissions.LeadsAssign)]
     public async Task<IActionResult> BulkEnrollCadence([FromBody] BulkCadenceBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new BulkEnrollCadenceCommand(body.LeadIds, body.CadenceId), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new BulkEnrollCadenceCommand(body.LeadIds, body.CadenceId), ct));
+    }
 
     // ---- CSV export ----
     [HttpGet("export.csv")]
@@ -152,6 +163,7 @@ public class LeadsController : ControllerBase
     [HasPermission(Permissions.LeadsWrite)]
     public async Task<ActionResult<LeadDto>> Create([FromBody] CreateLeadDto dto, CancellationToken ct)
     {
+        Guard.AgainstNull(dto);
         var result = await _mediator.Send(new CreateLeadCommand(dto), ct);
         return CreatedAtAction(nameof(List), new { }, result);
     }
@@ -159,12 +171,18 @@ public class LeadsController : ControllerBase
     [HttpPost("{id:guid}/transition")]
     [HasPermission(Permissions.LeadsTransition)]
     public async Task<ActionResult<LeadDto>> Transition(Guid id, [FromBody] TransitionLeadDto dto, CancellationToken ct)
-        => Ok(await _mediator.Send(new TransitionLeadCommand(id, dto), ct));
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new TransitionLeadCommand(id, dto), ct));
+    }
 
     public record AssignBody(string TargetRole, string Strategy = "round-robin", Guid? UserId = null);
 
     [HttpPost("{id:guid}/assign")]
     [HasPermission(Permissions.LeadsAssign)]
     public async Task<ActionResult<LeadDto>> Assign(Guid id, [FromBody] AssignBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new AssignLeadCommand(id, body.TargetRole, body.Strategy, body.UserId), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new AssignLeadCommand(id, body.TargetRole, body.Strategy, body.UserId), ct));
+    }
 }

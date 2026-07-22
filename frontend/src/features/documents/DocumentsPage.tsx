@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import * as XLSX from "xlsx";
+import DOMPurify from "dompurify";
 import {
   useListDocumentsQuery, useUploadDocumentMutation, useDeleteDocumentMutation,
   useDocumentNotesQuery, useAddDocumentNoteMutation,
@@ -191,7 +192,15 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           const out = await (mammoth as any).convertToHtml({ arrayBuffer: buf });
           rendered = out.value || "<p><em>(empty document)</em></p>";
         }
-        if (!cancelled) setHtml(rendered);
+        // Sanitize converter output before it ever touches the DOM. mammoth/xlsx emit
+        // attacker-controlled HTML from the uploaded file (a crafted cell/hyperlink can
+        // inject <img onerror> / javascript: URIs). DOMPurify strips scripts, event
+        // handlers and dangerous URIs while keeping tables/formatting. Also forbid iframes.
+        const safe = DOMPurify.sanitize(rendered, {
+          FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "style"],
+          FORBID_ATTR: ["srcdoc"],
+        });
+        if (!cancelled) setHtml(safe);
       } catch (e: any) {
         if (!cancelled) setError("Couldn't render this document. The file may be an unsupported format.");
       } finally {

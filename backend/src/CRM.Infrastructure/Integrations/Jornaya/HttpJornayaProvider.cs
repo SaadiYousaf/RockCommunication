@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
@@ -13,9 +14,9 @@ public class HttpJornayaProvider : IJornayaProvider
 
     public HttpJornayaProvider(HttpClient http, IOptions<IntegrationOptions> opts, ILogger<HttpJornayaProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value.Jornaya;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value.Jornaya;
+        _logger = Guard.AgainstNull(logger);
         if (!string.IsNullOrEmpty(_opts.BaseUrl)) _http.BaseAddress = new Uri(_opts.BaseUrl);
         _http.Timeout = TimeSpan.FromSeconds(_opts.TimeoutSeconds);
         if (!string.IsNullOrEmpty(_opts.Token))
@@ -24,6 +25,7 @@ public class HttpJornayaProvider : IJornayaProvider
 
     public async Task<JornayaVerificationResult> VerifyAsync(string leadId, string? jornayaLeadId, CancellationToken ct = default)
     {
+        Guard.AgainstNullOrWhiteSpace(leadId);
         if (string.IsNullOrWhiteSpace(jornayaLeadId))
             return new JornayaVerificationResult(false, null, DateTime.UtcNow);
 

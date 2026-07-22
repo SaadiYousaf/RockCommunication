@@ -1,5 +1,6 @@
 using CRM.Application.Common.Authorization;
 using CRM.Application.Roles.Dtos;
+using CRM.Domain.Common;
 using FluentValidation;
 using MediatR;
 
@@ -48,20 +49,30 @@ public class RoleCommandsHandler :
 
     public RoleCommandsHandler(IRoleManagementService roles)
     {
-        _roles = roles;
+        _roles = Guard.AgainstNull(roles);
     }
 
     public Task<RoleDto> Handle(CreateRoleCommand request, CancellationToken ct)
-        => _roles.CreateAsync(request.Name, request.ModuleCodes, ct);
+    {
+        Guard.AgainstNull(request);
+        return _roles.CreateAsync(request.Name, request.ModuleCodes, ct);
+    }
 
     public Task<RoleDto> Handle(RenameRoleCommand request, CancellationToken ct)
-        => _roles.RenameAsync(request.RoleId, request.Name, ct);
+    {
+        Guard.AgainstNull(request);
+        return _roles.RenameAsync(request.RoleId, request.Name, ct);
+    }
 
     public Task<RoleDto> Handle(SetRoleModulesCommand request, CancellationToken ct)
-        => _roles.SetModulesAsync(request.RoleId, request.ModuleCodes, ct);
+    {
+        Guard.AgainstNull(request);
+        return _roles.SetModulesAsync(request.RoleId, request.ModuleCodes, ct);
+    }
 
     public async Task<Unit> Handle(DeleteRoleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         await _roles.DeleteAsync(request.RoleId, ct);
         return Unit.Value;
     }

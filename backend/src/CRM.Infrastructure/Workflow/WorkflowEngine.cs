@@ -1,4 +1,5 @@
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ public class WorkflowActionRegistry : IWorkflowActionRegistry
     private readonly IReadOnlyDictionary<string, IWorkflowAction> _byType;
     public WorkflowActionRegistry(IEnumerable<IWorkflowAction> actions)
     {
-        _byType = actions.ToDictionary(a => a.ActionType, StringComparer.OrdinalIgnoreCase);
+        _byType = Guard.AgainstNull(actions).ToDictionary(a => a.ActionType, StringComparer.OrdinalIgnoreCase);
     }
     public IWorkflowAction Get(string actionType) =>
         _byType.TryGetValue(actionType, out var a) ? a
@@ -30,10 +31,10 @@ public class WorkflowEngine : IWorkflowEngine
     public WorkflowEngine(AppDbContext db, IWorkflowActionRegistry registry,
         ILogger<WorkflowEngine> logger, IBackgroundJobScheduler scheduler)
     {
-        _db = db;
-        _registry = registry;
-        _logger = logger;
-        _scheduler = scheduler;
+        _db = Guard.AgainstNull(db);
+        _registry = Guard.AgainstNull(registry);
+        _logger = Guard.AgainstNull(logger);
+        _scheduler = Guard.AgainstNull(scheduler);
     }
 
     public async Task PublishAsync(IWorkflowEvent ev, CancellationToken ct = default)
@@ -107,7 +108,10 @@ public class WorkflowEngine : IWorkflowEngine
         {
             execution.Status = "Failed";
             execution.CompletedAt = DateTime.UtcNow;
-            execution.Error = ex.ToString();
+            // Store a generic message rather than ex.ToString(): the raw exception (status
+            // codes, connection errors) is surfaced to tenant admins via the executions list
+            // and would turn a blind webhook SSRF into an internal port/service oracle.
+            execution.Error = "Action failed to execute.";
             await _db.SaveChangesAsync(ct);
             if (!rule.ContinueOnError) throw;
         }

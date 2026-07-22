@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -29,10 +30,11 @@ public class IpAllowlistHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public IpAllowlistHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public IpAllowlistHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<IpAllowlistDto>> Handle(ListIpAllowlistQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         return await _db.IpAllowlist
             .Where(e => e.AgencyId == _user.AgencyId)
@@ -43,6 +45,7 @@ public class IpAllowlistHandler :
 
     public async Task<IpAllowlistDto> Handle(AddIpAllowlistCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var entry = new IpAllowlistEntry
         {
@@ -57,6 +60,7 @@ public class IpAllowlistHandler :
 
     public async Task<Unit> Handle(RemoveIpAllowlistCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var entry = await _db.IpAllowlist.FirstOrDefaultAsync(
             e => e.Id == request.Id && e.AgencyId == _user.AgencyId, ct)

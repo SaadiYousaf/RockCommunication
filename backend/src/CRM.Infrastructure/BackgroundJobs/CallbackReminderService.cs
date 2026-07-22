@@ -1,4 +1,5 @@
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +17,8 @@ public class CallbackReminderService : BackgroundService
 
     public CallbackReminderService(IServiceProvider sp, ILogger<CallbackReminderService> logger)
     {
-        _sp = sp;
-        _logger = logger;
+        _sp = Guard.AgainstNull(sp);
+        _logger = Guard.AgainstNull(logger);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

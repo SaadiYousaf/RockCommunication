@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -41,10 +42,11 @@ public class InboundQueueHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public InboundQueueHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public InboundQueueHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<InboundQueueDto>> Handle(ListInboundQueuesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.InboundQueues.Where(q => q.AgencyId == _user.AgencyId)
             .OrderBy(q => q.Name)
@@ -55,6 +57,7 @@ public class InboundQueueHandler :
 
     public async Task<InboundQueueDto> Handle(UpsertInboundQueueCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         InboundQueue q;
         if (request.Id is { } id)
@@ -77,6 +80,7 @@ public class InboundQueueHandler :
 
     public async Task<IvrMenuDto?> Handle(GetIvrMenuQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var menu = await _db.IvrMenus.Include(m => m.Options)
             .FirstOrDefaultAsync(m => m.InboundQueueId == request.InboundQueueId && m.AgencyId == _user.AgencyId, ct);
@@ -85,6 +89,7 @@ public class InboundQueueHandler :
 
     public async Task<IvrMenuDto> Handle(UpsertIvrMenuCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         var menu = await _db.IvrMenus.Include(m => m.Options)
             .FirstOrDefaultAsync(m => m.InboundQueueId == request.InboundQueueId && m.AgencyId == _user.AgencyId, ct);

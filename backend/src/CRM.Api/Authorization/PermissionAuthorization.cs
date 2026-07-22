@@ -1,5 +1,6 @@
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using IPermissionService = CRM.Application.Common.Authorization.IPermissionService;
 
@@ -8,7 +9,7 @@ namespace CRM.Api.Authorization;
 public class PermissionRequirement : IAuthorizationRequirement
 {
     public string Permission { get; }
-    public PermissionRequirement(string permission) => Permission = permission;
+    public PermissionRequirement(string permission) => Permission = Guard.AgainstNullOrWhiteSpace(permission);
 }
 
 public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
@@ -18,8 +19,8 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
 
     public PermissionHandler(IPermissionService permissions, ICurrentUser user)
     {
-        _permissions = permissions;
-        _user = user;
+        _permissions = Guard.AgainstNull(permissions);
+        _user = Guard.AgainstNull(user);
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
@@ -44,7 +45,7 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
 
     public PermissionPolicyProvider(Microsoft.Extensions.Options.IOptions<AuthorizationOptions> options)
     {
-        _fallback = new DefaultAuthorizationPolicyProvider(options);
+        _fallback = new DefaultAuthorizationPolicyProvider(Guard.AgainstNull(options));
     }
 
     public Task<AuthorizationPolicy> GetDefaultPolicyAsync() => _fallback.GetDefaultPolicyAsync();

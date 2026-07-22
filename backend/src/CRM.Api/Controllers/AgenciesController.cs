@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Agencies;
 using CRM.Application.Common.Authorization;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,7 @@ namespace CRM.Api.Controllers;
 public class AgenciesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AgenciesController(IMediator mediator) => _mediator = mediator;
+    public AgenciesController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     [HttpGet]
     [HasPermission(Permissions.AgenciesManage)]
@@ -36,6 +37,7 @@ public class AgenciesController : ControllerBase
     [HasPermission(Permissions.AgenciesCreate)]
     public async Task<IActionResult> Create([FromBody] CreateAgencyBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         var dto = await _mediator.Send(new CreateAgencyCommand(body.Name, body.Code), ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
@@ -45,12 +47,18 @@ public class AgenciesController : ControllerBase
     [HttpPut("{id:guid}")]
     [HasPermission(Permissions.AgenciesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAgencyBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive), ct));
+    }
 
     public record AssignCeoBody(Guid UserId);
 
     [HttpPost("{id:guid}/assign-ceo")]
     [HasPermission(Permissions.AgenciesManage)]
     public async Task<IActionResult> AssignCeo(Guid id, [FromBody] AssignCeoBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new AssignCeoCommand(id, body.UserId), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new AssignCeoCommand(id, body.UserId), ct));
+    }
 }

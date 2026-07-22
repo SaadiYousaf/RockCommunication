@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Knowledge;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace CRM.Api.Controllers;
 public class KnowledgeController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public KnowledgeController(IMediator mediator) => _mediator = mediator;
+    public KnowledgeController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     [HttpGet("articles")]
     [HasPermission(Permissions.KnowledgeView)]
@@ -32,5 +33,8 @@ public class KnowledgeController : ControllerBase
     [HttpPut("articles")]
     [HasPermission(Permissions.KnowledgeWrite)]
     public async Task<IActionResult> Upsert([FromBody] UpsertKbArticleCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 }

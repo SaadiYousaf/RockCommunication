@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -30,14 +31,15 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
         IFundingProvider funding,
         ILogger<ValidateSaleHandler> logger)
     {
-        _db = db;
-        _user = user;
-        _funding = funding;
-        _logger = logger;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _funding = Guard.AgainstNull(funding);
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task<SaleDto> Handle(ValidateSaleCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var sale = await _db.Sales.FirstOrDefaultAsync(

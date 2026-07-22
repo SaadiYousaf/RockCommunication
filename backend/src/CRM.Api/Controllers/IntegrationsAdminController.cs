@@ -1,5 +1,6 @@
 using CRM.Api.Authorization;
 using CRM.Application.Common.Authorization;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Integrations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,8 +27,8 @@ public class IntegrationsAdminController : ControllerBase
 
     public IntegrationsAdminController(IOptions<IntegrationOptions> opts, IConfiguration config)
     {
-        _opts = opts.Value;
-        _config = config;
+        _opts = Guard.AgainstNull(opts).Value;
+        _config = Guard.AgainstNull(config);
     }
 
     public record IntegrationField(string Label, string? Value, bool Masked);

@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -26,10 +27,11 @@ public class VerticalHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
-    public VerticalHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public VerticalHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<VerticalDto>> Handle(ListVerticalsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.Verticals
             .Where(v => v.AgencyId == _user.AgencyId)
@@ -40,6 +42,7 @@ public class VerticalHandler :
 
     public async Task<VerticalDto> Handle(CreateVerticalCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var v = new Vertical
         {
@@ -54,6 +57,7 @@ public class VerticalHandler :
 
     public async Task<VerticalDto> Handle(UpdateVerticalCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var v = await _db.Verticals.FirstOrDefaultAsync(
             x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)

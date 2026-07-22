@@ -2,6 +2,7 @@ using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using ISecondFactorMethod = CRM.Application.Common.Interfaces.ISecondFactorMethod;
 using SecondFactorKind = CRM.Application.Common.Interfaces.SecondFactorKind;
@@ -32,18 +33,27 @@ public class IdentityService : IIdentityService
         IModuleAccessService moduleAccess,
         AuthEmailSender emailSender)
     {
-        _users = users;
-        _roles = roles;
-        _jwt = jwt;
-        _twoFactor = twoFactor;
-        _db = db;
-        _factorRegistry = factorRegistry;
-        _moduleAccess = moduleAccess;
-        _emailSender = emailSender;
+        _users = Guard.AgainstNull(users);
+        _roles = Guard.AgainstNull(roles);
+        _jwt = Guard.AgainstNull(jwt);
+        _twoFactor = Guard.AgainstNull(twoFactor);
+        _db = Guard.AgainstNull(db);
+        _factorRegistry = Guard.AgainstNull(factorRegistry);
+        _moduleAccess = Guard.AgainstNull(moduleAccess);
+        _emailSender = Guard.AgainstNull(emailSender);
     }
+
+    // A VALID ASP.NET Identity password hash, used only to equalise the timing of the
+    // unknown-user login path. It must be a well-formed Identity hash — a malformed value
+    // (e.g. a bcrypt string) makes VerifyHashedPassword throw, which both 500s and leaks
+    // user existence via the error. Computed once at startup.
+    private static readonly string DummyPasswordHash =
+        new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), "timing-equalisation-placeholder");
 
     public async Task<UserSummaryDto> RegisterAsync(string email, string userName, string? password, Guid agencyId, IEnumerable<string> roles, CancellationToken ct = default)
     {
+        Guard.AgainstNull(roles);
+
         // If admin didn't supply a password, generate a strong temporary one and force change on first login.
         var supplied = !string.IsNullOrWhiteSpace(password);
         var effectivePassword = supplied ? password! : GenerateTemporaryPassword();
@@ -161,14 +171,9 @@ public class IdentityService : IIdentityService
         {
             // Equalise timing with the real-user path: hashing a password takes tens of
             // milliseconds. Skipping it leaks user existence via response time.
-            _users.PasswordHasher.VerifyHashedPassword(
-                new ApplicationUser(),
-                "$2a$11$AAAAAAAAAAAAAAAAAAAAAOqZQ8YpmXyjGgT3yV3M4Xy8yC3o7y1Ie",
-                password);
+            _users.PasswordHasher.VerifyHashedPassword(new ApplicationUser(), DummyPasswordHash, password);
             throw new ForbiddenAccessException(generic);
         }
-
-        if (!user.IsActive) throw new ForbiddenAccessException(generic);
 
         if (await _users.IsLockedOutAsync(user))
         {
@@ -190,6 +195,11 @@ public class IdentityService : IIdentityService
                     TimeSpan.FromMinutes(15));
             throw new ForbiddenAccessException(generic);
         }
+
+        // Deactivated accounts are rejected only AFTER the password check runs, so an
+        // existing-but-inactive account is indistinguishable — by timing or message — from
+        // a wrong password. (Checking it earlier leaked account existence via response time.)
+        if (!user.IsActive) throw new ForbiddenAccessException(generic);
 
         // Clean slate on every successful password check — even when 2FA still has to run.
         await _users.ResetAccessFailedCountAsync(user);
@@ -398,7 +408,17 @@ public class IdentityService : IIdentityService
             ?? throw new ForbiddenAccessException("Invalid or expired reset link.");
         var result = await _users.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded)
-            throw new ForbiddenAccessException(string.Join("; ", result.Errors.Select(e => e.Description)));
+        {
+            // Surface only password-policy errors (about the value the caller submitted).
+            // Token / other errors must return the SAME generic message as the unknown-email
+            // path, otherwise the differing error text lets an attacker enumerate accounts.
+            var pwdErrors = result.Errors
+                .Where(e => e.Code.StartsWith("Password", StringComparison.OrdinalIgnoreCase))
+                .Select(e => e.Description).ToList();
+            if (pwdErrors.Count > 0)
+                throw new ConflictException(string.Join("; ", pwdErrors));
+            throw new ForbiddenAccessException("Invalid or expired reset link.");
+        }
 
         // Force re-login on every device — an attacker with a stolen refresh token
         // must not survive the legitimate user resetting their password.

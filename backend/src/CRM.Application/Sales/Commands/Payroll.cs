@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -23,10 +24,11 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public CreatePayrollRunHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public CreatePayrollRunHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<PayrollRunDto> Handle(CreatePayrollRunCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var unpaid = await _db.CommissionEntries
@@ -65,10 +67,11 @@ public class ListPayrollRunsHandler : IRequestHandler<ListPayrollRunsQuery, IRea
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ListPayrollRunsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ListPayrollRunsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<PayrollRunDto>> Handle(ListPayrollRunsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.PayrollRuns
             .Where(r => r.AgencyId == _user.AgencyId)
@@ -85,10 +88,11 @@ public class MyCommissionsHandler : IRequestHandler<MyCommissionsQuery, IReadOnl
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public MyCommissionsHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public MyCommissionsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<CommissionEntryDto>> Handle(MyCommissionsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.CommissionEntries.Where(c => c.AgencyId == _user.AgencyId
             && c.AgentUserId == _user.UserId

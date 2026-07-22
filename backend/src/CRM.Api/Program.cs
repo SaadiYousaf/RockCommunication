@@ -176,6 +176,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionMiddleware>();
+
+// Baseline security response headers on every API response. (CSP + frame-ancestors for
+// the HTML app are set by nginx.) HSTS only when the edge terminated TLS.
+app.Use(async (ctx, next) =>
+{
+    var h = ctx.Response.Headers;
+    h["X-Content-Type-Options"] = "nosniff";
+    h["X-Frame-Options"] = "DENY";
+    h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    h["X-XSS-Protection"] = "0";
+    var proto = ctx.Request.Headers["X-Forwarded-Proto"].ToString();
+    if (ctx.Request.IsHttps || string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
+        h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    await next();
+});
+
 app.UseCors();
 app.UseMiddleware<IpAllowlistMiddleware>();
 app.UseAuthentication();

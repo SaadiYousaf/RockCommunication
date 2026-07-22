@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,11 +37,12 @@ public class ListCallsHandler : IRequestHandler<ListCallsQuery, PagedCallsResult
 
     public ListCallsHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
-        _db = db; _user = user; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<PagedCallsResult> Handle(ListCallsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.CallRecords.AsNoTracking().Where(c => c.AgencyId == _user.AgencyId);

@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Users.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -61,14 +62,15 @@ public class AgenciesHandler :
         IIdentityService identity,
         IUserAdminService userAdmin)
     {
-        _db = db;
-        _user = user;
-        _identity = identity;
-        _userAdmin = userAdmin;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _identity = Guard.AgainstNull(identity);
+        _userAdmin = Guard.AgainstNull(userAdmin);
     }
 
     public async Task<IReadOnlyList<AgencyDto>> Handle(ListAgenciesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureSuperAdmin();
         var q = _db.Agencies.AsQueryable();
         if (!request.IncludeInactive) q = q.Where(a => a.IsActive);
@@ -81,6 +83,7 @@ public class AgenciesHandler :
 
     public async Task<AgencyDto> Handle(GetAgencyQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureSuperAdminOrSameAgency(request.Id);
         var a = await _db.Agencies.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Agency), request.Id);
@@ -89,6 +92,7 @@ public class AgenciesHandler :
 
     public async Task<AgencyDto> Handle(CreateAgencyCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureSuperAdmin();
         var name = request.Name.Trim();
         if (await _db.Agencies.AnyAsync(a => a.Name == name, ct))
@@ -113,6 +117,7 @@ public class AgenciesHandler :
 
     public async Task<AgencyDto> Handle(UpdateAgencyCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureSuperAdmin();
         var agency = await _db.Agencies.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Agency), request.Id);
@@ -126,6 +131,7 @@ public class AgenciesHandler :
 
     public async Task<AgencyDto> Handle(AssignCeoCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureSuperAdmin();
         var agency = await _db.Agencies.FirstOrDefaultAsync(x => x.Id == request.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Agency), request.AgencyId);

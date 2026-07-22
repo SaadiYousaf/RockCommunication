@@ -1,6 +1,7 @@
 using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -31,10 +32,11 @@ public class WrapUpCodeHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public WrapUpCodeHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public WrapUpCodeHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<WrapUpCodeDto>> Handle(ListWrapUpCodesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.WrapUpCodes
             .Where(w => w.AgencyId == _user.AgencyId)
@@ -45,6 +47,7 @@ public class WrapUpCodeHandler :
 
     public async Task<WrapUpCodeDto> Handle(UpsertWrapUpCodeCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         WrapUpCode entry;
         if (request.Id is { } id)
@@ -89,11 +92,12 @@ public class DncHandler :
 
     public DncHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer normalizer)
     {
-        _db = db; _user = user; _normalizer = normalizer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _normalizer = Guard.AgainstNull(normalizer);
     }
 
     public async Task<IReadOnlyList<DncDto>> Handle(ListDncQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.DncEntries
             .Where(d => d.AgencyId == _user.AgencyId)
@@ -105,6 +109,7 @@ public class DncHandler :
 
     public async Task<DncDto> Handle(AddDncCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var norm = _normalizer.Normalize(request.Phone);
         if (string.IsNullOrEmpty(norm)) throw new ConflictException("Invalid phone number.");
@@ -129,6 +134,7 @@ public class DncHandler :
 
     public async Task<Unit> Handle(RemoveDncCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var entry = await _db.DncEntries.FirstOrDefaultAsync(
             d => d.Id == request.Id && d.AgencyId == _user.AgencyId, ct)
@@ -164,10 +170,11 @@ public class CampaignHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public CampaignHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public CampaignHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<CampaignDto>> Handle(ListCampaignsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.Campaigns.Where(c => c.AgencyId == _user.AgencyId)
             .OrderBy(c => c.Code)
@@ -177,6 +184,7 @@ public class CampaignHandler :
 
     public async Task<CampaignDto> Handle(UpsertCampaignCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         Campaign c;
         if (request.Id is { } id)
@@ -216,10 +224,11 @@ public class LeadSourceHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public LeadSourceHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public LeadSourceHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<LeadSourceDto>> Handle(ListLeadSourcesQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.LeadSources.Where(s => s.AgencyId == _user.AgencyId)
             .OrderBy(s => s.Code)
@@ -229,6 +238,7 @@ public class LeadSourceHandler :
 
     public async Task<LeadSourceDto> Handle(UpsertLeadSourceCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         LeadSource s;
         if (request.Id is { } id)
@@ -273,10 +283,11 @@ public class SkillHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public SkillHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public SkillHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<SkillDto>> Handle(ListSkillsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.Skills.Where(s => s.AgencyId == _user.AgencyId)
             .OrderBy(s => s.Code)
@@ -286,6 +297,7 @@ public class SkillHandler :
 
     public async Task<SkillDto> Handle(UpsertSkillCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         Skill s;
         if (request.Id is { } id)
@@ -305,6 +317,7 @@ public class SkillHandler :
 
     public async Task<Unit> Handle(AssignAgentSkillCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var existing = await _db.AgentSkills.FirstOrDefaultAsync(
             a => a.UserId == request.UserId && a.SkillId == request.SkillId, ct);
@@ -324,6 +337,7 @@ public class SkillHandler :
 
     public async Task<Unit> Handle(RemoveAgentSkillCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         var existing = await _db.AgentSkills.FirstOrDefaultAsync(
             a => a.UserId == request.UserId && a.SkillId == request.SkillId, ct);
@@ -337,6 +351,7 @@ public class SkillHandler :
 
     public async Task<IReadOnlyList<AgentSkillDto>> Handle(GetAgentSkillsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         return await (from a in _db.AgentSkills
                       join s in _db.Skills on a.SkillId equals s.Id
                       where a.UserId == request.UserId && s.AgencyId == _user.AgencyId
@@ -361,10 +376,11 @@ public class ScriptHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ScriptHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public ScriptHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<IReadOnlyList<ScriptDto>> Handle(ListScriptsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.Scripts.Where(s => s.AgencyId == _user.AgencyId && s.IsActive);
         if (request.Stage is { } st) q = q.Where(s => s.Stage == st);
@@ -377,6 +393,7 @@ public class ScriptHandler :
 
     public async Task<ScriptDto> Handle(UpsertScriptCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureAdmin();
         Script s;
         if (request.Id is { } id)

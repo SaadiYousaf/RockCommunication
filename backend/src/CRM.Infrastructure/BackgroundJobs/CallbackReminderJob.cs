@@ -1,4 +1,5 @@
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,9 +19,9 @@ public class CallbackReminderJob
 
     public CallbackReminderJob(AppDbContext db, INotificationDispatcher dispatcher, ILogger<CallbackReminderJob> logger)
     {
-        _db = db;
-        _dispatcher = dispatcher;
-        _logger = logger;
+        _db = Guard.AgainstNull(db);
+        _dispatcher = Guard.AgainstNull(dispatcher);
+        _logger = Guard.AgainstNull(logger);
     }
 
     public async Task RunAsync(CancellationToken ct = default)

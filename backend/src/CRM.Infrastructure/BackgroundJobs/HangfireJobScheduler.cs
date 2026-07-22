@@ -1,4 +1,5 @@
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Infrastructure.Workflow;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,7 @@ namespace CRM.Infrastructure.BackgroundJobs;
 public class HangfireJobScheduler : IBackgroundJobScheduler
 {
     private readonly IBackgroundJobClient _jobs;
-    public HangfireJobScheduler(IBackgroundJobClient jobs) => _jobs = jobs;
+    public HangfireJobScheduler(IBackgroundJobClient jobs) => _jobs = Guard.AgainstNull(jobs);
 
     public void Enqueue(Guid ruleId, string payloadJson)
         => _jobs.Enqueue<WorkflowJobRunner>(r => r.RunRuleAsync(ruleId, payloadJson, CancellationToken.None));
@@ -24,7 +25,7 @@ public class HangfireJobScheduler : IBackgroundJobScheduler
 public class WorkflowJobRunner
 {
     private readonly IWorkflowEngine _engine;
-    public WorkflowJobRunner(IWorkflowEngine engine) => _engine = engine;
+    public WorkflowJobRunner(IWorkflowEngine engine) => _engine = Guard.AgainstNull(engine);
     public Task RunRuleAsync(Guid ruleId, string payloadJson, CancellationToken ct) =>
         _engine.ExecuteRuleAsync(ruleId, payloadJson, ct);
 }
@@ -35,7 +36,7 @@ public class WorkflowJobRunner
 public class InProcessJobScheduler : IBackgroundJobScheduler
 {
     private readonly IServiceProvider _sp;
-    public InProcessJobScheduler(IServiceProvider sp) => _sp = sp;
+    public InProcessJobScheduler(IServiceProvider sp) => _sp = Guard.AgainstNull(sp);
 
     public void Enqueue(Guid ruleId, string payloadJson)
     {

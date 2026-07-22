@@ -1,4 +1,5 @@
 using CRM.Application.Common.Commission;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using CRM.Infrastructure.Persistence;
@@ -9,7 +10,7 @@ namespace CRM.Infrastructure.Commission;
 public abstract class ConfigurableCommissionRule : ICommissionRule
 {
     private readonly IAgencyCommissionConfigProvider _config;
-    protected ConfigurableCommissionRule(IAgencyCommissionConfigProvider config) => _config = config;
+    protected ConfigurableCommissionRule(IAgencyCommissionConfigProvider config) => _config = Guard.AgainstNull(config);
 
     public abstract string Name { get; }
     public abstract int Priority { get; }
@@ -19,6 +20,8 @@ public abstract class ConfigurableCommissionRule : ICommissionRule
 
     public async Task<IReadOnlyList<CommissionLine>> CalculateAsync(CommissionContext ctx, CancellationToken ct = default)
     {
+        Guard.AgainstNull(ctx);
+
         if (!string.IsNullOrEmpty(TargetRole) && ctx.AgentRole != TargetRole)
             return Array.Empty<CommissionLine>();
 
@@ -100,11 +103,13 @@ public class TeamLeadOverrideRule : ICommissionRule
 
     public TeamLeadOverrideRule(IAgencyCommissionConfigProvider config, AppDbContext db)
     {
-        _config = config; _db = db;
+        _config = Guard.AgainstNull(config); _db = Guard.AgainstNull(db);
     }
 
     public async Task<IReadOnlyList<CommissionLine>> CalculateAsync(CommissionContext ctx, CancellationToken ct = default)
     {
+        Guard.AgainstNull(ctx);
+
         if (ctx.AgentRole != Roles.Closer) return Array.Empty<CommissionLine>();
 
         var closer = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == ctx.AgentId, ct);
@@ -132,12 +137,14 @@ public class CommissionEngine : ICommissionEngine
 
     public CommissionEngine(IEnumerable<ICommissionRule> rules, AppDbContext db)
     {
-        _rules = rules.OrderBy(r => r.Priority).ToList();
-        _db = db;
+        _rules = Guard.AgainstNull(rules).OrderBy(r => r.Priority).ToList();
+        _db = Guard.AgainstNull(db);
     }
 
     public async Task<IReadOnlyList<CommissionLine>> CalculateForSaleAsync(Sale sale, CancellationToken ct = default)
     {
+        Guard.AgainstNull(sale);
+
         var lines = new List<CommissionLine>();
         var participants = await GetParticipantsAsync(sale, ct);
 

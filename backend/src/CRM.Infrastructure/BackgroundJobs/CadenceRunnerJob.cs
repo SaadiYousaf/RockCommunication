@@ -1,5 +1,6 @@
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Notifications;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ public class CadenceRunnerJob
     public CadenceRunnerJob(AppDbContext db, ISmsProvider sms, IEmailProvider email,
         INotificationDispatcher dispatcher, ILogger<CadenceRunnerJob> logger)
     {
-        _db = db; _sms = sms; _email = email; _dispatcher = dispatcher; _logger = logger;
+        _db = Guard.AgainstNull(db); _sms = Guard.AgainstNull(sms); _email = Guard.AgainstNull(email); _dispatcher = Guard.AgainstNull(dispatcher); _logger = Guard.AgainstNull(logger);
     }
 
     public async Task RunAsync(CancellationToken ct = default)

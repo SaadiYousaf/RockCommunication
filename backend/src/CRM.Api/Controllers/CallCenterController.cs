@@ -3,6 +3,7 @@ using CRM.Application.CallCenter;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +17,7 @@ namespace CRM.Api.Controllers;
 public class CallCenterController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public CallCenterController(IMediator mediator) => _mediator = mediator;
+    public CallCenterController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     // ---- Agent session ----
 
@@ -31,7 +32,10 @@ public class CallCenterController : ControllerBase
     public record StatusBody(AgentStatus Status, string? Reason);
     [HttpPost("status")]
     public async Task<ActionResult<AgentSessionDto>> Status([FromBody] StatusBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new SetAgentStatusCommand(body.Status, body.Reason), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetAgentStatusCommand(body.Status, body.Reason), ct));
+    }
 
     [HttpGet("session")]
     public async Task<ActionResult<AgentSessionDto?>> Session(CancellationToken ct)
@@ -46,6 +50,7 @@ public class CallCenterController : ControllerBase
     [HttpPost("calls/{id:guid}/wrap-up")]
     public async Task<IActionResult> WrapUp(Guid id, [FromBody] WrapUpBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new WrapUpCallCommand(id, body.WrapUpCode, body.Notes), ct);
         return NoContent();
     }
@@ -85,7 +90,10 @@ public class CallCenterController : ControllerBase
     [HttpPut("wrap-up-codes")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertWrapUpCode([FromBody] UpsertWrapUpCodeCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     // ---- DNC ----
 
@@ -97,7 +105,10 @@ public class CallCenterController : ControllerBase
     [HttpPost("dnc")]
     [HasPermission(Permissions.DncManage)]
     public async Task<IActionResult> AddDnc([FromBody] AddDncBody body, CancellationToken ct)
-        => Ok(await _mediator.Send(new AddDncCommand(body.Phone, body.Reason, body.Source ?? "Internal", body.ExpiresAt), ct));
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new AddDncCommand(body.Phone, body.Reason, body.Source ?? "Internal", body.ExpiresAt), ct));
+    }
 
     [HttpDelete("dnc/{id:guid}")]
     [HasPermission(Permissions.DncManage)]
@@ -117,6 +128,9 @@ public class CallCenterController : ControllerBase
         [FromServices] ICurrentUser user,
         CancellationToken ct)
     {
+        Guard.AgainstNull(body);
+        Guard.AgainstNull(guard);
+        Guard.AgainstNull(user);
         if (user.AgencyId is null) return Forbid();
         var result = await guard.CheckOutboundDialAsync(user.AgencyId.Value, body.Phone, body.State, ct);
         return Ok(result);
@@ -131,7 +145,10 @@ public class CallCenterController : ControllerBase
     [HttpPut("campaigns")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertCampaign([FromBody] UpsertCampaignCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     [HttpGet("lead-sources")]
     public async Task<IActionResult> ListLeadSources(CancellationToken ct)
@@ -140,7 +157,10 @@ public class CallCenterController : ControllerBase
     [HttpPut("lead-sources")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertLeadSource([FromBody] UpsertLeadSourceCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     [HttpGet("skills")]
     public async Task<IActionResult> ListSkills(CancellationToken ct)
@@ -149,13 +169,17 @@ public class CallCenterController : ControllerBase
     [HttpPut("skills")]
     [HasPermission(Permissions.CampaignsManage)]
     public async Task<IActionResult> UpsertSkill([FromBody] UpsertSkillCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     public record AssignSkillBody(Guid UserId, Guid SkillId, int Proficiency);
     [HttpPost("skills/assign")]
     [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> AssignAgentSkill([FromBody] AssignSkillBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new AssignAgentSkillCommand(body.UserId, body.SkillId, body.Proficiency), ct);
         return NoContent();
     }
@@ -180,7 +204,10 @@ public class CallCenterController : ControllerBase
     [HttpPut("scripts")]
     [HasPermission(Permissions.ScriptsManage)]
     public async Task<IActionResult> UpsertScript([FromBody] UpsertScriptCommand cmd, CancellationToken ct)
-        => Ok(await _mediator.Send(cmd, ct));
+    {
+        Guard.AgainstNull(cmd);
+        return Ok(await _mediator.Send(cmd, ct));
+    }
 
     // ---- Supervisor ----
 
@@ -194,6 +221,7 @@ public class CallCenterController : ControllerBase
     [HasPermission(Permissions.SupervisorControl)]
     public async Task<IActionResult> ForceStatus(Guid id, [FromBody] ForceStatusBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new ForceAgentStatusCommand(id, body.Status, body.Reason), ct);
         return NoContent();
     }
@@ -203,6 +231,7 @@ public class CallCenterController : ControllerBase
     [HasPermission(Permissions.SupervisorControl)]
     public async Task<IActionResult> Coach(Guid id, [FromBody] CoachBody body, CancellationToken ct)
     {
+        Guard.AgainstNull(body);
         await _mediator.Send(new CoachCallCommand(id, body.Mode), ct);
         return NoContent();
     }

@@ -3,6 +3,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
 using CRM.Application.Common.Workflow;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -46,11 +47,12 @@ public class PublicLeadCaptureHandler :
     public PublicLeadCaptureHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone,
         IDncChecker dnc, ILeadScorer scorer, IWorkflowEngine workflow)
     {
-        _db = db; _user = user; _phone = phone; _dnc = dnc; _scorer = scorer; _workflow = workflow;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _phone = Guard.AgainstNull(phone); _dnc = Guard.AgainstNull(dnc); _scorer = Guard.AgainstNull(scorer); _workflow = Guard.AgainstNull(workflow);
     }
 
     public async Task<PublicEndpointWithSecretDto> Handle(CreatePublicEndpointCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         if (await _db.PublicLeadCaptureEndpoints.AnyAsync(e => e.Slug == request.Slug, ct))
             throw new ConflictException("Slug already taken.");
@@ -74,6 +76,7 @@ public class PublicLeadCaptureHandler :
 
     public async Task<IReadOnlyList<PublicEndpointDto>> Handle(ListPublicEndpointsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         return await _db.PublicLeadCaptureEndpoints
             .Where(e => e.AgencyId == _user.AgencyId)
@@ -84,18 +87,20 @@ public class PublicLeadCaptureHandler :
 
     public async Task<Guid> Handle(CapturePublicLeadCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var endpoint = await _db.PublicLeadCaptureEndpoints
             .FirstOrDefaultAsync(e => e.Slug == request.Slug && e.IsActive, ct)
             ?? throw new NotFoundException("Endpoint", request.Slug);
 
-        if (!string.IsNullOrEmpty(request.PayloadJsonForSig))
-        {
-            var expected = ComputeHmac(request.PayloadJsonForSig, endpoint.SecretHash);
-            if (!CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(expected),
-                Encoding.UTF8.GetBytes(request.Signature)))
-                throw new ForbiddenAccessException("Invalid signature.");
-        }
+        // Signature verification is MANDATORY on this anonymous endpoint — fail closed.
+        // A missing raw body or signature is a verification failure, never a skip.
+        if (string.IsNullOrEmpty(request.PayloadJsonForSig) || string.IsNullOrEmpty(request.Signature))
+            throw new ForbiddenAccessException("Invalid signature.");
+        var expected = ComputeHmac(request.PayloadJsonForSig, endpoint.SecretHash);
+        if (!CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(expected),
+            Encoding.UTF8.GetBytes(request.Signature)))
+            throw new ForbiddenAccessException("Invalid signature.");
 
         var p = request.Payload;
         var normalized = _phone.Normalize(p.PhoneNumber);

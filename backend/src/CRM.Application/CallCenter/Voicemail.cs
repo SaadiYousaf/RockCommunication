@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -36,11 +37,12 @@ public class VoicemailHandler :
 
     public VoicemailHandler(IApplicationDbContext db, ICurrentUser user, IDialerProvider dialer)
     {
-        _db = db; _user = user; _dialer = dialer;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer);
     }
 
     public async Task<IReadOnlyList<VoicemailAssetDto>> Handle(ListVoicemailAssetsQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         return await _db.VoicemailAssets
             .Where(v => v.AgencyId == _user.AgencyId && v.IsActive)
@@ -50,6 +52,7 @@ public class VoicemailHandler :
 
     public async Task<VoicemailAssetDto> Handle(UpsertVoicemailAssetCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureManager();
         VoicemailAsset v;
         if (request.Id is { } id)
@@ -67,6 +70,7 @@ public class VoicemailHandler :
 
     public async Task<VoicemailDropDto> Handle(DropVoicemailCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var asset = await _db.VoicemailAssets.FirstOrDefaultAsync(
             v => v.Id == request.VoicemailAssetId && v.AgencyId == _user.AgencyId, ct)

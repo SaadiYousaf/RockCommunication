@@ -1,6 +1,7 @@
 using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
@@ -34,13 +35,14 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
 
     public SetVerifierStatusHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone)
     {
-        _db = db;
-        _user = user;
-        _phone = phone;
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _phone = Guard.AgainstNull(phone);
     }
 
     public async Task<VerifierStatusResult> Handle(SetVerifierStatusCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(

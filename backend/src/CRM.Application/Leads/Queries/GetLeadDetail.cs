@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
 using CRM.Application.Leads.Commands;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using MediatR;
@@ -52,11 +53,12 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
     public GetLeadDetailHandler(IApplicationDbContext db, ICurrentUser user,
         ILeadScorer scorer, IIdentityService identity)
     {
-        _db = db; _user = user; _scorer = scorer; _identity = identity;
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _scorer = Guard.AgainstNull(scorer); _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<LeadDetailDto> Handle(GetLeadDetailQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads
@@ -129,10 +131,11 @@ public class UpdateLeadNotesHandler : IRequestHandler<UpdateLeadNotesCommand, Un
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public UpdateLeadNotesHandler(IApplicationDbContext db, ICurrentUser user) { _db = db; _user = user; }
+    public UpdateLeadNotesHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<Unit> Handle(UpdateLeadNotesCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var lead = await _db.Leads.FirstOrDefaultAsync(
             l => l.Id == request.Id && l.AgencyId == _user.AgencyId, ct)

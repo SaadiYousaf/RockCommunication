@@ -1,4 +1,5 @@
 using CRM.Application.Common.Integrations;
+using CRM.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
@@ -30,9 +31,9 @@ public class HttpTwilioSmsProvider : ISmsProvider
 
     public HttpTwilioSmsProvider(HttpClient http, IOptions<IntegrationOptions> opts, ILogger<HttpTwilioSmsProvider> logger)
     {
-        _http = http;
-        _opts = opts.Value.Sms;
-        _logger = logger;
+        _http = Guard.AgainstNull(http);
+        _opts = Guard.AgainstNull(opts).Value.Sms;
+        _logger = Guard.AgainstNull(logger);
 
         _http.BaseAddress = new Uri(string.IsNullOrEmpty(_opts.BaseUrl) ? "https://api.twilio.com" : _opts.BaseUrl);
         _http.Timeout = TimeSpan.FromSeconds(15);
@@ -49,6 +50,7 @@ public class HttpTwilioSmsProvider : ISmsProvider
 
     public async Task<SmsResult> SendAsync(SmsMessage message, CancellationToken ct = default)
     {
+        Guard.AgainstNull(message);
         if (string.IsNullOrEmpty(_accountSid) || string.IsNullOrEmpty(_opts.FromNumber))
         {
             _logger.LogWarning("Twilio not fully configured (need ApiKey=accountSid:authToken + FromNumber).");

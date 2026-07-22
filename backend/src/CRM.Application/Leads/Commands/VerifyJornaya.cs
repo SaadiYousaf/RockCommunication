@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
+using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -18,13 +19,14 @@ public class VerifyJornayaHandler : IRequestHandler<VerifyJornayaCommand, LeadDt
 
     public VerifyJornayaHandler(IApplicationDbContext db, IJornayaProvider jornaya, ICurrentUser user)
     {
-        _db = db;
-        _jornaya = jornaya;
-        _user = user;
+        _db = Guard.AgainstNull(db);
+        _jornaya = Guard.AgainstNull(jornaya);
+        _user = Guard.AgainstNull(user);
     }
 
     public async Task<LeadDto> Handle(VerifyJornayaCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var lead = await _db.Leads.FirstOrDefaultAsync(
