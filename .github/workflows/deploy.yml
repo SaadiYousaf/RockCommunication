@@ -49,6 +49,9 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_URL: https://api.smhachieverslifegroup.com
+          # Salts asset filenames so every deploy emits unique URLs (see vite.config.ts) —
+          # prevents Cloudflare from pinning a stale immutable bundle under a reused name.
+          VITE_BUILD_ID: ${{ github.sha }}
         run: |
           npm ci || npm install   # lockfile may be out of sync; fall back to install
           npm run build
