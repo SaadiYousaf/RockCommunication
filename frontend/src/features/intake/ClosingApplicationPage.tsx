@@ -66,11 +66,11 @@ export function ClosingApplicationPage() {
         leadId: id, status,
         application: {
           healthConditions: f.healthConditions || undefined, gender: f.gender, age: parseInt(f.age, 10) || 0,
-          smokerStatus: f.smokerStatus, name: f.name, dateOfBirth: f.dateOfBirth ? new Date(f.dateOfBirth).toISOString() : "",
+          smokerStatus: f.smokerStatus, name: f.name, dateOfBirth: f.dateOfBirth ? new Date(f.dateOfBirth).toISOString() : undefined,
           address: f.address, carrier: f.carrier, plan: f.plan, faceAmount: parseFloat(f.faceAmount) || 0,
           premium: parseFloat(f.premium) || 0, email: f.email, beneficiary: f.beneficiary,
           secondBeneficiary: f.secondBeneficiary || undefined,
-          initialDraftDate: f.initialDraftDate ? new Date(f.initialDraftDate).toISOString() : "",
+          initialDraftDate: f.initialDraftDate ? new Date(f.initialDraftDate).toISOString() : undefined,
           futureDraftDate: f.futureDraftDate ? new Date(f.futureDraftDate).toISOString() : undefined,
           phoneNumber: f.phoneNumber, altPhone: f.altPhone || undefined, primaryDoctor: f.primaryDoctor,
           social: f.social, bornIn: f.bornIn, driversLicense: f.driversLicense, height: f.height, weight: f.weight,

@@ -234,7 +234,7 @@ export interface ClosingApplicationInput {
   age: number;
   smokerStatus: string;
   name: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
   address: string;
   carrier: string;
   plan: string;
@@ -243,7 +243,7 @@ export interface ClosingApplicationInput {
   email: string;
   beneficiary: string;
   secondBeneficiary?: string;
-  initialDraftDate: string;
+  initialDraftDate?: string;
   futureDraftDate?: string;
   phoneNumber: string;
   altPhone?: string;
