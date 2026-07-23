@@ -15,6 +15,7 @@ const EVENTS = [
   "call-state-changed",
   "screen-pop",
   "toast",
+  "notification",
 ] as const;
 
 /**

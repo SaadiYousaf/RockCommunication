@@ -8,7 +8,7 @@ import type {
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
-  IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput,
+  IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   ValidatorQueueItem, SetValidatorStatusInput,
 } from "./types";
 
@@ -386,6 +386,20 @@ export const baseApi = createApi({
     setVerifierStatus: b.mutation<{ leadId: string; status: string; stage: string }, { leadId: string; status: string; notes?: string; callbackAt?: string }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/verify/${leadId}/status`, method: "POST", body }),
       invalidatesTags: ["VerifierQueue", "CloserQueue"],
+    }),
+    // Verifier opens a queued lead to review / correct its intake details.
+    getVerifyLead: b.query<ClosingApplicationView, string>({
+      query: (leadId) => `/api/intake/verify/${leadId}`,
+      providesTags: (_r, _e, id) => [{ type: "ClosingApp", id }],
+    }),
+    updateVerifyLead: b.mutation<{ leadId: string }, { leadId: string } & UpdateIntakeLeadInput>({
+      query: ({ leadId, ...body }) => ({ url: `/api/intake/verify/${leadId}`, method: "PUT", body }),
+      invalidatesTags: (_r, _e, arg) => ["VerifierQueue", { type: "ClosingApp", id: arg.leadId }],
+    }),
+    // Submission agent opens the full lead + application to copy into the carrier portal.
+    getValidateLead: b.query<ClosingApplicationView, string>({
+      query: (leadId) => `/api/intake/validate/${leadId}`,
+      providesTags: (_r, _e, id) => [{ type: "ClosingApp", id }],
     }),
     closerQueue: b.query<IntakeQueueItem[], void>({
       query: () => "/api/intake/close/queue",
@@ -1031,6 +1045,7 @@ export const {
   useCaptureIntakeLeadMutation, useVerifierQueueQuery, useSetVerifierStatusMutation,
   useCloserQueueQuery, useGetClosingApplicationQuery, useSubmitClosingApplicationMutation,
   useCaptureCloserLeadMutation, useValidatorQueueQuery, useSetValidatorStatusMutation,
+  useGetVerifyLeadQuery, useUpdateVerifyLeadMutation, useGetValidateLeadQuery,
   useListCommissionConfigQuery, useUpsertCommissionConfigMutation,
   useUpdateUserRolesMutation, useSetUserActiveMutation, useResetUserPasswordMutation,
   useSearchLeadsQuery, useDuplicateLeadsQuery,

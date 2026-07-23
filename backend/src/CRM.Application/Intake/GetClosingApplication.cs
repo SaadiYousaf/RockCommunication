@@ -20,7 +20,12 @@ public record ClosingApplicationView(
     string? Address,
     string? City,
     string? State,
+    string? PostalCode,
+    string? MaritalStatus,
+    int? AgeYears,
+    string? JornayaLeadId,
     DateTime? DateOfBirth,
+    DateTime CreatedAt,
     WorkflowStage Stage,
     CloserStatus CloserStatus,
     LeadApplicationDto? Application);
@@ -61,6 +66,7 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
 
         return new ClosingApplicationView(
             lead.Id, lead.FirstName, lead.LastName, lead.PhoneNumber, lead.Email, lead.Address,
-            lead.City, lead.State, lead.DateOfBirth, lead.Stage, a?.CloserStatus ?? CloserStatus.None, appDto);
+            lead.City, lead.State, lead.PostalCode, lead.MaritalStatus, lead.AgeYears, lead.JornayaLeadId,
+            lead.DateOfBirth, lead.CreatedAt, lead.Stage, a?.CloserStatus ?? CloserStatus.None, appDto);
     }
 }

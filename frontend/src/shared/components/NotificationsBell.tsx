@@ -8,6 +8,7 @@ import {
 import type { ChatMessage } from "../api/types";
 import type { RootState } from "../../app/store";
 import { Avatar, Badge, Button, Icon, Tooltip, useToast, cn } from "../ui";
+import { useAgentHub } from "../hooks/useAgentHub";
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
@@ -29,6 +30,16 @@ export function NotificationsBell() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+
+  // Live pipeline notifications (a lead/sale forwarded to this user's queue) → popup toast.
+  useAgentHub((ev, payload) => {
+    if (ev !== "notification") return;
+    toast.show({
+      title: payload?.title ?? "New notification",
+      description: payload?.body,
+      action: payload?.url ? { label: "Open", onClick: () => navigate(payload.url) } : undefined,
+    });
+  });
 
   const totalUnread = unread.reduce((s, u) => s + (u.unreadCount || 0), 0);
   const unreadRooms = unread.filter((u) => u.unreadCount > 0);

@@ -40,7 +40,8 @@ public record ClosingApplicationDto(
     string AccountType,
     string BankName,
     string AccountNumber,
-    string RoutingNumber);
+    string RoutingNumber,
+    string? Banking198Reason = null);
 
 public record SubmitClosingApplicationCommand(Guid LeadId, CloserStatus Status, ClosingApplicationDto Input)
     : IRequest<ClosingApplicationResult>;
@@ -92,13 +93,15 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
     private readonly ICurrentUser _user;
     private readonly IMediator _mediator;
     private readonly IPhoneNormalizer _phone;
+    private readonly IIntakeNotifier _notifier;
 
-    public SubmitClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user, IMediator mediator, IPhoneNormalizer phone)
+    public SubmitClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user, IMediator mediator, IPhoneNormalizer phone, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _mediator = Guard.AgainstNull(mediator);
         _phone = Guard.AgainstNull(phone);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<ClosingApplicationResult> Handle(SubmitClosingApplicationCommand request, CancellationToken ct)
@@ -129,7 +132,8 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
                 RoutingNumber: d.RoutingNumber,
                 AccountNumber: d.AccountNumber,
                 AccountType: d.AccountType,
-                RecordingKey: null)), ct);
+                RecordingKey: null,
+                Banking198Reason: d.Banking198Reason)), ct);
             saleId = sale.Id;
             // RecordSale already advanced the lead to Closed and wrote its own activity.
         }
@@ -183,6 +187,12 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
         app.SaleId = saleId;
 
         await _db.SaveChangesAsync(ct);
+
+        // "Complete and Sold" created a sale → it's now in the Submission (validator) queue.
+        if (saleId is not null)
+            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Validator, "New sale to submit",
+                $"{lead.FirstName} {lead.LastName} — {d.Carrier}", "/validate-queue", ct);
+
         return new ClosingApplicationResult(lead.Id, request.Status, lead.Stage, saleId);
     }
 

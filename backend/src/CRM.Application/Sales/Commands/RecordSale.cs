@@ -23,8 +23,10 @@ public record RecordSaleDto(
     string AccountNumber,
     /// <summary>Optional account type hint (checking/savings).</summary>
     string? AccountType,
-    /// <summary>Opaque storage key from POST /api/sales/recording-upload. Required when Lyons returns banking code 198.</summary>
-    string? RecordingKey);
+    /// <summary>Opaque storage key from POST /api/sales/recording-upload (optional when a 198 reason is given).</summary>
+    string? RecordingKey,
+    /// <summary>Reason the closer is proceeding when Lyons flags the account (banking code 198). Required for 198.</summary>
+    string? Banking198Reason = null);
 
 public record RecordSaleCommand(RecordSaleDto Input) : IRequest<SaleDto>;
 
@@ -106,9 +108,13 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             throw new ConflictException(
                 $"Lyons blocked this bank account — the sale cannot be submitted. {lyons.Reason}".Trim());
 
-        if (BankingPolicy.NeedsRecording(lyons.BankingCode) && string.IsNullOrWhiteSpace(input.RecordingKey))
+        // Banking code 198: the account is usable but flagged, so the closer must give a
+        // reason for proceeding (a verification recording may also be attached, but is optional).
+        if (BankingPolicy.NeedsRecording(lyons.BankingCode)
+            && string.IsNullOrWhiteSpace(input.Banking198Reason)
+            && string.IsNullOrWhiteSpace(input.RecordingKey))
             throw new ConflictException(
-                $"Lyons flagged this account (banking code {BankingPolicy.RequiresRecording}) — a verification recording must be uploaded before the sale can be submitted.");
+                $"Lyons flagged this account (banking code {BankingPolicy.RequiresRecording}) — enter a reason to proceed (or attach a verification recording).");
 
         var (isInternal, reason) = await _checker.CheckAsync(lead, _user.UserId.Value, ct);
 
@@ -128,6 +134,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             InternalSaleReason = reason,
             BankingCode = lyons.BankingCode,
             RecordingUrl = BankingPolicy.NeedsRecording(lyons.BankingCode) ? input.RecordingKey : null,
+            BankingNote = BankingPolicy.NeedsRecording(lyons.BankingCode) ? input.Banking198Reason?.Trim() : null,
             BankRoutingNumber = new string((input.RoutingNumber ?? "").Where(char.IsDigit).ToArray()),
             BankAccountLast4 = accountDigits.Length >= 4 ? accountDigits[^4..] : accountDigits,
             BankName = lyons.BankName,

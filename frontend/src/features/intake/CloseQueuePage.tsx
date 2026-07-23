@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
@@ -13,7 +13,10 @@ export function CloseQueuePage() {
   const { data: queue, isLoading } = useCloserQueueQuery();
   const [addLead, { isLoading: adding }] = useCaptureCloserLeadMutation();
   const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
   const toast = useToast();
+  const filtered = (queue ?? []).filter((l) =>
+    !q.trim() || `${l.firstName} ${l.lastName} ${l.phoneNumber} ${l.city ?? ""} ${l.state ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
 
   async function onAdd(input: IntakeLeadInput) {
     try {
@@ -39,17 +42,18 @@ export function CloseQueuePage() {
         }
       />
       <Card>
-        <CardHeader title="Ready to close" subtitle={queue ? `${queue.length} lead(s)` : undefined} />
+        <CardHeader title="Ready to close" subtitle={queue ? `${filtered.length} of ${queue.length} lead(s)` : undefined}
+          action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
         <CardBody>
-          {isLoading ? <Skeleton className="h-40" /> : !queue || queue.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description="Verified leads will appear here. Use “Add lead” to start one yourself." />
+          {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
+            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description={q ? "No matches in this queue." : "Verified leads will appear here. Use “Add lead” to start one yourself."} />
           ) : (
             <Table>
               <THead>
                 <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Application</TH><TH></TH></TR>
               </THead>
               <TBody>
-                {queue.map((l) => (
+                {filtered.map((l) => (
                   <TR key={l.id}>
                     <TD className="font-medium text-ink-900">{l.firstName} {l.lastName}</TD>
                     <TD className="font-mono text-xs">{l.phoneNumber}</TD>

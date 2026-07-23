@@ -61,13 +61,15 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
     private readonly ICurrentUser _user;
     private readonly ILeadScorer _scorer;
     private readonly IWorkflowEngine _workflow;
+    private readonly IIntakeNotifier _notifier;
 
-    public CaptureIntakeLeadHandler(IApplicationDbContext db, ICurrentUser user, ILeadScorer scorer, IWorkflowEngine workflow)
+    public CaptureIntakeLeadHandler(IApplicationDbContext db, ICurrentUser user, ILeadScorer scorer, IWorkflowEngine workflow, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _scorer = Guard.AgainstNull(scorer);
         _workflow = Guard.AgainstNull(workflow);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<IntakeLeadResult> Handle(CaptureIntakeLeadCommand request, CancellationToken ct)
@@ -126,6 +128,14 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             Source = lead.Source,
             Score = lead.Score
         }, ct);
+
+        // Notify the receiving queue's role that a new lead has landed.
+        if (toCloser)
+            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/close-queue", ct);
+        else
+            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Verifier, "New lead to verify",
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/verify-queue", ct);
 
         return new IntakeLeadResult(lead.Id, lead.FirstName, lead.LastName, lead.Stage);
     }

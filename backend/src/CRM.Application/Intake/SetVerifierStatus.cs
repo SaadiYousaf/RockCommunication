@@ -32,12 +32,14 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IPhoneNormalizer _phone;
+    private readonly IIntakeNotifier _notifier;
 
-    public SetVerifierStatusHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone)
+    public SetVerifierStatusHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _phone = Guard.AgainstNull(phone);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<VerifierStatusResult> Handle(SetVerifierStatusCommand request, CancellationToken ct)
@@ -101,6 +103,12 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
         });
 
         await _db.SaveChangesAsync(ct);
+
+        // Verified → the lead is now in the Closer queue; notify the closers.
+        if (request.Status == VerifierStatus.Verified)
+            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/close-queue", ct);
+
         return new VerifierStatusResult(lead.Id, lead.VerifierStatus, lead.Stage);
     }
 

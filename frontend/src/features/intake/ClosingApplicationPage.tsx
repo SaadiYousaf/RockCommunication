@@ -19,7 +19,7 @@ const blank = {
   carrier: "", plan: "", faceAmount: "", premium: "", email: "", beneficiary: "", secondBeneficiary: "",
   initialDraftDate: "", futureDraftDate: "", phoneNumber: "", altPhone: "", primaryDoctor: "", social: "",
   bornIn: "", driversLicense: "", height: "", weight: "", accountType: "checking", bankName: "",
-  accountNumber: "", routingNumber: "",
+  accountNumber: "", routingNumber: "", banking198Reason: "",
 };
 
 /** Closer's closing application. All fields typed (no paste). "Complete and Sold" creates the sale. */
@@ -75,6 +75,7 @@ export function ClosingApplicationPage() {
           phoneNumber: f.phoneNumber, altPhone: f.altPhone || undefined, primaryDoctor: f.primaryDoctor,
           social: f.social, bornIn: f.bornIn, driversLicense: f.driversLicense, height: f.height, weight: f.weight,
           accountType: f.accountType, bankName: f.bankName, accountNumber: f.accountNumber, routingNumber: f.routingNumber,
+          banking198Reason: f.banking198Reason || undefined,
         },
       }).unwrap();
       toast.success("Application submitted",
@@ -96,6 +97,23 @@ export function ClosingApplicationPage() {
         title={`Closing — ${data.firstName} ${data.lastName}`}
         description="Complete the application. All fields are typed (no paste). 'Complete and Sold' validates banking via Lyons and creates the sale."
       />
+      {/* Read-only intake context captured by the fronter, so the closer has the full picture. */}
+      <Card className="max-w-4xl mb-4">
+        <CardHeader title="Lead info (from intake)" />
+        <CardBody>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm">
+            <Field label="Marital status" value={data.maritalStatus} />
+            <Field label="Age" value={data.ageYears != null ? String(data.ageYears) : null} />
+            <Field label="City" value={data.city} />
+            <Field label="State" value={data.state} />
+            <Field label="Zipcode" value={data.postalCode} />
+            <Field label="Phone" value={data.phoneNumber} />
+            <Field label="Email" value={data.email} />
+            <Field label="Created date" value={data.createdAt ? data.createdAt.slice(0, 10) : null} />
+            <Field label="Jornaya LeadiD" value={data.jornayaLeadId} className="col-span-2 sm:col-span-4 font-mono text-xs" />
+          </div>
+        </CardBody>
+      </Card>
       <form onSubmit={onSubmit} className="space-y-4 max-w-4xl">
         <Card>
           <CardHeader title="Closer status"
@@ -152,6 +170,8 @@ export function ClosingApplicationPage() {
           <Input label="Bank name" required={sold} secure value={f.bankName} onChange={set("bankName")} />
           <Input label="Account number" required={sold} secure inputMode="numeric" value={f.accountNumber} onChange={set("accountNumber")} />
           <Input label="Routing number" required={sold} secure inputMode="numeric" value={f.routingNumber} onChange={set("routingNumber")} />
+          <Input label="Reason (only if Lyons flags the account — code 198)" secure containerClassName="sm:col-span-2"
+            placeholder="Why proceed on a flagged account?" value={f.banking198Reason} onChange={set("banking198Reason")} />
         </Section>
 
         <div className="flex justify-end gap-2">
@@ -162,6 +182,15 @@ export function ClosingApplicationPage() {
         </div>
       </form>
     </>
+  );
+}
+
+function Field({ label, value, className }: { label: string; value?: string | null; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="text-xs text-ink-500">{label}</div>
+      <div className="text-ink-900">{value && value.trim() ? value : "—"}</div>
+    </div>
   );
 }
 

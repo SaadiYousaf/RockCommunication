@@ -51,5 +51,18 @@ public enum ValidatorStatus
     /// <summary>Application declined — a reason is required.</summary>
     Decline = 6,
     /// <summary>Client cancelled the policy.</summary>
-    ClientCancelled = 7
+    ClientCancelled = 7,
+    /// <summary>
+    /// The application has an error the closer must fix. The specific error (e.g.
+    /// "Wrong banking / Payor issue", "Identity Error") is captured in the reason field.
+    /// </summary>
+    ErrorInApplicationInformation = 8
+}
+
+/// <summary>Sub-reason for <see cref="ValidatorStatus.ErrorInApplicationInformation"/>.</summary>
+public enum ApplicationErrorReason
+{
+    None = 0,
+    WrongBankingOrPayorIssue = 1,
+    IdentityError = 2
 }

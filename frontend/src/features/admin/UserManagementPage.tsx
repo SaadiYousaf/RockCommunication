@@ -17,6 +17,10 @@ const ALL_ROLES = [
   "Followups", "Correspondence", "Winbacks",
 ];
 
+// Display label overrides (internal role name → what the client wants shown).
+const ROLE_LABELS: Record<string, string> = { Validator: "Submission Agent" };
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? r;
+
 const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
   Admin: "danger", ProgramManager: "danger", TeamLead: "warning",
   Closer: "success", JrCloser: "success", SelfValidator: "success",
@@ -175,7 +179,7 @@ export function UserManagementPage() {
                     {u.roles.length === 0
                       ? <span className="text-xs text-ink-400">No roles</span>
                       : u.roles.map((r) => (
-                        <Badge key={r} tone={roleTones[r] ?? "neutral"} variant="soft">{r}</Badge>
+                        <Badge key={r} tone={roleTones[r] ?? "neutral"} variant="soft">{roleLabel(r)}</Badge>
                       ))}
                   </div>
                 </TD>

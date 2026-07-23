@@ -38,6 +38,21 @@ public class IntakeController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<IntakeQueueItem>>> VerifierQueue(CancellationToken ct)
         => Ok(await _mediator.Send(new VerifierQueueQuery(), ct));
 
+    /// <summary>Verifier opens a lead from the queue to review / correct its intake details.</summary>
+    [HttpGet("verify/{leadId:guid}")]
+    [Authorize(Roles = Roles.Verifier + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<ClosingApplicationView>> GetVerifyLead(Guid leadId, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetClosingApplicationQuery(leadId), ct));
+
+    /// <summary>Verifier edits the lead's intake fields (name, contact, marital, age, Jornaya id, …).</summary>
+    [HttpPut("verify/{leadId:guid}")]
+    [Authorize(Roles = Roles.Verifier + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<IntakeLeadResult>> UpdateVerifyLead(Guid leadId, [FromBody] UpdateIntakeLeadDto dto, CancellationToken ct)
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new UpdateIntakeLeadCommand(leadId, dto), ct));
+    }
+
     public record VerifierStatusBody(VerifierStatus Status, string? Notes, DateTime? CallbackAt);
 
     [HttpPost("verify/{leadId:guid}/status")]
@@ -83,6 +98,12 @@ public class IntakeController : ControllerBase
     [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<IReadOnlyList<ValidatorQueueItem>>> ValidatorQueue(CancellationToken ct)
         => Ok(await _mediator.Send(new ValidatorQueueQuery(), ct));
+
+    /// <summary>Submission agent opens the full lead + application to copy into the carrier portal.</summary>
+    [HttpGet("validate/{leadId:guid}")]
+    [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<ClosingApplicationView>> GetValidateLead(Guid leadId, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetClosingApplicationQuery(leadId), ct));
 
     public record ValidatorStatusBody(
         ValidatorStatus Status, string? CarrierApproved, decimal? CoverageApproved,

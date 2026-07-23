@@ -90,8 +90,11 @@ public class Sale : CallCenterEntity
     /// </summary>
     public int BankingCode { get; set; }
 
-    /// <summary>Opaque storage key for the verification recording (required when BankingCode == 198).</summary>
+    /// <summary>Opaque storage key for the verification recording (optional for BankingCode == 198).</summary>
     public string? RecordingUrl { get; set; }
+
+    /// <summary>Closer's reason for proceeding when Lyons flags the account (banking code 198).</summary>
+    public string? BankingNote { get; set; }
 
     // ---- Lyons bank-account validation (banking code is derived from this, never entered by hand) ----
     /// <summary>ABA routing number of the validated bank account (not sensitive).</summary>

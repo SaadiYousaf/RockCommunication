@@ -68,6 +68,10 @@ public class SetValidatorStatusValidator : AbstractValidator<SetValidatorStatusC
         // "Decline" requires a reason.
         When(x => x.Status == ValidatorStatus.Decline, () =>
             RuleFor(x => x.DeclineReason).NotEmpty().WithMessage("A decline reason is required."));
+
+        // "Error in application information" requires the specific sub-reason.
+        When(x => x.Status == ValidatorStatus.ErrorInApplicationInformation, () =>
+            RuleFor(x => x.DeclineReason).NotEmpty().WithMessage("Select the application error (banking/payor or identity)."));
     }
 }
 
@@ -140,8 +144,12 @@ public class ValidatorQueueHandler :
             sale.PlanApproved = request.PlanApproved?.Trim();
             sale.DeclineReason = null;
         }
-        else if (request.Status == ValidatorStatus.Decline)
+        else if (request.Status == ValidatorStatus.Decline ||
+                 request.Status == ValidatorStatus.ErrorInApplicationInformation)
         {
+            // Both carry a free-text reason in DeclineReason (decline reason, or the
+            // application-error sub-reason). The lead stays in the queue (default case below)
+            // for an error so the closer can correct and resubmit.
             sale.DeclineReason = request.DeclineReason?.Trim();
         }
 

@@ -189,7 +189,7 @@ export type VerifierStatusValue = "None" | "Verified" | "NotInterested" | "Dnc" 
 export type CloserStatusValue = "None" | "CompleteAndSold" | "LostOnSocial" | "LostOnAccount" | "DncLead" | "NotInterestedCallback";
 export type ValidatorStatusValue =
   | "Completed" | "Approved" | "ActivePaid" | "NoUpdateInCommission"
-  | "BadBank" | "Nsf" | "Decline" | "ClientCancelled";
+  | "BadBank" | "Nsf" | "Decline" | "ClientCancelled" | "ErrorInApplicationInformation";
 
 export interface ValidatorQueueItem {
   saleId: string;
@@ -268,6 +268,8 @@ export interface ClosingApplicationInput {
   bankName: string;
   accountNumber: string;
   routingNumber: string;
+  /** Reason the closer is proceeding when Lyons flags the account (banking code 198). */
+  banking198Reason?: string;
 }
 
 export interface ClosingApplicationView {
@@ -279,10 +281,31 @@ export interface ClosingApplicationView {
   address: string | null;
   city: string | null;
   state: string | null;
+  postalCode: string | null;
+  maritalStatus: string | null;
+  ageYears: number | null;
+  jornayaLeadId: string | null;
   dateOfBirth: string | null;
+  createdAt: string;
   stage: WorkflowStage;
   closerStatus: CloserStatusValue;
   application: (Partial<ClosingApplicationInput> & { closerStatus: CloserStatusValue; saleId: string | null }) | null;
+}
+
+/** Fields a verifier can edit on a queued lead. */
+export interface UpdateIntakeLeadInput {
+  firstName: string;
+  lastName: string;
+  maritalStatus?: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  zipcode?: string;
+  phoneNumber: string;
+  birthDate?: string;
+  ageYears?: number;
+  email?: string;
+  jornayaLeadId?: string;
 }
 
 export interface DocumentMeta {
