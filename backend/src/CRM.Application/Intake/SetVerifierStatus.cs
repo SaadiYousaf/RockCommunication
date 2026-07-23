@@ -7,6 +7,7 @@ using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CRM.Domain.Constants;
 
 namespace CRM.Application.Intake;
 
@@ -107,7 +108,7 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
         // Verified → the lead is now in the Closer queue; notify the closers.
         if (request.Status == VerifierStatus.Verified)
             await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
-                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/close-queue", ct);
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.CloseQueue, ct);
 
         return new VerifierStatusResult(lead.Id, lead.VerifierStatus, lead.Stage);
     }
@@ -123,7 +124,7 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
             AgencyId = lead.AgencyId,
             PhoneNormalized = norm,
             Reason = "Marked DNC by verifier",
-            Source = "Verifier"
+            Source = AppConstants.LeadSources.Verifier
         });
     }
 }

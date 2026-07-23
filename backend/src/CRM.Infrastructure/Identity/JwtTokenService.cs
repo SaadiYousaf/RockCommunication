@@ -44,13 +44,13 @@ public class JwtTokenService : IJwtTokenService
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new(JwtRegisteredClaimNames.UniqueName, userName),
-            new("agency", agencyId.ToString()),
+            new(CustomJwtClaims.Agency, agencyId.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         // Only agents are pinned to a call center; agency-level users omit the claim and
         // therefore see every call center in their agency (handled by the query filter).
         if (callCenterId is { } cc && cc != Guid.Empty)
-            claims.Add(new Claim("callcenter", cc.ToString()));
+            claims.Add(new Claim(CustomJwtClaims.CallCenter, cc.ToString()));
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         if (extraClaims is not null)
             foreach (var kv in extraClaims)

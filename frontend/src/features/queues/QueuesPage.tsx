@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useCreatePublicEndpointMutation,
@@ -45,8 +46,8 @@ function QueueSection() {
       }).unwrap();
       toast.success("Queue created", `${name} is ready to receive calls.`);
       setName(""); setPhone(""); setSkill(""); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't create queue", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create queue", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -141,8 +142,8 @@ function VoicemailSection() {
       }).unwrap();
       toast.success("Voicemail saved");
       setName(""); setUrl(""); setDuration("30"); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't save voicemail", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save voicemail", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -215,8 +216,8 @@ function PublicEndpointsSection() {
       setRevealedSecret(result.secret);
       setSlug("");
       toast.success("Endpoint created", `Slug: ${result.slug}`);
-    } catch (err: any) {
-      toast.error("Couldn't create endpoint", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create endpoint", getErrorDetail(err) ?? "Try again.");
     }
   }
 

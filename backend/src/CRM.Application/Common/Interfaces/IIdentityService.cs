@@ -10,6 +10,12 @@ public static class CustomJwtClaims
 {
     /// <summary>"true" when the user must change their password before doing anything else.</summary>
     public const string PasswordChangeRequired = "pwd_change";
+    /// <summary>The user's agency (tenant) id.</summary>
+    public const string Agency = "agency";
+    /// <summary>The user's call center id (absent = agency-level).</summary>
+    public const string CallCenter = "callcenter";
+    /// <summary>Subject (user id) — mirrors the standard "sub" claim read by hubs/services.</summary>
+    public const string Subject = "sub";
 }
 
 public interface IIdentityService

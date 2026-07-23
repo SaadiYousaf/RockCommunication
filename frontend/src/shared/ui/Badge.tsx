@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "./cn";
 
 type Tone = "default" | "brand" | "accent" | "success" | "warning" | "danger" | "info" | "neutral";
+/** Canonical badge/tone union — reuse this instead of re-declaring `Tone` per page. */
+export type BadgeTone = Tone;
 type Variant = "soft" | "solid" | "outline";
 type Size = "sm" | "md";
 

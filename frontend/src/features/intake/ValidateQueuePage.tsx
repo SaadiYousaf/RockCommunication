@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import {
   useSetValidatorStatusMutation, useValidatorQueueQuery, useGetValidateLeadQuery,
@@ -7,37 +8,12 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
-
-const STATUSES: { value: ValidatorStatusValue; label: string }[] = [
-  { value: "Completed", label: "Completed" },
-  { value: "Approved", label: "Approved" },
-  { value: "ActivePaid", label: "Active Paid" },
-  { value: "NoUpdateInCommission", label: "No update in commission" },
-  { value: "BadBank", label: "Bad Bank" },
-  { value: "Nsf", label: "NSF" },
-  { value: "Decline", label: "Decline" },
-  { value: "ClientCancelled", label: "Client Cancelled" },
-  { value: "ErrorInApplicationInformation", label: "Error in application information" },
-];
-
-// Sub-reasons for the "Error in application information" status (stored in declineReason).
-const ERROR_REASONS = ["Wrong banking / Payor issue", "Identity Error"];
-
-const LABEL: Record<ValidatorStatusValue, string> = Object.fromEntries(
-  STATUSES.map((s) => [s.value, s.label]),
-) as Record<ValidatorStatusValue, string>;
-
-const TONE: Record<ValidatorStatusValue, "neutral" | "info" | "success" | "warning" | "danger"> = {
-  Completed: "neutral",
-  Approved: "info",
-  ActivePaid: "success",
-  NoUpdateInCommission: "warning",
-  BadBank: "danger",
-  Nsf: "danger",
-  Decline: "danger",
-  ClientCancelled: "neutral",
-  ErrorInApplicationInformation: "danger",
-};
+import {
+  VALIDATOR_STATUSES as STATUSES,
+  VALIDATOR_ERROR_REASONS as ERROR_REASONS,
+  VALIDATOR_STATUS_LABEL as LABEL,
+  VALIDATOR_STATUS_TONE as TONE,
+} from "../../shared/constants/intake";
 
 const money = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -210,8 +186,8 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
       }).unwrap();
       toast.success("Status updated", `${sale.leadName} → ${LABEL[status]}`);
       onClose();
-    } catch (err: any) {
-      toast.error("Couldn't update", err?.data?.detail ?? "Check the required fields and try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update", getErrorDetail(err) ?? "Check the required fields and try again.");
     }
   }
 

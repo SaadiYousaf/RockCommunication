@@ -18,4 +18,6 @@ public static class AgentEvents
     public const string CallStateChanged = "call-state-changed";
     public const string ScreenPop = "screen-pop";
     public const string Toast = "toast";
+    /// <summary>In-app notification (pipeline forward, etc.) — the SPA toasts it.</summary>
+    public const string Notification = "notification";
 }

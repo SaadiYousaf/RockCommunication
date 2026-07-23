@@ -1,11 +1,9 @@
+import { API_URL } from "../config";
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
-
-type Handler = (event: string, payload: any) => void;
 
 const EVENTS = [
   "incoming-call",
@@ -17,6 +15,32 @@ const EVENTS = [
   "toast",
   "notification",
 ] as const;
+
+/** Names of the events broadcast on /hubs/agent. */
+export type AgentHubEvent = (typeof EVENTS)[number];
+
+/**
+ * Union of fields any agent-hub event may carry. All optional so a handler can
+ * read the fields relevant to the event it's handling without an `any` cast —
+ * call events use leadId/phone/state, screen-pop/toast use kind/text,
+ * "notification" uses title/body/url.
+ */
+export interface AgentHubPayload {
+  leadId?: string;
+  phone?: string;
+  callId?: string;
+  providerCallId?: string;
+  state?: string;
+  direction?: string;
+  kind?: string;
+  text?: string;
+  title?: string;
+  body?: string;
+  url?: string;
+  tone?: string;
+}
+
+type Handler = (event: AgentHubEvent, payload: AgentHubPayload) => void;
 
 /**
  * Subscribes to /hubs/agent for the signed-in user.
@@ -61,7 +85,7 @@ export function useAgentHub(handler: Handler) {
       .build();
 
     EVENTS.forEach((ev) => {
-      conn.on(ev, (payload: any) => handlerRef.current(ev, payload));
+      conn.on(ev, (payload: AgentHubPayload) => handlerRef.current(ev, payload));
     });
 
     let cancelled = false;

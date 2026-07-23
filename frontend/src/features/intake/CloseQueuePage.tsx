@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
@@ -24,8 +25,8 @@ export function CloseQueuePage() {
       toast.success("Lead added", `${r.firstName} ${r.lastName} → your closer queue`);
       setOpen(false);
       return true;
-    } catch (err: any) {
-      toast.error("Couldn't add lead", err?.data?.detail ?? "Check the required fields and try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't add lead", getErrorDetail(err) ?? "Check the required fields and try again.");
       return false;
     }
   }

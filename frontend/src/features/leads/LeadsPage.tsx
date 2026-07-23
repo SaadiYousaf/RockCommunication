@@ -1,3 +1,5 @@
+import { API_URL } from "../../shared/config";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -37,7 +39,6 @@ const stageOf = (s: any): WorkflowStage => stageMap[s] ?? "New";
 const dispOf = (d: any): string => dispMap[d] ?? "None";
 
 const PAGE_SIZE = 25;
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
 function formatPhone(p: string) {
   const d = (p || "").replace(/\D/g, "");
@@ -148,8 +149,8 @@ export function LeadsPage() {
     try {
       await transitionLead({ id, toStage: toStage as WorkflowStage, disposition: "Interested" }).unwrap();
       toast.success("Lead transitioned", `${name} → ${toStage}`);
-    } catch (err: any) {
-      toast.error("Couldn't transition", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't transition", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -158,8 +159,8 @@ export function LeadsPage() {
       await dialLead({ leadId: id }).unwrap();
       toast.success("Calling…");
       navigate(`/leads/${id}`);
-    } catch (err: any) {
-      toast.error("Couldn't dial", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -181,8 +182,8 @@ export function LeadsPage() {
       setBulkAction("none");
       clearSelection();
       refetch();
-    } catch (err: any) {
-      toast.error("Bulk action failed", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Bulk action failed", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -205,7 +206,7 @@ export function LeadsPage() {
         a.click();
         URL.revokeObjectURL(url);
       })
-      .catch((err) => toast.error("Export failed", err.message));
+      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"));
   }
 
   async function submitCreate(e: React.FormEvent) {
@@ -215,8 +216,8 @@ export function LeadsPage() {
       toast.success("Lead created", `${form.firstName} ${form.lastName}`);
       setForm({ firstName: "", lastName: "", phoneNumber: "", email: "" });
       setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't create lead", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create lead", getErrorDetail(err) ?? "Try again.");
     }
   }
 

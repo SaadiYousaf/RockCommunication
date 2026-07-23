@@ -1,3 +1,4 @@
+import { API_URL } from "../config";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -10,7 +11,6 @@ import type { RootState } from "../../app/store";
 import { Avatar, Badge, Button, Icon, Tooltip, useToast, cn } from "../ui";
 import { useAgentHub } from "../hooks/useAgentHub";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
 /**
  * Header notifications bell — shows live unread count + a dropdown of rooms with unread.
@@ -34,10 +34,11 @@ export function NotificationsBell() {
   // Live pipeline notifications (a lead/sale forwarded to this user's queue) → popup toast.
   useAgentHub((ev, payload) => {
     if (ev !== "notification") return;
+    const url = payload.url;
     toast.show({
-      title: payload?.title ?? "New notification",
-      description: payload?.body,
-      action: payload?.url ? { label: "Open", onClick: () => navigate(payload.url) } : undefined,
+      title: payload.title ?? "New notification",
+      description: payload.body,
+      action: url ? { label: "Open", onClick: () => navigate(url) } : undefined,
     });
   });
 

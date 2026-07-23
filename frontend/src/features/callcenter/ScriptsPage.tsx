@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useListCampaignsQuery, useListScriptsQuery, useUpsertScriptMutation } from "../../shared/api/baseApi";
 import {
@@ -50,15 +51,15 @@ export function ScriptsPage() {
       }).unwrap();
       toast.success(editing.id ? "Script updated" : "Script created", editing.name);
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Couldn't save script", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save script", getErrorDetail(err) ?? "Try again.");
     }
   }
 
   async function toggle(s: any) {
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
       toast.success(s.isActive ? "Script disabled" : "Script enabled");
-    } catch (err: any) { toast.error("Couldn't update", err?.data?.detail ?? "Try again."); }
+    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
   }
 
   return (

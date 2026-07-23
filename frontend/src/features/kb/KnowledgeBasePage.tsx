@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useGetKbArticleQuery, useSearchKbQuery, useUpsertKbArticleMutation } from "../../shared/api/baseApi";
 import {
@@ -24,8 +25,8 @@ export function KnowledgeBasePage() {
       toast.success("Article saved", a.title);
       setEditing(null);
       if (a.slug) setActiveSlug(a.slug);
-    } catch (err: any) {
-      toast.error("Couldn't save article", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save article", getErrorDetail(err) ?? "Try again.");
     }
   }
 

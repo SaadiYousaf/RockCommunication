@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useRef, useState } from "react";
 import {
   useImportLeadsCsvMutation, useLeadListsQuery, useListImportBatchesQuery, useUpsertLeadListMutation,
@@ -43,8 +44,8 @@ export function LeadListsPage() {
       await upsert({ id: null, name, isActive: true }).unwrap();
       toast.success("List created", name);
       setName(""); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't create list", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create list", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -52,8 +53,8 @@ export function LeadListsPage() {
     try {
       await upsert({ id: l.id, name: l.name, isActive: !l.isActive }).unwrap();
       toast.success(l.isActive ? "List disabled" : "List enabled");
-    } catch (err: any) {
-      toast.error("Couldn't update", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -70,8 +71,8 @@ export function LeadListsPage() {
         `${result?.imported ?? 0} imported · ${result?.duplicates ?? 0} dups · ${result?.dncScrubbed ?? 0} scrubbed`);
       if (fileRef.current) fileRef.current.value = "";
       setFilename("");
-    } catch (err: any) {
-      toast.error("Import failed", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Import failed", getErrorDetail(err) ?? "Try again.");
     }
   }
 

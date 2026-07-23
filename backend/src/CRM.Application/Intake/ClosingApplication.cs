@@ -8,6 +8,7 @@ using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CRM.Domain.Constants;
 
 namespace CRM.Application.Intake;
 
@@ -191,7 +192,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
         // "Complete and Sold" created a sale → it's now in the Submission (validator) queue.
         if (saleId is not null)
             await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Validator, "New sale to submit",
-                $"{lead.FirstName} {lead.LastName} — {d.Carrier}", "/validate-queue", ct);
+                $"{lead.FirstName} {lead.LastName} — {d.Carrier}", AppConstants.QueueRoutes.ValidateQueue, ct);
 
         return new ClosingApplicationResult(lead.Id, request.Status, lead.Stage, saleId);
     }
@@ -240,7 +241,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
             AgencyId = lead.AgencyId,
             PhoneNormalized = norm,
             Reason = "Marked DNC by closer",
-            Source = "Closer"
+            Source = AppConstants.LeadSources.Closer
         });
     }
 }

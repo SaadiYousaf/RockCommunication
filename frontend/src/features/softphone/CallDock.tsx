@@ -40,7 +40,7 @@ export function CallDock() {
       case "call-ringing":
       case "call-answered":
       case "call-state-changed":
-        setCall(payload);
+        setCall(payload as ActiveCall);
         break;
       case "call-ended":
         stopRing();
@@ -51,7 +51,7 @@ export function CallDock() {
         if (payload.leadId) navigate(`/leads/${payload.leadId}`);
         break;
       case "toast":
-        setToast({ kind: payload.kind ?? "info", text: payload.text });
+        setToast({ kind: payload.kind ?? "info", text: payload.text ?? "" });
         setTimeout(() => setToast(null), 3500);
         break;
     }

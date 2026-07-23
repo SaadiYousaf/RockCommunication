@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
 import {
@@ -61,8 +62,8 @@ export function SupervisorPage() {
       await forceStatus({ id: userId, status, reason }).unwrap();
       await refetch();
       toast.success(`${label} applied`, `Agent moved to ${status}.`);
-    } catch (err: any) {
-      toast.error(`Couldn't ${label.toLowerCase()}`, err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error(`Couldn't ${label.toLowerCase()}`, getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -70,8 +71,8 @@ export function SupervisorPage() {
     try {
       await coach({ id: userId, mode }).unwrap();
       toast.success(`${mode[0].toUpperCase() + mode.slice(1)} started`, `Connected to ${agentName}.`);
-    } catch (err: any) {
-      toast.error("Couldn't start coaching", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't start coaching", getErrorDetail(err) ?? "Try again.");
     }
   }
 

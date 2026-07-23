@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useCaptureIntakeLeadMutation } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import { Badge, Card, CardBody, CardHeader, PageHeader, useToast } from "../../shared/ui";
@@ -13,8 +14,8 @@ export function IntakeFormPage() {
       const r = await capture(input).unwrap();
       toast.success("Lead submitted", `${r.firstName} ${r.lastName} → verifier queue`);
       return true;
-    } catch (err: any) {
-      toast.error("Couldn't submit", err?.data?.detail ?? "Check the required fields and try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't submit", getErrorDetail(err) ?? "Check the required fields and try again.");
       return false;
     }
   }

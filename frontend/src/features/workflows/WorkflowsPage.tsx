@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import {
   useDeleteWorkflowRuleMutation, useListWorkflowRulesQuery, useUpsertWorkflowRuleMutation,
@@ -94,8 +95,8 @@ export function WorkflowsPage() {
       await upsert(editing).unwrap();
       toast.success(editing.id ? "Rule updated" : "Rule created", editing.name);
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Couldn't save rule", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save rule", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -105,8 +106,8 @@ export function WorkflowsPage() {
       await del(confirmDelete.id).unwrap();
       toast.success("Rule deleted", confirmDelete.name);
       setConfirmDelete(null);
-    } catch (err: any) {
-      toast.error("Couldn't delete", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again.");
     }
   }
 

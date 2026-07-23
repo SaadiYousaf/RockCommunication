@@ -1,3 +1,5 @@
+import { API_URL } from "../../shared/config";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HubConnectionBuilder, HubConnectionState, type HubConnection } from "@microsoft/signalr";
@@ -14,7 +16,6 @@ import {
   Avatar, Badge, Button, EmptyState, Icon, Input, Modal, Skeleton, useToast, cn,
 } from "../../shared/ui";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -280,9 +281,9 @@ export function ChatPage() {
     try {
       await send({ roomId: activeRoom, body: text }).unwrap();
       refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBody(text); // restore on error
-      toast.error("Couldn't send message", err?.data?.detail ?? "Try again.");
+      toast.error("Couldn't send message", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -298,9 +299,9 @@ export function ChatPage() {
     try {
       await sendAttachment({ roomId: activeRoom, body: text, file }).unwrap();
       refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBody(text);
-      toast.error("Upload failed", err?.data?.detail ?? err?.data ?? "Try again.");
+      toast.error("Upload failed", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -310,8 +311,8 @@ export function ChatPage() {
       toast.success("Room created", `#${room.name}`);
       setActiveRoom(room.id);
       setShowNewRoom(false);
-    } catch (err: any) {
-      toast.error("Couldn't create room", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create room", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -320,8 +321,8 @@ export function ChatPage() {
       const room = await startDm(userId).unwrap();
       setActiveRoom(room.id);
       setShowDm(false);
-    } catch (err: any) {
-      toast.error("Couldn't start chat", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't start chat", getErrorDetail(err) ?? "Try again.");
     }
   }
 

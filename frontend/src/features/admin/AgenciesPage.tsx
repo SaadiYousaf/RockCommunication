@@ -1,3 +1,4 @@
+import { getErrorDetail, getErrorStatus } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAssignAgencyCeoMutation,
@@ -55,8 +56,8 @@ export function AgenciesPage() {
       toast.success("Call center created", trimmed);
       setName("");
       setCode("");
-    } catch (err: any) {
-      toast.error("Couldn't create", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -78,8 +79,8 @@ export function AgenciesPage() {
       }).unwrap();
       toast.success("Updated", editing.name);
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Couldn't update", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -92,8 +93,8 @@ export function AgenciesPage() {
         isActive: !a.isActive,
       }).unwrap();
       toast.success(a.isActive ? "Disabled" : "Enabled", a.name);
-    } catch (err: any) {
-      toast.error("Couldn't update", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -311,8 +312,8 @@ export function AgenciesPage() {
             await assignCeo({ id: assigning.id, userId }).unwrap();
             toast.success("CEO assigned", assigning.name);
             setAssigning(null);
-          } catch (err: any) {
-            toast.error("Couldn't assign", err?.data?.detail ?? "Try again.");
+          } catch (err: unknown) {
+            toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
           }
         }}
       />
@@ -401,10 +402,10 @@ function AssignCeoModal({
       try {
         await onAssign(collision.user.id);
         return;
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast.error(
           collision.sameAgency ? "Couldn't promote" : "Couldn't move user",
-          err?.data?.detail ?? "Try again.",
+          getErrorDetail(err) ?? "Try again.",
         );
         return;
       }
@@ -418,9 +419,9 @@ function AssignCeoModal({
         roles: ["CEO"],
       }).unwrap();
       await onAssign(created.id);
-    } catch (err: any) {
-      const status = err?.status ?? err?.data?.status;
-      const detail: string = err?.data?.detail ?? err?.data?.title ?? "";
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      const detail: string = getErrorDetail(err) ?? getErrorDetail(err) ?? "";
       if (status === 409 || /already exists/i.test(detail)) {
         toast.error(
           "User already exists",

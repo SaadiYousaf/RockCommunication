@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useCheckIntegrationMutation, useListIntegrationsQuery,
@@ -44,8 +45,8 @@ export function IntegrationsPage() {
       setResults((r) => ({ ...r, [code]: res }));
       if (res.healthy) toast.success(`${code} OK`, res.message);
       else toast.error(`${code} unhealthy`, res.message);
-    } catch (err: any) {
-      toast.error("Check failed", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Check failed", getErrorDetail(err) ?? "Try again.");
     } finally {
       setChecking(null);
     }

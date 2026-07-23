@@ -1,3 +1,5 @@
+import { API_URL } from "../../shared/config";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCreatePayrollRunMutation, useMyCommissionsQuery, usePayrollRunsQuery } from "../../shared/api/baseApi";
 import { useSelector } from "react-redux";
@@ -7,7 +9,6 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
 function todayStr(offset = 0) {
   const d = new Date();
@@ -66,15 +67,15 @@ export function CommissionsPage() {
         a.click();
         URL.revokeObjectURL(url);
       })
-      .catch((err) => toast.error("Export failed", err.message));
+      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"));
   }
 
   async function makeRun() {
     try {
       await createRun({ periodStart: new Date(from).toISOString(), periodEnd: new Date(to).toISOString() }).unwrap();
       toast.success("Payroll run created", `Period ${from} → ${to}`);
-    } catch (err: any) {
-      toast.error("Couldn't create payroll run", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create payroll run", getErrorDetail(err) ?? "Try again.");
     }
   }
 

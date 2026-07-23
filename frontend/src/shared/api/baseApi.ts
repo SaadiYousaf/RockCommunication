@@ -1,5 +1,8 @@
+import { API_URL } from "../config";
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 import { setAuth, clearAuth } from "../../app/authSlice";
+import type { ApiErrorBody } from "./apiError";
+import type { RootState } from "../../app/store";
 import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
@@ -12,12 +15,10 @@ import type {
   ValidatorQueueItem, SetValidatorStatusInput,
 } from "./types";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
-
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_URL,
   prepareHeaders: (headers, { getState }) => {
-    const token = (getState() as any).auth?.accessToken as string | null;
+    const token = (getState() as RootState).auth?.accessToken;
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return headers;
   },
@@ -38,7 +39,7 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
     // Don't bother trying to refresh — the new access token would just be
     // rejected too. Nuke the local session and let the router send the user
     // to /login.
-    const errBody = (result.error as any).data as { detail?: string; title?: string } | undefined;
+    const errBody = (result.error as FetchBaseQueryError).data as ApiErrorBody | undefined;
     if (errBody && (
         errBody.title === "Account disabled" ||
         (typeof errBody.detail === "string" && /deactivated/i.test(errBody.detail))
@@ -47,7 +48,7 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
       api.dispatch(clearAuth());
       return result;
     }
-    const refreshToken = (api.getState() as any).auth?.refreshToken;
+    const refreshToken = (api.getState() as RootState).auth?.refreshToken;
     if (!refreshToken || sessionInvalid) {
       api.dispatch(clearAuth());
       return result;
@@ -67,7 +68,7 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
     const data = await inFlightRefresh;
     if (data) {
       sessionInvalid = false;
-      const current = (api.getState() as any).auth;
+      const current = (api.getState() as RootState).auth;
       api.dispatch(setAuth({ ...current, accessToken: data.accessToken, refreshToken: data.refreshToken }));
       result = await rawBaseQuery(args, api, extra);
     } else {

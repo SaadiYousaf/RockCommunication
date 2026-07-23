@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -39,8 +40,8 @@ export function LoginPage() {
           navigate("/dashboard");
         }
       }
-    } catch (err: any) {
-      const msg = err?.data?.detail ?? "Login failed.";
+    } catch (err: unknown) {
+      const msg = getErrorDetail(err) ?? "Login failed.";
       setError(msg);
       toast.error("Sign in failed", msg);
     }
@@ -62,8 +63,8 @@ export function LoginPage() {
           navigate("/dashboard");
         }
       }
-    } catch (err: any) {
-      const msg = err?.data?.detail ?? "Verification failed.";
+    } catch (err: unknown) {
+      const msg = getErrorDetail(err) ?? "Verification failed.";
       setError(msg);
       toast.error("Verification failed", msg);
     }

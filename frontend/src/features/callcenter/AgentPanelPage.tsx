@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import {
   useClockInMutation, useClockOutMutation, useListWrapUpCodesQuery,
@@ -84,8 +85,8 @@ export function AgentPanelPage() {
       await setStatus({ status, reason: reason || undefined }).unwrap();
       toast.success("Status updated", `You're now ${status}.`);
       setReason("");
-    } catch (err: any) {
-      const detail: string = err?.data?.detail ?? "Try again.";
+    } catch (err: unknown) {
+      const detail: string = getErrorDetail(err) ?? "Try again.";
       // Self-heal: if backend says we're not clocked in, our cached session is stale.
       // Refetch and let the UI render the empty state with a fresh Clock-in CTA.
       if (/not clocked in/i.test(detail)) {
@@ -99,15 +100,15 @@ export function AgentPanelPage() {
 
   async function doClockIn() {
     try { await clockIn().unwrap(); await refetchSession(); toast.success("Clocked in", "Welcome back."); }
-    catch (err: any) { toast.error("Clock-in failed", err?.data?.detail ?? "Try again."); }
+    catch (err: unknown) { toast.error("Clock-in failed", getErrorDetail(err) ?? "Try again."); }
   }
   async function doClockOut() {
     try {
       await clockOut().unwrap();
       await refetchSession();
       toast.success("Clocked out", "Have a good one.");
-    } catch (err: any) {
-      const detail: string = err?.data?.detail ?? "Try again.";
+    } catch (err: unknown) {
+      const detail: string = getErrorDetail(err) ?? "Try again.";
       // If the backend says we're not clocked in, our cache was stale — sync it.
       if (/not clocked in/i.test(detail)) {
         await refetchSession();
@@ -251,8 +252,8 @@ export function AgentPanelPage() {
                   await wrapUp(vals).unwrap();
                   await refetchSession();
                   toast.success("Wrap-up saved");
-                } catch (err: any) {
-                  toast.error("Couldn't save wrap-up", err?.data?.detail ?? "Try again.");
+                } catch (err: unknown) {
+                  toast.error("Couldn't save wrap-up", getErrorDetail(err) ?? "Try again.");
                 }
               }}
             />

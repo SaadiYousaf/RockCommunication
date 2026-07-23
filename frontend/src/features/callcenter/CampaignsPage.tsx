@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useListCampaignsQuery, useListLeadSourcesQuery, useListSkillsQuery, useListWrapUpCodesQuery,
@@ -60,15 +61,15 @@ function CampaignsSection() {
       await upsert({ id: null, code, name, verticalId: null, isActive: true, startsAt: null, endsAt: null }).unwrap();
       toast.success("Campaign saved", name);
       setCode(""); setName(""); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't save campaign", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save campaign", getErrorDetail(err) ?? "Try again.");
     }
   }
 
   async function toggle(c: any) {
     try { await upsert({ ...c, isActive: !c.isActive }).unwrap();
       toast.success(c.isActive ? "Campaign disabled" : "Campaign enabled");
-    } catch (err: any) { toast.error("Couldn't update", err?.data?.detail ?? "Try again."); }
+    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
   }
 
   return (
@@ -148,7 +149,7 @@ function LeadSourcesSection() {
       }).unwrap();
       toast.success("Lead source saved", name);
       setCode(""); setName(""); setCost("0"); setCampaignId(""); setOpen(false);
-    } catch (err: any) { toast.error("Couldn't save", err?.data?.detail ?? "Try again."); }
+    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
 
   return (
@@ -215,12 +216,12 @@ function SkillsSection() {
       await upsert({ id: null, code, name, isActive: true }).unwrap();
       toast.success("Skill saved", name);
       setCode(""); setName(""); setOpen(false);
-    } catch (err: any) { toast.error("Couldn't save", err?.data?.detail ?? "Try again."); }
+    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
 
   async function toggle(s: any) {
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap(); }
-    catch (err: any) { toast.error("Couldn't update", err?.data?.detail ?? "Try again."); }
+    catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
   }
 
   return (
@@ -281,7 +282,7 @@ function WrapUpCodesSection() {
       await upsert({ id: undefined, code, label, isSale, isContact, isRetry, isActive: true }).unwrap();
       toast.success("Wrap-up code saved", label);
       setCode(""); setLabel(""); setOpen(false);
-    } catch (err: any) { toast.error("Couldn't save", err?.data?.detail ?? "Try again."); }
+    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
 
   return (

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Text.Json;
+using CRM.Domain.Constants;
 
 namespace CRM.Api.Controllers;
 
@@ -28,7 +29,7 @@ public class PublicLeadCaptureController : ControllerBase
     [HttpPost("{slug}")]
     public async Task<IActionResult> Capture(string slug, CancellationToken ct)
     {
-        if (!Request.Headers.TryGetValue("X-Signature", out var sig) || string.IsNullOrEmpty(sig))
+        if (!Request.Headers.TryGetValue(AppConstants.HttpHeaderNames.Signature, out var sig) || string.IsNullOrEmpty(sig))
             return Unauthorized(new { error = "Missing X-Signature." });
 
         Request.EnableBuffering();

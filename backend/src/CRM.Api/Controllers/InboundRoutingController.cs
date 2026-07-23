@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CRM.Domain.Constants;
 
 namespace CRM.Api.Controllers;
 
@@ -41,7 +42,7 @@ public class InboundRoutingController : ControllerBase
         if (string.IsNullOrEmpty(secret))
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "Webhook is not configured." });
 
-        if (!Request.Headers.TryGetValue("X-Signature", out var signature) || string.IsNullOrEmpty(signature))
+        if (!Request.Headers.TryGetValue(AppConstants.HttpHeaderNames.Signature, out var signature) || string.IsNullOrEmpty(signature))
             return Unauthorized(new { error = "Missing X-Signature." });
 
         Request.EnableBuffering();

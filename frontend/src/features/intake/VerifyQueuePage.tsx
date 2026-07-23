@@ -1,3 +1,5 @@
+import { VERIFIER_STATUSES as STATUSES, MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import {
   useVerifierQueueQuery, useSetVerifierStatusMutation,
@@ -9,14 +11,6 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
-const STATUSES: { value: VerifierStatusValue; label: string }[] = [
-  { value: "Verified", label: "Verified" },
-  { value: "NotInterested", label: "Not interested" },
-  { value: "Dnc", label: "DNC" },
-  { value: "Busy", label: "Busy" },
-  { value: "CallBack", label: "Call Back" },
-  { value: "DeadAir", label: "Dead Air" },
-];
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
 export function VerifyQueuePage() {
@@ -63,8 +57,8 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
     try {
       const r = await setStatus({ leadId: lead.id, status }).unwrap();
       toast.success("Status saved", r.status === "Verified" ? "Lead sent to closer queue" : `Marked ${r.status}`);
-    } catch (err: any) {
-      toast.error("Couldn't save", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -90,7 +84,6 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
   );
 }
 
-const MARITAL = ["Single", "Married", "Divorced", "Widowed", "Separated"];
 
 /** Verifier opens a lead to review / correct its intake details. Typing only. */
 function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => void }) {
@@ -130,8 +123,8 @@ function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => voi
       }).unwrap();
       toast.success("Lead updated");
       onClose();
-    } catch (err: any) {
-      toast.error("Couldn't save", err?.data?.detail ?? "Check the fields and try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the fields and try again.");
     }
   }
 

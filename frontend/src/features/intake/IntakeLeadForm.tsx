@@ -1,8 +1,8 @@
+import { MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
 import { useState } from "react";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import { Button, Icon, Input, Select } from "../../shared/ui";
 
-const MARITAL = ["Single", "Married", "Divorced", "Widowed", "Separated"];
 
 const empty = {
   firstName: "", lastName: "", maritalStatus: "", createdDate: new Date().toISOString().slice(0, 10),

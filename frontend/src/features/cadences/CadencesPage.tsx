@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useCadenceEnrollmentsQuery, useListCadencesQuery, useUpsertCadenceMutation } from "../../shared/api/baseApi";
 import {
@@ -49,8 +50,8 @@ export function CadencesPage() {
       await upsert(editing).unwrap();
       toast.success(editing.id ? "Cadence updated" : "Cadence created", editing.name);
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Couldn't save cadence", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save cadence", getErrorDetail(err) ?? "Try again.");
     }
   }
 

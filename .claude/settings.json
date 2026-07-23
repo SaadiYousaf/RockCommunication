@@ -58,7 +58,8 @@
       "Bash(awk '{print $NF}')",
       "Bash(git stash *)",
       "Bash(grep -vE \"^\\\\s*$\")",
-      "Bash(echo \"exit $?\")"
+      "Bash(echo \"exit $?\")",
+      "Bash(python3 -)"
     ]
   }
 }

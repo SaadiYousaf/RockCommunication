@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation } from "../../shared/api/baseApi";
@@ -70,8 +71,8 @@ export function CallbacksPage() {
       }).unwrap();
       toast.success("Callback scheduled", `Reminder set for ${new Date(when).toLocaleString()}.`);
       setLeadId(""); setReason(""); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't schedule callback", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't schedule callback", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -79,8 +80,8 @@ export function CallbacksPage() {
     try {
       await complete(id).unwrap();
       toast.success("Callback completed");
-    } catch (err: any) {
-      toast.error("Couldn't mark complete", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't mark complete", getErrorDetail(err) ?? "Try again.");
     }
   }
 

@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -88,8 +89,8 @@ export function MyQueuePage() {
       await dial({ leadId: id }).unwrap();
       toast.success("Calling…", name);
       navigate(`/leads/${id}`);
-    } catch (err: any) {
-      toast.error("Couldn't dial", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -98,8 +99,8 @@ export function MyQueuePage() {
       await transition({ id, toStage, disposition }).unwrap();
       toast.success("Disposition saved", `${name} → ${disposition}`);
       refetch();
-    } catch (err: any) {
-      toast.error("Couldn't update", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
     }
   }
 

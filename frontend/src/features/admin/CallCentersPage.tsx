@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation,
@@ -29,8 +30,8 @@ export function CallCentersPage() {
       await createCc({ name: form.name.trim(), code: form.code.trim() || null }).unwrap();
       toast.success("Call center created", form.name);
       setShowNew(false); setForm({ name: "", code: "" });
-    } catch (err: any) {
-      toast.error("Couldn't create", err?.data?.detail ?? "Check the name and try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create", getErrorDetail(err) ?? "Check the name and try again.");
     }
   }
 
@@ -44,8 +45,8 @@ export function CallCentersPage() {
       }).unwrap();
       toast.success("Saved", editing.name);
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Couldn't save", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
     }
   }
 

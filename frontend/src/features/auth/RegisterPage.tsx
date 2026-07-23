@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -145,8 +146,8 @@ export function RegisterPage() {
         toast.success("User created", `${userName} can now sign in.`);
       }
       navigate("/admin/users");
-    } catch (err: any) {
-      const msg = err?.data?.detail ?? err?.data?.title ?? "Registration failed.";
+    } catch (err: unknown) {
+      const msg = getErrorDetail(err) ?? getErrorDetail(err) ?? "Registration failed.";
       setError(msg);
       toast.error("Registration failed", msg);
     }

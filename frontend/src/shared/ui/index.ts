@@ -3,7 +3,7 @@ export { Button, type ButtonProps } from "./Button";
 export { Input, Textarea, Select } from "./Input";
 export { useSecureEntry, TYPING_ONLY_ROLES } from "./secureEntry";
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
-export { Badge } from "./Badge";
+export { Badge, type BadgeTone } from "./Badge";
 export { Spinner } from "./Spinner";
 export { Skeleton } from "./Skeleton";
 export { EmptyState } from "./EmptyState";

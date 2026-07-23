@@ -17,7 +17,7 @@ public class CurrentUserService : ICurrentUser
         get
         {
             var raw = User?.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? User?.FindFirstValue("sub");
+                ?? User?.FindFirstValue(CustomJwtClaims.Subject);
             return Guid.TryParse(raw, out var id) ? id : null;
         }
     }
@@ -28,7 +28,7 @@ public class CurrentUserService : ICurrentUser
     {
         get
         {
-            var raw = User?.FindFirstValue("agency");
+            var raw = User?.FindFirstValue(CustomJwtClaims.Agency);
             return Guid.TryParse(raw, out var id) ? id : null;
         }
     }
@@ -37,7 +37,7 @@ public class CurrentUserService : ICurrentUser
     {
         get
         {
-            var raw = User?.FindFirstValue("callcenter");
+            var raw = User?.FindFirstValue(CustomJwtClaims.CallCenter);
             return Guid.TryParse(raw, out var id) ? id : null;
         }
     }

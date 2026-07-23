@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useResetPasswordMutation } from "../../shared/api/baseApi";
@@ -37,8 +38,8 @@ export function ResetPasswordPage() {
       await reset({ email, token, newPassword: pwd }).unwrap();
       toast.success("Password reset", "You can sign in with your new password.");
       navigate("/login", { replace: true });
-    } catch (err: any) {
-      setError(err?.data?.detail ?? "This reset link is invalid or has expired.");
+    } catch (err: unknown) {
+      setError(getErrorDetail(err) ?? "This reset link is invalid or has expired.");
     }
   }
 

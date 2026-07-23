@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useAddIpAllowlistMutation, useCreateVerticalMutation, useListCommissionConfigQuery,
@@ -57,7 +58,7 @@ function IpAllowlistSection() {
             await add({ cidrOrIp: cidr, note: note || undefined }).unwrap();
             toast.success("Entry added");
             setCidr(""); setNote("");
-          } catch (err: any) { toast.error("Couldn't add", err?.data?.detail ?? "Try again."); }
+          } catch (err: unknown) { toast.error("Couldn't add", getErrorDetail(err) ?? "Try again."); }
         }}>
           <Input leftIcon={<Icon name="shield" size={14} />} placeholder="IP or CIDR (e.g. 10.0.0.0/24)"
             value={cidr} onChange={(e) => setCidr(e.target.value)} required containerClassName="flex-1 min-w-[220px]" />
@@ -107,7 +108,7 @@ function VerticalsSection() {
             await create({ name, description: description || undefined }).unwrap();
             toast.success("Vertical created", name);
             setName(""); setDescription("");
-          } catch (err: any) { toast.error("Couldn't create", err?.data?.detail ?? "Try again."); }
+          } catch (err: unknown) { toast.error("Couldn't create", getErrorDetail(err) ?? "Try again."); }
         }}>
           <Input placeholder="Vertical name (e.g. Health)" value={name}
             onChange={(e) => setName(e.target.value)} required containerClassName="w-56" />
@@ -159,7 +160,7 @@ function HorizontalsSection() {
             await create({ name, description: description || undefined }).unwrap();
             toast.success("Horizontal created", name);
             setName(""); setDescription("");
-          } catch (err: any) { toast.error("Couldn't create", err?.data?.detail ?? "Try again."); }
+          } catch (err: unknown) { toast.error("Couldn't create", getErrorDetail(err) ?? "Try again."); }
         }}>
           <Input placeholder="Horizontal name (e.g. East Region)" value={name}
             onChange={(e) => setName(e.target.value)} required containerClassName="w-56" />

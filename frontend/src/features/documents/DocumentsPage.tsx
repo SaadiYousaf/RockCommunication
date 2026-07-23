@@ -1,3 +1,5 @@
+import { API_URL } from "../../shared/config";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import * as XLSX from "xlsx";
@@ -13,7 +15,6 @@ import {
   PageHeader, Skeleton, useToast,
 } from "../../shared/ui";
 
-const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
 
 function fmtSize(n: number) {
   if (n < 1024) return `${n} B`;
@@ -42,8 +43,8 @@ export function DocumentsPage() {
       toast.success("Uploaded", pending.name);
       setPending(null); setName("");
       if (fileRef.current) fileRef.current.value = "";
-    } catch (err: any) {
-      toast.error("Upload failed", err?.data?.detail ?? err?.data ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Upload failed", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -295,8 +296,8 @@ function NotesPanel({ documentId }: { documentId: string }) {
     try {
       await addNote({ id: documentId, body: body.trim() }).unwrap();
       setBody("");
-    } catch (err: any) {
-      toast.error("Couldn't save note", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't save note", getErrorDetail(err) ?? "Try again.");
     }
   }
 

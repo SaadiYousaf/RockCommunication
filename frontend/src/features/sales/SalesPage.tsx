@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -60,8 +61,8 @@ export function SalesPage() {
       toast.success("Sale recorded", `$${premium.toFixed(2)}/mo · ${carrier} · ${bankMsg}`);
       setLeadId(""); setPolicyNumber(""); setRecordingFile(null);
       setRoutingNumber(""); setAccountNumber(""); setAccountType("checking");
-    } catch (err: any) {
-      const detail = err?.data?.detail ?? "Try again.";
+    } catch (err: unknown) {
+      const detail = getErrorDetail(err) ?? "Try again.";
       // Lyons flagged the account (198) and no recording was attached — keep the form so they can add one.
       if (/recording/i.test(detail)) {
         toast.warning("Verification recording needed", detail);
@@ -270,8 +271,8 @@ export function SalesPage() {
     try {
       await validateSale({ id, approve }).unwrap();
       toast.success(approve ? "Sale approved" : "Sale rejected");
-    } catch (err: any) {
-      toast.error("Couldn't validate sale", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't validate sale", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -279,8 +280,8 @@ export function SalesPage() {
     try {
       await fundSale(id).unwrap();
       toast.success("Sale funded");
-    } catch (err: any) {
-      toast.error("Couldn't fund sale", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't fund sale", getErrorDetail(err) ?? "Try again.");
     }
   }
 }

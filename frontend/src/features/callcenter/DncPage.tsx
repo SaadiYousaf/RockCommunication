@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useAddDncMutation, useListDncQuery, useRemoveDncMutation } from "../../shared/api/baseApi";
 import {
@@ -33,8 +34,8 @@ export function DncPage() {
       await add({ phone, reason: reason || undefined }).unwrap();
       toast.success("Added to DNC", phone);
       setPhone(""); setReason(""); setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't add DNC entry", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't add DNC entry", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -43,8 +44,8 @@ export function DncPage() {
       await remove(id).unwrap();
       toast.success("Removed from DNC");
       setConfirmRemove(null);
-    } catch (err: any) {
-      toast.error("Couldn't remove", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again.");
     }
   }
 

@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -115,8 +116,8 @@ export function AgentStatusBar() {
                 await clockIn().unwrap();
                 await sessionQuery.refetch();
                 toast.success("Clocked in", "Welcome back.");
-              } catch (err: any) {
-                toast.error("Clock-in failed", err?.data?.detail ?? "Try again.");
+              } catch (err: unknown) {
+                toast.error("Clock-in failed", getErrorDetail(err) ?? "Try again.");
               }
             }}
             leftIcon={<Icon name="phone" size={14} />}
@@ -135,8 +136,8 @@ export function AgentStatusBar() {
     try {
       await setStatus({ status: next }).unwrap();
       toast.success(`Now ${next}`, "");
-    } catch (err: any) {
-      toast.error("Couldn't update status", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update status", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -231,8 +232,8 @@ export function AgentStatusBar() {
                 await clockOut().unwrap();
                 await sessionQuery.refetch();
                 toast.success("Clocked out", "Have a good one.");
-              } catch (err: any) {
-                toast.error("Clock-out failed", err?.data?.detail ?? "Try again.");
+              } catch (err: unknown) {
+                toast.error("Clock-out failed", getErrorDetail(err) ?? "Try again.");
               }
             }}
             disabled={clockingOut}

@@ -7,6 +7,7 @@ using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
+using CRM.Domain.Constants;
 
 namespace CRM.Application.Intake;
 
@@ -96,7 +97,7 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             AgeYears = d.AgeYears,
             JornayaLeadId = d.JornayaLeadId,
             ConsentCaptured = true,
-            Source = toCloser ? "Closer Intake" : "Fronter Intake",
+            Source = toCloser ? AppConstants.LeadSources.CloserIntake : AppConstants.LeadSources.FronterIntake,
             Stage = request.EntryStage,
             Disposition = LeadDisposition.None,
             VerifierStatus = toCloser ? VerifierStatus.Verified : VerifierStatus.None,
@@ -132,10 +133,10 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
         // Notify the receiving queue's role that a new lead has landed.
         if (toCloser)
             await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
-                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/close-queue", ct);
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.CloseQueue, ct);
         else
             await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Verifier, "New lead to verify",
-                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", "/verify-queue", ct);
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.VerifyQueue, ct);
 
         return new IntakeLeadResult(lead.Id, lead.FirstName, lead.LastName, lead.Stage);
     }

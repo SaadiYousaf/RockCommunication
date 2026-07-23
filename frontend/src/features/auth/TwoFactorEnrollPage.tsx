@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import {
@@ -43,8 +44,8 @@ export function TwoFactorEnrollPage() {
         await sendEmailOtp().unwrap();
         setStep("verify");
       }
-    } catch (err: any) {
-      setError(err?.data?.detail ?? "Couldn't start setup. Try again.");
+    } catch (err: unknown) {
+      setError(getErrorDetail(err) ?? "Couldn't start setup. Try again.");
     }
   }
 
@@ -55,8 +56,8 @@ export function TwoFactorEnrollPage() {
       await enable({ code }).unwrap();
       setStep("done");
       refetchStatus();
-    } catch (err: any) {
-      setError(err?.data?.detail ?? "Invalid code. Try again.");
+    } catch (err: unknown) {
+      setError(getErrorDetail(err) ?? "Invalid code. Try again.");
     }
   }
 
@@ -68,8 +69,8 @@ export function TwoFactorEnrollPage() {
       setStep("choose");
       setCode("");
       refetchStatus();
-    } catch (err: any) {
-      setError(err?.data?.detail ?? "Couldn't disable 2FA. Try again.");
+    } catch (err: unknown) {
+      setError(getErrorDetail(err) ?? "Couldn't disable 2FA. Try again.");
     }
   }
 

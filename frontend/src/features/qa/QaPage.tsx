@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useCreateRubricMutation, useRubricsQuery } from "../../shared/api/baseApi";
 import {
@@ -25,8 +26,8 @@ export function QaPage() {
       toast.success("Rubric created", name);
       setName(""); setDescription(""); setItems([{ label: "Greeting", maxScore: 10, order: 1 }]);
       setOpen(false);
-    } catch (err: any) {
-      toast.error("Couldn't create rubric", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't create rubric", getErrorDetail(err) ?? "Try again.");
     }
   }
 

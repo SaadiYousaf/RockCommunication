@@ -37,7 +37,7 @@ public class InAppNotificationChannel : INotificationChannel
         // Best-effort: a real-time push failure must not fail the notification write.
         try
         {
-            await _agent.PushAsync(payload.UserId.Value, "notification",
+            await _agent.PushAsync(payload.UserId.Value, AgentEvents.Notification,
                 new { title = payload.Title, body = payload.Body, url = payload.Url }, ct);
         }
         catch { /* advisory only */ }

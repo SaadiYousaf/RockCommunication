@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -98,8 +99,8 @@ export function GlobalSearchPage() {
     try {
       await dialLead({ leadId: id }).unwrap();
       toast.success("Dialing", `Calling ${name}…`);
-    } catch (err: any) {
-      toast.error("Dial failed", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Dial failed", getErrorDetail(err) ?? "");
     }
   }
 

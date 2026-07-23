@@ -1,3 +1,5 @@
+import { CLOSER_STATUSES } from "../../shared/constants/intake";
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetClosingApplicationQuery, useSubmitClosingApplicationMutation } from "../../shared/api/baseApi";
@@ -6,13 +8,6 @@ import {
   Badge, Button, Card, CardBody, CardHeader, Icon, Input, PageHeader, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 
-const CLOSER_STATUSES: { value: CloserStatusValue; label: string }[] = [
-  { value: "CompleteAndSold", label: "Complete and Sold" },
-  { value: "LostOnSocial", label: "Lost on Social" },
-  { value: "LostOnAccount", label: "Lost on Account" },
-  { value: "DncLead", label: "DNC Lead" },
-  { value: "NotInterestedCallback", label: "Not Interested, Callback later" },
-];
 
 const blank = {
   healthConditions: "", gender: "", age: "", smokerStatus: "", name: "", dateOfBirth: "", address: "",
@@ -81,8 +76,8 @@ export function ClosingApplicationPage() {
       toast.success("Application submitted",
         r.status === "CompleteAndSold" ? "Sale created (Lyons cleared the account)." : `Marked ${r.status}`);
       navigate("/close-queue");
-    } catch (err: any) {
-      toast.error("Couldn't submit", err?.data?.detail ?? "Check the required fields and bank details.");
+    } catch (err: unknown) {
+      toast.error("Couldn't submit", getErrorDetail(err) ?? "Check the required fields and bank details.");
     }
   }
 

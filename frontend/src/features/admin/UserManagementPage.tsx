@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import {
   useListUsersQuery, useResetUserPasswordMutation,
@@ -9,24 +10,10 @@ import {
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
+import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones } from "../../shared/constants/roles";
 
-const ALL_ROLES = [
-  "Admin", "ProgramManager", "TeamLead",
-  "Fronter", "Verifier",
-  "JrCloser", "Closer", "Validator", "SelfValidator",
-  "Followups", "Correspondence", "Winbacks",
-];
 
-// Display label overrides (internal role name → what the client wants shown).
-const ROLE_LABELS: Record<string, string> = { Validator: "Submission Agent" };
-const roleLabel = (r: string) => ROLE_LABELS[r] ?? r;
 
-const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
-  Admin: "danger", ProgramManager: "danger", TeamLead: "warning",
-  Closer: "success", JrCloser: "success", SelfValidator: "success",
-  Validator: "info", Fronter: "brand", Verifier: "brand",
-  Followups: "neutral", Correspondence: "neutral", Winbacks: "neutral",
-};
 
 export function UserManagementPage() {
   const { data: users, isLoading } = useListUsersQuery();
@@ -41,8 +28,8 @@ export function UserManagementPage() {
     try {
       await setUserCc({ userId, callCenterId: value || null }).unwrap();
       toast.success("Call center updated");
-    } catch (err: any) {
-      toast.error("Couldn't update call center", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't update call center", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -68,7 +55,7 @@ export function UserManagementPage() {
     return {
       total: list.length,
       admins: list.filter((u) => u.roles.includes("Admin") || u.roles.includes("ProgramManager")).length,
-      mustChange: list.filter((u: any) => u.mustChangePassword).length,
+      mustChange: list.filter((u) => u.mustChangePassword).length,
       noRoles: list.filter((u) => u.roles.length === 0).length,
     };
   }, [users]);
@@ -148,7 +135,7 @@ export function UserManagementPage() {
             {filtered.map((u) => {
               // Backend now returns isActive on every UserSummary. We default to
               // `true` for older payloads so we don't accidentally grey out everyone.
-              const active = (u as any).isActive ?? true;
+              const active = u.isActive ?? true;
               return (
               <TR key={u.id} className={active ? "" : "bg-rose-50/30"}>
                 <TD>
@@ -164,7 +151,7 @@ export function UserManagementPage() {
                             <Icon name="userX" size={10} className="mr-1" /> Deactivated
                           </Badge>
                         )}
-                        {(u as any).mustChangePassword && (
+                        {u.mustChangePassword && (
                           <Badge tone="warning" variant="soft" size="sm">
                             <Icon name="key" size={10} className="mr-1" /> Must change password
                           </Badge>
@@ -185,7 +172,7 @@ export function UserManagementPage() {
                 </TD>
                 <TD>
                   <Select
-                    value={(u as any).callCenterId ?? ""}
+                    value={u.callCenterId ?? ""}
                     onChange={(e) => assignCallCenter(u.id, e.target.value)}
                     className="text-xs"
                   >
@@ -221,8 +208,8 @@ export function UserManagementPage() {
                           try {
                             await setActive({ id: u.id, isActive: true }).unwrap();
                             toast.success("User reactivated", `${u.userName} can sign in again.`);
-                          } catch (err: any) {
-                            toast.error("Couldn't reactivate", err?.data?.detail ?? "Try again.");
+                          } catch (err: unknown) {
+                            toast.error("Couldn't reactivate", getErrorDetail(err) ?? "Try again.");
                           }
                         }}
                       >Reactivate</Button>
@@ -253,8 +240,8 @@ export function UserManagementPage() {
                 await updateRoles({ id: editing.id, roles }).unwrap();
                 toast.success("Roles updated", `${editing.userName} now has ${roles.length} role(s).`);
                 setEditing(null);
-              } catch (err: any) {
-                toast.error("Couldn't update roles", err?.data?.detail ?? "Try again.");
+              } catch (err: unknown) {
+                toast.error("Couldn't update roles", getErrorDetail(err) ?? "Try again.");
               }
             }}
           />
@@ -278,8 +265,8 @@ export function UserManagementPage() {
                   await resetPw({ id: resetting.id, newPassword: newPwd }).unwrap();
                   toast.success("Password reset", `New password set for ${resetting.userName}.`);
                   setResetting(null);
-                } catch (err: any) {
-                  toast.error("Couldn't reset password", err?.data?.detail ?? "Try again.");
+                } catch (err: unknown) {
+                  toast.error("Couldn't reset password", getErrorDetail(err) ?? "Try again.");
                 }
               }}
             >Set password</Button>
@@ -313,8 +300,8 @@ export function UserManagementPage() {
                   await setActive({ id: confirmDeactivate.id, isActive: false }).unwrap();
                   toast.success("User deactivated", `${confirmDeactivate.userName} can no longer sign in.`);
                   setConfirmDeactivate(null);
-                } catch (err: any) {
-                  toast.error("Couldn't deactivate", err?.data?.detail ?? "Try again.");
+                } catch (err: unknown) {
+                  toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
                 }
               }}
             >Deactivate user</Button>

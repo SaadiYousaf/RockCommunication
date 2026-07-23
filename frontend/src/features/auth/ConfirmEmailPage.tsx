@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useConfirmEmailMutation, useResendEmailConfirmationMutation } from "../../shared/api/baseApi";
@@ -22,7 +23,7 @@ export function ConfirmEmailPage() {
     confirm({ userId, token }).unwrap()
       .then(() => setState("ok"))
       .catch((err) => {
-        setError(err?.data?.detail ?? "This confirmation link is invalid or has expired.");
+        setError(getErrorDetail(err) ?? "This confirmation link is invalid or has expired.");
         setState("fail");
       });
   }, [state, userId, token, confirm]);

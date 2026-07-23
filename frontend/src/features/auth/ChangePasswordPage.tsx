@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -54,8 +55,8 @@ export function ChangePasswordPage() {
         }
       } catch { /* if /me fails the user can just sign in again */ }
       navigate("/dashboard");
-    } catch (err: any) {
-      const msg = err?.data?.detail ?? err?.data?.title ?? "Couldn't change password.";
+    } catch (err: unknown) {
+      const msg = getErrorDetail(err) ?? getErrorDetail(err) ?? "Couldn't change password.";
       setError(msg);
       toast.error("Couldn't change password", msg);
     }

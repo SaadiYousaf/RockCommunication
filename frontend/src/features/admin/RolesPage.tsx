@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import {
   useCreateRoleMutation, useDeleteRoleMutation, useListModulesQuery,
@@ -110,8 +111,8 @@ export function RolesPage() {
       setNewName("");
       setNewModules([]);
       setSelectedRoleId(created.id);
-    } catch (err: any) {
-      toast.error("Could not create role", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Could not create role", getErrorDetail(err) ?? "");
     }
   }
 
@@ -120,8 +121,8 @@ export function RolesPage() {
     try {
       await setRoleModules({ id: selected.id, moduleCodes: draftModules }).unwrap();
       toast.success("Saved", `Module access updated for ${selected.name}.`);
-    } catch (err: any) {
-      toast.error("Save failed", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Save failed", getErrorDetail(err) ?? "");
     }
   }
 
@@ -130,8 +131,8 @@ export function RolesPage() {
     try {
       await renameRole({ id: selected.id, name: editingName.trim() }).unwrap();
       toast.success("Renamed");
-    } catch (err: any) {
-      toast.error("Rename failed", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Rename failed", getErrorDetail(err) ?? "");
     }
   }
 
@@ -142,8 +143,8 @@ export function RolesPage() {
       toast.success("Role deleted", confirmDelete.name);
       setConfirmDelete(null);
       if (selectedRoleId === confirmDelete.id) setSelectedRoleId(null);
-    } catch (err: any) {
-      toast.error("Delete failed", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Delete failed", getErrorDetail(err) ?? "");
     }
   }
 
@@ -555,8 +556,8 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
     try {
       await setRolePermissions({ roleId, permissionCodes: draft }).unwrap();
       toast.success("Permissions saved", "Role grants updated.");
-    } catch (err: any) {
-      toast.error("Save failed", err?.data?.detail ?? "");
+    } catch (err: unknown) {
+      toast.error("Save failed", getErrorDetail(err) ?? "");
     }
   }
 

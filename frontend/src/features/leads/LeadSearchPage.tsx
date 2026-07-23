@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -76,8 +77,8 @@ export function LeadSearchPage() {
       await dialLead({ leadId }).unwrap();
       toast.success("Calling…", "Watch the dock for status.");
       navigate(`/leads/${leadId}`);
-    } catch (err: any) {
-      toast.error("Couldn't dial", err?.data?.detail ?? "Try again.");
+    } catch (err: unknown) {
+      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
     }
   }
 
