@@ -154,6 +154,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.BankAccountLast4).HasMaxLength(8);
             e.Property(x => x.BankName).HasMaxLength(120);
             e.Property(x => x.LyonsReference).HasMaxLength(64);
+            e.Property(x => x.CoverageApproved).HasPrecision(18, 2);
+            e.Property(x => x.PremiumApproved).HasPrecision(18, 2);
+            e.Property(x => x.CarrierApproved).HasMaxLength(120);
+            e.Property(x => x.PlanApproved).HasMaxLength(120);
+            e.Property(x => x.DeclineReason).HasMaxLength(500);
+            e.HasIndex(x => new { x.AgencyId, x.ValidatorStatus });
         });
 
         b.Entity<LeadApplication>(e =>

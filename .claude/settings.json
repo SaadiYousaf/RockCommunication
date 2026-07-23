@@ -43,7 +43,13 @@
       "Bash(grep -nA6 '\"Jwt\"' backend/src/CRM.Api/appsettings.json)",
       "Bash(awk 'NR>=60 && NR<=110' src/CRM.Application/Sales/Commands/Payroll.cs)",
       "Bash(grep -v ':0$')",
-      "Bash(grep -vE \"^\\\\s*M?\\\\s*\\(\\\\.claude/settings\\\\.json|backend/src/CRM.Infrastructure/Identity/UserAdminService\\\\.cs\\)$\")"
+      "Bash(grep -vE \"^\\\\s*M?\\\\s*\\(\\\\.claude/settings\\\\.json|backend/src/CRM.Infrastructure/Identity/UserAdminService\\\\.cs\\)$\")",
+      "Bash(git worktree *)",
+      "Bash(git -C /private/tmp/claude-501/crm-baseline log --oneline -1)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM/backend log --oneline -3)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM log --oneline -3)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM/backend log --oneline -1 -- src/CRM.Domain/Common/Guard.cs)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM log --oneline -1 -- backend/src/CRM.Domain/Common/Guard.cs)"
     ]
   }
 }

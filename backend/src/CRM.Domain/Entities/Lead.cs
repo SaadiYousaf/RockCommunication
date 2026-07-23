@@ -102,4 +102,18 @@ public class Sale : TenantEntity
     public string? BankName { get; set; }
     /// <summary>Lyons reference id for the validation, kept for audit/dispute.</summary>
     public string? LyonsReference { get; set; }
+
+    // ---- Validator review (post-close validation queue) ----
+    /// <summary>Where the sale sits in the Validator queue. Defaults to Completed on submission.</summary>
+    public ValidatorStatus ValidatorStatus { get; set; } = ValidatorStatus.Completed;
+    /// <summary>Carrier the customer was approved on (set when the validator marks Approved).</summary>
+    public string? CarrierApproved { get; set; }
+    /// <summary>Approved coverage / face amount (set when Approved).</summary>
+    public decimal? CoverageApproved { get; set; }
+    /// <summary>Approved premium (set when Approved).</summary>
+    public decimal? PremiumApproved { get; set; }
+    /// <summary>Approved plan (set when Approved).</summary>
+    public string? PlanApproved { get; set; }
+    /// <summary>Reason recorded when the validator marks the sale Declined.</summary>
+    public string? DeclineReason { get; set; }
 }

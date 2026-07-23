@@ -1,21 +1,48 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useCloserQueueQuery } from "../../shared/api/baseApi";
+import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
+import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Modal, PageHeader,
+  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { IntakeLeadForm } from "./IntakeLeadForm";
 
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
   const { data: queue, isLoading } = useCloserQueueQuery();
+  const [addLead, { isLoading: adding }] = useCaptureCloserLeadMutation();
+  const [open, setOpen] = useState(false);
+  const toast = useToast();
+
+  async function onAdd(input: IntakeLeadInput) {
+    try {
+      const r = await addLead(input).unwrap();
+      toast.success("Lead added", `${r.firstName} ${r.lastName} → your closer queue`);
+      setOpen(false);
+      return true;
+    } catch (err: any) {
+      toast.error("Couldn't add lead", err?.data?.detail ?? "Check the required fields and try again.");
+      return false;
+    }
+  }
+
   return (
     <>
-      <PageHeader title="Closer Queue" description="Verified leads ready to close. Open a lead to complete the application." />
+      <PageHeader
+        title="Closer Queue"
+        description="Verified leads ready to close. Open a lead to complete the application."
+        actions={
+          <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>
+            Add lead
+          </Button>
+        }
+      />
       <Card>
         <CardHeader title="Ready to close" subtitle={queue ? `${queue.length} lead(s)` : undefined} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !queue || queue.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description="Verified leads will appear here." />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description="Verified leads will appear here. Use “Add lead” to start one yourself." />
           ) : (
             <Table>
               <THead>
@@ -41,6 +68,16 @@ export function CloseQueuePage() {
           )}
         </CardBody>
       </Card>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Get Yourself Protected — Add Lead"
+        description="Capture the prospect's details. All fields are required and must be typed (no paste). The lead lands in your closer queue."
+        size="lg"
+      >
+        <IntakeLeadForm onSubmit={onAdd} isLoading={adding} submitLabel="Add to closer queue" />
+      </Modal>
     </>
   );
 }

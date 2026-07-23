@@ -28,7 +28,13 @@ public record IntakeLeadDto(
 
 public record IntakeLeadResult(Guid LeadId, string FirstName, string LastName, WorkflowStage Stage);
 
-public record CaptureIntakeLeadCommand(IntakeLeadDto Input) : IRequest<IntakeLeadResult>;
+/// <summary>
+/// Captures a Jornaya intake lead. <paramref name="EntryStage"/> is <see cref="WorkflowStage.Fronted"/>
+/// for the Fronter form (lead enters the Verifier queue) or <see cref="WorkflowStage.Verified"/> when a
+/// Closer adds a lead directly from the Closer queue (skips verification, ready to close).
+/// </summary>
+public record CaptureIntakeLeadCommand(IntakeLeadDto Input, WorkflowStage EntryStage = WorkflowStage.Fronted)
+    : IRequest<IntakeLeadResult>;
 
 public class CaptureIntakeLeadValidator : AbstractValidator<CaptureIntakeLeadCommand>
 {
@@ -70,6 +76,8 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException("No agency context.");
 
         var d = request.Input;
+        // A closer-added lead skips verification and is already ready to close.
+        var toCloser = request.EntryStage == WorkflowStage.Verified;
         var lead = new Lead
         {
             AgencyId = _user.AgencyId.Value,
@@ -86,11 +94,10 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             AgeYears = d.AgeYears,
             JornayaLeadId = d.JornayaLeadId,
             ConsentCaptured = true,
-            Source = "Fronter Intake",
-            // Fronter has captured the lead → it enters the Verifier queue immediately.
-            Stage = WorkflowStage.Fronted,
+            Source = toCloser ? "Closer Intake" : "Fronter Intake",
+            Stage = request.EntryStage,
             Disposition = LeadDisposition.None,
-            VerifierStatus = VerifierStatus.None,
+            VerifierStatus = toCloser ? VerifierStatus.Verified : VerifierStatus.None,
             AssignedUserId = _user.UserId
         };
         _db.Leads.Add(lead);
@@ -100,9 +107,9 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             LeadId = lead.Id,
             UserId = _user.UserId.Value,
             FromStage = WorkflowStage.New,
-            ToStage = WorkflowStage.Fronted,
+            ToStage = request.EntryStage,
             Disposition = LeadDisposition.None,
-            Notes = "Lead captured via Fronter intake form."
+            Notes = toCloser ? "Lead captured via Closer intake form." : "Lead captured via Fronter intake form."
         });
         await _db.SaveChangesAsync(ct);
 

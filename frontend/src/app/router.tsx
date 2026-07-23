@@ -10,6 +10,7 @@ import { IntakeFormPage } from "../features/intake/IntakeFormPage";
 import { VerifyQueuePage } from "../features/intake/VerifyQueuePage";
 import { CloseQueuePage } from "../features/intake/CloseQueuePage";
 import { ClosingApplicationPage } from "../features/intake/ClosingApplicationPage";
+import { ValidateQueuePage } from "../features/intake/ValidateQueuePage";
 import { LeadDetailPage } from "../features/leads/LeadDetailPage";
 import { LeadSearchPage } from "../features/leads/LeadSearchPage";
 import { LeadTroubleshootPage } from "../features/leads/LeadTroubleshootPage";
@@ -129,6 +130,10 @@ const router = createBrowserRouter([
               { path: "/close-queue", element: <CloseQueuePage /> },
               { path: "/close-queue/:id", element: <ClosingApplicationPage /> },
             ],
+          },
+          {
+            element: <ProtectedRoute roles={["Validator"]} />,
+            children: [{ path: "/validate-queue", element: <ValidateQueuePage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Callbacks]} />,

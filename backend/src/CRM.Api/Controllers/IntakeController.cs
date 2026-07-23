@@ -54,6 +54,15 @@ public class IntakeController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<IntakeQueueItem>>> CloserQueue(CancellationToken ct)
         => Ok(await _mediator.Send(new CloserQueueQuery(), ct));
 
+    /// <summary>Closer adds a lead directly into their own queue (skips the fronter/verifier steps).</summary>
+    [HttpPost("close/leads")]
+    [Authorize(Roles = Roles.Closer + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<IntakeLeadResult>> CaptureForCloser([FromBody] IntakeLeadDto dto, CancellationToken ct)
+    {
+        Guard.AgainstNull(dto);
+        return Ok(await _mediator.Send(new CaptureIntakeLeadCommand(dto, WorkflowStage.Verified), ct));
+    }
+
     [HttpGet("close/{leadId:guid}")]
     [Authorize(Roles = Roles.Closer + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<ClosingApplicationView>> GetClosing(Guid leadId, CancellationToken ct)
@@ -67,5 +76,25 @@ public class IntakeController : ControllerBase
     {
         Guard.AgainstNull(body);
         return Ok(await _mediator.Send(new SubmitClosingApplicationCommand(leadId, body.Status, body.Application), ct));
+    }
+
+    // ---- Validator ----
+    [HttpGet("validate/queue")]
+    [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<IReadOnlyList<ValidatorQueueItem>>> ValidatorQueue(CancellationToken ct)
+        => Ok(await _mediator.Send(new ValidatorQueueQuery(), ct));
+
+    public record ValidatorStatusBody(
+        ValidatorStatus Status, string? CarrierApproved, decimal? CoverageApproved,
+        decimal? PremiumApproved, string? PlanApproved, string? DeclineReason);
+
+    [HttpPost("validate/{saleId:guid}/status")]
+    [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<ActionResult<ValidatorStatusResult>> SetValidatorStatus(Guid saleId, [FromBody] ValidatorStatusBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetValidatorStatusCommand(
+            saleId, body.Status, body.CarrierApproved, body.CoverageApproved,
+            body.PremiumApproved, body.PlanApproved, body.DeclineReason), ct));
     }
 }

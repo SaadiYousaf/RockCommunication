@@ -9,6 +9,7 @@ import type {
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput,
+  ValidatorQueueItem, SetValidatorStatusInput,
 } from "./types";
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5050";
@@ -83,7 +84,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -378,7 +379,21 @@ export const baseApi = createApi({
     }),
     submitClosingApplication: b.mutation<{ leadId: string; status: string; stage: string; saleId: string | null }, { leadId: string; status: string; application: ClosingApplicationInput }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/close/${leadId}`, method: "POST", body }),
-      invalidatesTags: (_r, _e, arg) => ["CloserQueue", "Sales", "Leads", "Commissions", { type: "ClosingApp", id: arg.leadId }],
+      invalidatesTags: (_r, _e, arg) => ["CloserQueue", "Sales", "Leads", "Commissions", "ValidatorQueue", { type: "ClosingApp", id: arg.leadId }],
+    }),
+    // Closer adds a lead straight into the Closer queue (skips fronter/verifier).
+    captureCloserLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
+      query: (body) => ({ url: "/api/intake/close/leads", method: "POST", body }),
+      invalidatesTags: ["CloserQueue", "Leads"],
+    }),
+    // ---- Validator queue ----
+    validatorQueue: b.query<ValidatorQueueItem[], void>({
+      query: () => "/api/intake/validate/queue",
+      providesTags: ["ValidatorQueue"],
+    }),
+    setValidatorStatus: b.mutation<{ saleId: string; status: string; leadStage: string }, { saleId: string } & SetValidatorStatusInput>({
+      query: ({ saleId, ...body }) => ({ url: `/api/intake/validate/${saleId}/status`, method: "POST", body }),
+      invalidatesTags: ["ValidatorQueue", "Sales", "Leads"],
     }),
     listCommissionConfig: b.query<{ ruleName: string; amount: number | null; threshold: number | null; enabled: boolean }[], void>({
       query: () => "/api/admin/commission-config",
@@ -996,6 +1011,7 @@ export const {
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
   useCaptureIntakeLeadMutation, useVerifierQueueQuery, useSetVerifierStatusMutation,
   useCloserQueueQuery, useGetClosingApplicationQuery, useSubmitClosingApplicationMutation,
+  useCaptureCloserLeadMutation, useValidatorQueueQuery, useSetValidatorStatusMutation,
   useListCommissionConfigQuery, useUpsertCommissionConfigMutation,
   useUpdateUserRolesMutation, useSetUserActiveMutation, useResetUserPasswordMutation,
   useSearchLeadsQuery, useDuplicateLeadsQuery,

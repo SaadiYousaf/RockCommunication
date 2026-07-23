@@ -176,6 +176,41 @@ export interface IntakeLeadInput {
 
 export type VerifierStatusValue = "None" | "Verified" | "NotInterested" | "Dnc" | "Busy" | "CallBack" | "DeadAir";
 export type CloserStatusValue = "None" | "CompleteAndSold" | "LostOnSocial" | "LostOnAccount" | "DncLead" | "NotInterestedCallback";
+export type ValidatorStatusValue =
+  | "Completed" | "Approved" | "ActivePaid" | "NoUpdateInCommission"
+  | "BadBank" | "Nsf" | "Decline" | "ClientCancelled";
+
+export interface ValidatorQueueItem {
+  saleId: string;
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  state: string | null;
+  carrier: string;
+  policyNumber: string | null;
+  monthlyPremium: number;
+  closerUserId: string;
+  closerName: string | null;
+  status: ValidatorStatusValue;
+  carrierApproved: string | null;
+  coverageApproved: number | null;
+  premiumApproved: number | null;
+  planApproved: string | null;
+  declineReason: string | null;
+  validatorUserId: string | null;
+  validatorName: string | null;
+  soldAt: string;
+  validatedAt: string | null;
+}
+
+export interface SetValidatorStatusInput {
+  status: ValidatorStatusValue;
+  carrierApproved?: string;
+  coverageApproved?: number;
+  premiumApproved?: number;
+  planApproved?: string;
+  declineReason?: string;
+}
 
 export interface IntakeQueueItem {
   id: string;
