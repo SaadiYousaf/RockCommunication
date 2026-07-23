@@ -49,7 +49,8 @@ public class WrapUpCodeHandler :
     {
         Guard.AgainstNull(request);
         EnsureAdmin();
-        WrapUpCode entry;
+        var code = request.Code.Trim();
+        WrapUpCode? entry;
         if (request.Id is { } id)
         {
             entry = await _db.WrapUpCodes.FirstOrDefaultAsync(w => w.Id == id && w.AgencyId == _user.AgencyId, ct)
@@ -57,10 +58,16 @@ public class WrapUpCodeHandler :
         }
         else
         {
-            entry = new WrapUpCode { AgencyId = _user.AgencyId!.Value };
-            _db.WrapUpCodes.Add(entry);
+            // Upsert by (agency, code): if the code already exists, update it rather than
+            // inserting a duplicate that would violate the unique index (was a 500).
+            entry = await _db.WrapUpCodes.FirstOrDefaultAsync(w => w.AgencyId == _user.AgencyId && w.Code == code, ct);
+            if (entry is null)
+            {
+                entry = new WrapUpCode { AgencyId = _user.AgencyId!.Value };
+                _db.WrapUpCodes.Add(entry);
+            }
         }
-        entry.Code = request.Code.Trim();
+        entry.Code = code;
         entry.Label = request.Label.Trim();
         entry.IsSale = request.IsSale;
         entry.IsContact = request.IsContact;

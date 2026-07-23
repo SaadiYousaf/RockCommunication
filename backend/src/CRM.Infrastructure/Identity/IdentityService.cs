@@ -329,7 +329,8 @@ public class IdentityService : IIdentityService
         var roles = await _users.GetRolesAsync(user);
         var modules = await _moduleAccess.GetCodesForUserAsync(user.Id, ct);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), modules,
-            MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive);
+            MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
+            CallCenterId: user.CallCenterId);
     }
 
     public async Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default)
@@ -344,7 +345,8 @@ public class IdentityService : IIdentityService
             var roles = await _users.GetRolesAsync(u);
             var modules = await _moduleAccess.GetCodesForUserAsync(u.Id, ct);
             result.Add(new UserSummaryDto(u.Id, u.UserName!, u.Email!, u.AgencyId, roles.ToList(), modules,
-                MustChangePassword: u.MustChangePassword, TeamId: u.TeamId, IsActive: u.IsActive));
+                MustChangePassword: u.MustChangePassword, TeamId: u.TeamId, IsActive: u.IsActive,
+                CallCenterId: u.CallCenterId));
         }
         return result;
     }
@@ -361,7 +363,7 @@ public class IdentityService : IIdentityService
         if (user.MustChangePassword)
             extra = new() { [CustomJwtClaims.PasswordChangeRequired] = "true" };
 
-        var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, extra, ct);
+        var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword);
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);

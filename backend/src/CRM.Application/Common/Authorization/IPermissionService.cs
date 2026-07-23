@@ -79,6 +79,9 @@ public static class Permissions
     public const string AgenciesManage = "agencies.manage";
     public const string IpAllowlistManage = "ip-allowlist.manage";
 
+    public const string CallCentersView = "callcenters.view";
+    public const string CallCentersManage = "callcenters.manage";
+
     public const string IntegrationsView = "integrations.view";
     public const string IntegrationsManage = "integrations.manage";
 

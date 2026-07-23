@@ -49,7 +49,16 @@
       "Bash(git -C /Users/saadsaqib/Documents/CRM/backend log --oneline -3)",
       "Bash(git -C /Users/saadsaqib/Documents/CRM log --oneline -3)",
       "Bash(git -C /Users/saadsaqib/Documents/CRM/backend log --oneline -1 -- src/CRM.Domain/Common/Guard.cs)",
-      "Bash(git -C /Users/saadsaqib/Documents/CRM log --oneline -1 -- backend/src/CRM.Domain/Common/Guard.cs)"
+      "Bash(git -C /Users/saadsaqib/Documents/CRM log --oneline -1 -- backend/src/CRM.Domain/Common/Guard.cs)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM worktree add -q /private/tmp/claude-501/crm-baseline e405c01)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM worktree remove --force /private/tmp/claude-501/crm-baseline)",
+      "Bash(git -C /Users/saadsaqib/Documents/CRM worktree list)",
+      "Bash(grep -rA20 \"interface ICurrentUser\" src)",
+      "Bash(awk '{print $NF}')",
+      "Bash(git stash *)",
+      "Bash(grep -vE \"^\\\\s*$\")",
+      "Bash(echo \"exit $?\")"
     ]
   }
 }

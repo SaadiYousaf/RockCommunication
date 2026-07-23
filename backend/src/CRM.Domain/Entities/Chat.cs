@@ -33,7 +33,7 @@ public class ChatMessage : TenantEntity
     public long? AttachmentSize { get; set; }
 }
 
-public class CallRecord : TenantEntity
+public class CallRecord : CallCenterEntity
 {
     public Guid LeadId { get; set; }
     public Guid AgentUserId { get; set; }

@@ -67,7 +67,7 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
 
         _db.LeadActivities.Add(new LeadActivity
         {
-            AgencyId = sale.AgencyId,
+            AgencyId = sale.AgencyId, CallCenterId = sale.CallCenterId,
             LeadId = sale.LeadId,
             UserId = _user.UserId.Value,
             FromStage = WorkflowStage.Closed,
@@ -102,7 +102,7 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
                     lead.Stage = WorkflowStage.Funded;
                     _db.LeadActivities.Add(new LeadActivity
                     {
-                        AgencyId = sale.AgencyId,
+                        AgencyId = sale.AgencyId, CallCenterId = sale.CallCenterId,
                         LeadId = sale.LeadId,
                         UserId = _user.UserId.Value,
                         FromStage = WorkflowStage.Validated,

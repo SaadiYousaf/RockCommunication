@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
@@ -64,6 +65,11 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
         var lead = await _db.Leads
             .FirstOrDefaultAsync(l => l.Id == request.Id && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.Id);
+
+        // Front-line agents may only open leads assigned to them; managers see any lead in
+        // their call center. Report NotFound (not Forbidden) so we don't confirm existence.
+        if (!AccessScope.SeesAllRecords(_user.Roles) && lead.AssignedUserId != _user.UserId)
+            throw new NotFoundException(nameof(Lead), request.Id);
 
         var sale = await _db.Sales.AsNoTracking()
             .FirstOrDefaultAsync(s => s.LeadId == lead.Id, ct);

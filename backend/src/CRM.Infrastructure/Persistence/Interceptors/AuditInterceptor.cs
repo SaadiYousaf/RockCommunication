@@ -83,6 +83,7 @@ public class AuditInterceptor : SaveChangesInterceptor
 
             audits.Add(new AuditEntry
             {
+                AgencyId = _user.AgencyId,
                 EntityName = nameof(ApplicationRole),
                 EntityId = entry.Entity.Id.ToString(),
                 Action = action,
@@ -104,8 +105,13 @@ public class AuditInterceptor : SaveChangesInterceptor
                 .Where(p => p.IsModified && p.Metadata.Name != nameof(BaseEntity.UpdatedAt))
                 .ToDictionary(p => p.Metadata.Name, p => new { Old = p.OriginalValue, New = p.CurrentValue });
 
+        // Attribute the audit to the acting user's agency; for a cross-tenant SuperAdmin
+        // (no agency claim) fall back to the audited row's own agency so a tenant admin can
+        // still see changes made to their data.
+        var entityAgency = (entry.Entity as Domain.Common.TenantEntity)?.AgencyId;
         return new AuditEntry
         {
+            AgencyId = _user.AgencyId ?? (entityAgency == Guid.Empty ? null : entityAgency),
             EntityName = entry.Entity.GetType().Name,
             EntityId = entry.Entity.Id.ToString(),
             Action = action,

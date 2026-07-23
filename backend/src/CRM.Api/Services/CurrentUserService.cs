@@ -33,6 +33,15 @@ public class CurrentUserService : ICurrentUser
         }
     }
 
+    public Guid? CallCenterId
+    {
+        get
+        {
+            var raw = User?.FindFirstValue("callcenter");
+            return Guid.TryParse(raw, out var id) ? id : null;
+        }
+    }
+
     public IReadOnlyList<string> Roles => User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
 
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;

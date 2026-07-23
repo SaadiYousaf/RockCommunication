@@ -4,6 +4,12 @@ namespace CRM.Domain.Entities;
 
 public class AuditEntry : BaseEntity
 {
+    /// <summary>
+    /// Agency the audited change belongs to, so the audit trail is tenant-isolated on read.
+    /// Nullable because some entries (cross-tenant SuperAdmin actions, system events) have no
+    /// single agency. Stamped from the acting user in the audit interceptor.
+    /// </summary>
+    public Guid? AgencyId { get; set; }
     public string EntityName { get; set; } = string.Empty;
     public string EntityId { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;

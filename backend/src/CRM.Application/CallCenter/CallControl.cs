@@ -75,6 +75,7 @@ public class CallControlHandler :
         var call = new CallRecord
         {
             AgencyId = lead.AgencyId,
+            CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             AgentUserId = _user.UserId.Value,
             Provider = _dialer.Name,

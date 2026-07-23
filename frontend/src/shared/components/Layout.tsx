@@ -74,7 +74,8 @@ const groups: NavGroup[] = [
   {
     label: "Administration",
     items: [
-      { to: "/admin/agencies", label: "Call Centers",     icon: "building", superAdminOnly: true },
+      { to: "/admin/agencies",     label: "Agencies",         icon: "building", superAdminOnly: true },
+      { to: "/admin/call-centers", label: "Call Centers",     icon: "building", module: "admin" },
       { to: "/admin/users",    label: "User Mgmt",        icon: "users",    module: "users.manage" },
       { to: "/admin/roles",    label: "Role Management",  icon: "shield",   module: "roles.manage" },
       { to: "/admin/register", label: "Register User",    icon: "plus",     module: "users.manage" },

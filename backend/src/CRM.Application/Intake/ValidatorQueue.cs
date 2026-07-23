@@ -174,7 +174,7 @@ public class ValidatorQueueHandler :
                 lead.UpdatedAt = DateTime.UtcNow;
                 _db.LeadActivities.Add(new LeadActivity
                 {
-                    AgencyId = lead.AgencyId,
+                    AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
                     LeadId = lead.Id,
                     UserId = _user.UserId.Value,
                     FromStage = from,

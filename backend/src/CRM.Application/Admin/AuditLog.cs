@@ -37,7 +37,9 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
         Guard.AgainstNull(request);
         EnsureManager();
 
-        var q = _db.AuditEntries.AsNoTracking().AsQueryable();
+        // AuditEntry is not a TenantEntity (no global filter), so scope explicitly. Only
+        // agency Admin/ProgramManager reach here (EnsureManager), so pin to their agency.
+        var q = _db.AuditEntries.AsNoTracking().Where(a => a.AgencyId == _user.AgencyId);
         if (!string.IsNullOrWhiteSpace(request.EntityName))
             q = q.Where(a => a.EntityName == request.EntityName);
         if (!string.IsNullOrWhiteSpace(request.EntityId))
@@ -99,11 +101,12 @@ public class DistinctAuditFiltersHandler : IRequestHandler<DistinctAuditFiltersQ
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
             throw new ForbiddenAccessException();
 
-        var entityNames = await _db.AuditEntries.AsNoTracking()
+        var scoped = _db.AuditEntries.AsNoTracking().Where(a => a.AgencyId == _user.AgencyId);
+        var entityNames = await scoped
             .Select(a => a.EntityName).Distinct().OrderBy(x => x).ToListAsync(ct);
-        var actions = await _db.AuditEntries.AsNoTracking()
+        var actions = await scoped
             .Select(a => a.Action).Distinct().OrderBy(x => x).ToListAsync(ct);
-        var users = await _db.AuditEntries.AsNoTracking()
+        var users = await scoped
             .Where(a => a.UserName != null)
             .Select(a => a.UserName!).Distinct().OrderBy(x => x).ToListAsync(ct);
 

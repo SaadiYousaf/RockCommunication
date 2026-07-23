@@ -86,9 +86,14 @@ public class RouteInboundCallHandler : IRequestHandler<RouteInboundCallCommand, 
         queuedCall.Status = "Answered";
 
         var leadId = await ResolveLeadIdAsync(request.AgencyId, request.FromPhone, ct);
+        // Inherit the call center from the matched lead when there is one; otherwise the
+        // record stays agency-scoped (visible to agency-level users) until it is linked.
+        var callCenterId = leadId == Guid.Empty ? Guid.Empty : await _db.Leads
+            .Where(l => l.Id == leadId).Select(l => l.CallCenterId).FirstOrDefaultAsync(ct);
         var record = new CallRecord
         {
             AgencyId = request.AgencyId,
+            CallCenterId = callCenterId,
             LeadId = leadId,
             AgentUserId = pickedAgent.Value,
             Provider = request.Provider,

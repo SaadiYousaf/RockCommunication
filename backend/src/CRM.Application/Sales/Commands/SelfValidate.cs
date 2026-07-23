@@ -51,7 +51,7 @@ public class SelfValidateSaleHandler : IRequestHandler<SelfValidateSaleCommand, 
 
         _db.LeadActivities.Add(new LeadActivity
         {
-            AgencyId = sale.AgencyId,
+            AgencyId = sale.AgencyId, CallCenterId = sale.CallCenterId,
             LeadId = sale.LeadId,
             UserId = _user.UserId.Value,
             FromStage = WorkflowStage.Closed,

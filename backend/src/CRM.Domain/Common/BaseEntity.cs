@@ -14,3 +14,14 @@ public abstract class TenantEntity : BaseEntity
 {
     public Guid AgencyId { get; set; }
 }
+
+/// <summary>
+/// A tenant entity that additionally belongs to a specific <c>CallCenter</c> within its agency.
+/// Reads are isolated to the caller's call center; callers with no call-center context
+/// (agency-level roles — Admin, managers, CEO) see every call center in their agency.
+/// This is the second, finer isolation dimension layered on top of <see cref="TenantEntity.AgencyId"/>.
+/// </summary>
+public abstract class CallCenterEntity : TenantEntity
+{
+    public Guid CallCenterId { get; set; }
+}

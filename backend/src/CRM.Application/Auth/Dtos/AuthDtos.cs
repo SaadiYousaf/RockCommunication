@@ -17,7 +17,8 @@ public record UserSummaryDto(
     IReadOnlyList<string> Modules,
     bool MustChangePassword = false,
     Guid? TeamId = null,
-    bool IsActive = true);
+    bool IsActive = true,
+    Guid? CallCenterId = null);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 

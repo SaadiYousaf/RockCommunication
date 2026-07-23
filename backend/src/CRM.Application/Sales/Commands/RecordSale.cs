@@ -116,6 +116,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
         var sale = new Sale
         {
             AgencyId = lead.AgencyId,
+            CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             CloserUserId = _user.UserId.Value,
             Carrier = input.Carrier.ToUpperInvariant(),
@@ -140,6 +141,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
         _db.LeadActivities.Add(new LeadActivity
         {
             AgencyId = lead.AgencyId,
+            CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             UserId = _user.UserId.Value,
             FromStage = WorkflowStage.Verified,
@@ -156,6 +158,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             _db.CommissionEntries.Add(new CommissionEntry
             {
                 AgencyId = sale.AgencyId,
+                CallCenterId = sale.CallCenterId,
                 SaleId = sale.Id,
                 AgentUserId = line.AgentId,
                 RuleName = line.RuleName,

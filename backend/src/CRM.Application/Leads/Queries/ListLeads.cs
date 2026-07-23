@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
@@ -42,6 +43,10 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
         var q = _db.Leads.AsNoTracking().Where(l => l.AgencyId == _user.AgencyId);
+        // Front-line agents only browse their own assigned leads; managers see the whole
+        // call center. (The global filter already limits rows to the caller's call center.)
+        if (!AccessScope.SeesAllRecords(_user.Roles))
+            q = q.Where(l => l.AssignedUserId == _user.UserId);
         if (request.Stage is { } stage) q = q.Where(l => l.Stage == stage);
         if (request.AssignedUserId is { } uid) q = q.Where(l => l.AssignedUserId == uid);
         if (request.Disposition is { } d) q = q.Where(l => l.Disposition == d);

@@ -3,7 +3,7 @@ using CRM.Domain.Enums;
 
 namespace CRM.Domain.Entities;
 
-public class Lead : TenantEntity
+public class Lead : CallCenterEntity
 {
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
@@ -46,7 +46,7 @@ public class Lead : TenantEntity
     public LeadApplication? Application { get; set; }
 }
 
-public class LeadActivity : TenantEntity
+public class LeadActivity : CallCenterEntity
 {
     public Guid LeadId { get; set; }
     public Guid UserId { get; set; }
@@ -57,7 +57,7 @@ public class LeadActivity : TenantEntity
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 }
 
-public class ScheduledCallback : TenantEntity
+public class ScheduledCallback : CallCenterEntity
 {
     public Guid LeadId { get; set; }
     public Guid AssignedUserId { get; set; }
@@ -67,7 +67,7 @@ public class ScheduledCallback : TenantEntity
     public bool Reminded { get; set; }
 }
 
-public class Sale : TenantEntity
+public class Sale : CallCenterEntity
 {
     public Guid LeadId { get; set; }
     public Guid CloserUserId { get; set; }

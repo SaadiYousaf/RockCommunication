@@ -64,7 +64,7 @@ public class CallCenterPlusTests : IClassFixture<CrmWebAppFactory>
     public async Task Inbound_route_with_no_queue_returns_decision()
     {
         var client = _factory.CreateClient();
-        var resp = await client.PostAsJsonAsync("/api/webhooks/inbound/route", new
+        var resp = await client.PostSignedAsync("/api/webhooks/inbound/route", new
         {
             agencyId = Guid.NewGuid(), provider = "Vici", providerCallId = "ic-1",
             fromPhone = "5550001234", dialedNumber = "5550009999"

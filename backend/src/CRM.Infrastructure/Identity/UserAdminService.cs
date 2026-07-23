@@ -123,6 +123,7 @@ public class UserAdminService : IUserAdminService
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
         user.PreferredTwoFactorMethod = method;
         await _users.UpdateAsync(user);
         var roles = await _users.GetRolesAsync(user);
@@ -133,6 +134,8 @@ public class UserAdminService : IUserAdminService
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+        // Cross-tenant guard covers the unassign (teamId == null) path too.
+        await AuthorizeTargetAsync(user);
 
         if (teamId is { } tid)
         {
@@ -158,6 +161,30 @@ public class UserAdminService : IUserAdminService
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), Array.Empty<string>(),
             TeamId: user.TeamId);
+    }
+
+    public async Task<UserSummaryDto> SetCallCenterAsync(Guid userId, Guid? callCenterId, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
+
+        if (callCenterId is { } ccId)
+        {
+            // The call center must live in the user's own agency — no cross-tenant pinning.
+            var cc = await _db.CallCenters.FirstOrDefaultAsync(c => c.Id == ccId, ct)
+                ?? throw new NotFoundException(nameof(CallCenter), ccId);
+            if (cc.AgencyId != user.AgencyId)
+                throw new ConflictException("Call center belongs to a different agency.");
+        }
+
+        user.CallCenterId = callCenterId;
+        var result = await _users.UpdateAsync(user);
+        if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        var roles = await _users.GetRolesAsync(user);
+        return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), Array.Empty<string>(),
+            TeamId: user.TeamId, CallCenterId: user.CallCenterId);
     }
 
     public async Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid agencyId, CancellationToken ct = default)

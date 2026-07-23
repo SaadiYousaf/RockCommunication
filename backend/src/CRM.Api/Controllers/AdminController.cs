@@ -86,6 +86,39 @@ public class AdminController : ControllerBase
         return Ok(await _mediator.Send(new UpdateHorizontalCommand(id, body.Name, body.Description, body.IsActive), ct));
     }
 
+    // ---- Call centers (the sub-agency data-isolation unit) ----
+    [HttpGet("call-centers")]
+    [HasPermission(Permissions.CallCentersView)]
+    public async Task<IActionResult> ListCallCenters(CancellationToken ct)
+        => Ok(await _mediator.Send(new ListCallCentersQuery(), ct));
+
+    public record CallCenterBody(string Name, string? Code);
+    [HttpPost("call-centers")]
+    [HasPermission(Permissions.CallCentersManage)]
+    public async Task<IActionResult> CreateCallCenter([FromBody] CallCenterBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new CreateCallCenterCommand(body.Name, body.Code), ct));
+    }
+
+    public record UpdateCallCenterBody(string Name, string? Code, bool IsActive);
+    [HttpPut("call-centers/{id:guid}")]
+    [HasPermission(Permissions.CallCentersManage)]
+    public async Task<IActionResult> UpdateCallCenter(Guid id, [FromBody] UpdateCallCenterBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new UpdateCallCenterCommand(id, body.Name, body.Code, body.IsActive), ct));
+    }
+
+    public record SetUserCallCenterBody(Guid? CallCenterId);
+    [HttpPut("users/{userId:guid}/call-center")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> SetUserCallCenter(Guid userId, [FromBody] SetUserCallCenterBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetUserCallCenterCommand(userId, body.CallCenterId), ct));
+    }
+
     [HttpGet("commission-config")]
     [HasPermission(Permissions.CommissionsView)]
     public async Task<IActionResult> CommissionConfig(CancellationToken ct)

@@ -99,6 +99,10 @@ public static class DbSeeder
             await DummyDataSeeder.SeedAsync(db, users, roles, agency);
             await FeatureSeeder.SeedAsync(db, users, roles, agency);
         }
+
+        // Ensure every agency has a default call center and stamp any pre-existing pipeline
+        // rows (including freshly-seeded dummy data) onto it. Additive + idempotent.
+        await CallCenterBackfill.RunAsync(db);
     }
 
     private static async Task SeedPermissionsAsync(AppDbContext db, RoleManager<ApplicationRole> roles)

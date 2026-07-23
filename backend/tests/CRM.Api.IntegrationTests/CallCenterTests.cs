@@ -76,11 +76,12 @@ public class CallCenterTests : IClassFixture<CrmWebAppFactory>
         var agentId = me.GetProperty("id").GetGuid();
         var agencyId = me.GetProperty("agencyId").GetGuid();
 
-        await admin.PostAsJsonAsync("/api/webhooks/dialer", new
+        var hook = await admin.PostSignedAsync("/api/webhooks/dialer", new
         {
             provider = "Vici", providerCallId = "test-call-1", eventType = "ended",
             occurredAt = DateTime.UtcNow, agencyId, agentUserId = agentId, leadId
         });
+        hook.EnsureSuccessStatusCode();
 
         // Try to go Available — should 409
         var resp = await admin.PostAsJsonAsync("/api/cc/status", new { status = "Available", reason = (string?)null });
@@ -100,16 +101,26 @@ public class CallCenterTests : IClassFixture<CrmWebAppFactory>
     [Fact]
     public async Task Webhook_rejects_bad_signature_when_secret_set()
     {
-        // Default factory has no secret — verify webhook accepts unsigned payloads in tests.
+        // A secret is configured — a bad signature must be rejected (fail-closed HMAC).
         var client = _factory.CreateClient();
-        var resp = await client.PostAsJsonAsync("/api/webhooks/dialer", new
+        var bad = new HttpRequestMessage(HttpMethod.Post, "/api/webhooks/dialer")
         {
-            provider = "Vici", providerCallId = "abc", eventType = "answered",
+            Content = new StringContent("{\"provider\":\"Vici\",\"providerCallId\":\"abc\"}",
+                System.Text.Encoding.UTF8, "application/json")
+        };
+        bad.Headers.Add("X-Signature", "not-a-valid-signature");
+        var badResp = await client.SendAsync(bad);
+        Assert.Equal(HttpStatusCode.Unauthorized, badResp.StatusCode);
+
+        // A correctly-signed payload gets past auth into the handler (Accepted, or Conflict
+        // for the unknown agency) — proving the signature check, not a blanket reject.
+        var ok = await client.PostSignedAsync("/api/webhooks/dialer", new
+        {
+            provider = "Vici", providerCallId = "abc2", eventType = "answered",
             occurredAt = DateTime.UtcNow, agencyId = Guid.NewGuid(),
             agentUserId = Guid.NewGuid(), leadId = Guid.NewGuid()
         });
-        // Conflict (unknown agency) is fine — proves it got past auth and into handler.
-        Assert.True(resp.StatusCode == HttpStatusCode.Accepted || resp.StatusCode == HttpStatusCode.Conflict);
+        Assert.True(ok.StatusCode == HttpStatusCode.Accepted || ok.StatusCode == HttpStatusCode.Conflict);
     }
 
     private static async Task<Guid> GetCallId(HttpClient client, string providerCallId)

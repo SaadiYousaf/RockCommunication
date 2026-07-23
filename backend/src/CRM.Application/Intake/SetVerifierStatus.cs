@@ -76,7 +76,7 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
                 lead.Disposition = LeadDisposition.CallBack;      // stays fronted for a retry
                 _db.ScheduledCallbacks.Add(new ScheduledCallback
                 {
-                    AgencyId = lead.AgencyId,
+                    AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
                     LeadId = lead.Id,
                     AssignedUserId = _user.UserId.Value,
                     ScheduledFor = request.CallbackAt ?? DateTime.UtcNow.AddHours(1),
@@ -91,7 +91,7 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
 
         _db.LeadActivities.Add(new LeadActivity
         {
-            AgencyId = lead.AgencyId,
+            AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             UserId = _user.UserId.Value,
             FromStage = from,

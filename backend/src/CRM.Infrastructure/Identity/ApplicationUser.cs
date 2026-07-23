@@ -6,6 +6,13 @@ public class ApplicationUser : IdentityUser<Guid>
 {
     public Guid AgencyId { get; set; }
     public Guid? TeamId { get; set; }
+
+    /// <summary>
+    /// The call center this user operates in. Null = agency-level user (Admin / managers /
+    /// CEO) who sees every call center in the agency; non-null = pinned to one call center,
+    /// so their reads of pipeline data are isolated to it. Flows into the JWT "callcenter" claim.
+    /// </summary>
+    public Guid? CallCenterId { get; set; }
     public string? DisplayName { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

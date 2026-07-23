@@ -14,6 +14,8 @@ public record ResetPasswordCommand(Guid UserId, string NewPassword) : IRequest<U
 public record SetPreferred2FaCommand(Guid UserId, string Method) : IRequest<UserSummaryDto>;
 public record SetUserTeamCommand(Guid UserId, Guid? TeamId) : IRequest<UserSummaryDto>;
 public record SetTeamLeadCommand(Guid TeamId, Guid? UserId) : IRequest<Unit>;
+/// <summary>Pin a user to a call center, or pass null to make them agency-level (sees all).</summary>
+public record SetUserCallCenterCommand(Guid UserId, Guid? CallCenterId) : IRequest<UserSummaryDto>;
 
 public class UpdateUserRolesValidator : AbstractValidator<UpdateUserRolesCommand>
 {
@@ -35,6 +37,7 @@ public class UserAdminHandler :
     IRequestHandler<ResetPasswordCommand, Unit>,
     IRequestHandler<SetPreferred2FaCommand, UserSummaryDto>,
     IRequestHandler<SetUserTeamCommand, UserSummaryDto>,
+    IRequestHandler<SetUserCallCenterCommand, UserSummaryDto>,
     IRequestHandler<SetTeamLeadCommand, Unit>
 {
     private readonly IUserAdminService _admin;
@@ -83,6 +86,13 @@ public class UserAdminHandler :
         return await _admin.SetTeamAsync(request.UserId, request.TeamId, ct);
     }
 
+    public async Task<UserSummaryDto> Handle(SetUserCallCenterCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        await EnsurePermissionAsync(Permissions.UsersManage, ct);
+        return await _admin.SetCallCenterAsync(request.UserId, request.CallCenterId, ct);
+    }
+
     public async Task<Unit> Handle(SetTeamLeadCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
@@ -113,6 +123,11 @@ public interface IUserAdminService
     /// caller's agency to prevent cross-tenant moves.
     /// </summary>
     Task<UserSummaryDto> SetTeamAsync(Guid userId, Guid? teamId, CancellationToken ct = default);
+    /// <summary>
+    /// Pin a user to a call center (or pass null for agency-level). Validates the call center
+    /// belongs to the caller's agency to prevent cross-tenant assignment.
+    /// </summary>
+    Task<UserSummaryDto> SetCallCenterAsync(Guid userId, Guid? callCenterId, CancellationToken ct = default);
     /// <summary>
     /// Set the team-lead user for a team. Pass null to unset.
     /// </summary>

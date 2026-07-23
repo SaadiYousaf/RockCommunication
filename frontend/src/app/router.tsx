@@ -25,6 +25,7 @@ import { ChatPage } from "../features/chat/ChatPage";
 import { AdminPage } from "../features/admin/AdminPage";
 import { AgenciesPage } from "../features/admin/AgenciesPage";
 import { AuditLogPage } from "../features/admin/AuditLogPage";
+import { CallCentersPage } from "../features/admin/CallCentersPage";
 import { TeamPage } from "../features/team/TeamPage";
 import { CallsHistoryPage } from "../features/callcenter/CallsHistoryPage";
 import { UserManagementPage } from "../features/admin/UserManagementPage";
@@ -247,6 +248,7 @@ const router = createBrowserRouter([
             children: [
               { path: "/admin",              element: <AdminPage /> },
               { path: "/admin/audit",        element: <AuditLogPage /> },
+              { path: "/admin/call-centers", element: <CallCentersPage /> },
               { path: "/admin/integrations", element: <IntegrationsPage /> },
             ],
           },

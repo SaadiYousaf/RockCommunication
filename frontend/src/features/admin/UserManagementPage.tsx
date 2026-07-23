@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import {
   useListUsersQuery, useResetUserPasswordMutation,
   useSetUserActiveMutation, useUpdateUserRolesMutation,
+  useListCallCentersQuery, useSetUserCallCenterMutation,
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
 
@@ -25,10 +26,21 @@ const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "dang
 
 export function UserManagementPage() {
   const { data: users, isLoading } = useListUsersQuery();
+  const { data: callCenters } = useListCallCentersQuery();
   const [updateRoles] = useUpdateUserRolesMutation();
   const [setActive] = useSetUserActiveMutation();
   const [resetPw] = useResetUserPasswordMutation();
+  const [setUserCc] = useSetUserCallCenterMutation();
   const toast = useToast();
+
+  async function assignCallCenter(userId: string, value: string) {
+    try {
+      await setUserCc({ userId, callCenterId: value || null }).unwrap();
+      toast.success("Call center updated");
+    } catch (err: any) {
+      toast.error("Couldn't update call center", err?.data?.detail ?? "Try again.");
+    }
+  }
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<{ id: string; userName: string; roles: string[] } | null>(null);
@@ -124,6 +136,7 @@ export function UserManagementPage() {
               <TH>User</TH>
               <TH>Email</TH>
               <TH>Roles</TH>
+              <TH>Call center</TH>
               <TH className="text-right">Actions</TH>
             </TR>
           </THead>
@@ -165,6 +178,18 @@ export function UserManagementPage() {
                         <Badge key={r} tone={roleTones[r] ?? "neutral"} variant="soft">{r}</Badge>
                       ))}
                   </div>
+                </TD>
+                <TD>
+                  <Select
+                    value={(u as any).callCenterId ?? ""}
+                    onChange={(e) => assignCallCenter(u.id, e.target.value)}
+                    className="text-xs"
+                  >
+                    <option value="">Agency-level (all)</option>
+                    {(callCenters ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
                 </TD>
                 <TD>
                   <div className="flex items-center justify-end gap-1.5">

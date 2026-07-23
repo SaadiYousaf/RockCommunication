@@ -27,22 +27,37 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public Guid CurrentAgencyId => _currentUser?.AgencyId ?? Guid.Empty;
 
     /// <summary>
-    /// True when the current request context should bypass the tenant filter:
-    /// no user context (seeder / design-time / background jobs) or SuperAdmin.
+    /// The caller's call center for the finer isolation dimension, or null for an agency-level
+    /// user who sees every call center in the agency. Only consulted for <see cref="Domain.Common.CallCenterEntity"/>.
+    /// </summary>
+    public Guid? CurrentCallCenterId => _currentUser?.CallCenterId;
+
+    /// <summary>
+    /// True when the current request context should bypass the tenant filter — and ONLY then:
+    /// no user context (seeder / design-time / background jobs, which self-scope by each row's
+    /// AgencyId) or SuperAdmin (the one cross-tenant operator role).
+    ///
+    /// This is FAIL-CLOSED: an authenticated non-SuperAdmin whose agency claim is missing or
+    /// empty does NOT bypass. With <see cref="CurrentAgencyId"/> left at <see cref="Guid.Empty"/>,
+    /// the filter then matches no rows (sees nothing) rather than every agency's data.
     /// </summary>
     public bool BypassTenantFilter
     {
         get
         {
             if (_currentUser is null) return true;
+            // No authenticated principal → seeder, design-time, or background job (no HTTP
+            // context). These legitimately operate across agencies and self-scope by each
+            // row's own AgencyId, so they bypass. An AUTHENTICATED user never reaches here
+            // via this branch, so the fail-closed guarantee below still holds.
+            if (!_currentUser.IsAuthenticated) return true;
             if (_currentUser.Roles.Contains(Domain.Enums.Roles.SuperAdmin)) return true;
-            // No agency context yet (anonymous request, etc.) — be permissive at the filter
-            // layer; controller-level [Authorize] is what actually keeps anonymous out.
-            return _currentUser.AgencyId is null || _currentUser.AgencyId == Guid.Empty;
+            return false;
         }
     }
 
     public DbSet<Agency> Agencies => Set<Agency>();
+    public DbSet<CallCenter> CallCenters => Set<CallCenter>();
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<IpAllowlistEntry> IpAllowlist => Set<IpAllowlistEntry>();
     public DbSet<Lead> Leads => Set<Lead>();
@@ -131,6 +146,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.HasIndex(x => new { x.AgencyId, x.Name }).IsUnique();
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.HasOne<Agency>().WithMany(a => a.Teams).HasForeignKey(x => x.AgencyId);
+        });
+
+        b.Entity<CallCenter>(e =>
+        {
+            e.HasIndex(x => new { x.AgencyId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Code).HasMaxLength(40);
+            e.HasOne<Agency>().WithMany(a => a.CallCenters).HasForeignKey(x => x.AgencyId);
         });
 
         b.Entity<Lead>(e =>
@@ -522,13 +545,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         var setTenantFilter = typeof(AppDbContext).GetMethod(
             nameof(SetTenantFilter),
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var setCallCenterFilter = typeof(AppDbContext).GetMethod(
+            nameof(SetCallCenterFilter),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
 
         foreach (var entityType in b.Model.GetEntityTypes())
         {
             var clr = entityType.ClrType;
             if (!typeof(Domain.Common.BaseEntity).IsAssignableFrom(clr)) continue;
 
-            if (typeof(Domain.Common.TenantEntity).IsAssignableFrom(clr))
+            // CallCenterEntity is the most specific — it derives from TenantEntity, so this
+            // check MUST come first. It layers the call-center dimension on top of agency.
+            if (typeof(Domain.Common.CallCenterEntity).IsAssignableFrom(clr))
+            {
+                setCallCenterFilter.MakeGenericMethod(clr).Invoke(this, new object[] { b });
+            }
+            else if (typeof(Domain.Common.TenantEntity).IsAssignableFrom(clr))
             {
                 setTenantFilter.MakeGenericMethod(clr).Invoke(this, new object[] { b });
             }
@@ -548,5 +580,20 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         b.Entity<T>().HasQueryFilter(e =>
             !e.IsDeleted &&
             (BypassTenantFilter || e.AgencyId == CurrentAgencyId));
+    }
+
+    /// <summary>
+    /// Two-level isolation for call-center-scoped entities: the row must be in the caller's
+    /// agency AND (the caller is agency-level — <see cref="CurrentCallCenterId"/> is null, so
+    /// they see every call center — OR the row's call center matches the caller's). SuperAdmin /
+    /// no-user context still bypasses via <see cref="BypassTenantFilter"/>.
+    /// </summary>
+    private void SetCallCenterFilter<T>(ModelBuilder b) where T : Domain.Common.CallCenterEntity
+    {
+        b.Entity<T>().HasQueryFilter(e =>
+            !e.IsDeleted &&
+            (BypassTenantFilter ||
+             (e.AgencyId == CurrentAgencyId &&
+              (CurrentCallCenterId == null || e.CallCenterId == CurrentCallCenterId))));
     }
 }

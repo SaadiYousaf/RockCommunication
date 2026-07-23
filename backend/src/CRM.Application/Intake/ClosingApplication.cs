@@ -150,7 +150,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
             if (request.Status == CloserStatus.NotInterestedCallback)
                 _db.ScheduledCallbacks.Add(new ScheduledCallback
                 {
-                    AgencyId = lead.AgencyId,
+                    AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
                     LeadId = lead.Id,
                     AssignedUserId = _user.UserId.Value,
                     ScheduledFor = DateTime.UtcNow.AddDays(1),
@@ -159,7 +159,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
 
             _db.LeadActivities.Add(new LeadActivity
             {
-                AgencyId = lead.AgencyId,
+                AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
                 LeadId = lead.Id,
                 UserId = _user.UserId.Value,
                 FromStage = from,
@@ -173,7 +173,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
         var app = await _db.LeadApplications.FirstOrDefaultAsync(a => a.LeadId == lead.Id && a.AgencyId == lead.AgencyId, ct);
         if (app is null)
         {
-            app = new LeadApplication { AgencyId = lead.AgencyId, LeadId = lead.Id };
+            app = new LeadApplication { AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId, LeadId = lead.Id };
             _db.LeadApplications.Add(app);
         }
         MapInto(app, d);

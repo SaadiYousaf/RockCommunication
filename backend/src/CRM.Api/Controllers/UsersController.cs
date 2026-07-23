@@ -67,19 +67,15 @@ public class UsersController : ControllerBase
 
     /// <summary>
     /// Resolves the effective agency filter for a list query.
-    ///   - SuperAdmin / Admin: free to pass any <paramref name="requestedAgencyId"/>;
-    ///     null means "all agencies" (SuperAdmin) or "my agency" (Admin).
-    ///   - Everyone else: pinned to their own agency regardless of the parameter
-    ///     (defence-in-depth so someone can't peek into another tenant by passing
-    ///     a different agencyId on the URL).
+    ///   - SuperAdmin: the only cross-tenant operator — may pass any
+    ///     <paramref name="requestedAgencyId"/>; null means "all agencies".
+    ///   - Everyone else (including agency Admin): pinned to their own agency regardless
+    ///     of the parameter, so a per-agency admin can't enumerate another tenant's users
+    ///     by passing a different agencyId on the URL.
     /// </summary>
     private Guid? ResolveAgencyFilter(Guid? requestedAgencyId)
     {
-        var isSuperAdmin = _user.Roles.Contains(Roles.SuperAdmin);
-        var isAdmin = _user.Roles.Contains(Roles.Admin);
-
-        if (isSuperAdmin) return requestedAgencyId; // null = all agencies
-        if (isAdmin)      return requestedAgencyId ?? _user.AgencyId;
-        return _user.AgencyId; // pinned
+        if (_user.Roles.Contains(Roles.SuperAdmin)) return requestedAgencyId; // null = all agencies
+        return _user.AgencyId; // pinned to the caller's tenant
     }
 }

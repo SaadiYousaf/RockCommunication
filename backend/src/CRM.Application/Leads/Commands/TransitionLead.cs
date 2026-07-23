@@ -65,7 +65,7 @@ public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, Lead
 
         var activity = new LeadActivity
         {
-            AgencyId = lead.AgencyId,
+            AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             UserId = _user.UserId.Value,
             FromStage = lead.Stage,

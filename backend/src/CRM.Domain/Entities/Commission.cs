@@ -2,7 +2,7 @@ using CRM.Domain.Common;
 
 namespace CRM.Domain.Entities;
 
-public class CommissionEntry : TenantEntity
+public class CommissionEntry : CallCenterEntity
 {
     public Guid SaleId { get; set; }
     public Guid AgentUserId { get; set; }

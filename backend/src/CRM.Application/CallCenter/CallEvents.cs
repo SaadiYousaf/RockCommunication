@@ -49,9 +49,16 @@ public class DialerEventHandler : IRequestHandler<DialerEventCommand, Unit>
             if (request.AgencyId is null || request.AgentUserId is null || request.LeadId is null)
                 throw new ConflictException("First event for unknown call must include agencyId, agentUserId, leadId.");
 
+            // Inherit the call center from the lead so the record is isolated correctly.
+            var callCenterId = await _db.Leads
+                .Where(l => l.Id == request.LeadId.Value && l.AgencyId == request.AgencyId.Value)
+                .Select(l => l.CallCenterId)
+                .FirstOrDefaultAsync(ct);
+
             record = new CallRecord
             {
                 AgencyId = request.AgencyId.Value,
+                CallCenterId = callCenterId,
                 LeadId = request.LeadId.Value,
                 AgentUserId = request.AgentUserId.Value,
                 Provider = request.Provider,

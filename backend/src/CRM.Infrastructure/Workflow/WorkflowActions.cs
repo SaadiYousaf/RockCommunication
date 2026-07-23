@@ -127,6 +127,7 @@ public class CreateCallbackAction : IWorkflowAction
         _db.ScheduledCallbacks.Add(new ScheduledCallback
         {
             AgencyId = lead.AgencyId,
+            CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             AssignedUserId = lead.AssignedUserId.Value,
             ScheduledFor = DateTime.UtcNow.AddMinutes(minutes),

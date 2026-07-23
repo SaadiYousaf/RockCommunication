@@ -34,6 +34,17 @@ public class CrmWebAppFactory : WebApplicationFactory<Program>
                 ["Integrations:Dialer:BaseUrl"] = "",
                 ["Integrations:Lyons:Provider"] = "Stub",
                 ["Ai:Provider"] = "Stub",
+                // Effectively disable rate limiting for the test suite — many tests
+                // register/login in quick succession and would otherwise trip the strict
+                // auth bucket (5/min). Production limits are unaffected.
+                ["RateLimits:Auth:PerMinute"] = "1000000",
+                ["RateLimits:Webhook:PerMinute"] = "1000000",
+                ["RateLimits:Anon:Burst"] = "1000000",
+                ["RateLimits:User:Burst"] = "1000000",
+                // Configure the webhook HMAC secret so the dialer/inbound endpoints are
+                // "configured" (not fail-closed 503); tests sign with TestHelpers.WebhookSecret.
+                ["Webhooks:Dialer:Secret"] = "test-webhook-secret-0123456789abcdef",
+                ["Webhooks:Inbound:Secret"] = "test-webhook-secret-0123456789abcdef",
             });
         });
         return base.CreateHost(builder);

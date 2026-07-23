@@ -9,6 +9,17 @@ export interface UserSummary {
   mustChangePassword?: boolean;
   /** False = deactivated account; login + active sessions are blocked. Defaults true on existing rows. */
   isActive?: boolean;
+  teamId?: string | null;
+  /** Call center the user is pinned to; null = agency-level (sees all call centers). */
+  callCenterId?: string | null;
+}
+
+export interface CallCenterDto {
+  id: string;
+  name: string;
+  code: string | null;
+  isActive: boolean;
+  leadCount: number;
 }
 
 export interface AppModuleDto {

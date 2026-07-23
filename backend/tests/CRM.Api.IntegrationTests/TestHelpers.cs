@@ -6,11 +6,32 @@ namespace CRM.Api.IntegrationTests;
 
 internal static class TestHelpers
 {
+    /// <summary>Shared HMAC secret the factory configures for the dialer + inbound webhooks.</summary>
+    public const string WebhookSecret = "test-webhook-secret-0123456789abcdef";
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
     };
+
+    /// <summary>
+    /// POSTs a webhook payload with a valid X-Signature (hex HMAC-SHA256 of the raw body,
+    /// matching the dialer/inbound controllers). Serializes the payload ourselves so the
+    /// signed bytes are exactly what the server reads.
+    /// </summary>
+    public static Task<HttpResponseMessage> PostSignedAsync(this HttpClient client, string url, object payload, string secret = WebhookSecret)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        using var h = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
+        var sig = Convert.ToHexString(h.ComputeHash(System.Text.Encoding.UTF8.GetBytes(json))).ToLowerInvariant();
+        var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        };
+        req.Headers.Add("X-Signature", sig);
+        return client.SendAsync(req);
+    }
 
     public static async Task<HttpClient> LoginAsync(this CrmWebAppFactory factory, string userNameOrEmail, string password)
     {

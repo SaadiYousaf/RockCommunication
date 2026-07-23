@@ -11,7 +11,7 @@ namespace CRM.Domain.Entities;
 /// licence). It should be encrypted at rest in production; only the last four
 /// digits of the bank account flow onto the <see cref="Sale"/>.
 /// </summary>
-public class LeadApplication : TenantEntity
+public class LeadApplication : CallCenterEntity
 {
     public Guid LeadId { get; set; }
 

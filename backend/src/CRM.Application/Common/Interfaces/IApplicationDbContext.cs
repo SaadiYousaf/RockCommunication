@@ -6,6 +6,7 @@ namespace CRM.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Agency> Agencies { get; }
+    DbSet<CRM.Domain.Entities.CallCenter> CallCenters { get; }
     DbSet<Team> Teams { get; }
     DbSet<IpAllowlistEntry> IpAllowlist { get; }
     DbSet<Lead> Leads { get; }
@@ -71,6 +72,11 @@ public interface ICurrentUser
     Guid? UserId { get; }
     string? UserName { get; }
     Guid? AgencyId { get; }
+    /// <summary>
+    /// The caller's call center, or null for an agency-level user who sees every call
+    /// center in the agency. Drives the second isolation dimension in the query filter.
+    /// </summary>
+    Guid? CallCenterId { get; }
     IReadOnlyList<string> Roles { get; }
     bool IsAuthenticated { get; }
     string? IpAddress { get; }
@@ -84,6 +90,7 @@ public interface IJwtTokenService
     /// </summary>
     Task<TokenResult> IssueAsync(
         Guid userId, string userName, Guid agencyId, IEnumerable<string> roles,
+        Guid? callCenterId = null,
         IReadOnlyDictionary<string, string>? extraClaims = null,
         CancellationToken ct = default);
 

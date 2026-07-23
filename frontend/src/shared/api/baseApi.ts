@@ -5,7 +5,7 @@ import type {
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage,
   WorkflowStage, LeadDisposition, DashboardSummary,
-  AppModuleDto, RoleDto, AgencyDto, OrgTreeDto,
+  AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput,
@@ -84,7 +84,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -354,6 +354,24 @@ export const baseApi = createApi({
     updateHorizontal: b.mutation<any, { id: string; name: string; description?: string; isActive: boolean }>({
       query: ({ id, ...body }) => ({ url: `/api/admin/horizontals/${id}`, method: "PUT", body }),
       invalidatesTags: ["Horizontals"],
+    }),
+
+    // ---- Call centers (sub-agency data-isolation unit) ----
+    listCallCenters: b.query<CallCenterDto[], void>({
+      query: () => "/api/admin/call-centers",
+      providesTags: ["CallCenters"],
+    }),
+    createCallCenter: b.mutation<CallCenterDto, { name: string; code?: string | null }>({
+      query: (body) => ({ url: "/api/admin/call-centers", method: "POST", body }),
+      invalidatesTags: ["CallCenters"],
+    }),
+    updateCallCenter: b.mutation<CallCenterDto, { id: string; name: string; code?: string | null; isActive: boolean }>({
+      query: ({ id, ...body }) => ({ url: `/api/admin/call-centers/${id}`, method: "PUT", body }),
+      invalidatesTags: ["CallCenters"],
+    }),
+    setUserCallCenter: b.mutation<UserSummary, { userId: string; callCenterId: string | null }>({
+      query: ({ userId, callCenterId }) => ({ url: `/api/admin/users/${userId}/call-center`, method: "PUT", body: { callCenterId } }),
+      invalidatesTags: ["Users"],
     }),
 
     // ---- Intake pipeline (Fronter → Verifier → Closer) ----
@@ -1009,6 +1027,7 @@ export const {
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
+  useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation, useSetUserCallCenterMutation,
   useCaptureIntakeLeadMutation, useVerifierQueueQuery, useSetVerifierStatusMutation,
   useCloserQueueQuery, useGetClosingApplicationQuery, useSubmitClosingApplicationMutation,
   useCaptureCloserLeadMutation, useValidatorQueueQuery, useSetValidatorStatusMutation,

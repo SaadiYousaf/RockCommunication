@@ -33,6 +33,7 @@ public class JwtTokenService : IJwtTokenService
 
     public async Task<TokenResult> IssueAsync(
         Guid userId, string userName, Guid agencyId, IEnumerable<string> roles,
+        Guid? callCenterId = null,
         IReadOnlyDictionary<string, string>? extraClaims = null,
         CancellationToken ct = default)
     {
@@ -46,6 +47,10 @@ public class JwtTokenService : IJwtTokenService
             new("agency", agencyId.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+        // Only agents are pinned to a call center; agency-level users omit the claim and
+        // therefore see every call center in their agency (handled by the query filter).
+        if (callCenterId is { } cc && cc != Guid.Empty)
+            claims.Add(new Claim("callcenter", cc.ToString()));
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         if (extraClaims is not null)
             foreach (var kv in extraClaims)
@@ -93,7 +98,7 @@ public class JwtTokenService : IJwtTokenService
                            select r.Name!).ToListAsync(ct);
 
         existing.RevokedAt = DateTime.UtcNow;
-        var newToken = await IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, null, ct);
+        var newToken = await IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, null, ct);
         existing.ReplacedByHash = Hash(newToken.RefreshToken);
         await _db.SaveChangesAsync(ct);
         return newToken;

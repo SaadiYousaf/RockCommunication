@@ -45,7 +45,7 @@ public class ScheduleCallbackHandler : IRequestHandler<ScheduleCallbackCommand, 
 
         var cb = new ScheduledCallback
         {
-            AgencyId = lead.AgencyId,
+            AgencyId = lead.AgencyId, CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             AssignedUserId = lead.AssignedUserId ?? _user.UserId.Value,
             ScheduledFor = input.ScheduledFor,
