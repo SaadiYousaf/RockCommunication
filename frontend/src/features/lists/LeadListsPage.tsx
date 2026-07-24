@@ -232,7 +232,7 @@ export function LeadListsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100">
-                    {batches.map((b: any) => (
+                    {batches.map((b) => (
                       <tr key={b.id} className="hover:bg-ink-50/60">
                         <td className="px-4 py-2.5 text-xs text-ink-600">
                           {b.completedAt ? new Date(b.completedAt).toLocaleString() : <Badge tone="warning" variant="soft" dot>Running</Badge>}

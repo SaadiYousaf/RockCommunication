@@ -8,16 +8,13 @@ import {
 } from "../shared/ui";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery } from "../shared/api/baseApi";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage } from "../shared/api/types";
+import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
+import type { WallboardSnapshot, AgentLeaderboard } from "../shared/api/types";
 
 const stageOrder: WorkflowStage[] = [
   "New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost",
 ];
 
-const stageTone: Record<WorkflowStage, "brand" | "info" | "warning" | "neutral" | "success" | "danger"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
 const stageBar: Record<WorkflowStage, string> = {
   New:       "from-brand-400 to-brand-600",
@@ -485,7 +482,7 @@ function PipelineFunnel({ pipeline }: { pipeline: DashboardStageBucket[] }) {
 // Floor card — agents on the floor, today's call stats
 // =============================================================================
 
-function FloorCard({ wall, loading }: { wall: any; loading: boolean }) {
+function FloorCard({ wall, loading }: { wall?: WallboardSnapshot; loading: boolean }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader
@@ -640,7 +637,7 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
 // Leaderboard — top performers today
 // =============================================================================
 
-function LeaderboardCard({ leaders, loading }: { leaders: any; loading: boolean }) {
+function LeaderboardCard({ leaders, loading }: { leaders?: AgentLeaderboard[]; loading: boolean }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader
@@ -678,7 +675,7 @@ function LeaderboardCard({ leaders, loading }: { leaders: any; loading: boolean 
           </div>
         ) : (
           <ul className="divide-y divide-ink-100/70">
-            {leaders.slice(0, 5).map((u: any, i: number) => {
+            {leaders.slice(0, 5).map((u, i: number) => {
               const premium = Number(u.premiumToday ?? 0);
               return (
                 <li key={u.userId} className="flex items-center gap-3 py-3">
@@ -687,7 +684,7 @@ function LeaderboardCard({ leaders, loading }: { leaders: any; loading: boolean 
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-ink-900 truncate text-sm">{u.userName}</div>
                     <div className="text-[11px] text-ink-500">
-                      {u.salesToday ?? u.sales ?? 0} sales · {formatMoney(premium)}
+                      {u.salesToday ?? 0} sales · {formatMoney(premium)}
                     </div>
                   </div>
                 </li>

@@ -529,3 +529,61 @@ export interface IntegrationHealthResult {
   message: string;
   elapsedMs: number;
 }
+
+// ---------------------------------------------------------------------------
+// Call-center / workflow / QA list-endpoint response DTOs (mirror the backend
+// records; enums serialize as string names). Added to replace `any[]` returns.
+// ---------------------------------------------------------------------------
+
+export type AgentStatus =
+  | "Offline" | "Available" | "OnCall" | "Break" | "Lunch" | "Training" | "Meeting";
+
+export interface CallListItem {
+  id: string; leadId: string; leadName: string; leadPhone: string;
+  agentUserId: string; agentName: string | null;
+  provider: string; providerCallId: string;
+  status: string; direction: string;
+  initiatedAt: string; answeredAt: string | null; endedAt: string | null;
+  talkSeconds: number | null; waitSeconds: number | null;
+  recordingUrl: string | null; wrapUpCode: string | null;
+}
+export interface PagedCallsResult {
+  items: CallListItem[]; total: number; skip: number; take: number;
+  answeredCount: number; voicemailCount: number; abandonedCount: number; avgTalkSeconds: number;
+}
+export interface CallSummary {
+  id: string; leadId: string; agentUserId: string;
+  provider: string; providerCallId: string;
+  status: string; direction: string;
+  initiatedAt: string; answeredAt: string | null; endedAt: string | null;
+  recordingUrl: string | null; wrapUpCode: string | null; notes: string | null;
+}
+export interface WrapUpCode { id: string; code: string; label: string; isSale: boolean; isContact: boolean; isRetry: boolean; isActive: boolean; }
+export interface DncEntry { id: string; phoneNormalized: string; reason: string | null; source: string; expiresAt: string | null; }
+export interface Campaign { id: string; code: string; name: string; verticalId: string | null; isActive: boolean; startsAt: string | null; endsAt: string | null; }
+export interface LeadSource { id: string; code: string; name: string; campaignId: string | null; costPerLead: number; isActive: boolean; }
+export interface Skill { id: string; code: string; name: string; isActive: boolean; }
+export interface AgentSkill { skillId: string; code: string; name: string; proficiency: number; }
+export interface Script { id: string; name: string; stage: WorkflowStage | null; role: string | null; campaignId: string | null; body: string; isActive: boolean; version: number; }
+export interface LiveAgent { userId: string; userName: string; status: AgentStatus; reason: string | null; sinceAt: string; duration: string; currentCallId: string | null; currentCallStatus: string | null; }
+export interface WorkflowAction { id: string; actionType: string; parametersJson: string | null; order: number; }
+export interface WorkflowRule { id: string; name: string; eventType: string; conditionJson: string | null; priority: number; isActive: boolean; continueOnError: boolean; description: string | null; actions: WorkflowAction[]; }
+export interface WorkflowExecution { id: string; ruleId: string; eventType: string; status: string; startedAt: string; completedAt: string | null; error: string | null; }
+export interface ImportBatch { id: string; leadListId: string; fileName: string; totalRows: number; imported: number; duplicates: number; dncScrubbed: number; errors: number; status: string; completedAt: string | null; }
+export interface CadenceStep { id?: string; order: number; stepKind: string; delayMinutes: number; parametersJson: string | null; stopIfContacted: boolean; }
+export interface Cadence { id: string; name: string; campaignId: string | null; isActive: boolean; description: string | null; steps: CadenceStep[]; }
+export interface CadenceEnrollment { id: string; cadenceId: string; leadId: string; currentStepOrder: number; enrolledAt: string; nextRunAt: string; status: string; completedAt: string | null; stopReason: string | null; }
+export interface VoicemailAsset { id: string; name: string; url: string; durationSeconds: number; campaignId: string | null; isActive: boolean; }
+export interface InboundQueue { id: string; name: string; phoneNumber: string | null; requiredSkillCode: string | null; campaignId: string | null; strategy: string; maxWaitSeconds: number; overflowQueueId: string | null; voicemailAssetId: string | null; isActive: boolean; }
+export interface AgentLeaderboard { userId: string; userName: string; callsToday: number; salesToday: number; premiumToday: number; leadsTransitionedToday: number; }
+export interface KbArticle { id: string; slug: string; title: string; body: string; tags: string | null; category: string | null; isPublished: boolean; viewCount: number; publishedAt: string | null; }
+export interface PublicEndpoint { id: string; slug: string; campaignId: string | null; leadSourceId: string | null; cadenceId: string | null; isActive: boolean; leadCount: number; allowedOrigins: string | null; }
+export interface PublicEndpointWithSecret extends PublicEndpoint { secret: string; }
+export interface QaReviewSummary { id: string; leadId: string; agentUserId: string; reviewerUserId: string; rubricId: string; totalScore: number; maxScore: number; percentage: number; notes: string | null; reviewedAt: string; }
+export interface AgentScorecard { agentUserId: string; reviewCount: number; avgPercentage: number; avgScore: number; }
+export interface TopAgent { userId: string; userName: string; sales: number; calls: number; premium: number | null; }
+export interface WallboardSnapshot {
+  agentsClockedIn: number; agentsAvailable: number; agentsOnCall: number; agentsOnBreak: number;
+  callsAnsweredToday: number; callsAbandonedToday: number; leadsCreatedToday: number; salesClosedToday: number;
+  callsWaitingNow: number; longestWaitSeconds: number; topAgentsToday: TopAgent[];
+}

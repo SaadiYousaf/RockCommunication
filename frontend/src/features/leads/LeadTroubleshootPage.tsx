@@ -6,12 +6,8 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR, cn, type IconName,
 } from "../../shared/ui";
 import type { LeadDiagnostics } from "../../shared/api/types";
+import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 
-const stageTone: Record<string, "brand" | "info" | "warning" | "success" | "danger" | "neutral"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
 const severityTone: Record<string, { tone: "danger" | "warning" | "info"; icon: IconName; bg: string; ring: string }> = {
   error:   { tone: "danger",  icon: "x",      bg: "bg-rose-50",   ring: "ring-rose-200" },

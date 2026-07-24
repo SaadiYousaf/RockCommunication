@@ -13,6 +13,9 @@ import type {
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   ValidatorQueueItem, SetValidatorStatusInput,
+  QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
+  Skill, AgentSkill, Script, LiveAgent, WorkflowRule, WorkflowExecution, ImportBatch,
+  Cadence, CadenceEnrollment, VoicemailAsset, InboundQueue, AgentLeaderboard, KbArticle, PublicEndpoint,
 } from "./types";
 
 const rawBaseQuery = fetchBaseQuery({
@@ -463,10 +466,10 @@ export const baseApi = createApi({
     }),
 
     // QA browser
-    listQaReviews: b.query<any[], { agentUserId?: string; from?: string; to?: string }>({
+    listQaReviews: b.query<QaReviewSummary[], { agentUserId?: string; from?: string; to?: string }>({
       query: (params) => ({ url: "/api/qa/reviews", params }),
     }),
-    qaScorecards: b.query<any[], { from?: string; to?: string }>({
+    qaScorecards: b.query<AgentScorecard[], { from?: string; to?: string }>({
       query: (params) => ({ url: "/api/qa/scorecards", params }),
     }),
 
@@ -491,27 +494,27 @@ export const baseApi = createApi({
       query: ({ callId, ...body }) => ({ url: `/api/cc/calls/${callId}/wrap-up`, method: "POST", body }),
       invalidatesTags: ["Session", "Calls"],
     }),
-    myRecentCalls: b.query<any[], number | void>({
+    myRecentCalls: b.query<CallSummary[], number | void>({
       query: (take) => ({ url: "/api/cc/calls/recent", params: take ? { take } : undefined }),
       providesTags: ["Calls"],
     }),
 
     // ===== Wrap-up codes =====
-    listWrapUpCodes: b.query<any[], void>({
+    listWrapUpCodes: b.query<WrapUpCode[], void>({
       query: () => "/api/cc/wrap-up-codes",
       providesTags: ["WrapUpCodes"],
     }),
-    upsertWrapUpCode: b.mutation<any, { id?: string; code: string; label: string; isSale: boolean; isContact: boolean; isRetry: boolean; isActive: boolean }>({
+    upsertWrapUpCode: b.mutation<WrapUpCode, { id?: string; code: string; label: string; isSale: boolean; isContact: boolean; isRetry: boolean; isActive: boolean }>({
       query: (body) => ({ url: "/api/cc/wrap-up-codes", method: "PUT", body }),
       invalidatesTags: ["WrapUpCodes"],
     }),
 
     // ===== DNC =====
-    listDnc: b.query<any[], { skip?: number; take?: number } | void>({
+    listDnc: b.query<DncEntry[], { skip?: number; take?: number } | void>({
       query: (params) => ({ url: "/api/cc/dnc", params: params ?? undefined }),
       providesTags: ["Dnc"],
     }),
-    addDnc: b.mutation<any, { phone: string; reason?: string; source?: string; expiresAt?: string }>({
+    addDnc: b.mutation<DncEntry, { phone: string; reason?: string; source?: string; expiresAt?: string }>({
       query: (body) => ({ url: "/api/cc/dnc", method: "POST", body }),
       invalidatesTags: ["Dnc"],
     }),
@@ -526,27 +529,27 @@ export const baseApi = createApi({
     }),
 
     // ===== Campaigns / LeadSources / Skills / Scripts =====
-    listCampaigns: b.query<any[], void>({
+    listCampaigns: b.query<Campaign[], void>({
       query: () => "/api/cc/campaigns",
       providesTags: ["Campaigns"],
     }),
-    upsertCampaign: b.mutation<any, any>({
+    upsertCampaign: b.mutation<Campaign, any>({
       query: (body) => ({ url: "/api/cc/campaigns", method: "PUT", body }),
       invalidatesTags: ["Campaigns"],
     }),
-    listLeadSources: b.query<any[], void>({
+    listLeadSources: b.query<LeadSource[], void>({
       query: () => "/api/cc/lead-sources",
       providesTags: ["LeadSources"],
     }),
-    upsertLeadSource: b.mutation<any, any>({
+    upsertLeadSource: b.mutation<LeadSource, any>({
       query: (body) => ({ url: "/api/cc/lead-sources", method: "PUT", body }),
       invalidatesTags: ["LeadSources"],
     }),
-    listSkills: b.query<any[], void>({
+    listSkills: b.query<Skill[], void>({
       query: () => "/api/cc/skills",
       providesTags: ["Skills"],
     }),
-    upsertSkill: b.mutation<any, any>({
+    upsertSkill: b.mutation<Skill, any>({
       query: (body) => ({ url: "/api/cc/skills", method: "PUT", body }),
       invalidatesTags: ["Skills"],
     }),
@@ -558,21 +561,21 @@ export const baseApi = createApi({
       query: ({ userId, skillId }) => ({ url: "/api/cc/skills/assign", method: "DELETE", params: { userId, skillId } }),
       invalidatesTags: ["Skills"],
     }),
-    agentSkills: b.query<any[], string>({
+    agentSkills: b.query<AgentSkill[], string>({
       query: (id) => `/api/cc/agents/${id}/skills`,
       providesTags: ["Skills"],
     }),
-    listScripts: b.query<any[], { stage?: string; role?: string; campaignId?: string } | void>({
+    listScripts: b.query<Script[], { stage?: string; role?: string; campaignId?: string } | void>({
       query: (params) => ({ url: "/api/cc/scripts", params: params ?? undefined }),
       providesTags: ["Scripts"],
     }),
-    upsertScript: b.mutation<any, any>({
+    upsertScript: b.mutation<Script, any>({
       query: (body) => ({ url: "/api/cc/scripts", method: "PUT", body }),
       invalidatesTags: ["Scripts"],
     }),
 
     // ===== Supervisor =====
-    liveAgents: b.query<any[], void>({
+    liveAgents: b.query<LiveAgent[], void>({
       query: () => "/api/cc/supervisor/live",
       providesTags: ["LiveAgents"],
     }),
@@ -585,11 +588,11 @@ export const baseApi = createApi({
     }),
 
     // ===== Workflows =====
-    listWorkflowRules: b.query<any[], string | void>({
+    listWorkflowRules: b.query<WorkflowRule[], string | void>({
       query: (eventType) => ({ url: "/api/workflows/rules", params: eventType ? { eventType } : undefined }),
       providesTags: ["Workflows"],
     }),
-    upsertWorkflowRule: b.mutation<any, any>({
+    upsertWorkflowRule: b.mutation<WorkflowRule, any>({
       query: (body) => ({ url: "/api/workflows/rules", method: "PUT", body }),
       invalidatesTags: ["Workflows"],
     }),
@@ -599,7 +602,7 @@ export const baseApi = createApi({
     }),
     workflowEventTypes: b.query<string[], void>({ query: () => "/api/workflows/event-types" }),
     workflowActionTypes: b.query<string[], void>({ query: () => "/api/workflows/action-types" }),
-    workflowExecutions: b.query<any[], { ruleId?: string; take?: number } | void>({
+    workflowExecutions: b.query<WorkflowExecution[], { ruleId?: string; take?: number } | void>({
       query: (params) => ({ url: "/api/workflows/executions", params: params ?? undefined }),
       providesTags: ["WorkflowExecutions"],
     }),
@@ -743,17 +746,17 @@ export const baseApi = createApi({
       },
       invalidatesTags: ["LeadLists", "ImportBatches", "Leads"],
     }),
-    listImportBatches: b.query<any[], string>({
+    listImportBatches: b.query<ImportBatch[], string>({
       query: (id) => `/api/cc/lists/${id}/imports`,
       providesTags: ["ImportBatches"],
     }),
 
     // ===== Cadences =====
-    listCadences: b.query<any[], void>({
+    listCadences: b.query<Cadence[], void>({
       query: () => "/api/cc/cadences",
       providesTags: ["Cadences"],
     }),
-    upsertCadence: b.mutation<any, any>({
+    upsertCadence: b.mutation<Cadence, any>({
       query: (body) => ({ url: "/api/cc/cadences", method: "PUT", body }),
       invalidatesTags: ["Cadences"],
     }),
@@ -761,17 +764,17 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/cc/cadences/enroll", method: "POST", body }),
       invalidatesTags: ["CadenceEnrollments"],
     }),
-    cadenceEnrollments: b.query<any[], { cadenceId?: string; status?: string } | void>({
+    cadenceEnrollments: b.query<CadenceEnrollment[], { cadenceId?: string; status?: string } | void>({
       query: (params) => ({ url: "/api/cc/cadences/enrollments", params: params ?? undefined }),
       providesTags: ["CadenceEnrollments"],
     }),
 
     // ===== Voicemails =====
-    listVoicemails: b.query<any[], void>({
+    listVoicemails: b.query<VoicemailAsset[], void>({
       query: () => "/api/cc/voicemails",
       providesTags: ["Voicemails"],
     }),
-    upsertVoicemail: b.mutation<any, any>({
+    upsertVoicemail: b.mutation<VoicemailAsset, any>({
       query: (body) => ({ url: "/api/cc/voicemails", method: "PUT", body }),
       invalidatesTags: ["Voicemails"],
     }),
@@ -780,11 +783,11 @@ export const baseApi = createApi({
     }),
 
     // ===== Inbound queues + IVR =====
-    listQueues: b.query<any[], void>({
+    listQueues: b.query<InboundQueue[], void>({
       query: () => "/api/cc/queues",
       providesTags: ["Queues"],
     }),
-    upsertQueue: b.mutation<any, any>({
+    upsertQueue: b.mutation<InboundQueue, any>({
       query: (body) => ({ url: "/api/cc/queues", method: "PUT", body }),
       invalidatesTags: ["Queues"],
     }),
@@ -810,13 +813,13 @@ export const baseApi = createApi({
       query: () => "/api/cc/wallboard",
       providesTags: ["Wallboard"],
     }),
-    leaderboard: b.query<any[], string | void>({
+    leaderboard: b.query<AgentLeaderboard[], string | void>({
       query: (period) => ({ url: "/api/cc/leaderboard", params: period ? { period } : undefined }),
       providesTags: ["Leaderboard"],
     }),
 
     // ===== Knowledge base =====
-    searchKb: b.query<any[], { q?: string; category?: string; publishedOnly?: boolean } | void>({
+    searchKb: b.query<KbArticle[], { q?: string; category?: string; publishedOnly?: boolean } | void>({
       query: (params) => ({ url: "/api/kb/articles", params: params ?? undefined }),
       providesTags: ["KbArticles"],
     }),
@@ -829,7 +832,7 @@ export const baseApi = createApi({
     }),
 
     // ===== Public lead-capture endpoints =====
-    listPublicEndpoints: b.query<any[], void>({
+    listPublicEndpoints: b.query<PublicEndpoint[], void>({
       query: () => "/api/admin/public-endpoints",
       providesTags: ["PublicEndpoints"],
     }),

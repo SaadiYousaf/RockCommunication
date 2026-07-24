@@ -18,25 +18,10 @@ import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
+import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
 
-const stages: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed","Validated","Funded","Followup","Winback","Lost"];
-const stageMap: Record<number | string, WorkflowStage> = {
-  0:"New",10:"Fronted",20:"Verified",30:"JrClosed",40:"Closed",50:"Validated",60:"Funded",70:"Followup",80:"Winback",90:"Lost",
-  New:"New",Fronted:"Fronted",Verified:"Verified",JrClosed:"JrClosed",Closed:"Closed",Validated:"Validated",Funded:"Funded",Followup:"Followup",Winback:"Winback",Lost:"Lost",
-};
-const dispMap: Record<number | string, string> = {
-  0:"None",1:"Interested",2:"NotInterested",3:"CallBack",4:"DoNotCall",5:"Sold",6:"NotQualified",7:"Voicemail",8:"NoAnswer",9:"WrongNumber",
-  None:"None",Interested:"Interested",NotInterested:"NotInterested",CallBack:"CallBack",DoNotCall:"DoNotCall",Sold:"Sold",NotQualified:"NotQualified",Voicemail:"Voicemail",NoAnswer:"NoAnswer",WrongNumber:"WrongNumber",
-};
 
-const stageTone: Record<WorkflowStage, "brand" | "info" | "warning" | "neutral" | "success" | "danger"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
-const stageOf = (s: any): WorkflowStage => stageMap[s] ?? "New";
-const dispOf = (d: any): string => dispMap[d] ?? "None";
 
 const PAGE_SIZE = 25;
 
@@ -313,7 +298,7 @@ export function LeadsPage() {
             {bulkAction === "cadence" && (
               <Select className="h-9 w-56 text-sm" value={bulkCadence} onChange={(e) => setBulkCadence(e.target.value)}>
                 <option value="">Pick cadence…</option>
-                {cadences?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {cadences?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Select>
             )}
 

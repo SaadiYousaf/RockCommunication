@@ -52,7 +52,7 @@ export function WallboardPage() {
 
   const topPremium = useMemo(() => {
     if (!leaders?.length) return 0;
-    return Math.max(...leaders.map((u: any) => Number(u.premiumToday ?? 0)));
+    return Math.max(...leaders.map((u) => Number(u.premiumToday ?? 0)));
   }, [leaders]);
 
   return (
@@ -157,7 +157,7 @@ export function WallboardPage() {
                     <div className="col-span-4 text-right">Premium</div>
                   </div>
                   <div className="divide-y divide-white/5">
-                    {leaders?.map((u: any, i: number) => {
+                    {leaders?.map((u, i: number) => {
                       const premium = Number(u.premiumToday ?? 0);
                       const pct = topPremium > 0 ? (premium / topPremium) * 100 : 0;
                       return (
@@ -172,12 +172,9 @@ export function WallboardPage() {
                           <div className="col-span-1 relative"><Medal rank={i + 1} /></div>
                           <div className="col-span-5 relative">
                             <div className="font-semibold text-white text-base">{u.userName}</div>
-                            {u.calls != null && (
-                              <div className="text-xs text-white/40">{u.calls} calls</div>
-                            )}
                           </div>
                           <div className="col-span-2 text-right relative">
-                            <span className="text-2xl font-bold text-emerald-300 font-mono tabular-nums">{u.salesToday ?? u.sales ?? 0}</span>
+                            <span className="text-2xl font-bold text-emerald-300 font-mono tabular-nums">{u.salesToday ?? 0}</span>
                           </div>
                           <div className="col-span-4 text-right relative">
                             <span className="text-xl font-mono text-brand-300 tabular-nums">${premium.toLocaleString()}</span>

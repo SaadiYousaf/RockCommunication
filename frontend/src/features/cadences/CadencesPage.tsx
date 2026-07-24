@@ -5,6 +5,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
 } from "../../shared/ui";
+import type { Cadence, CadenceStep } from "../../shared/api/types";
 
 const KINDS = ["Call", "Sms", "Email", "Wait"] as const;
 type Kind = typeof KINDS[number];
@@ -76,7 +77,7 @@ export function CadencesPage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-4 mb-8">
-          {cadences.map((c: any) => (
+          {cadences.map((c) => (
             <Card key={c.id} className="hover:shadow-card-hover transition-shadow">
               <CardBody>
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -98,8 +99,8 @@ export function CadencesPage() {
                 <div className="flex items-center gap-2 flex-wrap pt-3 border-t hairline">
                   {c.steps
                     .slice()
-                    .sort((a: any, b: any) => a.order - b.order)
-                    .map((s: any, idx: number) => (
+                    .sort((a, b: any) => a.order - b.order)
+                    .map((s, idx: number) => (
                     <div key={s.id ?? idx} className="flex items-center gap-2">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-ink-50/80 border hairline">
                         <Icon name={kindIcon[s.stepKind as Kind] ?? "doc"} size={14} className="text-ink-600" />
@@ -146,7 +147,7 @@ export function CadencesPage() {
                 </TR>
               </THead>
               <TBody>
-                {enrollments.map((e: any) => (
+                {enrollments.map((e) => (
                   <TR key={e.id}>
                     <TD className="text-ink-600 text-xs">{new Date(e.enrolledAt).toLocaleString()}</TD>
                     <TD className="font-mono text-xs text-ink-700">{e.leadId.slice(0, 8)}…</TD>
@@ -184,8 +185,8 @@ export function CadencesPage() {
   );
 }
 
-function CadenceForm({ cadence, setCadence }: { cadence: any; setCadence: (c: any) => void }) {
-  function setStep(i: number, patch: any) {
+function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c: Cadence) => void }) {
+  function setStep(i: number, patch: Partial<CadenceStep>) {
     const s = [...cadence.steps];
     s[i] = { ...s[i], ...patch };
     setCadence({ ...cadence, steps: s });
@@ -222,7 +223,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: any; setCadence: (c: an
         </div>
 
         <div className="space-y-2">
-          {cadence.steps.map((s: any, i: number) => (
+          {cadence.steps.map((s, i: number) => (
             <div key={i} className="p-3 rounded-lg border hairline bg-ink-50/40 space-y-2">
               <div className="flex items-center gap-2">
                 <div className="h-7 w-7 rounded-md bg-brand-100 text-brand-700 grid place-items-center text-xs font-semibold">
@@ -245,7 +246,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: any; setCadence: (c: an
                   stop if contacted
                 </label>
                 <Button type="button" variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50"
-                  onClick={() => setCadence({ ...cadence, steps: cadence.steps.filter((_: any, j: number) => j !== i) })}>
+                  onClick={() => setCadence({ ...cadence, steps: cadence.steps.filter((_, j: number) => j !== i) })}>
                   <Icon name="x" size={14} />
                 </Button>
               </div>

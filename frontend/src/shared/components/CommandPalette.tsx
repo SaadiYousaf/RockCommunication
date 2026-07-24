@@ -231,7 +231,7 @@ function Palette({ onClose }: { onClose: () => void }) {
 
     if (users) {
       const ql = debounced.toLowerCase();
-      const matches = users.filter((u: any) =>
+      const matches = users.filter((u) =>
         u.userName.toLowerCase().includes(ql) ||
         u.email.toLowerCase().includes(ql) ||
         u.roles.some((r: string) => r.toLowerCase().includes(ql))

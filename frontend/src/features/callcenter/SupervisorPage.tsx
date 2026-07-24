@@ -43,9 +43,9 @@ export function SupervisorPage() {
     const a = agents ?? [];
     return {
       total: a.length,
-      available: a.filter((x: any) => x.status === "Available").length,
-      onCall:    a.filter((x: any) => x.status === "OnCall").length,
-      onBreak:   a.filter((x: any) => x.status === "Break" || x.status === "Lunch").length,
+      available: a.filter((x) => x.status === "Available").length,
+      onCall:    a.filter((x) => x.status === "OnCall").length,
+      onBreak:   a.filter((x) => x.status === "Break" || x.status === "Lunch").length,
     };
   }, [agents]);
 

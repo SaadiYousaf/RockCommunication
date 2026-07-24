@@ -148,7 +148,7 @@ export function LeadDetailPage() {
                 e.target.value = "";
               }}>
               <option value="">📥 Drop voicemail…</option>
-              {voicemails.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           )}
           <button onClick={async () => { await verifyJornaya(id); refetchLead(); }}

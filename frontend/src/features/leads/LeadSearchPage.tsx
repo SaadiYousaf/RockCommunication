@@ -11,16 +11,12 @@ import {
   EmptyState, Icon, Input, PageHeader, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 
 type Filters = { phone: string; email: string; name: string; state: string; stage: string };
 
 const STAGES = ["", "New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost"];
 
-const stageTone: Record<string, "brand" | "info" | "warning" | "success" | "danger" | "neutral"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
 function formatPhone(p?: string | null) {
   if (!p) return "";

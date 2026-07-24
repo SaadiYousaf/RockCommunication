@@ -9,6 +9,7 @@ import {
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, useToast, cn,
   type IconName,
 } from "../../shared/ui";
+import type { WorkflowRule } from "../../shared/api/types";
 
 type Rule = {
   id: string | null;
@@ -63,7 +64,7 @@ export function WorkflowsPage() {
     if (!rules) return [];
     const q = search.trim().toLowerCase();
     if (!q) return rules;
-    return rules.filter((r: any) =>
+    return rules.filter((r) =>
       r.name.toLowerCase().includes(q) ||
       r.eventType.toLowerCase().includes(q) ||
       (r.description ?? "").toLowerCase().includes(q),
@@ -74,8 +75,8 @@ export function WorkflowsPage() {
     const items = rules ?? [];
     return {
       total: items.length,
-      active: items.filter((r: any) => r.isActive).length,
-      events: new Set(items.map((r: any) => r.eventType)).size,
+      active: items.filter((r) => r.isActive).length,
+      events: new Set(items.map((r) => r.eventType)).size,
       runs: executions?.length ?? 0,
     };
   }, [rules, executions]);
@@ -161,7 +162,7 @@ export function WorkflowsPage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-3">
-          {filtered.map((r: any) => (
+          {filtered.map((r) => (
             <RuleCard
               key={r.id}
               rule={r}
@@ -195,7 +196,7 @@ export function WorkflowsPage() {
                   </TR>
                 </THead>
                 <TBody>
-                  {executions.map((e: any) => (
+                  {executions.map((e) => (
                     <TR key={e.id}>
                       <TD className="text-ink-600 text-xs whitespace-nowrap">{new Date(e.startedAt).toLocaleString()}</TD>
                       <TD><Badge tone={eventTone[e.eventType] ?? "neutral"} variant="soft" dot>{e.eventType}</Badge></TD>
@@ -256,7 +257,7 @@ export function WorkflowsPage() {
 function RuleCard({
   rule, onEdit, onDelete,
 }: {
-  rule: any;
+  rule: WorkflowRule;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -306,7 +307,7 @@ function RuleCard({
           {/* Action chain */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mr-1">Actions</span>
-            {rule.actions.map((a: any, i: number) => (
+            {rule.actions.map((a, i: number) => (
               <span key={i} className="inline-flex items-center gap-1.5">
                 {i > 0 && <Icon name="arrowRight" size={11} className="text-ink-300" />}
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-ink-100/80 ring-1 ring-inset ring-ink-200 text-xs font-medium text-ink-700">

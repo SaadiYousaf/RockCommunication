@@ -64,7 +64,7 @@ export function KnowledgeBasePage() {
               </div>
             ) : (
               <ul className="p-2 space-y-1">
-                {results.map((a: any) => {
+                {results.map((a) => {
                   const active = activeSlug === a.slug;
                   return (
                     <li key={a.id}>

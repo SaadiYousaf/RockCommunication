@@ -9,6 +9,7 @@ import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
+import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   New: ["Fronted", "Lost"],
@@ -23,19 +24,8 @@ const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   Lost: ["Winback"],
 };
 
-const stageMap: Record<number | string, WorkflowStage> = {
-  0: "New", 10: "Fronted", 20: "Verified", 30: "JrClosed", 40: "Closed",
-  50: "Validated", 60: "Funded", 70: "Followup", 80: "Winback", 90: "Lost",
-  New:"New",Fronted:"Fronted",Verified:"Verified",JrClosed:"JrClosed",Closed:"Closed",Validated:"Validated",Funded:"Funded",Followup:"Followup",Winback:"Winback",Lost:"Lost",
-};
 
-const stageTone: Record<WorkflowStage, "brand" | "info" | "warning" | "neutral" | "success" | "danger"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
-const stageOf = (s: any): WorkflowStage => stageMap[s] ?? "New";
 
 function formatPhone(p: string) {
   const d = (p || "").replace(/\D/g, "");

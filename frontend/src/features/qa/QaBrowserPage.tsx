@@ -62,12 +62,12 @@ export function QaBrowserPage() {
                 </TR>
               </THead>
               <TBody>
-                {scorecards.map((s: any) => (
+                {scorecards.map((s) => (
                   <TR key={s.agentUserId}>
                     <TD>
                       <div className="flex items-center gap-3">
-                        <Avatar name={s.agentName ?? s.agentUserId.slice(0, 6)} size={32} />
-                        <div className="font-mono text-xs text-ink-700">{s.agentName ?? s.agentUserId.slice(0, 8)}</div>
+                        <Avatar name={s.agentUserId.slice(0, 6)} size={32} />
+                        <div className="font-mono text-xs text-ink-700">{s.agentUserId.slice(0, 8)}</div>
                       </div>
                     </TD>
                     <TD className="font-semibold text-ink-900">{s.reviewCount}</TD>
@@ -121,11 +121,11 @@ export function QaBrowserPage() {
                 </TR>
               </THead>
               <TBody>
-                {reviews.map((r: any) => (
+                {reviews.map((r) => (
                   <TR key={r.id}>
                     <TD className="text-ink-600 text-xs">{new Date(r.reviewedAt).toLocaleString()}</TD>
-                    <TD className="font-mono text-xs text-ink-700">{(r.agentName ?? r.agentUserId).toString().slice(0, 12)}</TD>
-                    <TD className="font-mono text-xs text-ink-500">{(r.reviewerName ?? r.reviewerUserId).toString().slice(0, 12)}</TD>
+                    <TD className="font-mono text-xs text-ink-700">{r.agentUserId.slice(0, 12)}</TD>
+                    <TD className="font-mono text-xs text-ink-500">{r.reviewerUserId.slice(0, 12)}</TD>
                     <TD className="text-ink-800">{r.totalScore} <span className="text-ink-400">/ {r.maxScore}</span></TD>
                     <TD>
                       <Badge tone={scoreTone(r.percentage)} variant="soft">{r.percentage}%</Badge>

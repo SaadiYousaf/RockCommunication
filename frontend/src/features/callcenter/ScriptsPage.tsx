@@ -5,15 +5,11 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
+import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 
 const STAGES = ["New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost"];
 const ROLES  = ["Fronter", "Verifier", "JrCloser", "Closer", "Validator", "Followups", "Winbacks"];
 
-const stageTone: Record<string, "brand" | "info" | "warning" | "success" | "danger" | "neutral"> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
-};
 
 export function ScriptsPage() {
   const { data: scripts, isLoading } = useListScriptsQuery();

@@ -73,7 +73,7 @@ function IpAllowlistSection() {
             description="Add at least one CIDR/IP to start enforcing allowlisting." />
         ) : (
           <ul className="divide-y hairline">
-            {list.map((e: any) => (
+            {list.map((e) => (
               <li key={e.id} className="flex items-center gap-3 py-2">
                 <Icon name="shield" size={14} className="text-ink-500" />
                 <code className="font-mono text-sm text-ink-800">{e.cidrOrIp}</code>
@@ -121,7 +121,7 @@ function VerticalsSection() {
             title="No verticals yet" description="Create the first one to tag leads and teams." />
         ) : (
           <ul className="divide-y hairline">
-            {verticals.map((v: any) => (
+            {verticals.map((v) => (
               <li key={v.id} className="flex items-center gap-3 py-2">
                 <Icon name="target" size={14} className="text-ink-500" />
                 <span className="font-medium text-ink-900">{v.name}</span>
@@ -173,7 +173,7 @@ function HorizontalsSection() {
             title="No horizontals yet" description="Create the first one to organise teams and campaigns across verticals." />
         ) : (
           <ul className="divide-y hairline">
-            {horizontals.map((v: any) => (
+            {horizontals.map((v) => (
               <li key={v.id} className="flex items-center gap-3 py-2">
                 <Icon name="target" size={14} className="text-ink-500" />
                 <span className="font-medium text-ink-900">{v.name}</span>
@@ -197,7 +197,7 @@ function HorizontalsSection() {
 function CommissionConfigSection() {
   const { data: rules } = useListCommissionConfigQuery();
   const [upsert] = useUpsertCommissionConfigMutation();
-  const ruleByName = (n: string) => rules?.find((r: any) => r.ruleName === n);
+  const ruleByName = (n: string) => rules?.find((r) => r.ruleName === n);
 
   return (
     <Card>

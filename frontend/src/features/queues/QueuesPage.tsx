@@ -80,7 +80,7 @@ function QueueSection() {
               </TR>
             </THead>
             <TBody>
-              {queues.map((q: any) => (
+              {queues.map((q) => (
                 <TR key={q.id}>
                   <TD className="font-medium text-ink-900">{q.name}</TD>
                   <TD className="font-mono text-ink-700 text-xs">{q.phoneNumber || <span className="text-ink-400">—</span>}</TD>
@@ -165,7 +165,7 @@ function VoicemailSection() {
           />
         ) : (
           <ul className="divide-y divide-ink-100">
-            {vms.map((v: any) => (
+            {vms.map((v) => (
               <li key={v.id} className="py-3 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center">
                   <Icon name="chat" size={16} />
@@ -274,7 +274,7 @@ function PublicEndpointsSection() {
               </TR>
             </THead>
             <TBody>
-              {endpoints.map((e: any) => (
+              {endpoints.map((e) => (
                 <TR key={e.id}>
                   <TD className="font-mono text-xs text-ink-800">/api/public/leads/{e.slug}</TD>
                   <TD className="font-semibold text-ink-900">{e.leadCount}</TD>

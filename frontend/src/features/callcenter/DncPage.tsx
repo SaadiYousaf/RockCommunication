@@ -22,7 +22,7 @@ export function DncPage() {
     if (!list) return [];
     const q = search.trim().toLowerCase();
     if (!q) return list;
-    return list.filter((e: any) =>
+    return list.filter((e) =>
       e.phoneNormalized?.toLowerCase().includes(q) ||
       e.reason?.toLowerCase().includes(q),
     );
@@ -60,9 +60,9 @@ export function DncPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <Stat label="Total entries" value={list?.length ?? 0}
               icon={<Icon name="flag" size={16} />} tone="danger" />
-        <Stat label="Active blocks" value={list?.filter((e: any) => !e.expiresAt || new Date(e.expiresAt) > new Date()).length ?? 0}
+        <Stat label="Active blocks" value={list?.filter((e) => !e.expiresAt || new Date(e.expiresAt) > new Date()).length ?? 0}
               icon={<Icon name="shield" size={16} />} tone="warning" hint="Currently blocking calls" />
-        <Stat label="Expired" value={list?.filter((e: any) =>  e.expiresAt && new Date(e.expiresAt) <= new Date()).length ?? 0}
+        <Stat label="Expired" value={list?.filter((e) =>  e.expiresAt && new Date(e.expiresAt) <= new Date()).length ?? 0}
               icon={<Icon name="clock" size={16} />} tone="neutral" hint="Past expiry, no longer blocking" />
       </div>
 
@@ -101,7 +101,7 @@ export function DncPage() {
             </TR>
           </THead>
           <TBody>
-            {filtered.map((e: any) => {
+            {filtered.map((e) => {
               const expired = e.expiresAt && new Date(e.expiresAt) <= new Date();
               return (
                 <TR key={e.id}>

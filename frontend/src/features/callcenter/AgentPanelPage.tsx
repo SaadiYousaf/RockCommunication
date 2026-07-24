@@ -8,6 +8,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, type IconName,
 } from "../../shared/ui";
+import type { WrapUpCode } from "../../shared/api/types";
 
 type AgentStatus = "Available" | "OnCall" | "Break" | "Lunch" | "Training" | "Meeting" | "Offline";
 
@@ -376,7 +377,7 @@ function WrapUpForm({
   callId, codes, loading, onSubmit,
 }: {
   callId: string;
-  codes: any[];
+  codes: WrapUpCode[];
   loading: boolean;
   onSubmit: (vals: { callId: string; wrapUpCode: string; notes?: string }) => Promise<void>;
 }) {
