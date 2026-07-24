@@ -1,3 +1,4 @@
+import { roleLabel } from "../constants/roles";
 import { getErrorDetail } from "../api/apiError";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -241,7 +242,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         out.push({
           id: `user-${u.id}`,
           label: u.userName,
-          hint: `${u.email} · ${u.roles.slice(0, 2).join(", ")}`,
+          hint: `${u.email} · ${u.roles.slice(0, 2).map(roleLabel).join(", ")}`,
           group: "Users",
           icon: "users",
           to: "/users",

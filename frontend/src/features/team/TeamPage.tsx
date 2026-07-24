@@ -1,3 +1,4 @@
+import { roleLabel } from "../../shared/constants/roles";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo } from "react";
 import {
@@ -396,7 +397,7 @@ function PersonCard({
         <div className="min-w-0">
           {role && (
             <div className={`section-title mb-0.5 ${tone === "brand" ? "text-brand-600" : tone === "accent" ? "text-accent-600" : "text-emerald-700"}`}>
-              {role}
+              {roleLabel(role)}
             </div>
           )}
           <div className={`font-semibold text-ink-900 truncate ${isHero ? "text-lg" : "text-sm"}`}>
@@ -409,7 +410,7 @@ function PersonCard({
         <div className="relative mt-3 flex flex-wrap gap-1">
           {person.roles.slice(0, isHero ? 6 : 3).map((r) => (
             <Badge key={r} tone={tone === "brand" ? "brand" : tone === "accent" ? "info" : "success"} variant="soft">
-              {r}
+              {roleLabel(r)}
             </Badge>
           ))}
           {person.roles.length > (isHero ? 6 : 3) && (
@@ -432,7 +433,7 @@ function PersonRow({ person, compact }: { person: OrgPersonDto; compact?: boolea
       {person.roles.length > 0 && (
         <div className="hidden sm:flex flex-wrap gap-1 justify-end">
           {person.roles.slice(0, 2).map((r) => (
-            <Badge key={r} tone="neutral" variant="soft">{r}</Badge>
+            <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>
           ))}
         </div>
       )}

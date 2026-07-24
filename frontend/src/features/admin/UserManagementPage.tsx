@@ -347,7 +347,7 @@ function RolePicker({
                 (active ? "border-brand-600 bg-brand-600 text-white" : "border-ink-300 bg-white")}>
                 {active && <Icon name="check" size={12} />}
               </span>
-              <span className="truncate">{r}</span>
+              <span className="truncate">{roleLabel(r)}</span>
             </button>
           );
         })}

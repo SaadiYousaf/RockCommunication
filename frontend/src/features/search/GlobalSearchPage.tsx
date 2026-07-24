@@ -1,3 +1,4 @@
+import { roleLabel } from "../../shared/constants/roles";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -282,7 +283,7 @@ export function GlobalSearchPage() {
                         <TD>
                           <div className="flex flex-wrap gap-1">
                             {u.roles.map((r) => (
-                              <Badge key={r} tone="brand" variant="soft">{r}</Badge>
+                              <Badge key={r} tone="brand" variant="soft">{roleLabel(r)}</Badge>
                             ))}
                           </div>
                         </TD>

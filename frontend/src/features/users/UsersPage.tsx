@@ -1,3 +1,4 @@
+import { roleLabel } from "../../shared/constants/roles";
 import { useMemo, useState } from "react";
 import { useListUsersQuery } from "../../shared/api/baseApi";
 import {
@@ -79,7 +80,7 @@ export function UsersPage() {
             className="w-44"
           >
             <option value="">All roles</option>
-            {allRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+            {allRoles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
           </Select>
           {users && (
             <Badge tone="neutral" variant="soft">
@@ -141,7 +142,7 @@ export function UsersPage() {
                     {u.roles.length === 0
                       ? <span className="text-xs text-ink-400">No roles</span>
                       : u.roles.map((r) => (
-                        <Badge key={r} tone={roleTones[r] ?? "neutral"} variant="soft">{r}</Badge>
+                        <Badge key={r} tone={roleTones[r] ?? "neutral"} variant="soft">{roleLabel(r)}</Badge>
                       ))}
                   </div>
                 </TD>

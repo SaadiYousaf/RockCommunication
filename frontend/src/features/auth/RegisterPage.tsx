@@ -1,3 +1,4 @@
+import { roleLabel } from "../../shared/constants/roles";
 import type { IconName } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
@@ -301,7 +302,7 @@ export function RegisterPage() {
                             </span>
                             <span className="min-w-0">
                               <div className={cn("text-sm font-medium", active ? "text-brand-700" : "text-ink-800")}>
-                                {roleName}
+                                {roleLabel(roleName)}
                               </div>
                               {ROLE_DESCRIPTIONS[roleName] && (
                                 <div className="text-[11px] text-ink-500 leading-snug mt-0.5 line-clamp-2">
@@ -417,7 +418,7 @@ function PreviewCard({
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {selectedRoles.map((r) => (
-              <Badge key={r} tone="brand" variant="soft">{r}</Badge>
+              <Badge key={r} tone="brand" variant="soft">{roleLabel(r)}</Badge>
             ))}
           </div>
         )}

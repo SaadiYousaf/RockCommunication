@@ -1,3 +1,4 @@
+import { roleLabel } from "../../shared/constants/roles";
 import type { Script } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
@@ -156,7 +157,7 @@ export function ScriptsPage() {
               </Select>
               <Select label="Role" value={editing.role ?? ""} onChange={(e) => setEditing({ ...editing, role: e.target.value })}>
                 <option value="">— Any role —</option>
-                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
               </Select>
               <Select label="Campaign" value={editing.campaignId ?? ""} onChange={(e) => setEditing({ ...editing, campaignId: e.target.value })}>
                 <option value="">— Any campaign —</option>

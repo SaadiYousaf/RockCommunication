@@ -1,3 +1,4 @@
+import { roleLabel } from "../constants/roles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -129,7 +130,7 @@ function LayoutInner() {
   }, []);
 
   const userName = auth.user?.userName ?? "User";
-  const primaryRole = auth.user?.roles[0] ?? "Member";
+  const primaryRole = roleLabel(auth.user?.roles[0] ?? "Member");
 
   return (
     <div className="min-h-screen flex">
@@ -272,7 +273,7 @@ function LayoutInner() {
                   <div className="text-xs text-ink-500 truncate">{auth.user?.email}</div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {auth.user?.roles.map((r) => (
-                      <Badge key={r} tone="brand" variant="soft">{r}</Badge>
+                      <Badge key={r} tone="brand" variant="soft">{roleLabel(r)}</Badge>
                     ))}
                   </div>
                 </div>
