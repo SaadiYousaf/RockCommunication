@@ -1,3 +1,4 @@
+import type { Lead } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -282,7 +283,7 @@ export function LeadSearchPage() {
 function DuplicateGroup({
   group, onDial,
 }: {
-  group: { key: string; leads: any[] };
+  group: { key: string; leads: Lead[] };
   onDial: (id: string) => void;
 }) {
   const phone = group.key.replace(/^phone:/, "");

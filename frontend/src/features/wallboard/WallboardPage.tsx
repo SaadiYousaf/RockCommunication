@@ -172,6 +172,9 @@ export function WallboardPage() {
                           <div className="col-span-1 relative"><Medal rank={i + 1} /></div>
                           <div className="col-span-5 relative">
                             <div className="font-semibold text-white text-base">{u.userName}</div>
+                            {u.callsToday > 0 && (
+                              <div className="text-xs text-white/40">{u.callsToday} calls</div>
+                            )}
                           </div>
                           <div className="col-span-2 text-right relative">
                             <span className="text-2xl font-bold text-emerald-300 font-mono tabular-nums">{u.salesToday ?? 0}</span>

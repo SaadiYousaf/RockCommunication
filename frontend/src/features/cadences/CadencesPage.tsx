@@ -99,7 +99,7 @@ export function CadencesPage() {
                 <div className="flex items-center gap-2 flex-wrap pt-3 border-t hairline">
                   {c.steps
                     .slice()
-                    .sort((a, b: any) => a.order - b.order)
+                    .sort((a, b) => a.order - b.order)
                     .map((s, idx: number) => (
                     <div key={s.id ?? idx} className="flex items-center gap-2">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-ink-50/80 border hairline">

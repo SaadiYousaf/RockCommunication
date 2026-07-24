@@ -1,3 +1,4 @@
+import type { IconName } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
@@ -425,7 +426,7 @@ function PreviewCard({
   );
 }
 
-function Tip({ icon, text }: { icon: any; text: string }) {
+function Tip({ icon, text }: { icon: IconName; text: string }) {
   return (
     <div className="flex items-start gap-2.5">
       <div className="h-7 w-7 rounded-md bg-brand-50 text-brand-600 grid place-items-center shrink-0">

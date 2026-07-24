@@ -1,3 +1,4 @@
+type MammothLib = { convertToHtml(input: { arrayBuffer: ArrayBuffer }): Promise<{ value: string }> };
 import { API_URL } from "../../shared/config";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -190,7 +191,7 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         } else {
           // Lazy-import mammoth so it doesn't bloat the main bundle.
           const mammoth = (await import("mammoth")).default ?? (await import("mammoth"));
-          const out = await (mammoth as any).convertToHtml({ arrayBuffer: buf });
+          const out = await (mammoth as unknown as MammothLib).convertToHtml({ arrayBuffer: buf });
           rendered = out.value || "<p><em>(empty document)</em></p>";
         }
         // Sanitize converter output before it ever touches the DOM. mammoth/xlsx emit
@@ -202,7 +203,7 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           FORBID_ATTR: ["srcdoc"],
         });
         if (!cancelled) setHtml(safe);
-      } catch (e: any) {
+      } catch (e) {
         if (!cancelled) setError("Couldn't render this document. The file may be an unsupported format.");
       } finally {
         if (!cancelled) setLoading(false);

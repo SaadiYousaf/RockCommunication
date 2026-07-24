@@ -10,14 +10,17 @@ import type { RootState } from "../../app/store";
  */
 export function TopProgressBar() {
   const inFlight = useSelector((s: RootState) => {
-    const api = (s as any).api;
+    // RTK Query's internal slice shape, narrowed to just what we read.
+    type RequestState = { status?: string };
+    type ApiSlice = { queries?: Record<string, RequestState>; mutations?: Record<string, RequestState> };
+    const api = (s as RootState & { api?: ApiSlice }).api;
     if (!api) return 0;
     let count = 0;
     // RTK Query exposes per-endpoint state; count subscriptions still pending.
-    for (const q of Object.values(api.queries ?? {}) as any[]) {
+    for (const q of Object.values(api.queries ?? {})) {
       if (q?.status === "pending") count++;
     }
-    for (const m of Object.values(api.mutations ?? {}) as any[]) {
+    for (const m of Object.values(api.mutations ?? {})) {
       if (m?.status === "pending") count++;
     }
     return count;

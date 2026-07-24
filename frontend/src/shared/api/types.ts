@@ -566,7 +566,7 @@ export interface Skill { id: string; code: string; name: string; isActive: boole
 export interface AgentSkill { skillId: string; code: string; name: string; proficiency: number; }
 export interface Script { id: string; name: string; stage: WorkflowStage | null; role: string | null; campaignId: string | null; body: string; isActive: boolean; version: number; }
 export interface LiveAgent { userId: string; userName: string; status: AgentStatus; reason: string | null; sinceAt: string; duration: string; currentCallId: string | null; currentCallStatus: string | null; }
-export interface WorkflowAction { id: string; actionType: string; parametersJson: string | null; order: number; }
+export interface WorkflowAction { id?: string; actionType: string; parametersJson: string | null; order: number; }
 export interface WorkflowRule { id: string; name: string; eventType: string; conditionJson: string | null; priority: number; isActive: boolean; continueOnError: boolean; description: string | null; actions: WorkflowAction[]; }
 export interface WorkflowExecution { id: string; ruleId: string; eventType: string; status: string; startedAt: string; completedAt: string | null; error: string | null; }
 export interface ImportBatch { id: string; leadListId: string; fileName: string; totalRows: number; imported: number; duplicates: number; dncScrubbed: number; errors: number; status: string; completedAt: string | null; }
@@ -587,3 +587,8 @@ export interface WallboardSnapshot {
   callsAnsweredToday: number; callsAbandonedToday: number; leadsCreatedToday: number; salesClosedToday: number;
   callsWaitingNow: number; longestWaitSeconds: number; topAgentsToday: TopAgent[];
 }
+
+export interface LeadList { id: string; name: string; campaignId: string | null; leadSourceId: string | null; isActive: boolean; leadCount: number; }
+
+/** Payload for an upsert mutation: any subset of the entity; `id` absent/null means "create". */
+export type Upsert<T> = Partial<Omit<T, "id">> & { id?: string | null };

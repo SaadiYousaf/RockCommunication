@@ -1,3 +1,4 @@
+import type { ElementType } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "./cn";
@@ -38,7 +39,7 @@ export function Stat({
   const trendBg   = trend === "up" ? "bg-emerald-50"  : trend === "down" ? "bg-rose-50"  : "bg-ink-100";
 
   const interactive = Boolean(to || onClick);
-  const Wrapper: any = to ? Link : onClick ? "button" : "div";
+  const Wrapper: ElementType = to ? Link : onClick ? "button" : "div";
   const wrapperProps: Record<string, unknown> = to
     ? { to }
     : onClick

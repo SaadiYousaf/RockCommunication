@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -145,7 +146,7 @@ export function CallDock() {
   );
 }
 
-function DockBtn({ children, onClick, active }: { children: any; onClick: () => void; active?: boolean }) {
+function DockBtn({ children, onClick, active }: { children: ReactNode; onClick: () => void; active?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -184,7 +185,7 @@ let ringTimer: number | null = null;
 function playRing() {
   try {
     ringCtx?.close();
-    ringCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    ringCtx = new (window.AudioContext || window.webkitAudioContext!)();
     const beep = () => {
       if (!ringCtx) return;
       const osc = ringCtx.createOscillator();

@@ -22,7 +22,7 @@ export function Tooltip({
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
-  let timer: any;
+  let timer: ReturnType<typeof setTimeout>;
 
   function show() {
     clearTimeout(timer);

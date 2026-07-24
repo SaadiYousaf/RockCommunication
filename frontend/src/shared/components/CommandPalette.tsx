@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../api/apiError";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -173,23 +174,23 @@ function Palette({ onClose }: { onClose: () => void }) {
   const actionItems: PaletteItem[] = useMemo(() => [
     {
       id: "act-clockin", label: "Clock in", group: "Actions", icon: "phone", keywords: ["start shift", "available"],
-      onRun: async () => { try { await clockIn().unwrap(); toast.success("Clocked in"); } catch (e: any) { toast.error("Couldn't clock in", e?.data?.detail); } },
+      onRun: async () => { try { await clockIn().unwrap(); toast.success("Clocked in"); } catch (e) { toast.error("Couldn't clock in", getErrorDetail(e)); } },
     },
     {
       id: "act-clockout", label: "Clock out", group: "Actions", icon: "x", keywords: ["end shift"],
-      onRun: async () => { try { await clockOut().unwrap(); toast.success("Clocked out"); } catch (e: any) { toast.error("Couldn't clock out", e?.data?.detail); } },
+      onRun: async () => { try { await clockOut().unwrap(); toast.success("Clocked out"); } catch (e) { toast.error("Couldn't clock out", getErrorDetail(e)); } },
     },
     {
       id: "act-status-available", label: "Set status: Available", group: "Actions", icon: "check", keywords: ["status", "ready"],
-      onRun: async () => { try { await setAgentStatus({ status: "Available" }).unwrap(); toast.success("Now Available"); } catch (e: any) { toast.error("Couldn't change status", e?.data?.detail); } },
+      onRun: async () => { try { await setAgentStatus({ status: "Available" }).unwrap(); toast.success("Now Available"); } catch (e) { toast.error("Couldn't change status", getErrorDetail(e)); } },
     },
     {
       id: "act-status-break", label: "Set status: Break", group: "Actions", icon: "clock", keywords: ["status", "pause"],
-      onRun: async () => { try { await setAgentStatus({ status: "Break" }).unwrap(); toast.success("On break"); } catch (e: any) { toast.error("Couldn't change status", e?.data?.detail); } },
+      onRun: async () => { try { await setAgentStatus({ status: "Break" }).unwrap(); toast.success("On break"); } catch (e) { toast.error("Couldn't change status", getErrorDetail(e)); } },
     },
     {
       id: "act-status-lunch", label: "Set status: Lunch", group: "Actions", icon: "clock", keywords: ["status", "afk"],
-      onRun: async () => { try { await setAgentStatus({ status: "Lunch" }).unwrap(); toast.success("Lunch started"); } catch (e: any) { toast.error("Couldn't change status", e?.data?.detail); } },
+      onRun: async () => { try { await setAgentStatus({ status: "Lunch" }).unwrap(); toast.success("Lunch started"); } catch (e) { toast.error("Couldn't change status", getErrorDetail(e)); } },
     },
     {
       id: "act-signout", label: "Sign out", group: "Actions", icon: "x", keywords: ["log out", "logout"],
@@ -223,7 +224,7 @@ function Palette({ onClose }: { onClose: () => void }) {
           icon: "phone",
           onRun: async () => {
             try { await dialLead({ leadId: l.id }).unwrap(); toast.success("Calling…"); navigate(`/leads/${l.id}`); }
-            catch (e: any) { toast.error("Couldn't dial", e?.data?.detail); }
+            catch (e) { toast.error("Couldn't dial", getErrorDetail(e)); }
           },
         });
       }

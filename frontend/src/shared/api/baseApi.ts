@@ -15,7 +15,7 @@ import type {
   ValidatorQueueItem, SetValidatorStatusInput,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
   Skill, AgentSkill, Script, LiveAgent, WorkflowRule, WorkflowExecution, ImportBatch,
-  Cadence, CadenceEnrollment, VoicemailAsset, InboundQueue, AgentLeaderboard, KbArticle, PublicEndpoint,
+  Cadence, CadenceEnrollment, VoicemailAsset, InboundQueue, AgentLeaderboard, KbArticle, PublicEndpoint, LeadList, Upsert,
 } from "./types";
 
 const rawBaseQuery = fetchBaseQuery({
@@ -533,7 +533,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/campaigns",
       providesTags: ["Campaigns"],
     }),
-    upsertCampaign: b.mutation<Campaign, any>({
+    upsertCampaign: b.mutation<Campaign, Upsert<Campaign>>({
       query: (body) => ({ url: "/api/cc/campaigns", method: "PUT", body }),
       invalidatesTags: ["Campaigns"],
     }),
@@ -541,7 +541,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/lead-sources",
       providesTags: ["LeadSources"],
     }),
-    upsertLeadSource: b.mutation<LeadSource, any>({
+    upsertLeadSource: b.mutation<LeadSource, Upsert<LeadSource>>({
       query: (body) => ({ url: "/api/cc/lead-sources", method: "PUT", body }),
       invalidatesTags: ["LeadSources"],
     }),
@@ -549,7 +549,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/skills",
       providesTags: ["Skills"],
     }),
-    upsertSkill: b.mutation<Skill, any>({
+    upsertSkill: b.mutation<Skill, Upsert<Skill>>({
       query: (body) => ({ url: "/api/cc/skills", method: "PUT", body }),
       invalidatesTags: ["Skills"],
     }),
@@ -569,7 +569,7 @@ export const baseApi = createApi({
       query: (params) => ({ url: "/api/cc/scripts", params: params ?? undefined }),
       providesTags: ["Scripts"],
     }),
-    upsertScript: b.mutation<Script, any>({
+    upsertScript: b.mutation<Script, Upsert<Script>>({
       query: (body) => ({ url: "/api/cc/scripts", method: "PUT", body }),
       invalidatesTags: ["Scripts"],
     }),
@@ -592,7 +592,7 @@ export const baseApi = createApi({
       query: (eventType) => ({ url: "/api/workflows/rules", params: eventType ? { eventType } : undefined }),
       providesTags: ["Workflows"],
     }),
-    upsertWorkflowRule: b.mutation<WorkflowRule, any>({
+    upsertWorkflowRule: b.mutation<WorkflowRule, Upsert<WorkflowRule>>({
       query: (body) => ({ url: "/api/workflows/rules", method: "PUT", body }),
       invalidatesTags: ["Workflows"],
     }),
@@ -731,15 +731,15 @@ export const baseApi = createApi({
     }),
 
     // ===== Lead Lists + CSV import =====
-    leadLists: b.query<{ id: string; name: string; campaignId: string | null; leadSourceId: string | null; isActive: boolean; leadCount: number }[], void>({
+    leadLists: b.query<LeadList[], void>({
       query: () => "/api/cc/lists",
       providesTags: ["LeadLists"],
     }),
-    upsertLeadList: b.mutation<any, { id?: string | null; name: string; campaignId?: string | null; leadSourceId?: string | null; isActive: boolean }>({
+    upsertLeadList: b.mutation<LeadList, { id?: string | null; name: string; campaignId?: string | null; leadSourceId?: string | null; isActive: boolean }>({
       query: (body) => ({ url: "/api/cc/lists", method: "PUT", body }),
       invalidatesTags: ["LeadLists"],
     }),
-    importLeadsCsv: b.mutation<any, { listId: string; file: File }>({
+    importLeadsCsv: b.mutation<ImportBatch, { listId: string; file: File }>({
       query: ({ listId, file }) => {
         const fd = new FormData(); fd.append("file", file);
         return { url: `/api/cc/lists/${listId}/import`, method: "POST", body: fd };
@@ -756,7 +756,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/cadences",
       providesTags: ["Cadences"],
     }),
-    upsertCadence: b.mutation<Cadence, any>({
+    upsertCadence: b.mutation<Cadence, Upsert<Cadence>>({
       query: (body) => ({ url: "/api/cc/cadences", method: "PUT", body }),
       invalidatesTags: ["Cadences"],
     }),
@@ -774,7 +774,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/voicemails",
       providesTags: ["Voicemails"],
     }),
-    upsertVoicemail: b.mutation<VoicemailAsset, any>({
+    upsertVoicemail: b.mutation<VoicemailAsset, Upsert<VoicemailAsset>>({
       query: (body) => ({ url: "/api/cc/voicemails", method: "PUT", body }),
       invalidatesTags: ["Voicemails"],
     }),
@@ -787,7 +787,7 @@ export const baseApi = createApi({
       query: () => "/api/cc/queues",
       providesTags: ["Queues"],
     }),
-    upsertQueue: b.mutation<InboundQueue, any>({
+    upsertQueue: b.mutation<InboundQueue, Upsert<InboundQueue>>({
       query: (body) => ({ url: "/api/cc/queues", method: "PUT", body }),
       invalidatesTags: ["Queues"],
     }),
@@ -844,7 +844,7 @@ export const baseApi = createApi({
     // ===== Call control (softphone) =====
     activeCall: b.query<ActiveCall | null, void>({
       query: () => "/api/cc/calls/active",
-      transformResponse: (r) => (r as any) || null,
+      transformResponse: (r: ActiveCall | null) => r ?? null,
     }),
     dialLead: b.mutation<ActiveCall, { leadId: string }>({
       query: (body) => ({ url: "/api/cc/calls/dial", method: "POST", body }),

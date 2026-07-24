@@ -1,3 +1,4 @@
+import type { IconName } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
@@ -50,7 +51,7 @@ export function SupervisorPage() {
   }, [agents]);
 
   const filtered = useMemo(() => {
-    let items = (agents ?? []) as any[];
+    let items = agents ?? [];
     if (statusFilter !== "all") items = items.filter((a) => a.status === statusFilter);
     const q = search.trim().toLowerCase();
     if (q) items = items.filter((a) => a.userName?.toLowerCase().includes(q));
@@ -193,7 +194,7 @@ export function SupervisorPage() {
   );
 }
 
-function SupTile({ label, value, icon, tone }: { label: string; value: number; icon: any; tone: string }) {
+function SupTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
   return (
     <div className="surface p-4 flex items-center gap-3">
       <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>

@@ -1,3 +1,5 @@
+import type { LeadList } from "../../shared/api/types";
+import type { IconName } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -49,7 +51,7 @@ export function LeadListsPage() {
     }
   }
 
-  async function toggle(l: any) {
+  async function toggle(l: LeadList) {
     try {
       await upsert({ id: l.id, name: l.name, isActive: !l.isActive }).unwrap();
       toast.success(l.isActive ? "List disabled" : "List enabled");
@@ -66,7 +68,7 @@ export function LeadListsPage() {
       return;
     }
     try {
-      const result: any = await importCsv({ listId: activeListId, file }).unwrap();
+      const result = await importCsv({ listId: activeListId, file }).unwrap();
       toast.success("Import finished",
         `${result?.imported ?? 0} imported · ${result?.duplicates ?? 0} dups · ${result?.dncScrubbed ?? 0} scrubbed`);
       if (fileRef.current) fileRef.current.value = "";
@@ -277,7 +279,7 @@ export function LeadListsPage() {
   );
 }
 
-function SmallTile({ label, value, icon, tone }: { label: string; value: number; icon: any; tone: string }) {
+function SmallTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
   return (
     <div className="surface p-4 flex items-center gap-3">
       <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>

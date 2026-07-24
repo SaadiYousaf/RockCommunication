@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -386,7 +387,7 @@ function DispositionBadge({ disposition }: { disposition: string }) {
   return <Badge tone={tone}>{disposition}</Badge>;
 }
 
-function Badge({ children, tone = "slate" }: { children: any; tone?: string }) {
+function Badge({ children, tone = "slate" }: { children: ReactNode; tone?: string }) {
   const cls: Record<string, string> = {
     sky: "bg-brand-100 text-brand-800",
     emerald: "bg-emerald-100 text-emerald-800",
@@ -397,7 +398,7 @@ function Badge({ children, tone = "slate" }: { children: any; tone?: string }) {
   return <span className={`text-xs px-2 py-0.5 rounded-full ${cls[tone]}`}>{children}</span>;
 }
 
-function Row({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
+function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
   if (!value) return null;
   return (
     <div className="flex items-baseline gap-2">

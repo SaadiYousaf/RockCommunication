@@ -1,3 +1,4 @@
+import type { KbArticle } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useGetKbArticleQuery, useSearchKbQuery, useUpsertKbArticleMutation } from "../../shared/api/baseApi";
@@ -19,7 +20,7 @@ export function KnowledgeBasePage() {
     setEditing({ id: null, slug: "", title: "", body: "", tags: "", category: "", isPublished: false });
   }
 
-  async function handleSave(a: any) {
+  async function handleSave(a: KbArticle) {
     try {
       await upsert(a).unwrap();
       toast.success("Article saved", a.title);

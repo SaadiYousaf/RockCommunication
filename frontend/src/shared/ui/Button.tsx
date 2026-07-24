@@ -3,6 +3,8 @@ import { cn } from "./cn";
 import { Spinner } from "./Spinner";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "outline" | "accent";
+/** Canonical button variant union — reuse instead of re-declaring. */
+export type ButtonVariant = Variant;
 type Size = "sm" | "md" | "lg" | "icon";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

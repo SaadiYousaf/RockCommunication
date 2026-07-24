@@ -1,3 +1,4 @@
+import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo } from "react";
 import {
   useOrgTreeQuery, useSetTeamLeadMutation, useSetUserTeamMutation,
@@ -24,8 +25,8 @@ export function TeamPage() {
     try {
       await setUserTeam({ userId, teamId }).unwrap();
       toast.success(teamId ? `Moved to ${label}` : "Removed from team", "");
-    } catch (e: any) {
-      toast.error("Couldn't move user", e?.data?.detail ?? "Try again.");
+    } catch (e) {
+      toast.error("Couldn't move user", getErrorDetail(e) ?? "Try again.");
     }
   }
 
@@ -33,8 +34,8 @@ export function TeamPage() {
     try {
       await setTeamLead({ teamId, userId }).unwrap();
       toast.success(userId ? "Lead assigned" : "Lead cleared", teamName);
-    } catch (e: any) {
-      toast.error("Couldn't update lead", e?.data?.detail ?? "Try again.");
+    } catch (e) {
+      toast.error("Couldn't update lead", getErrorDetail(e) ?? "Try again.");
     }
   }
 

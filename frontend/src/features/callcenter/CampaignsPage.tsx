@@ -1,3 +1,4 @@
+import type { Campaign, Skill } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
@@ -66,7 +67,7 @@ function CampaignsSection() {
     }
   }
 
-  async function toggle(c: any) {
+  async function toggle(c: Campaign) {
     try { await upsert({ ...c, isActive: !c.isActive }).unwrap();
       toast.success(c.isActive ? "Campaign disabled" : "Campaign enabled");
     } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
@@ -219,7 +220,7 @@ function SkillsSection() {
     } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
 
-  async function toggle(s: any) {
+  async function toggle(s: Skill) {
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap(); }
     catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
   }
@@ -328,11 +329,11 @@ function WrapUpCodesSection() {
           <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="SALE" />
           <Input label="Label" required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Closed sale" />
           <div className="flex flex-wrap gap-3">
-            {[
+            {([
               ["Sale",    isSale,    setIsSale],
               ["Contact", isContact, setIsContact],
               ["Retry",   isRetry,   setIsRetry],
-            ].map(([lbl, val, setter]: any) => (
+            ] as [string, boolean, (v: boolean) => void][]).map(([lbl, val, setter]) => (
               <label key={lbl} className="inline-flex items-center gap-2 text-sm text-ink-700">
                 <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
                   checked={val} onChange={(e) => setter(e.target.checked)} />

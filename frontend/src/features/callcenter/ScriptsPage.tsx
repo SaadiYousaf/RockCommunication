@@ -1,3 +1,4 @@
+import type { Script } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useListCampaignsQuery, useListScriptsQuery, useUpsertScriptMutation } from "../../shared/api/baseApi";
@@ -52,7 +53,7 @@ export function ScriptsPage() {
     }
   }
 
-  async function toggle(s: any) {
+  async function toggle(s: Script) {
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
       toast.success(s.isActive ? "Script disabled" : "Script enabled");
     } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }

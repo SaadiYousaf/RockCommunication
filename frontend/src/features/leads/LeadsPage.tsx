@@ -277,7 +277,7 @@ export function LeadsPage() {
               </div>
             </div>
             <div className="h-8 w-px bg-ink-200/70" />
-            <Select className="h-9 w-44 text-sm" value={bulkAction} onChange={(e) => setBulkAction(e.target.value as any)}>
+            <Select className="h-9 w-44 text-sm" value={bulkAction} onChange={(e) => setBulkAction(e.target.value as "none" | "assign" | "stage" | "cadence")}>
               <option value="none">Choose action…</option>
               <option value="assign">Assign agent</option>
               <option value="stage">Set stage</option>

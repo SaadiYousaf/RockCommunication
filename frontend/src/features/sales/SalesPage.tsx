@@ -1,3 +1,4 @@
+import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -461,7 +462,7 @@ function SaleActionForm({
   label: string;
   placeholder: string;
   tone: "success" | "info";
-  actions: { label: string; variant: any; onClick: (id: string) => void }[];
+  actions: { label: string; variant: ButtonVariant; onClick: (id: string) => void }[];
   loading: boolean;
 }) {
   const [id, setId] = useState("");
