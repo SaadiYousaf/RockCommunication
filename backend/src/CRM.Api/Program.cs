@@ -204,6 +204,8 @@ app.UseRateLimiter();
 app.UseMiddleware<PaginationCapMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<PasswordChangeRequiredMiddleware>();
+// After the password gate: privileged users must also have 2FA enrolled.
+app.UseMiddleware<TwoFactorSetupRequiredMiddleware>();
 
 app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");

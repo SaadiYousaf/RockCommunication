@@ -81,6 +81,12 @@ public static class Permissions
 
     public const string CallCentersView = "callcenters.view";
     public const string CallCentersManage = "callcenters.manage";
+    /// <summary>
+    /// Edit a call center's information profile. Deliberately NOT part of the "everything"
+    /// grant bundles: only a Call Center Admin edits their own call center's profile —
+    /// Agency CEO and Super Admin are read-only by design.
+    /// </summary>
+    public const string CallCenterProfileEdit = "callcenters.profile-edit";
 
     public const string IntegrationsView = "integrations.view";
     public const string IntegrationsManage = "integrations.manage";

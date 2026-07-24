@@ -22,14 +22,15 @@ export function CallCentersPage() {
 
   const [editing, setEditing] = useState<CallCenterDto | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "" });
+  const [form, setForm] = useState({ name: "", code: "", adminName: "", adminEmail: "" });
 
   async function submitNew(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await createCc({ name: form.name.trim(), code: form.code.trim() || null }).unwrap();
-      toast.success("Call center created", form.name);
-      setShowNew(false); setForm({ name: "", code: "" });
+      if (!form.adminName.trim() || !form.adminEmail.trim()) { toast.error("Admin required", "A Call Center Admin name and email are required."); return; }
+      await createCc({ name: form.name.trim(), code: form.code.trim() || null, adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim() }).unwrap();
+      toast.success("Call center created", `${form.name} — the admin has been emailed an invitation.`);
+      setShowNew(false); setForm({ name: "", code: "", adminName: "", adminEmail: "" });
     } catch (err: unknown) {
       toast.error("Couldn't create", getErrorDetail(err) ?? "Check the name and try again.");
     }
@@ -96,6 +97,14 @@ export function CallCentersPage() {
         <form onSubmit={submitNew} className="space-y-3">
           <Input label="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Input label="Code" placeholder="Optional short code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+          <div className="border-t border-ink-100 pt-3 mt-1">
+            <div className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Call Center Admin</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Admin name" required value={form.adminName} onChange={(e) => setForm({ ...form, adminName: e.target.value })} />
+              <Input label="Admin email" type="email" required value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
+            </div>
+            <p className="text-xs text-ink-500 mt-2">The admin is created automatically and emailed a temporary password — they set their own on first login.</p>
+          </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
             <Button type="submit" loading={creating}>Create</Button>

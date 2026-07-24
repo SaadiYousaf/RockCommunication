@@ -45,6 +45,8 @@ public class CrmWebAppFactory : WebApplicationFactory<Program>
                 // "configured" (not fail-closed 503); tests sign with TestHelpers.WebhookSecret.
                 ["Webhooks:Dialer:Secret"] = "test-webhook-secret-0123456789abcdef",
                 ["Webhooks:Inbound:Secret"] = "test-webhook-secret-0123456789abcdef",
+                // Tests can't complete a TOTP enrolment; verify the gate separately.
+                ["Security:EnforceMandatoryTwoFactor"] = "false",
             });
         });
         return base.CreateHost(builder);

@@ -365,7 +365,7 @@ export const baseApi = createApi({
       query: () => "/api/admin/call-centers",
       providesTags: ["CallCenters"],
     }),
-    createCallCenter: b.mutation<CallCenterDto, { name: string; code?: string | null }>({
+    createCallCenter: b.mutation<CallCenterDto, { name: string; code?: string | null; adminName: string; adminEmail: string }>({
       query: (body) => ({ url: "/api/admin/call-centers", method: "POST", body }),
       invalidatesTags: ["CallCenters"],
     }),
@@ -449,6 +449,10 @@ export const baseApi = createApi({
     }),
     resetUserPassword: b.mutation<void, { id: string; newPassword: string }>({
       query: ({ id, newPassword }) => ({ url: `/api/admin/users/${id}/password`, method: "PUT", body: { newPassword } }),
+    }),
+    resendInvitation: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/admin/users/${id}/resend-invitation`, method: "POST" }),
+      invalidatesTags: ["Users"],
     }),
 
     // Lead search/dedup
@@ -683,7 +687,7 @@ export const baseApi = createApi({
       query: (id) => `/api/agencies/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Agencies", id }],
     }),
-    createAgency: b.mutation<AgencyDto, { name: string; code?: string | null }>({
+    createAgency: b.mutation<AgencyDto, { name: string; code?: string | null; ceoName: string; ceoEmail: string }>({
       query: (body) => ({ url: "/api/agencies", method: "POST", body }),
       invalidatesTags: ["Agencies"],
     }),
@@ -1045,7 +1049,7 @@ export const {
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
-  useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation, useSetUserCallCenterMutation,
+  useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation, useSetUserCallCenterMutation, useResendInvitationMutation,
   useCaptureIntakeLeadMutation, useVerifierQueueQuery, useSetVerifierStatusMutation,
   useCloserQueueQuery, useGetClosingApplicationQuery, useSubmitClosingApplicationMutation,
   useCaptureCloserLeadMutation, useValidatorQueueQuery, useSetValidatorStatusMutation,

@@ -48,16 +48,27 @@ public class AuthEmailSender
         LogResult("reset", to, link, result);
     }
 
-    public async Task SendInviteAsync(string to, string userName, string temporaryPassword, IEnumerable<string> roles, CancellationToken ct)
+    /// <summary>
+    /// Onboarding invitation. <paramref name="displayName"/>, <paramref name="agencyName"/> and
+    /// <paramref name="callCenterName"/> are optional context rendered into the template — they
+    /// are appended as optional parameters so existing callers are unaffected.
+    /// </summary>
+    public async Task SendInviteAsync(string to, string userName, string temporaryPassword, IEnumerable<string> roles, CancellationToken ct,
+        string? displayName = null, string? agencyName = null, string? callCenterName = null)
     {
         var loginLink = $"{_opts.AppUrl.TrimEnd('/')}/login";
         var subject = $"You're invited to {_opts.FromName}";
         var roleList = string.Join(", ", roles.Select(Html));
+        var greeting = string.IsNullOrWhiteSpace(displayName) ? userName : displayName!;
+        var orgRow = string.IsNullOrWhiteSpace(agencyName) ? "" : $@"
+  <tr><td style='padding:14px 18px;border-bottom:1px solid #e5e7eb'><span style='color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:0.04em'>Agency</span><br><strong style='font-size:15px'>{Html(agencyName!)}</strong></td></tr>";
+        var ccRow = string.IsNullOrWhiteSpace(callCenterName) ? "" : $@"
+  <tr><td style='padding:14px 18px;border-bottom:1px solid #e5e7eb'><span style='color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:0.04em'>Call center</span><br><strong style='font-size:15px'>{Html(callCenterName!)}</strong></td></tr>";
         var body = Layout(subject, $@"
-<p>Hi <strong>{Html(userName)}</strong>,</p>
+<p>Hi <strong>{Html(greeting)}</strong>,</p>
 <p>An admin has created an account for you on <strong>{Html(_opts.FromName)}</strong>{(string.IsNullOrEmpty(roleList) ? "" : $" with the role(s) <strong>{roleList}</strong>")}.</p>
 <p>Sign in using the temporary password below — you'll be asked to choose a new password the first time you log in.</p>
-<table cellpadding='0' cellspacing='0' style='width:100%;margin:20px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px'>
+<table cellpadding='0' cellspacing='0' style='width:100%;margin:20px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px'>{orgRow}{ccRow}
   <tr><td style='padding:14px 18px;border-bottom:1px solid #e5e7eb'><span style='color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:0.04em'>Username</span><br><strong style='font-size:15px'>{Html(userName)}</strong></td></tr>
   <tr><td style='padding:14px 18px'><span style='color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:0.04em'>Temporary password</span><br><span style='font-family:ui-monospace,Menlo,monospace;font-size:15px;background:#fff;border:1px solid #e5e7eb;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:4px'>{Html(temporaryPassword)}</span></td></tr>
 </table>

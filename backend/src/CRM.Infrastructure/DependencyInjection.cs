@@ -167,6 +167,7 @@ public static class DependencyInjection
         services.AddScoped<ITwoFactorService, TwoFactorService>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<AuthEmailSender>();
         services.AddSingleton<IChatAttachmentStorage, Services.LocalChatAttachmentStorage>();
         services.AddSingleton<IFileStorage, Services.LocalFileStorage>();

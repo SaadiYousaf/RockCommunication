@@ -22,7 +22,12 @@ public record AgencyDto(
 
 public record ListAgenciesQuery(bool IncludeInactive = false) : IRequest<IReadOnlyList<AgencyDto>>;
 public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
-public record CreateAgencyCommand(string Name, string? Code) : IRequest<AgencyDto>;
+/// <summary>
+/// Creates an agency AND provisions its Agency CEO in one step. CEO name + email are
+/// mandatory: an agency may never exist without an owner. Additional agency fields can be
+/// appended to this record without changing the handler's control flow.
+/// </summary>
+public record CreateAgencyCommand(string Name, string? Code, string CeoName, string CeoEmail) : IRequest<AgencyDto>;
 public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive) : IRequest<AgencyDto>;
 public record AssignCeoCommand(Guid AgencyId, Guid UserId) : IRequest<AgencyDto>;
 
@@ -32,6 +37,10 @@ public class CreateAgencyValidator : AbstractValidator<CreateAgencyCommand>
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Code).MaximumLength(40);
+        RuleFor(x => x.CeoName).NotEmpty().MaximumLength(120)
+            .WithMessage("An Agency CEO name is required.");
+        RuleFor(x => x.CeoEmail).NotEmpty().EmailAddress().MaximumLength(200)
+            .WithMessage("A valid Agency CEO email is required.");
     }
 }
 
@@ -55,17 +64,20 @@ public class AgenciesHandler :
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
     private readonly IUserAdminService _userAdmin;
+    private readonly IInvitationService _invitations;
 
     public AgenciesHandler(
         IApplicationDbContext db,
         ICurrentUser user,
         IIdentityService identity,
-        IUserAdminService userAdmin)
+        IUserAdminService userAdmin,
+        IInvitationService invitations)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _userAdmin = Guard.AgainstNull(userAdmin);
+        _invitations = Guard.AgainstNull(invitations);
     }
 
     public async Task<IReadOnlyList<AgencyDto>> Handle(ListAgenciesQuery request, CancellationToken ct)
@@ -104,6 +116,10 @@ public class AgenciesHandler :
                 throw new ConflictException($"Agency code '{code}' already exists.");
         }
 
+        // Fail fast BEFORE inserting the agency: a duplicate CEO email must not leave an
+        // owner-less agency behind.
+        await _invitations.EnsureEmailAvailableAsync(request.CeoEmail.Trim(), ct);
+
         var agency = new Agency
         {
             Name = name,
@@ -112,6 +128,17 @@ public class AgenciesHandler :
         };
         _db.Agencies.Add(agency);
         await _db.SaveChangesAsync(ct);
+
+        // Provision the Agency CEO through the shared onboarding service: temporary
+        // password, forced first-login, CEO role and invitation email are all reused.
+        await _invitations.InviteAsync(new InvitationRequest(
+            Email: request.CeoEmail.Trim(),
+            FullName: request.CeoName.Trim(),
+            AgencyId: agency.Id,
+            CallCenterId: null,                       // Agency CEO is agency-level, not pinned
+            Roles: new[] { DomainRoles.CEO },
+            AgencyName: agency.Name), ct);
+
         return await ToDtoAsync(agency, ct);
     }
 

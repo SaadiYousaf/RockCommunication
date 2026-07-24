@@ -1,14 +1,24 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import {
   useEnable2FaMutation, useSendEmailOtpMutation, useSetTwoFactorMethodMutation, useSetup2FaMutation,
   useDisable2FaMutation, useGet2FaStatusQuery,
 } from "../../shared/api/baseApi";
+import { clearAuth } from "../../app/store";
+import type { RootState } from "../../app/store";
 
 type Method = "Totp" | "EmailOtp";
 
 export function TwoFactorEnrollPage() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  // True when the user was sent here by the mandatory-2FA gate (privileged role,
+  // not yet enrolled). Their live tokens carry the "twofa_setup" claim, so the
+  // server revokes them on enable — we must send them back to a fresh sign-in.
+  const forced = useSelector((s: RootState) => !!s.auth.user?.twoFactorSetupRequired);
   const { data: status, refetch: refetchStatus, isLoading: loadingStatus } = useGet2FaStatusQuery();
   const [method, setMethod] = useState<Method>("Totp");
   const [step, setStep] = useState<"choose" | "setup" | "verify" | "done">("choose");
@@ -54,6 +64,14 @@ export function TwoFactorEnrollPage() {
     setError(null);
     try {
       await enable({ code }).unwrap();
+      if (forced) {
+        // Mandatory-enrolment path: tokens were just revoked server-side. Drop the
+        // stale session and send the user back to sign in — they'll get a normal
+        // 2FA challenge and a clean token without the "setup required" claim.
+        dispatch(clearAuth());
+        navigate("/login", { replace: true });
+        return;
+      }
       setStep("done");
       refetchStatus();
     } catch (err: unknown) {

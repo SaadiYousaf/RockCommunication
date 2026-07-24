@@ -47,6 +47,20 @@ public class UserAdminService : IUserAdminService
             throw new ForbiddenAccessException("You can only manage users in your own agency.");
         if (await _users.IsInRoleAsync(target, Roles.SuperAdmin))
             throw new ForbiddenAccessException("You are not permitted to manage this account.");
+
+        // Resource-based: a call-center-pinned caller (e.g. a Call Center Admin) may only
+        // manage users inside their own call center. Agency-level callers (CEO/Admin, whose
+        // CallCenterId is null) keep agency-wide reach. ApplicationUser is not a TenantEntity,
+        // so the global query filter does NOT cover this — the check must live here.
+        if (_current.CallCenterId is { } callerCallCenter && target.CallCenterId != callerCallCenter)
+            throw new ForbiddenAccessException("You can only manage users in your own call center.");
+    }
+
+    public async Task EnsureCanManageAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
     }
 
     public async Task<UserSummaryDto> UpdateRolesAsync(Guid userId, IReadOnlyList<string> roles, CancellationToken ct = default)
@@ -117,6 +131,12 @@ public class UserAdminService : IUserAdminService
         var token = await _users.GeneratePasswordResetTokenAsync(user);
         var result = await _users.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        // An admin-set password is temporary by definition: force the user to choose their
+        // own on next login (mirrors the invitation flow) and drop their live sessions.
+        user.MustChangePassword = true;
+        await _users.UpdateAsync(user);
+        await _jwt.RevokeAllForUserAsync(userId, ct);
     }
 
     public async Task<UserSummaryDto> SetPreferred2FaAsync(Guid userId, string method, CancellationToken ct = default)

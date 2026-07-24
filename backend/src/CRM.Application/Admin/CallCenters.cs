@@ -7,18 +7,31 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 // Disambiguate from the CRM.Application.CallCenter (telephony) namespace.
 using CcEntity = CRM.Domain.Entities.CallCenter;
+using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.Admin;
 
 public record CallCenterDto(Guid Id, string Name, string? Code, bool IsActive, int LeadCount);
 
 public record ListCallCentersQuery() : IRequest<IReadOnlyList<CallCenterDto>>;
-public record CreateCallCenterCommand(string Name, string? Code) : IRequest<CallCenterDto>;
+/// <summary>
+/// Creates a call center AND provisions its Call Center Admin in one step — the same
+/// onboarding contract as agency creation. Admin name + email are mandatory. Extra call
+/// center fields can be appended here without changing the handler's control flow.
+/// </summary>
+public record CreateCallCenterCommand(string Name, string? Code, string AdminName, string AdminEmail) : IRequest<CallCenterDto>;
 public record UpdateCallCenterCommand(Guid Id, string Name, string? Code, bool IsActive) : IRequest<CallCenterDto>;
 
 public class CreateCallCenterValidator : AbstractValidator<CreateCallCenterCommand>
 {
-    public CreateCallCenterValidator() => RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+    public CreateCallCenterValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.AdminName).NotEmpty().MaximumLength(120)
+            .WithMessage("A Call Center Admin name is required.");
+        RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().MaximumLength(200)
+            .WithMessage("A valid Call Center Admin email is required.");
+    }
 }
 
 public class UpdateCallCenterValidator : AbstractValidator<UpdateCallCenterCommand>
@@ -42,9 +55,10 @@ public class CallCenterHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IInvitationService _invitations;
 
-    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user)
-    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user, IInvitationService invitations)
+    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _invitations = Guard.AgainstNull(invitations); }
 
     public async Task<IReadOnlyList<CallCenterDto>> Handle(ListCallCentersQuery request, CancellationToken ct)
     {
@@ -63,8 +77,13 @@ public class CallCenterHandler :
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var name = request.Name.Trim();
+        // Name is unique WITHIN the agency — the query filter already scopes this check.
         if (await _db.CallCenters.AnyAsync(c => c.Name == name, ct))
             throw new ConflictException($"A call center named \"{name}\" already exists.");
+
+        // Fail fast before inserting: a duplicate admin email must not leave an
+        // admin-less call center behind.
+        await _invitations.EnsureEmailAvailableAsync(request.AdminEmail.Trim(), ct);
 
         var cc = new CcEntity
         {
@@ -75,6 +94,20 @@ public class CallCenterHandler :
         };
         _db.CallCenters.Add(cc);
         await _db.SaveChangesAsync(ct);
+
+        // Same onboarding contract as the Agency CEO — one shared service, no duplicate logic.
+        // The admin is pinned to this call center, which is what scopes everything they can see.
+        var agencyName = await _db.Agencies.Where(a => a.Id == cc.AgencyId)
+            .Select(a => a.Name).FirstOrDefaultAsync(ct);
+        await _invitations.InviteAsync(new InvitationRequest(
+            Email: request.AdminEmail.Trim(),
+            FullName: request.AdminName.Trim(),
+            AgencyId: cc.AgencyId,
+            CallCenterId: cc.Id,
+            Roles: new[] { DomainRoles.CallCenterAdmin },
+            AgencyName: agencyName,
+            CallCenterName: cc.Name), ct);
+
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, 0);
     }
 

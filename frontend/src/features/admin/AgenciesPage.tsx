@@ -29,6 +29,8 @@ export function AgenciesPage() {
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [ceoName, setCeoName] = useState("");
+  const [ceoEmail, setCeoEmail] = useState("");
 
   const [editing, setEditing] = useState<AgencyDto | null>(null);
   const [editName, setEditName] = useState("");
@@ -51,11 +53,11 @@ export function AgenciesPage() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (!ceoName.trim() || !ceoEmail.trim()) { toast.error("CEO required", "An Agency CEO name and email are required."); return; }
     try {
-      await createAgency({ name: trimmed, code: code.trim() || null }).unwrap();
-      toast.success("Call center created", trimmed);
-      setName("");
-      setCode("");
+      await createAgency({ name: trimmed, code: code.trim() || null, ceoName: ceoName.trim(), ceoEmail: ceoEmail.trim() }).unwrap();
+      toast.success("Agency created", `${trimmed} — the CEO has been emailed an invitation.`);
+      setName(""); setCode(""); setCeoName(""); setCeoEmail("");
     } catch (err: unknown) {
       toast.error("Couldn't create", getErrorDetail(err) ?? "Try again.");
     }
@@ -153,24 +155,30 @@ export function AgenciesPage() {
           bordered
         />
         <CardBody>
-          <form className="flex flex-wrap gap-2" onSubmit={handleCreate}>
-            <Input
-              leftIcon={<Icon name="building" size={14} />}
-              placeholder="Call center name (e.g. Phoenix Operations)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              containerClassName="flex-1 min-w-[260px]"
-            />
-            <Input
-              placeholder="Short code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              containerClassName="w-32"
-            />
-            <Button leftIcon={<Icon name="plus" size={14} />} loading={creating}>
-              Create
-            </Button>
+          <form className="space-y-3" onSubmit={handleCreate}>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                label="Agency name" leftIcon={<Icon name="building" size={14} />}
+                placeholder="e.g. Phoenix Group"
+                value={name} onChange={(e) => setName(e.target.value)} required
+                containerClassName="flex-1 min-w-[260px]"
+              />
+              <Input label="Short code" placeholder="Optional"
+                value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+                containerClassName="w-32" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Input label="Agency CEO name" leftIcon={<Icon name="user" size={14} />}
+                placeholder="Full name" value={ceoName} onChange={(e) => setCeoName(e.target.value)} required
+                containerClassName="flex-1 min-w-[220px]" />
+              <Input label="Agency CEO email" type="email" leftIcon={<Icon name="mail" size={14} />}
+                placeholder="ceo@agency.com" value={ceoEmail} onChange={(e) => setCeoEmail(e.target.value)} required
+                containerClassName="flex-1 min-w-[220px]" />
+            </div>
+            <p className="text-xs text-ink-500">The CEO is created automatically and emailed a temporary password — they set their own on first login.</p>
+            <div className="flex justify-end">
+              <Button leftIcon={<Icon name="plus" size={14} />} loading={creating}>Create agency + invite CEO</Button>
+            </div>
           </form>
         </CardBody>
       </Card>

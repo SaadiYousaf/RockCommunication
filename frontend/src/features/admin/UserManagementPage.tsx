@@ -4,6 +4,7 @@ import {
   useListUsersQuery, useResetUserPasswordMutation,
   useSetUserActiveMutation, useUpdateUserRolesMutation,
   useListCallCentersQuery, useSetUserCallCenterMutation,
+  useResendInvitationMutation,
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
@@ -22,6 +23,7 @@ export function UserManagementPage() {
   const [setActive] = useSetUserActiveMutation();
   const [resetPw] = useResetUserPasswordMutation();
   const [setUserCc] = useSetUserCallCenterMutation();
+  const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
 
   async function assignCallCenter(userId: string, value: string) {
@@ -194,6 +196,20 @@ export function UserManagementPage() {
                       leftIcon={<Icon name="key" size={13} />}
                       onClick={() => { setResetting({ id: u.id, userName: u.userName }); setNewPwd(""); }}
                     >Reset</Button>
+                    {active && !u.invitationAcceptedAt && (
+                      <Button
+                        variant="ghost" size="sm" disabled={resending}
+                        leftIcon={<Icon name="mail" size={13} />}
+                        onClick={async () => {
+                          try {
+                            await resendInvite(u.id).unwrap();
+                            toast.success("Invitation resent", `A fresh temporary password was emailed to ${u.userName}.`);
+                          } catch (err: unknown) {
+                            toast.error("Couldn't resend invitation", getErrorDetail(err) ?? "Try again.");
+                          }
+                        }}
+                      >Resend invite</Button>
+                    )}
                     {active ? (
                       <Button
                         variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"

@@ -92,13 +92,14 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> ListCallCenters(CancellationToken ct)
         => Ok(await _mediator.Send(new ListCallCentersQuery(), ct));
 
-    public record CallCenterBody(string Name, string? Code);
+    /// <summary>Admin name + email are mandatory — the Call Center Admin is provisioned with the call center.</summary>
+    public record CallCenterBody(string Name, string? Code, string AdminName, string AdminEmail);
     [HttpPost("call-centers")]
     [HasPermission(Permissions.CallCentersManage)]
     public async Task<IActionResult> CreateCallCenter([FromBody] CallCenterBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new CreateCallCenterCommand(body.Name, body.Code), ct));
+        return Ok(await _mediator.Send(new CreateCallCenterCommand(body.Name, body.Code, body.AdminName, body.AdminEmail), ct));
     }
 
     public record UpdateCallCenterBody(string Name, string? Code, bool IsActive);
@@ -162,6 +163,15 @@ public class AdminController : ControllerBase
     {
         Guard.AgainstNull(body);
         await _mediator.Send(new ResetPasswordCommand(id, body.NewPassword), ct);
+        return NoContent();
+    }
+
+    /// <summary>Re-send the onboarding invitation (fresh temp password + email) to a user who hasn't accepted yet.</summary>
+    [HttpPost("users/{id:guid}/resend-invitation")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> ResendInvitation(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new ResendInvitationCommand(id), ct);
         return NoContent();
     }
 

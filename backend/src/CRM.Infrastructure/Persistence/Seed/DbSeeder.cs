@@ -119,10 +119,28 @@ public static class DbSeeder
         }
         await db.SaveChangesAsync();
 
-        // CEO defaults: full agency-scoped management. Excludes super-admin-only items.
-        string[] ceoGrants = Permissions.All
-            .Where(p => p != Permissions.AgenciesCreate)
+        // Permissions the broad "everything" bundles must never hand out:
+        //   AgenciesCreate        — only a Super Admin provisions agencies.
+        //   CallCenterProfileEdit — only the Call Center Admin edits their own call center's
+        //                           profile; Agency CEO / Super Admin are read-only by design.
+        string[] restricted = { Permissions.AgenciesCreate, Permissions.CallCenterProfileEdit };
+        string[] everythingExceptRestricted = Permissions.All
+            .Where(p => !restricted.Contains(p))
             .ToArray();
+
+        // CEO defaults: full agency-scoped management. Excludes super-admin-only items.
+        string[] ceoGrants = everythingExceptRestricted;
+
+        // Call Center Admin: manages the users and profile of their OWN call center only.
+        // Deliberately has no AgenciesCreate/AgenciesManage and no CallCentersManage — they
+        // may neither create agencies nor create/edit other call centers.
+        string[] callCenterAdminGrants = new[]
+        {
+            Permissions.DashboardView,
+            Permissions.UsersRead, Permissions.UsersManage,
+            Permissions.CallCentersView, Permissions.CallCenterProfileEdit,
+            Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
+        };
 
         // Common read bundles
         string[] agentReads = new[]
@@ -179,13 +197,14 @@ public static class DbSeeder
             // SuperAdmin is enforced via the override in PermissionHandler — no grants needed,
             // but seed all permissions defensively in case the override is ever removed.
             [Roles.SuperAdmin] = Permissions.All,
-            [Roles.Admin] = Permissions.All.Where(p => p != Permissions.AgenciesCreate).ToArray(),
+            [Roles.Admin] = everythingExceptRestricted,
             [Roles.CEO] = ceoGrants,
             [Roles.QAManager] = qaManagerGrants,
             [Roles.ProjectManager] = projectManagerGrants,
             [Roles.TechLead] = techLeadGrants,
-            [Roles.ProgramManager] = Permissions.All.Where(p => p != Permissions.AgenciesCreate).ToArray(),
+            [Roles.ProgramManager] = everythingExceptRestricted,
             [Roles.TeamLead] = teamLeadGrants,
+            [Roles.CallCenterAdmin] = callCenterAdminGrants,
             // Every agent-level role gets ChatWrite — internal chat is how the floor
             // communicates; read-only chat is useless. Same for QueueWrite (mark
             // queue items handled).

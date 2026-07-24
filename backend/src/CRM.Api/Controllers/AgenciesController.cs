@@ -31,14 +31,15 @@ public class AgenciesController : ControllerBase
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetAgencyQuery(id), ct));
 
-    public record CreateAgencyBody(string Name, string? Code);
+    /// <summary>CEO name + email are mandatory — the Agency CEO is provisioned with the agency.</summary>
+    public record CreateAgencyBody(string Name, string? Code, string CeoName, string CeoEmail);
 
     [HttpPost]
     [HasPermission(Permissions.AgenciesCreate)]
     public async Task<IActionResult> Create([FromBody] CreateAgencyBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        var dto = await _mediator.Send(new CreateAgencyCommand(body.Name, body.Code), ct);
+        var dto = await _mediator.Send(new CreateAgencyCommand(body.Name, body.Code, body.CeoName, body.CeoEmail), ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 

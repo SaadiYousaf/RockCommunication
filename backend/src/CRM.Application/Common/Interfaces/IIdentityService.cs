@@ -6,6 +6,12 @@ namespace CRM.Application.Common.Interfaces;
 /// Well-known custom JWT claim names. Kept here so the issuer (JwtTokenService) and
 /// the consumer (authorization filters) can't drift.
 /// </summary>
+/// <summary>
+/// Optional context rendered into the onboarding invitation email. Extensible: add fields
+/// here rather than widening the RegisterAsync signature.
+/// </summary>
+public record InviteContext(string? DisplayName = null, string? AgencyName = null, string? CallCenterName = null);
+
 public static class CustomJwtClaims
 {
     /// <summary>"true" when the user must change their password before doing anything else.</summary>
@@ -16,6 +22,12 @@ public static class CustomJwtClaims
     public const string CallCenter = "callcenter";
     /// <summary>Subject (user id) — mirrors the standard "sub" claim read by hubs/services.</summary>
     public const string Subject = "sub";
+    /// <summary>
+    /// "true" when a privileged user (SuperAdmin/Admin/CEO) must enrol in two-factor auth
+    /// before using the app. Gated by TwoFactorSetupRequiredMiddleware, exactly like the
+    /// forced password change.
+    /// </summary>
+    public const string TwoFactorSetupRequired = "twofa_setup";
 }
 
 public interface IIdentityService
@@ -27,7 +39,16 @@ public interface IIdentityService
     /// back through the API — the invite email is the only carrier — so a compromised
     /// admin session can't pivot to all freshly-invited users.
     /// </summary>
-    Task<UserSummaryDto> RegisterAsync(string email, string userName, string? password, Guid agencyId, IEnumerable<string> roles, CancellationToken ct = default);
+    /// <param name="callCenterId">
+    /// Optional call center to pin the new user to (null = agency-level, sees every call
+    /// center in the agency). Used by the onboarding flow to bind a Call Center Admin to
+    /// the call center being created.
+    /// </param>
+    /// <param name="invite">
+    /// Optional onboarding context (display name + org names) rendered into the invitation
+    /// email. A record so future onboarding fields need no signature change.
+    /// </param>
+    Task<UserSummaryDto> RegisterAsync(string email, string userName, string? password, Guid agencyId, IEnumerable<string> roles, Guid? callCenterId = null, InviteContext? invite = null, CancellationToken ct = default);
     Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct = default);
     Task<LoginResponse> LoginAsync(string userNameOrEmail, string password, CancellationToken ct = default);
     Task<LoginResponse> VerifyTwoFactorAsync(string twoFactorToken, string code, CancellationToken ct = default);

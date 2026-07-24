@@ -7,6 +7,7 @@ using CRM.Infrastructure.Persistence;
 using ISecondFactorMethod = CRM.Application.Common.Interfaces.ISecondFactorMethod;
 using SecondFactorKind = CRM.Application.Common.Interfaces.SecondFactorKind;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
@@ -22,6 +23,7 @@ public class IdentityService : IIdentityService
     private readonly SecondFactorRegistry _factorRegistry;
     private readonly IModuleAccessService _moduleAccess;
     private readonly AuthEmailSender _emailSender;
+    private readonly bool _enforce2Fa;
 
     public IdentityService(
         UserManager<ApplicationUser> users,
@@ -31,7 +33,8 @@ public class IdentityService : IIdentityService
         AppDbContext db,
         SecondFactorRegistry factorRegistry,
         IModuleAccessService moduleAccess,
-        AuthEmailSender emailSender)
+        AuthEmailSender emailSender,
+        IConfiguration config)
     {
         _users = Guard.AgainstNull(users);
         _roles = Guard.AgainstNull(roles);
@@ -41,6 +44,8 @@ public class IdentityService : IIdentityService
         _factorRegistry = Guard.AgainstNull(factorRegistry);
         _moduleAccess = Guard.AgainstNull(moduleAccess);
         _emailSender = Guard.AgainstNull(emailSender);
+        // Mandatory 2FA for privileged roles — enforced by default, switchable off for tests.
+        _enforce2Fa = Guard.AgainstNull(config).GetValue("Security:EnforceMandatoryTwoFactor", true);
     }
 
     // A VALID ASP.NET Identity password hash, used only to equalise the timing of the
@@ -50,7 +55,7 @@ public class IdentityService : IIdentityService
     private static readonly string DummyPasswordHash =
         new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), "timing-equalisation-placeholder");
 
-    public async Task<UserSummaryDto> RegisterAsync(string email, string userName, string? password, Guid agencyId, IEnumerable<string> roles, CancellationToken ct = default)
+    public async Task<UserSummaryDto> RegisterAsync(string email, string userName, string? password, Guid agencyId, IEnumerable<string> roles, Guid? callCenterId = null, InviteContext? invite = null, CancellationToken ct = default)
     {
         Guard.AgainstNull(roles);
 
@@ -71,8 +76,11 @@ public class IdentityService : IIdentityService
             Email = email,
             UserName = userName,
             AgencyId = agencyId,
+            CallCenterId = callCenterId,
+            DisplayName = invite?.DisplayName,
             EmailConfirmed = true,
             MustChangePassword = mustChange,
+            // InvitationSentAt is stamped when the invite email goes out below.
         };
         var result = await _users.CreateAsync(user, effectivePassword);
         if (!result.Succeeded)
@@ -89,8 +97,11 @@ public class IdentityService : IIdentityService
         // Send the invite email — best-effort, errors are logged but don't fail registration.
         if (mustChange)
         {
-            try { await _emailSender.SendInviteAsync(email, userName, effectivePassword, roleList, ct); }
+            try { await _emailSender.SendInviteAsync(email, userName, effectivePassword, roleList, ct,
+                    invite?.DisplayName, invite?.AgencyName, invite?.CallCenterName); }
             catch { /* logged inside sender */ }
+            user.InvitationSentAt = DateTime.UtcNow;
+            await _users.UpdateAsync(user);
         }
 
         var assigned = (await _users.GetRolesAsync(user)).ToList();
@@ -120,7 +131,9 @@ public class IdentityService : IIdentityService
 
         if (user.MustChangePassword)
         {
+            // Completing the forced first-login change IS the invitation being accepted.
             user.MustChangePassword = false;
+            user.InvitationAcceptedAt ??= DateTime.UtcNow;
             await _users.UpdateAsync(user);
         }
         // Force re-login on every device — refresh tokens stop working after a password change.
@@ -131,7 +144,8 @@ public class IdentityService : IIdentityService
     /// Generates a 14-char password that always satisfies the password policy:
     /// at least one upper, lower, digit, and non-alphanumeric.
     /// </summary>
-    private static string GenerateTemporaryPassword()
+    /// <summary>Policy-compliant temp password. Internal so InvitationService can reuse it (no duplicate generator).</summary>
+    internal static string GenerateTemporaryPassword()
     {
         const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";   // dropped I, O for readability
         const string lower = "abcdefghijkmnpqrstuvwxyz";   // dropped l, o
@@ -295,12 +309,23 @@ public class IdentityService : IIdentityService
             throw new ForbiddenAccessException("Invalid code.");
 
         await _users.SetTwoFactorEnabledAsync(user, true);
+        // If this enrolment satisfied a MANDATORY-2FA requirement, the user's live tokens
+        // still carry the stale "twofa_setup" claim — revoke them so their next sign-in is a
+        // clean 2FA challenge. Voluntary enrollers (non-privileged) keep their session.
+        var roles = await _users.GetRolesAsync(user);
+        if (_enforce2Fa && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+            await _jwt.RevokeAllForUserAsync(userId, ct);
     }
 
     public async Task DisableTwoFactorAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
+
+        // 2FA is mandatory for privileged roles — they may not turn it off.
+        var roles = await _users.GetRolesAsync(user);
+        if (_enforce2Fa && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+            throw new ForbiddenAccessException("Two-factor authentication is mandatory for this role and cannot be disabled.");
 
         await _users.SetTwoFactorEnabledAsync(user, false);
         // Reset the authenticator key so re-enabling generates a fresh secret.
@@ -330,7 +355,8 @@ public class IdentityService : IIdentityService
         var modules = await _moduleAccess.GetCodesForUserAsync(user.Id, ct);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), modules,
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
-            CallCenterId: user.CallCenterId);
+            CallCenterId: user.CallCenterId,
+            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles));
     }
 
     public async Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default)
@@ -361,11 +387,17 @@ public class IdentityService : IIdentityService
         // the password is rotated, so a stolen "must-change" token can't be used.
         Dictionary<string, string>? extra = null;
         if (user.MustChangePassword)
-            extra = new() { [CustomJwtClaims.PasswordChangeRequired] = "true" };
+            (extra ??= new())[CustomJwtClaims.PasswordChangeRequired] = "true";
+        // Mandatory 2FA: a privileged user without 2FA enabled is confined to the 2FA-setup
+        // endpoints until they enrol (TwoFactorSetupRequiredMiddleware). Cleared once they
+        // enable 2FA and re-login (their next login is a normal 2FA challenge).
+        if (_enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+            (extra ??= new())[CustomJwtClaims.TwoFactorSetupRequired] = "true";
 
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
-            MustChangePassword: user.MustChangePassword);
+            MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
+            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
     }
 

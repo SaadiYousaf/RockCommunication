@@ -12,6 +12,10 @@ export interface UserSummary {
   teamId?: string | null;
   /** Call center the user is pinned to; null = agency-level (sees all call centers). */
   callCenterId?: string | null;
+  /** True when a privileged user (SuperAdmin/Admin/CEO) must enrol in 2FA before using the app. */
+  twoFactorSetupRequired?: boolean;
+  /** When the onboarding invitation was accepted (null = still pending). */
+  invitationAcceptedAt?: string | null;
 }
 
 export interface CallCenterDto {

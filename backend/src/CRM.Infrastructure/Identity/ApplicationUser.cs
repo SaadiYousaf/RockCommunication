@@ -21,8 +21,21 @@ public class ApplicationUser : IdentityUser<Guid>
     /// <summary>
     /// True for users created via admin registration with a temporary password.
     /// They are forced to change their password before they can use the rest of the app.
+    /// Doubles as the "first login" flag for the onboarding flow.
     /// </summary>
     public bool MustChangePassword { get; set; }
+
+    /// <summary>
+    /// When the onboarding invitation (temporary password email) was last sent.
+    /// Null = never invited. Updated again on every resend.
+    /// </summary>
+    public DateTime? InvitationSentAt { get; set; }
+
+    /// <summary>
+    /// When the invitation was accepted — set the moment the user completes their forced
+    /// first-login password change. Null while the invitation is still outstanding.
+    /// </summary>
+    public DateTime? InvitationAcceptedAt { get; set; }
 }
 
 public class ApplicationRole : IdentityRole<Guid>

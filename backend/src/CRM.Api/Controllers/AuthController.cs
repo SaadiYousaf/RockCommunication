@@ -58,7 +58,7 @@ public class AuthController : ControllerBase
             if (_user.AgencyId is null) return BadRequest(new { error = "agencyId is required." });
             agencyId = _user.AgencyId.Value;
         }
-        return Ok(await _identity.RegisterAsync(req.Email, req.UserName, req.Password, agencyId, req.Roles, ct));
+        return Ok(await _identity.RegisterAsync(req.Email, req.UserName, req.Password, agencyId, req.Roles, ct: ct));
     }
 
     [Authorize]

@@ -31,6 +31,12 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
     return <Navigate to="/change-password" replace />;
   }
 
+  // Then force 2FA enrolment for privileged roles (mirrors the server-side gate).
+  // Reuses the existing enrolment page at /2fa.
+  if (auth.user.twoFactorSetupRequired && pathname !== "/2fa") {
+    return <Navigate to="/2fa" replace />;
+  }
+
   const userRoles = auth.user.roles ?? [];
   const userModules = auth.user.modules ?? [];
 

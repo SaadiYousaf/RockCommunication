@@ -16,6 +16,8 @@ public record SetUserTeamCommand(Guid UserId, Guid? TeamId) : IRequest<UserSumma
 public record SetTeamLeadCommand(Guid TeamId, Guid? UserId) : IRequest<Unit>;
 /// <summary>Pin a user to a call center, or pass null to make them agency-level (sees all).</summary>
 public record SetUserCallCenterCommand(Guid UserId, Guid? CallCenterId) : IRequest<UserSummaryDto>;
+/// <summary>Re-issue the onboarding invitation (fresh temp password + email) for a user who hasn't accepted yet.</summary>
+public record ResendInvitationCommand(Guid UserId) : IRequest<Unit>;
 
 public class UpdateUserRolesValidator : AbstractValidator<UpdateUserRolesCommand>
 {
@@ -38,14 +40,16 @@ public class UserAdminHandler :
     IRequestHandler<SetPreferred2FaCommand, UserSummaryDto>,
     IRequestHandler<SetUserTeamCommand, UserSummaryDto>,
     IRequestHandler<SetUserCallCenterCommand, UserSummaryDto>,
-    IRequestHandler<SetTeamLeadCommand, Unit>
+    IRequestHandler<SetTeamLeadCommand, Unit>,
+    IRequestHandler<ResendInvitationCommand, Unit>
 {
     private readonly IUserAdminService _admin;
     private readonly ICurrentUser _user;
     private readonly IPermissionService _permissions;
+    private readonly IInvitationService _invitations;
 
-    public UserAdminHandler(IUserAdminService admin, ICurrentUser user, IPermissionService permissions)
-    { _admin = Guard.AgainstNull(admin); _user = Guard.AgainstNull(user); _permissions = Guard.AgainstNull(permissions); }
+    public UserAdminHandler(IUserAdminService admin, ICurrentUser user, IPermissionService permissions, IInvitationService invitations)
+    { _admin = Guard.AgainstNull(admin); _user = Guard.AgainstNull(user); _permissions = Guard.AgainstNull(permissions); _invitations = Guard.AgainstNull(invitations); }
 
     public async Task<UserSummaryDto> Handle(UpdateUserRolesCommand request, CancellationToken ct)
     {
@@ -93,6 +97,18 @@ public class UserAdminHandler :
         return await _admin.SetCallCenterAsync(request.UserId, request.CallCenterId, ct);
     }
 
+    public async Task<Unit> Handle(ResendInvitationCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        // Only a user-manager may resend, and only for a user they're allowed to manage
+        // (the invitation service loads the user; the same-agency/call-center guard applies
+        // through UserAdminService when the caller later manages them). Gate on UsersManage.
+        await EnsurePermissionAsync(Permissions.UsersManage, ct);
+        await _admin.EnsureCanManageAsync(request.UserId, ct);
+        await _invitations.ResendAsync(request.UserId, ct);
+        return Unit.Value;
+    }
+
     public async Task<Unit> Handle(SetTeamLeadCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
@@ -137,4 +153,9 @@ public interface IUserAdminService
     /// team membership and any team-lead pointers, since teams live inside agencies.
     /// </summary>
     Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid agencyId, CancellationToken ct = default);
+    /// <summary>
+    /// Throws if the caller may not manage the target user (cross-agency / cross-call-center /
+    /// SuperAdmin target). Reuses the same rule as every other user-admin operation.
+    /// </summary>
+    Task EnsureCanManageAsync(Guid userId, CancellationToken ct = default);
 }
