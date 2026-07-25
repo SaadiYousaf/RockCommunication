@@ -18,7 +18,7 @@ namespace CRM.Application.Agencies;
 // has no agency of their own), mirroring the `?agencyId` precedent in OrgTree.
 // ─────────────────────────────────────────────────────────────────────────────
 
-public record AgencyOptionDto(Guid Id, string Name);
+public record AgencyOptionDto(Guid Id, string Name, bool IsActive);
 public record LicenseAgentDto(Guid Id, string Name, string Email, bool IsActive);
 public record SubmissionAgentDto(Guid Id, string Name, string Email, bool IsActive);
 
@@ -99,12 +99,18 @@ public class AgencyPanelHandler :
     public async Task<IReadOnlyList<AgencyOptionDto>> Handle(ListAgencyOptionsQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        // The Agency picker is used by SuperAdmin (panel) and central Submission Agents (approval popup).
+        // The Agency picker is used by SuperAdmin (panel/Team/Call Centers) and central
+        // Submission Agents (approval popup).
         if (!IsSuperAdmin && !IsCentralValidator) throw new ForbiddenAccessException();
-        return await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
-            .Where(a => !a.IsDeleted && a.IsActive)
-            .OrderBy(a => a.Name)
-            .Select(a => new AgencyOptionDto(a.Id, a.Name))
+        var q = _db.Agencies.AsNoTracking().IgnoreQueryFilters().Where(a => !a.IsDeleted);
+        // SuperAdmin manages every agency, including deactivated ones (so they can view
+        // or re-activate them). A central Submission Agent may only assign sales to a
+        // currently-active agency, so they never see inactive ones.
+        if (!IsSuperAdmin) q = q.Where(a => a.IsActive);
+        return await q
+            .OrderBy(a => a.IsActive ? 0 : 1)   // active first, inactive sink to the bottom
+            .ThenBy(a => a.Name)
+            .Select(a => new AgencyOptionDto(a.Id, a.Name, a.IsActive))
             .ToListAsync(ct);
     }
 

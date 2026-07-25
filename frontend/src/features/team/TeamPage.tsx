@@ -79,7 +79,7 @@ export function TeamPage() {
         actions={isSuperAdmin ? (
           <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
             {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
-            {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>)}
           </Select>
         ) : undefined}
       />

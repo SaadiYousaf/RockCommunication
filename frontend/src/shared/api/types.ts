@@ -236,6 +236,7 @@ export interface SetValidatorStatusInput {
 export interface AgencyOption {
   id: string;
   name: string;
+  isActive: boolean;
 }
 export interface LicenseAgent {
   id: string;
