@@ -243,6 +243,7 @@ internal static class DummyDataSeeder
         // ---- Sales for closed/validated/funded leads ----
         var carriers = new[] { "Aetna", "UnitedHealth", "Cigna", "Anthem", "Humana" };
         var saleList = new List<Sale>();
+        var saleSeq = 0;   // per-agency serial (the whole dummy set lives in one agency)
         foreach (var lead in leadList.Where(l => l.Stage is WorkflowStage.Closed or WorkflowStage.Validated or WorkflowStage.Funded))
         {
             var closer = closers[rnd.Next(closers.Count)];
@@ -252,6 +253,7 @@ internal static class DummyDataSeeder
             var sale = new Sale
             {
                 AgencyId = agency.Id,
+                SaleNumber = ++saleSeq,
                 LeadId = lead.Id,
                 CloserUserId = closer.Id,
                 ValidatorUserId = validator?.Id,
@@ -267,6 +269,7 @@ internal static class DummyDataSeeder
             saleList.Add(sale);
         }
         db.Sales.AddRange(saleList);
+        agency.LastSaleNumber = saleSeq;   // keep the serial allocator in sync with seeded sales
         await db.SaveChangesAsync();
 
         // ---- Commission entries for funded sales ----

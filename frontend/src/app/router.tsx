@@ -24,6 +24,8 @@ import { QaBrowserPage } from "../features/qa/QaBrowserPage";
 import { ChatPage } from "../features/chat/ChatPage";
 import { AdminPage } from "../features/admin/AdminPage";
 import { AgenciesPage } from "../features/admin/AgenciesPage";
+import { AgencyDetailPage } from "../features/admin/AgencyDetailPage";
+import { SubmissionAgentsPage } from "../features/admin/SubmissionAgentsPage";
 import { AuditLogPage } from "../features/admin/AuditLogPage";
 import { CallCentersPage } from "../features/admin/CallCentersPage";
 import { TeamPage } from "../features/team/TeamPage";
@@ -258,6 +260,8 @@ const router = createBrowserRouter([
             element: <ProtectedRoute roles={["SuperAdmin"]} />,
             children: [
               { path: "/admin/agencies", element: <AgenciesPage /> },
+              { path: "/admin/agencies/:agencyId", element: <AgencyDetailPage /> },
+              { path: "/admin/submission-agents", element: <SubmissionAgentsPage /> },
             ],
           },
         ],

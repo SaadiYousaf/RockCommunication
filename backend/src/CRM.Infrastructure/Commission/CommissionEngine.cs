@@ -75,6 +75,22 @@ public class ValidatorBonusRule : ConfigurableCommissionRule
     protected override string BuildNote(CommissionContext ctx, decimal amount, decimal? threshold) => "Validation bonus";
 }
 
+/// <summary>
+/// Pays the agency-level License Agent assigned to a sale by a Submission Agent at approval.
+/// Configurable per agency (rule_name = license-agent-approval) exactly like the other rules.
+/// </summary>
+public class LicenseAgentApprovalRule : ConfigurableCommissionRule
+{
+    public LicenseAgentApprovalRule(IAgencyCommissionConfigProvider c) : base(c) { }
+    public override string Name => "license-agent-approval";
+    public override int Priority => 130;
+    protected override decimal DefaultAmount => 50m;
+    protected override string TargetRole => Roles.LicenseAgent;
+
+    protected override bool ShouldApply(CommissionContext ctx, decimal? threshold) => !ctx.Sale.IsInternalSale;
+    protected override string BuildNote(CommissionContext ctx, decimal amount, decimal? threshold) => "License agent approval";
+}
+
 public class HighPremiumKickerRule : ConfigurableCommissionRule
 {
     public HighPremiumKickerRule(IAgencyCommissionConfigProvider c) : base(c) { }
@@ -155,6 +171,17 @@ public class CommissionEngine : ICommissionEngine
                 lines.AddRange(await rule.CalculateAsync(ctx, ct));
         }
 
+        return lines;
+    }
+
+    public async Task<IReadOnlyList<CommissionLine>> CalculateForAgentAsync(Sale sale, Guid agentId, string role, CancellationToken ct = default)
+    {
+        Guard.AgainstNull(sale);
+
+        var ctx = new CommissionContext(sale, agentId, role, sale.AgencyId);
+        var lines = new List<CommissionLine>();
+        foreach (var rule in _rules)
+            lines.AddRange(await rule.CalculateAsync(ctx, ct));
         return lines;
     }
 

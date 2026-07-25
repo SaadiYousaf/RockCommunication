@@ -388,16 +388,20 @@ public class IdentityService : IIdentityService
         Dictionary<string, string>? extra = null;
         if (user.MustChangePassword)
             (extra ??= new())[CustomJwtClaims.PasswordChangeRequired] = "true";
-        // Mandatory 2FA: a privileged user without 2FA enabled is confined to the 2FA-setup
-        // endpoints until they enrol (TwoFactorSetupRequiredMiddleware). Cleared once they
-        // enable 2FA and re-login (their next login is a normal 2FA challenge).
-        if (_enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+        // Mandatory 2FA: a privileged user (or a cross-agency "central" Submission Agent, who
+        // reads cross-tenant PII) without 2FA enabled is confined to the 2FA-setup endpoints
+        // until they enrol (TwoFactorSetupRequiredMiddleware). Cleared once they enable 2FA and
+        // re-login (their next login is a normal 2FA challenge).
+        var require2Fa = _enforce2Fa && !user.TwoFactorEnabled &&
+            (CRM.Domain.Enums.Roles.TwoFactorMandatory(roles) ||
+             CRM.Domain.Enums.Roles.IsCentralSubmissionAgent(user.AgencyId, roles));
+        if (require2Fa)
             (extra ??= new())[CustomJwtClaims.TwoFactorSetupRequired] = "true";
 
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
-            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles));
+            TwoFactorSetupRequired: require2Fa);
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
     }
 

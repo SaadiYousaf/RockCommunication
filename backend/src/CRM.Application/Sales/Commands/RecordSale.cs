@@ -118,12 +118,20 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
 
         var (isInternal, reason) = await _checker.CheckAsync(lead, _user.UserId.Value, ct);
 
+        // Allocate the next per-agency serial. SQLite serialises writes and the unique
+        // (AgencyId, SaleNumber) filtered index is the correctness backstop, so a plain
+        // read-increment on the tracked agency (persisted in the same SaveChanges) is safe.
+        var agency = await _db.Agencies.FirstOrDefaultAsync(a => a.Id == lead.AgencyId, ct)
+            ?? throw new NotFoundException(nameof(Agency), lead.AgencyId);
+        agency.LastSaleNumber += 1;
+
         var accountDigits = new string((input.AccountNumber ?? "").Where(char.IsDigit).ToArray());
         var sale = new Sale
         {
             AgencyId = lead.AgencyId,
             CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
+            SaleNumber = agency.LastSaleNumber,
             CloserUserId = _user.UserId.Value,
             Carrier = input.Carrier.ToUpperInvariant(),
             PolicyNumber = input.PolicyNumber,

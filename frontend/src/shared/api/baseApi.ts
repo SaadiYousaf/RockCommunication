@@ -13,6 +13,7 @@ import type {
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   ValidatorQueueItem, SetValidatorStatusInput,
+  AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
   Skill, AgentSkill, Script, LiveAgent, WorkflowRule, WorkflowExecution, ImportBatch,
   Cadence, CadenceEnrollment, VoicemailAsset, InboundQueue, AgentLeaderboard, KbArticle, PublicEndpoint, LeadList, Upsert,
@@ -700,6 +701,34 @@ export const baseApi = createApi({
       invalidatesTags: ["Agencies", "Users"],
     }),
 
+    // ===== Agency Panel (SuperAdmin drill-in) + cross-agency Submission Agents =====
+    // Agency options for the approval popup's Agency picker (SuperAdmin or central Submission Agent).
+    agencyOptions: b.query<AgencyOption[], void>({
+      query: () => "/api/agencies/options",
+      providesTags: ["Agencies"],
+    }),
+    // License Agents in an agency — panel roster + approval popup's dependent Agent picker.
+    agencyLicenseAgents: b.query<LicenseAgent[], string>({
+      query: (agencyId) => `/api/agencies/${agencyId}/license-agents`,
+      providesTags: (_r, _e, agencyId) => [{ type: "Users", id: `license-agents:${agencyId}` }],
+    }),
+    createLicenseAgent: b.mutation<LicenseAgent, { agencyId: string; name: string; email: string }>({
+      query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/license-agents`, method: "POST", body }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Users", id: `license-agents:${arg.agencyId}` }, "Users"],
+    }),
+    createCallCenterInAgency: b.mutation<CallCenterDto, { agencyId: string; name: string; code?: string | null; adminName: string; adminEmail: string }>({
+      query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/call-centers`, method: "POST", body }),
+      invalidatesTags: ["CallCenters", "Agencies"],
+    }),
+    listSubmissionAgents: b.query<SubmissionAgent[], void>({
+      query: () => "/api/agencies/submission-agents",
+      providesTags: [{ type: "Users", id: "submission-agents" }],
+    }),
+    createSubmissionAgent: b.mutation<SubmissionAgent, { name: string; email: string }>({
+      query: (body) => ({ url: "/api/agencies/submission-agents", method: "POST", body }),
+      invalidatesTags: [{ type: "Users", id: "submission-agents" }],
+    }),
+
     // ===== Org tree (Team hierarchy page) =====
     orgTree: b.query<OrgTreeDto, { agencyId?: string } | void>({
       query: (p) => ({ url: "/api/org/tree", params: p ?? undefined }),
@@ -938,10 +967,15 @@ export interface AuditQuery {
 }
 
 export interface SaleListItem {
-  id: string; leadId: string; leadName: string; leadPhone: string;
+  id: string; saleNumber: number; leadId: string; leadName: string; leadPhone: string;
   closerUserId: string; closerName: string | null;
+  validatorUserId: string | null; validatorName: string | null;
+  licenseAgentUserId: string | null; licenseAgentName: string | null;
   carrier: string; policyNumber: string | null;
   monthlyPremium: number; annualPremium: number;
+  carrierApproved: string | null; coverageApproved: number | null;
+  premiumApproved: number | null; planApproved: string | null;
+  commissionEarned: number | null; callCenterName: string | null;
   soldAt: string; validatedAt: string | null; fundedAt: string | null;
   isInternalSale: boolean; status: string;
 }
@@ -952,6 +986,8 @@ export interface PagedSalesResult {
 export interface SalesQuery {
   closerUserId?: string; carrier?: string; status?: string;
   from?: string; to?: string; sort?: string; skip?: number; take?: number;
+  /** SuperAdmin Agency Panel only — list a specific agency's sales. */
+  agencyId?: string;
 }
 
 export interface CallListItem {
@@ -1078,6 +1114,8 @@ export const {
   useListModulesQuery, useMyModulesQuery,
   useListAgenciesQuery, useGetAgencyQuery, useCreateAgencyMutation,
   useUpdateAgencyMutation, useAssignAgencyCeoMutation,
+  useAgencyOptionsQuery, useAgencyLicenseAgentsQuery, useCreateLicenseAgentMutation,
+  useCreateCallCenterInAgencyMutation, useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
   useRegisterMutation,
   useChangePasswordMutation,

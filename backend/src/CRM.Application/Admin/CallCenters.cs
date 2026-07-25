@@ -64,7 +64,10 @@ public class CallCenterHandler :
     {
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // Explicit agency scope as a backstop: SuperAdmin bypasses the global tenant filter, so
+        // without this an accidental SuperAdmin caller would see every agency's call centers.
         return await _db.CallCenters
+            .Where(c => c.AgencyId == _user.AgencyId.Value)
             .OrderBy(c => c.Name)
             .Select(c => new CallCenterDto(
                 c.Id, c.Name, c.Code, c.IsActive,

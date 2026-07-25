@@ -198,6 +198,8 @@ export type ValidatorStatusValue =
 export interface ValidatorQueueItem {
   saleId: string;
   leadId: string;
+  agencyId: string;
+  agencyName: string;
   leadName: string;
   leadPhone: string;
   state: string | null;
@@ -214,6 +216,8 @@ export interface ValidatorQueueItem {
   declineReason: string | null;
   validatorUserId: string | null;
   validatorName: string | null;
+  licenseAgentUserId: string | null;
+  licenseAgentName: string | null;
   soldAt: string;
   validatedAt: string | null;
 }
@@ -225,6 +229,25 @@ export interface SetValidatorStatusInput {
   premiumApproved?: number;
   planApproved?: string;
   declineReason?: string;
+  licenseAgentUserId?: string | null;
+}
+
+/** Agency Panel + cross-agency Submission-Agent support. */
+export interface AgencyOption {
+  id: string;
+  name: string;
+}
+export interface LicenseAgent {
+  id: string;
+  name: string;
+  email: string;
+  isActive: boolean;
+}
+export interface SubmissionAgent {
+  id: string;
+  name: string;
+  email: string;
+  isActive: boolean;
 }
 
 export interface IntakeQueueItem {

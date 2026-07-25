@@ -70,8 +70,18 @@ public class ScheduledCallback : CallCenterEntity
 public class Sale : CallCenterEntity
 {
     public Guid LeadId { get; set; }
+
+    /// <summary>Human-friendly serial, sequential per agency (assigned at creation). See Agency.LastSaleNumber.</summary>
+    public int SaleNumber { get; set; }
+
     public Guid CloserUserId { get; set; }
     public Guid? ValidatorUserId { get; set; }
+
+    /// <summary>
+    /// Agency-level License Agent assigned to this sale by a Submission Agent at approval.
+    /// Loose Guid (resolved to a name at query time, like CloserUserId/ValidatorUserId).
+    /// </summary>
+    public Guid? LicenseAgentUserId { get; set; }
     public string Carrier { get; set; } = string.Empty;
     public string? PolicyNumber { get; set; }
     public decimal MonthlyPremium { get; set; }

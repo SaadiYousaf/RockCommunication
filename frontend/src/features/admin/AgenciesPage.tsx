@@ -9,6 +9,7 @@ import {
   useUpdateAgencyMutation,
 } from "../../shared/api/baseApi";
 import type { AgencyDto, UserSummary } from "../../shared/api/types";
+import { Link } from "react-router-dom";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Stat, useToast,
@@ -257,6 +258,11 @@ export function AgenciesPage() {
                     </div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
+                    <Link to={`/admin/agencies/${a.id}`}>
+                      <Button variant="outline" size="sm" leftIcon={<Icon name="building" size={13} />}>
+                        Manage
+                      </Button>
+                    </Link>
                     <Button
                       variant="ghost"
                       size="sm"

@@ -8,11 +8,15 @@ using Microsoft.EntityFrameworkCore;
 namespace CRM.Application.Sales.Queries;
 
 public record SaleListItemDto(
-    Guid Id, Guid LeadId, string LeadName, string LeadPhone,
+    Guid Id, int SaleNumber, Guid LeadId, string LeadName, string LeadPhone,
     Guid CloserUserId, string? CloserName,
     Guid? ValidatorUserId, string? ValidatorName,
+    Guid? LicenseAgentUserId, string? LicenseAgentName,
     string Carrier, string? PolicyNumber,
     decimal MonthlyPremium, decimal AnnualPremium,
+    string? CarrierApproved, decimal? CoverageApproved, decimal? PremiumApproved, string? PlanApproved,
+    // Commission the assigned License Agent earned on this sale (their own line, not the sale total).
+    decimal? CommissionEarned, string? CallCenterName,
     DateTime SoldAt, DateTime? ValidatedAt, DateTime? FundedAt,
     bool IsInternalSale, string? InternalSaleReason,
     string Status);
@@ -28,11 +32,16 @@ public record ListSalesQuery(
     DateTime? To = null,
     string Sort = "soldAt-desc",
     int Skip = 0,
-    int Take = 50)
+    int Take = 50,
+    // SuperAdmin only: target a specific agency (the Agency Panel always passes one).
+    // Ignored for tenant-scoped callers, who are always pinned to their own agency.
+    Guid? AgencyId = null)
     : IRequest<PagedSalesResult>;
 
 public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult>
 {
+    private const string LicenseAgentRule = "license-agent-approval";
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
@@ -45,12 +54,29 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
     public async Task<PagedSalesResult> Handle(ListSalesQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
-        var q = _db.Sales.AsNoTracking().Where(s => s.AgencyId == _user.AgencyId);
+        // Resolve which agency's sales to list. SuperAdmin (who has no agency) must target one
+        // explicitly, mirroring the OrgTree/ListUsers "?agencyId honored only for SuperAdmin" rule.
+        var isSuperAdmin = _user.Roles.Contains("SuperAdmin");
+        Guid agencyId;
+        if (isSuperAdmin)
+        {
+            if (request.AgencyId is not { } aid || aid == Guid.Empty)
+                throw new ForbiddenAccessException("An agency must be specified.");
+            agencyId = aid;
+        }
+        else
+        {
+            if (_user.AgencyId is not { } uaid || uaid == Guid.Empty) throw new ForbiddenAccessException();
+            if (request.AgencyId is { } reqAid && reqAid != uaid) throw new ForbiddenAccessException();
+            agencyId = uaid;
+        }
 
-        // Restrict closers/jr-closers to their own sales
-        if (!_user.Roles.Contains("Admin") &&
+        var q = _db.Sales.AsNoTracking().Where(s => s.AgencyId == agencyId);
+
+        // Managers/validators/SuperAdmin see the whole agency; closers/jr-closers only their own.
+        if (!isSuperAdmin &&
+            !_user.Roles.Contains("Admin") &&
             !_user.Roles.Contains("ProgramManager") &&
             !_user.Roles.Contains("TeamLead") &&
             !_user.Roles.Contains("Validator"))
@@ -97,25 +123,48 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
                 s => s.LeadId, l => l.Id,
                 (s, l) => new
                 {
-                    s.Id, s.LeadId, l.FirstName, l.LastName, l.PhoneNumber,
-                    s.CloserUserId, s.ValidatorUserId,
+                    s.Id, s.SaleNumber, s.LeadId, l.FirstName, l.LastName, l.PhoneNumber,
+                    s.CloserUserId, s.ValidatorUserId, s.LicenseAgentUserId, s.CallCenterId,
                     s.Carrier, s.PolicyNumber,
                     s.MonthlyPremium, s.AnnualPremium,
+                    s.CarrierApproved, s.CoverageApproved, s.PremiumApproved, s.PlanApproved,
                     s.SoldAt, s.ValidatedAt, s.FundedAt,
                     s.IsInternalSale, s.InternalSaleReason
                 })
             .ToListAsync(ct);
 
-        var users = await _identity.ListUsersAsync(_user.AgencyId, ct);
+        var users = await _identity.ListUsersAsync(agencyId, ct);
         var byId = users.ToDictionary(u => u.Id);
+        string? Name(Guid? id) => id is { } g && byId.TryGetValue(g, out var u) ? u.UserName : null;
+
+        // Call-center names — dictionary lookup with fallback (never an inner join, so legacy
+        // rows with an empty CallCenterId aren't silently dropped).
+        var ccIds = rawItems.Select(r => r.CallCenterId).Distinct().ToList();
+        var ccById = (await _db.CallCenters.AsNoTracking()
+                .Where(c => ccIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.Name }).ToListAsync(ct))
+            .ToDictionary(c => c.Id, c => c.Name);
+
+        // License-agent commission per sale — sum in memory (EF/SQLite doesn't translate a
+        // server-side decimal SUM/GroupBy reliably).
+        var saleIds = rawItems.Select(r => r.Id).ToList();
+        var commissionBySale = (await _db.CommissionEntries.AsNoTracking()
+                .Where(c => saleIds.Contains(c.SaleId) && c.RuleName == LicenseAgentRule)
+                .Select(c => new { c.SaleId, c.Amount }).ToListAsync(ct))
+            .GroupBy(x => x.SaleId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
         var items = rawItems.Select(r => new SaleListItemDto(
-            r.Id, r.LeadId,
+            r.Id, r.SaleNumber, r.LeadId,
             $"{r.FirstName} {r.LastName}".Trim(), r.PhoneNumber,
-            r.CloserUserId, byId.TryGetValue(r.CloserUserId, out var c) ? c.UserName : null,
-            r.ValidatorUserId, r.ValidatorUserId is { } vid && byId.TryGetValue(vid, out var v) ? v.UserName : null,
+            r.CloserUserId, Name(r.CloserUserId),
+            r.ValidatorUserId, Name(r.ValidatorUserId),
+            r.LicenseAgentUserId, Name(r.LicenseAgentUserId),
             r.Carrier, r.PolicyNumber,
             r.MonthlyPremium, r.AnnualPremium,
+            r.CarrierApproved, r.CoverageApproved, r.PremiumApproved, r.PlanApproved,
+            commissionBySale.TryGetValue(r.Id, out var comm) ? comm : (decimal?)null,
+            ccById.TryGetValue(r.CallCenterId, out var cn) ? cn : null,
             r.SoldAt, r.ValidatedAt, r.FundedAt,
             r.IsInternalSale, r.InternalSaleReason,
             r.FundedAt is not null ? "Funded"

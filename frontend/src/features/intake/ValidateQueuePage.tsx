@@ -2,6 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import {
   useSetValidatorStatusMutation, useValidatorQueueQuery, useGetValidateLeadQuery,
+  useAgencyOptionsQuery, useAgencyLicenseAgentsQuery,
 } from "../../shared/api/baseApi";
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
@@ -43,8 +44,8 @@ export function ValidateQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>Customer</TH><TH>Carrier</TH><TH>Premium</TH><TH>Closer</TH>
-                  <TH>Status</TH><TH>Sold</TH><TH></TH>
+                  <TH>Customer</TH><TH>Agency</TH><TH>Carrier</TH><TH>Premium</TH><TH>Closer</TH>
+                  <TH>Agent</TH><TH>Status</TH><TH>Sold</TH><TH></TH>
                 </TR>
               </THead>
               <TBody>
@@ -54,9 +55,11 @@ export function ValidateQueuePage() {
                       <div className="font-medium text-ink-900">{s.leadName}</div>
                       <div className="font-mono text-xs text-ink-500">{s.leadPhone}</div>
                     </TD>
+                    <TD className="text-sm text-ink-600">{s.agencyName || "—"}</TD>
                     <TD className="text-sm">{s.carrier}</TD>
                     <TD className="text-sm">{money(s.monthlyPremium)}</TD>
                     <TD className="text-sm text-ink-600">{s.closerName ?? "—"}</TD>
+                    <TD className="text-sm text-ink-600">{s.licenseAgentName ?? "—"}</TD>
                     <TD>
                       <Badge tone={TONE[s.status]} variant="soft">{LABEL[s.status]}</Badge>
                       {(s.status === "Decline" || s.status === "ErrorInApplicationInformation") && s.declineReason && (
@@ -158,6 +161,20 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
   const [premiumApproved, setPremiumApproved] = useState(sale.premiumApproved?.toString() ?? sale.monthlyPremium?.toString() ?? "");
   const [planApproved, setPlanApproved] = useState(sale.planApproved ?? sale.policyNumber ?? "");
   const [reason, setReason] = useState(sale.declineReason ?? "");
+  // Agency → Agent assignment. The License Agent must belong to the sale's agency, so the
+  // Agency picker defaults to (and normally stays) the sale's own agency.
+  const [agencyId, setAgencyId] = useState(sale.agencyId);
+  const [licenseAgentUserId, setLicenseAgentUserId] = useState(sale.licenseAgentUserId ?? "");
+
+  // Agency options: SuperAdmin / central Submission Agents get every agency; agency-scoped
+  // validators are forbidden the /options endpoint, so we fall back to the sale's own agency.
+  const { data: agencyOptions } = useAgencyOptionsQuery();
+  const agencyList = agencyOptions && agencyOptions.length
+    ? agencyOptions
+    : [{ id: sale.agencyId, name: sale.agencyName }];
+  // Dependent Agent picker — populated only once an agency is chosen.
+  const { data: licenseAgents, isFetching: agentsLoading } =
+    useAgencyLicenseAgentsQuery(agencyId, { skip: !agencyId });
 
   // Reset editable fields whenever a different sale is opened.
   useEffect(() => {
@@ -167,6 +184,8 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
     setPremiumApproved(sale.premiumApproved?.toString() ?? sale.monthlyPremium?.toString() ?? "");
     setPlanApproved(sale.planApproved ?? sale.policyNumber ?? "");
     setReason(sale.declineReason ?? "");
+    setAgencyId(sale.agencyId);
+    setLicenseAgentUserId(sale.licenseAgentUserId ?? "");
   }, [sale]);
 
   const isError = status === "ErrorInApplicationInformation";
@@ -183,6 +202,7 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
         premiumApproved: status === "Approved" ? parseFloat(premiumApproved) || 0 : undefined,
         planApproved: status === "Approved" ? planApproved : undefined,
         declineReason: isDecline || isError ? reason : undefined,
+        licenseAgentUserId: status === "Approved" && licenseAgentUserId ? licenseAgentUserId : undefined,
       }).unwrap();
       toast.success("Status updated", `${sale.leadName} → ${LABEL[status]}`);
       onClose();
@@ -199,12 +219,29 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
         </Select>
 
         {status === "Approved" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
-            <Input label="Carrier Approved" required value={carrierApproved} onChange={(e) => setCarrierApproved(e.target.value)} />
-            <Input label="Plan Approved" required value={planApproved} onChange={(e) => setPlanApproved(e.target.value)} />
-            <Input label="Coverage Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={coverageApproved} onChange={(e) => setCoverageApproved(e.target.value)} />
-            <Input label="Premium Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={premiumApproved} onChange={(e) => setPremiumApproved(e.target.value)} />
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
+              <Input label="Carrier Approved" required value={carrierApproved} onChange={(e) => setCarrierApproved(e.target.value)} />
+              <Input label="Plan Approved" required value={planApproved} onChange={(e) => setPlanApproved(e.target.value)} />
+              <Input label="Coverage Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={coverageApproved} onChange={(e) => setCoverageApproved(e.target.value)} />
+              <Input label="Premium Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={premiumApproved} onChange={(e) => setPremiumApproved(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
+              {/* Pick the agency first, then a License Agent from that agency. */}
+              <Select label="Agency" value={agencyId}
+                onChange={(e) => { setAgencyId(e.target.value); setLicenseAgentUserId(""); }}>
+                {agencyList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </Select>
+              <Select label="License Agent" value={licenseAgentUserId}
+                disabled={!agencyId || agentsLoading}
+                onChange={(e) => setLicenseAgentUserId(e.target.value)}>
+                <option value="">{agentsLoading ? "Loading…" : "Unassigned"}</option>
+                {(licenseAgents ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>
+                ))}
+              </Select>
+            </div>
+          </>
         )}
 
         {isDecline && (

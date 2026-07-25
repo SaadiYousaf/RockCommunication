@@ -1,3 +1,4 @@
+using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -6,13 +7,17 @@ using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using DomainRoles = CRM.Domain.Enums.Roles;
+using ValidationException = CRM.Application.Common.Exceptions.ValidationException;
 
 namespace CRM.Application.Intake;
 
-/// <summary>A submitted sale as shown in the Validator queue.</summary>
+/// <summary>A submitted sale as shown in the Validator (Submission Agent) queue.</summary>
 public record ValidatorQueueItem(
     Guid SaleId,
     Guid LeadId,
+    Guid AgencyId,
+    string AgencyName,
     string LeadName,
     string LeadPhone,
     string? State,
@@ -29,6 +34,8 @@ public record ValidatorQueueItem(
     string? DeclineReason,
     Guid? ValidatorUserId,
     string? ValidatorName,
+    Guid? LicenseAgentUserId,
+    string? LicenseAgentName,
     DateTime SoldAt,
     DateTime? ValidatedAt);
 
@@ -46,7 +53,9 @@ public record SetValidatorStatusCommand(
     decimal? CoverageApproved,
     decimal? PremiumApproved,
     string? PlanApproved,
-    string? DeclineReason) : IRequest<ValidatorStatusResult>;
+    string? DeclineReason,
+    /// <summary>Agency-level License Agent to assign on approval (optional). Must belong to the sale's agency.</summary>
+    Guid? LicenseAgentUserId = null) : IRequest<ValidatorStatusResult>;
 
 public record ValidatorStatusResult(Guid SaleId, ValidatorStatus Status, WorkflowStage LeadStage);
 
@@ -82,54 +91,82 @@ public class ValidatorQueueHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
+    private readonly ICommissionEngine _commission;
 
-    public ValidatorQueueHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    public ValidatorQueueHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
+        ICommissionEngine commission)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
+        _commission = Guard.AgainstNull(commission);
     }
 
     public async Task<IReadOnlyList<ValidatorQueueItem>> Handle(ValidatorQueueQuery request, CancellationToken ct)
     {
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // A "central" (SMH-level) Submission Agent validates sales across ALL agencies; an
+        // agency-scoped validator only sees their own. Central reads bypass the tenant query
+        // filter, so we must re-add the soft-delete predicate by hand (IgnoreQueryFilters drops it too).
+        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var take = Math.Clamp(request.Take, 1, 500);
-        var raw = await _db.Sales.AsNoTracking()
-            .Where(s => s.AgencyId == _user.AgencyId)
-            .OrderByDescending(s => s.SoldAt)
-            .Take(take)
-            .Join(_db.Leads.AsNoTracking(),
-                s => s.LeadId, l => l.Id,
-                (s, l) => new
-                {
-                    s.Id, s.LeadId, l.FirstName, l.LastName, l.PhoneNumber, l.State,
-                    s.Carrier, s.PolicyNumber, s.MonthlyPremium, s.CloserUserId,
-                    s.ValidatorStatus, s.CarrierApproved, s.CoverageApproved, s.PremiumApproved,
-                    s.PlanApproved, s.DeclineReason, s.ValidatorUserId, s.SoldAt, s.ValidatedAt
-                })
+
+        var salesQ = _db.Sales.AsNoTracking();
+        salesQ = central
+            ? salesQ.IgnoreQueryFilters().Where(s => !s.IsDeleted)
+            : salesQ.Where(s => s.AgencyId == _user.AgencyId);
+
+        var sales = await salesQ.OrderByDescending(s => s.SoldAt).Take(take).ToListAsync(ct);
+
+        var leadIds = sales.Select(s => s.LeadId).Distinct().ToList();
+        var leadsQ = _db.Leads.AsNoTracking();
+        if (central) leadsQ = leadsQ.IgnoreQueryFilters().Where(l => !l.IsDeleted);
+        var leads = await leadsQ.Where(l => leadIds.Contains(l.Id))
+            .Select(l => new { l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.State })
             .ToListAsync(ct);
+        var leadById = leads.ToDictionary(l => l.Id);
 
-        var users = await _identity.ListUsersAsync(_user.AgencyId, ct);
+        var agencyIds = sales.Select(s => s.AgencyId).Distinct().ToList();
+        var agencyById = (await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
+                .Where(a => agencyIds.Contains(a.Id) && !a.IsDeleted)
+                .Select(a => new { a.Id, a.Name }).ToListAsync(ct))
+            .ToDictionary(a => a.Id, a => a.Name);
+
+        // Cross-agency queues need names from every agency; scoped queues only their own.
+        var users = await _identity.ListUsersAsync(central ? null : _user.AgencyId, ct);
         var byId = users.ToDictionary(u => u.Id);
+        string? Name(Guid? id) => id is { } g && byId.TryGetValue(g, out var u) ? u.UserName : null;
 
-        return raw.Select(r => new ValidatorQueueItem(
-            r.Id, r.LeadId, $"{r.FirstName} {r.LastName}".Trim(), r.PhoneNumber, r.State,
-            r.Carrier, r.PolicyNumber, r.MonthlyPremium,
-            r.CloserUserId, byId.TryGetValue(r.CloserUserId, out var c) ? c.UserName : null,
-            r.ValidatorStatus, r.CarrierApproved, r.CoverageApproved, r.PremiumApproved,
-            r.PlanApproved, r.DeclineReason,
-            r.ValidatorUserId, r.ValidatorUserId is { } vid && byId.TryGetValue(vid, out var v) ? v.UserName : null,
-            r.SoldAt, r.ValidatedAt)).ToList();
+        return sales.Select(s =>
+        {
+            leadById.TryGetValue(s.LeadId, out var l);
+            return new ValidatorQueueItem(
+                s.Id, s.LeadId,
+                s.AgencyId, agencyById.TryGetValue(s.AgencyId, out var an) ? an : "",
+                l is null ? "" : $"{l.FirstName} {l.LastName}".Trim(),
+                l?.PhoneNumber ?? "", l?.State,
+                s.Carrier, s.PolicyNumber, s.MonthlyPremium,
+                s.CloserUserId, Name(s.CloserUserId),
+                s.ValidatorStatus, s.CarrierApproved, s.CoverageApproved, s.PremiumApproved,
+                s.PlanApproved, s.DeclineReason,
+                s.ValidatorUserId, Name(s.ValidatorUserId),
+                s.LicenseAgentUserId, Name(s.LicenseAgentUserId),
+                s.SoldAt, s.ValidatedAt);
+        }).ToList();
     }
 
     public async Task<ValidatorStatusResult> Handle(SetValidatorStatusCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
+        if (_user.UserId is null) throw new ForbiddenAccessException();
 
-        var sale = await _db.Sales.FirstOrDefaultAsync(
-            s => s.Id == request.SaleId && s.AgencyId == _user.AgencyId, ct)
+        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
+
+        var sale = (central
+            ? await _db.Sales.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
+            : await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId && s.AgencyId == _user.AgencyId, ct))
             ?? throw new NotFoundException(nameof(Sale), request.SaleId);
 
         sale.ValidatorStatus = request.Status;
@@ -143,6 +180,10 @@ public class ValidatorQueueHandler :
             sale.PremiumApproved = request.PremiumApproved;
             sale.PlanApproved = request.PlanApproved?.Trim();
             sale.DeclineReason = null;
+
+            // Assign the License Agent (if one was chosen) and pay their commission.
+            if (request.LicenseAgentUserId is { } licenseAgentId)
+                await AssignLicenseAgentAsync(sale, licenseAgentId, ct);
         }
         else if (request.Status == ValidatorStatus.Decline ||
                  request.Status == ValidatorStatus.ErrorInApplicationInformation)
@@ -154,7 +195,10 @@ public class ValidatorQueueHandler :
         }
 
         // Reflect the outcome on the lead's stage so the rest of the pipeline stays consistent.
-        var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == sale.LeadId && l.AgencyId == sale.AgencyId, ct);
+        // Central agents act cross-agency, so the lead lookup must bypass the tenant filter too.
+        var lead = central
+            ? await _db.Leads.IgnoreQueryFilters().FirstOrDefaultAsync(l => l.Id == sale.LeadId && !l.IsDeleted, ct)
+            : await _db.Leads.FirstOrDefaultAsync(l => l.Id == sale.LeadId && l.AgencyId == sale.AgencyId, ct);
         if (lead is not null)
         {
             var from = lead.Stage;
@@ -195,5 +239,52 @@ public class ValidatorQueueHandler :
 
         await _db.SaveChangesAsync(ct);
         return new ValidatorStatusResult(sale.Id, sale.ValidatorStatus, lead?.Stage ?? WorkflowStage.Closed);
+    }
+
+    /// <summary>
+    /// Assigns an agency-level License Agent to an approved sale and records their commission.
+    /// The agent MUST belong to the sale's own agency and hold the LicenseAgent role — otherwise
+    /// a central agent could mint commission for an arbitrary/foreign user. Idempotent: the
+    /// commission line is created once; a later re-assignment updates it only while still unpaid.
+    /// </summary>
+    private async Task AssignLicenseAgentAsync(Sale sale, Guid licenseAgentId, CancellationToken ct)
+    {
+        var agencyUsers = await _identity.ListUsersAsync(sale.AgencyId, ct);
+        var agent = agencyUsers.FirstOrDefault(u => u.Id == licenseAgentId
+            && u.Roles.Contains(DomainRoles.LicenseAgent, StringComparer.OrdinalIgnoreCase));
+        if (agent is null)
+            throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["licenseAgentUserId"] = new[] { "The selected agent is not a License Agent in this sale's agency." }
+            });
+
+        sale.LicenseAgentUserId = licenseAgentId;
+
+        var line = (await _commission.CalculateForAgentAsync(sale, licenseAgentId, DomainRoles.LicenseAgent, ct))
+            .FirstOrDefault();
+        if (line is null) return; // e.g. internal sale — no license-agent commission
+
+        var existing = await _db.CommissionEntries.FirstOrDefaultAsync(
+            c => c.SaleId == sale.Id && c.RuleName == line.RuleName, ct);
+        if (existing is null)
+        {
+            _db.CommissionEntries.Add(new CommissionEntry
+            {
+                AgencyId = sale.AgencyId,
+                CallCenterId = sale.CallCenterId,
+                SaleId = sale.Id,
+                AgentUserId = licenseAgentId,
+                RuleName = line.RuleName,
+                Amount = line.Amount,
+                Note = line.Note
+            });
+        }
+        else if (!existing.Paid)
+        {
+            existing.AgentUserId = licenseAgentId;
+            existing.Amount = line.Amount;
+            existing.Note = line.Note;
+        }
+        // else: already paid out — leave the historical entry untouched.
     }
 }

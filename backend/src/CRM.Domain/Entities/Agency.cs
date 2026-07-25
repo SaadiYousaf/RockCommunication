@@ -8,6 +8,12 @@ public class Agency : BaseEntity
     public string? Code { get; set; }
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Highest sale serial issued for this agency. Incremented atomically when a sale is created
+    /// so each agency's sales are numbered 1, 2, 3… independently. See Sale.SaleNumber.
+    /// </summary>
+    public int LastSaleNumber { get; set; }
+
     public ICollection<Team> Teams { get; set; } = new List<Team>();
     public ICollection<CallCenter> CallCenters { get; set; } = new List<CallCenter>();
     public ICollection<IpAllowlistEntry> IpAllowlist { get; set; } = new List<IpAllowlistEntry>();

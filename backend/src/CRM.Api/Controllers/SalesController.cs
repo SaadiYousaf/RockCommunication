@@ -64,9 +64,10 @@ public class SalesController : ControllerBase
         [FromQuery] string sort = "soldAt-desc",
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
+        [FromQuery] Guid? agencyId = null,   // SuperAdmin Agency Panel only; ignored for tenant-scoped callers
         CancellationToken ct = default)
         => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.ListSalesQuery(
-            closerUserId, carrier, status, from, to, sort, skip, take), ct));
+            closerUserId, carrier, status, from, to, sort, skip, take, agencyId), ct));
 
     public record ValidateBody(bool Approve, string? Notes);
 

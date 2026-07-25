@@ -226,6 +226,12 @@ public static class DbSeeder
                 Permissions.CommissionsView, Permissions.QaView, Permissions.KnowledgeView,
                 Permissions.ChatRead, Permissions.ChatWrite
             },
+            // Agency-level License Agent: sees sales assigned to them + their commissions.
+            [Roles.LicenseAgent] = new[]
+            {
+                Permissions.DashboardView, Permissions.SalesRead, Permissions.CommissionsView,
+                Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
+            },
             [Roles.Followups] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray(),
             [Roles.Correspondence] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray(),
             [Roles.Winbacks] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray()
@@ -314,6 +320,7 @@ public static class DbSeeder
             [Domain.Enums.Roles.Closer] = closer,
             [Domain.Enums.Roles.Validator] = validator,
             [Domain.Enums.Roles.SelfValidator] = validator.Concat(new[] { Modules.Commissions }).ToArray(),
+            [Domain.Enums.Roles.LicenseAgent] = new[] { Modules.Dashboard, Modules.Sales, Modules.Commissions, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.Followups] = agent,
             [Domain.Enums.Roles.Correspondence] = agent,
             [Domain.Enums.Roles.Winbacks] = agent

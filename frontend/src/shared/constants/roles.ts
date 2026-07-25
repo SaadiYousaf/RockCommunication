@@ -5,6 +5,7 @@ export const ALL_ROLES = [
   "Admin", "ProgramManager", "TeamLead",
   "Fronter", "Verifier",
   "JrCloser", "Closer", "Validator", "SelfValidator",
+  "LicenseAgent",
   "Followups", "Correspondence", "Winbacks",
 ] as const;
 
@@ -13,6 +14,7 @@ export type RoleName = (typeof ALL_ROLES)[number];
 /** Display-name overrides (internal role → what the UI shows). */
 export const ROLE_LABELS: Record<string, string> = {
   Validator: "Submission Agent",
+  LicenseAgent: "License Agent",
 };
 export const roleLabel = (r: string): string => ROLE_LABELS[r] ?? r;
 
@@ -20,7 +22,7 @@ export const roleLabel = (r: string): string => ROLE_LABELS[r] ?? r;
 export const ROLE_TONES: Record<string, BadgeTone> = {
   Admin: "danger", ProgramManager: "danger", TeamLead: "warning",
   Closer: "success", JrCloser: "success", SelfValidator: "success",
-  Validator: "info", Fronter: "brand", Verifier: "brand",
+  Validator: "info", LicenseAgent: "info", Fronter: "brand", Verifier: "brand",
   Followups: "neutral", Correspondence: "neutral", Winbacks: "neutral",
 };
 

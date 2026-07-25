@@ -183,6 +183,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.PlanApproved).HasMaxLength(120);
             e.Property(x => x.DeclineReason).HasMaxLength(500);
             e.HasIndex(x => new { x.AgencyId, x.ValidatorStatus });
+            // Per-agency serial: unique among live rows only (soft-deleted rows keep their number
+            // for stable history but must not block re-use / collide with the filtered index).
+            e.HasIndex(x => new { x.AgencyId, x.SaleNumber })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<LeadApplication>(e =>

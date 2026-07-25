@@ -16,4 +16,11 @@ public interface ICommissionRule
 public interface ICommissionEngine
 {
     Task<IReadOnlyList<CommissionLine>> CalculateForSaleAsync(Sale sale, CancellationToken ct = default);
+
+    /// <summary>
+    /// Runs the rule pipeline for a single explicit participant — used when an agent is attached
+    /// to a sale after it closed (e.g. a License Agent assigned by a Submission Agent at approval).
+    /// Only rules whose TargetRole matches <paramref name="role"/> emit lines.
+    /// </summary>
+    Task<IReadOnlyList<CommissionLine>> CalculateForAgentAsync(Sale sale, Guid agentId, string role, CancellationToken ct = default);
 }

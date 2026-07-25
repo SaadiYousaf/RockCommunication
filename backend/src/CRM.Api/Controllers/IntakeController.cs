@@ -107,7 +107,8 @@ public class IntakeController : ControllerBase
 
     public record ValidatorStatusBody(
         ValidatorStatus Status, string? CarrierApproved, decimal? CoverageApproved,
-        decimal? PremiumApproved, string? PlanApproved, string? DeclineReason);
+        decimal? PremiumApproved, string? PlanApproved, string? DeclineReason,
+        Guid? LicenseAgentUserId = null);
 
     [HttpPost("validate/{saleId:guid}/status")]
     [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
@@ -116,6 +117,6 @@ public class IntakeController : ControllerBase
         Guard.AgainstNull(body);
         return Ok(await _mediator.Send(new SetValidatorStatusCommand(
             saleId, body.Status, body.CarrierApproved, body.CoverageApproved,
-            body.PremiumApproved, body.PlanApproved, body.DeclineReason), ct));
+            body.PremiumApproved, body.PlanApproved, body.DeclineReason, body.LicenseAgentUserId), ct));
     }
 }

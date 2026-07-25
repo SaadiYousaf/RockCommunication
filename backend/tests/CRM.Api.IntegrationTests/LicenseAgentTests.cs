@@ -1,0 +1,130 @@
+using System.Net;
+using System.Net.Http.Json;
+
+namespace CRM.Api.IntegrationTests;
+
+public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
+{
+    private readonly CrmWebAppFactory _factory;
+    public LicenseAgentTests(CrmWebAppFactory factory) => _factory = factory;
+
+    private static Task<HttpClient> SuperAdmin(CrmWebAppFactory f) => f.LoginAsync("superadmin", "SuperAdmin@123!");
+
+    [Fact]
+    public async Task SuperAdmin_can_provision_and_list_submission_and_license_agents()
+    {
+        var sa = await SuperAdmin(_factory);
+
+        // Central submission agent (SMH-level).
+        var subEmail = $"sub-{Guid.NewGuid():N}@crm.local";
+        var sub = await sa.PostJsonAsync("/api/agencies/submission-agents", new { name = "Sam Submit", email = subEmail });
+        Assert.NotEqual(Guid.Empty, sub.GetProperty("id").GetGuid());
+
+        var subs = await sa.GetJsonAsync("/api/agencies/submission-agents");
+        Assert.Contains(subs.EnumerateArray(), a => a.GetProperty("email").GetString() == subEmail);
+
+        // License agent inside an agency.
+        var agencies = await sa.GetJsonAsync("/api/agencies");
+        var agencyId = agencies.EnumerateArray().First().GetProperty("id").GetGuid();
+
+        var laEmail = $"la-{Guid.NewGuid():N}@crm.local";
+        var la = await sa.PostJsonAsync($"/api/agencies/{agencyId}/license-agents", new { name = "Lee Agent", email = laEmail });
+        Assert.NotEqual(Guid.Empty, la.GetProperty("id").GetGuid());
+
+        var agents = await sa.GetJsonAsync($"/api/agencies/{agencyId}/license-agents");
+        Assert.Contains(agents.EnumerateArray(), a => a.GetProperty("email").GetString() == laEmail);
+
+        // Agency options power the approval popup's Agency picker.
+        var options = await sa.GetJsonAsync("/api/agencies/options");
+        Assert.Contains(options.EnumerateArray(), o => o.GetProperty("id").GetGuid() == agencyId);
+    }
+
+    [Fact]
+    public async Task Agency_admin_cannot_provision_license_agents_or_list_submission_agents()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var create = await admin.PostAsJsonAsync($"/api/agencies/{agencyId}/license-agents",
+            new { name = "Nope", email = $"nope-{Guid.NewGuid():N}@crm.local" });
+        Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
+
+        var subs = await admin.GetAsync("/api/agencies/submission-agents");
+        Assert.Equal(HttpStatusCode.Forbidden, subs.StatusCode);
+    }
+
+    [Fact]
+    public async Task Approval_assigns_license_agent_pays_commission_and_stamps_serials()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        // A License Agent in this agency (provisioned by SuperAdmin).
+        var sa = await SuperAdmin(_factory);
+        var la = await sa.PostJsonAsync($"/api/agencies/{agencyId}/license-agents",
+            new { name = "Assign Me", email = $"la-{Guid.NewGuid():N}@crm.local" });
+        var licenseAgentId = la.GetProperty("id").GetGuid();
+
+        // A validator (Submission Agent) in this agency, with a known password so we can act as them.
+        var valName = $"val{Guid.NewGuid():N}".Substring(0, 14);
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{valName}@crm.local", userName = valName,
+            password = "Val@1234!", agencyId, roles = new[] { "Validator" }
+        });
+        var validator = await _factory.LoginAsync(valName, "Val@1234!");
+
+        var firstSale = await RecordSaleAsync(admin, "5550000001");
+        var secondSale = await RecordSaleAsync(admin, "5550000002");
+
+        // Guard: assigning a non-License-Agent (the admin) is rejected.
+        var badApprove = await validator.PostAsJsonAsync($"/api/intake/validate/{firstSale}/status", new
+        {
+            status = "Approved", carrierApproved = "AETNA", coverageApproved = 25000m,
+            premiumApproved = 250m, planApproved = "PlanA",
+            licenseAgentUserId = me.GetProperty("id").GetGuid()
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, badApprove.StatusCode);
+
+        // Valid approval assigns the license agent.
+        await validator.PostJsonAsync($"/api/intake/validate/{firstSale}/status", new
+        {
+            status = "Approved", carrierApproved = "AETNA", coverageApproved = 25000m,
+            premiumApproved = 250m, planApproved = "PlanA",
+            licenseAgentUserId = licenseAgentId
+        });
+
+        // The sales list surfaces the assignment, commission and per-agency serials.
+        var sales = await admin.GetJsonAsync("/api/sales?take=100");
+        var items = sales.GetProperty("items").EnumerateArray().ToList();
+
+        var first = items.First(i => i.GetProperty("id").GetGuid() == firstSale);
+        Assert.False(first.GetProperty("licenseAgentUserId").ValueKind == System.Text.Json.JsonValueKind.Null,
+            "license agent should be assigned");
+        Assert.True(first.GetProperty("commissionEarned").GetDecimal() > 0, "license agent commission should be recorded");
+
+        var s1 = items.First(i => i.GetProperty("id").GetGuid() == firstSale).GetProperty("saleNumber").GetInt32();
+        var s2 = items.First(i => i.GetProperty("id").GetGuid() == secondSale).GetProperty("saleNumber").GetInt32();
+        Assert.True(s1 > 0 && s2 > 0 && s1 != s2, $"per-agency serials must be positive and distinct (got {s1}, {s2})");
+    }
+
+    /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.</summary>
+    private async Task<Guid> RecordSaleAsync(HttpClient admin, string phone)
+    {
+        var lead = await admin.PostJsonAsync("/api/leads", new
+        {
+            firstName = "Serial", lastName = "Case", phoneNumber = phone, email = $"{phone}@crm.local"
+        });
+        var leadId = lead.GetProperty("id").GetGuid();
+        await admin.PostJsonAsync($"/api/leads/{leadId}/transition", new { toStage = "Fronted", disposition = "Interested" });
+        await admin.PostJsonAsync($"/api/leads/{leadId}/transition", new { toStage = "Verified", disposition = "Interested" });
+        var sale = await admin.PostJsonAsync("/api/sales", new
+        {
+            leadId, carrier = "AETNA", policyNumber = "POL-LA", monthlyPremium = 250m,
+            routingNumber = "011000015", accountNumber = "1234567800", accountType = "checking"
+        });
+        return sale.GetProperty("id").GetGuid();
+    }
+}

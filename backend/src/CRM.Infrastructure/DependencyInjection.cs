@@ -253,6 +253,7 @@ public static class DependencyInjection
         services.AddScoped<ICommissionRule, CloserFlatRateRule>();
         services.AddScoped<ICommissionRule, JrCloserSplitRule>();
         services.AddScoped<ICommissionRule, ValidatorBonusRule>();
+        services.AddScoped<ICommissionRule, LicenseAgentApprovalRule>();
         services.AddScoped<ICommissionRule, HighPremiumKickerRule>();
         services.AddScoped<ICommissionEngine, CommissionEngine>();
 

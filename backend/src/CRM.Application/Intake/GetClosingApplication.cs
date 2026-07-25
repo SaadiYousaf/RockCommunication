@@ -5,6 +5,7 @@ using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.Intake;
 
@@ -49,13 +50,21 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
     public async Task<ClosingApplicationView> Handle(GetClosingApplicationQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
-        var lead = await _db.Leads.FirstOrDefaultAsync(
-            l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
+        // A central (SMH-level) Submission Agent reviews closing applications across ALL agencies
+        // to copy them into the carrier portal. That read bypasses the tenant filter, so re-add
+        // the soft-delete predicate by hand. Agency-scoped users stay pinned to their own agency.
+        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
+
+        var lead = (central
+            ? await _db.Leads.IgnoreQueryFilters().FirstOrDefaultAsync(l => l.Id == request.LeadId && !l.IsDeleted, ct)
+            : await _db.Leads.FirstOrDefaultAsync(l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct))
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
 
-        var a = await _db.LeadApplications.FirstOrDefaultAsync(x => x.LeadId == lead.Id && x.AgencyId == _user.AgencyId, ct);
+        var a = central
+            ? await _db.LeadApplications.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.LeadId == lead.Id && !x.IsDeleted, ct)
+            : await _db.LeadApplications.FirstOrDefaultAsync(x => x.LeadId == lead.Id && x.AgencyId == _user.AgencyId, ct);
 
         LeadApplicationDto? appDto = a is null ? null : new LeadApplicationDto(
             a.HealthConditions, a.Gender, a.Age, a.SmokerStatus, a.Name, a.DateOfBirth, a.Address,

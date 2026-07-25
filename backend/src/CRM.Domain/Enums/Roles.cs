@@ -35,6 +35,12 @@ public static class Roles
     public const string Validator = "Validator";
     public const string SelfValidator = "SelfValidator";
 
+    /// <summary>
+    /// Agency-level licensed agent. Belongs to an agency (CallCenterId = null) and can be
+    /// assigned a sale by a Submission Agent at approval; earns commission on assignment.
+    /// </summary>
+    public const string LicenseAgent = "LicenseAgent";
+
     public const string Followups = "Followups";
     public const string Correspondence = "Correspondence";
     public const string Winbacks = "Winbacks";
@@ -47,6 +53,7 @@ public static class Roles
         ProgramManager, TeamLead,
         Fronter, Verifier,
         JrCloser, Closer, Validator, SelfValidator,
+        LicenseAgent,
         Followups, Correspondence, Winbacks
     };
 
@@ -59,6 +66,15 @@ public static class Roles
     /// <summary>True if any of the given roles makes two-factor authentication mandatory.</summary>
     public static bool TwoFactorMandatory(IEnumerable<string> roles) =>
         roles.Any(r => RequireTwoFactor.Contains(r, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// A "central" (SMH-level) Submission Agent: holds the <see cref="Validator"/> role but is
+    /// bound to no agency (empty/none). These validate and approve sales across ALL agencies and
+    /// read cross-tenant PII, so 2FA is mandatory for them (unlike agency-scoped validators).
+    /// </summary>
+    public static bool IsCentralSubmissionAgent(Guid? agencyId, IEnumerable<string> roles) =>
+        (agencyId is null || agencyId == Guid.Empty) &&
+        roles.Contains(Validator, StringComparer.OrdinalIgnoreCase);
 }
 
 public enum WorkflowStage
