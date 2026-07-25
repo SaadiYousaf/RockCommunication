@@ -98,6 +98,7 @@ public class CallCenterPlusController : ControllerBase
 
     public record EnrollBody(Guid CadenceId, Guid LeadId);
     [HttpPost("cadences/enroll")]
+    [HasPermission(Permissions.LeadsAssign)]
     public async Task<IActionResult> EnrollCadence([FromBody] EnrollBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
@@ -107,6 +108,7 @@ public class CallCenterPlusController : ControllerBase
 
     public record StopEnrollBody(string? Reason);
     [HttpPost("cadences/enrollments/{id:guid}/stop")]
+    [HasPermission(Permissions.LeadsAssign)]
     public async Task<IActionResult> StopEnroll(Guid id, [FromBody] StopEnrollBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
@@ -134,6 +136,7 @@ public class CallCenterPlusController : ControllerBase
 
     public record DropBody(Guid LeadId, Guid VoicemailAssetId, Guid? CallRecordId);
     [HttpPost("voicemails/drop")]
+    [HasPermission(Permissions.AgentPanelUse)]
     public async Task<IActionResult> DropVoicemail([FromBody] DropBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);

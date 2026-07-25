@@ -100,9 +100,14 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
         var breakdown = scoring.Breakdown
             .Select(b => new LeadScoreLineDto(b.Rule, b.Points, b.Note)).ToList();
 
-        var age = lead.DateOfBirth is null ? (int?)null
-            : (DateTime.UtcNow.Year - lead.DateOfBirth.Value.Year
-               - (DateTime.UtcNow.DayOfYear < lead.DateOfBirth.Value.DayOfYear ? 1 : 0));
+        // Exact calendar age — DayOfYear comparison is off by a day across leap-year boundaries.
+        int? age = null;
+        if (lead.DateOfBirth is { } dob)
+        {
+            var today = DateTime.UtcNow.Date;
+            age = today.Year - dob.Date.Year;
+            if (dob.Date > today.AddYears(-age.Value)) age--;
+        }
 
         return new LeadDetailDto(
             lead.Id,

@@ -31,6 +31,7 @@ public class IntegrationsController : ControllerBase
     }
 
     [HttpPost("jornaya/verify/{leadId:guid}")]
+    [HasPermission(Permissions.AgentPanelUse)]
     public async Task<IActionResult> Verify(Guid leadId, CancellationToken ct)
         => Ok(await _mediator.Send(new VerifyJornayaCommand(leadId), ct));
 

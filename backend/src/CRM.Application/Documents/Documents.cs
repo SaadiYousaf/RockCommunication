@@ -128,8 +128,10 @@ public class DocumentsHandler :
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
-        // TenantEntity global filter already scopes to the caller's agency/office.
+        // Explicit agency scope — a SuperAdmin bypasses the tenant query filter, so relying on
+        // it alone would leak every agency's documents. (SuperAdmin has Guid.Empty → sees none.)
         return await _db.Documents
+            .Where(d => d.AgencyId == _user.AgencyId)
             .OrderByDescending(d => d.CreatedAt)
             .Select(d => new DocumentDto(
                 d.Id, d.Name, d.OriginalFileName, d.ContentType, d.Size, d.Kind, d.UploadedByUserId, d.CreatedAt))

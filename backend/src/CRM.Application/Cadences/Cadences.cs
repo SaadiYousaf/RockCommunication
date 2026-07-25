@@ -110,7 +110,9 @@ public class CadenceHandler :
             if (existing.Status == "Active") return Unit.Value;
             existing.Status = "Active";
             existing.CurrentStepOrder = 0;
-            existing.NextRunAt = DateTime.UtcNow.AddMinutes(cadence.Steps.OrderBy(s => s.Order).First().DelayMinutes);
+            // FirstOrDefault: a cadence can be active with zero steps — re-enrolling must not throw.
+            var reDelay = cadence.Steps.OrderBy(s => s.Order).FirstOrDefault()?.DelayMinutes ?? 0;
+            existing.NextRunAt = DateTime.UtcNow.AddMinutes(reDelay);
             await _db.SaveChangesAsync(ct);
             return Unit.Value;
         }

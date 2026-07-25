@@ -83,7 +83,7 @@ export function LeadListsPage() {
     <>
       <PageHeader
         title="Lead lists"
-        description="Group leads into named lists, import via CSV (DNC-scrubbed automatically), and run cadences against them."
+        description="Group leads into named lists and import them via CSV (automatically scrubbed against your DNC list)."
         actions={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button></Can>}
       />
 

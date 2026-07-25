@@ -52,8 +52,8 @@ export function CommissionsPage() {
     const params = new URLSearchParams();
     if (runId) params.set("runId", runId);
     else { params.set("from", from); params.set("to", to); }
-    const token = localStorage.getItem("auth")
-      ? JSON.parse(localStorage.getItem("auth")!)?.accessToken : null;
+    let token: string | null = null;
+    try { token = JSON.parse(localStorage.getItem("auth") ?? "null")?.accessToken ?? null; } catch { /* malformed */ }
     if (!token) { toast.error("Not authenticated"); return; }
     fetch(`${API_URL}/api/sales/payroll-export?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },

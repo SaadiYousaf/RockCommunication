@@ -176,9 +176,8 @@ export function LeadsPage() {
   function exportCsv() {
     const params = new URLSearchParams();
     if (filter !== "All") params.set("stage", filter);
-    const token = localStorage.getItem("auth")
-      ? JSON.parse(localStorage.getItem("auth")!)?.accessToken
-      : null;
+    let token: string | null = null;
+    try { token = JSON.parse(localStorage.getItem("auth") ?? "null")?.accessToken ?? null; } catch { /* malformed */ }
     if (!token) { toast.error("Not authenticated"); return; }
     fetch(`${API_URL}/api/leads/export.csv?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },

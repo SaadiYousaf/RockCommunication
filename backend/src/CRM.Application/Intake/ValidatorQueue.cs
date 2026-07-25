@@ -264,8 +264,11 @@ public class ValidatorQueueHandler :
             .FirstOrDefault();
         if (line is null) return; // e.g. internal sale — no license-agent commission
 
-        var existing = await _db.CommissionEntries.FirstOrDefaultAsync(
-            c => c.SaleId == sale.Id && c.RuleName == line.RuleName, ct);
+        // IgnoreQueryFilters + explicit agency: a central Submission Agent has Guid.Empty as their
+        // tenant, so the filtered lookup would never match the sale's real-agency entry and every
+        // re-approval would insert a DUPLICATE commission. Scope to the sale's agency instead.
+        var existing = await _db.CommissionEntries.IgnoreQueryFilters().FirstOrDefaultAsync(
+            c => c.SaleId == sale.Id && c.AgencyId == sale.AgencyId && c.RuleName == line.RuleName, ct);
         if (existing is null)
         {
             _db.CommissionEntries.Add(new CommissionEntry
