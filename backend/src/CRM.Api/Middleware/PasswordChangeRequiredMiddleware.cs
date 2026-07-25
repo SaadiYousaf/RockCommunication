@@ -19,6 +19,8 @@ public class PasswordChangeRequiredMiddleware
     private static readonly string[] AllowedPaths =
     {
         "/api/auth/change-password",
+        // Re-authentication must stay reachable (the FE attaches the token to login too).
+        "/api/auth/login",
         "/api/auth/logout",
         "/api/auth/me",
         "/api/auth/refresh",

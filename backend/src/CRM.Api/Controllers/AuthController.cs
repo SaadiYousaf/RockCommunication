@@ -86,6 +86,7 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [DisableRateLimiting]
     [HttpPost("2fa/setup")]
     public async Task<ActionResult<TwoFactorSetupResponse>> Setup2Fa(CancellationToken ct)
     {
@@ -113,12 +114,15 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [DisableRateLimiting]
     [HttpGet("2fa/status")]
     public async Task<ActionResult<TwoFactorStatusDto>> Get2FaStatus(CancellationToken ct)
     {
         if (_user.UserId is null) return Forbid();
         return Ok(await _identity.GetTwoFactorStatusAsync(_user.UserId.Value, ct));
     }
+
+    [DisableRateLimiting]
 
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResult>> Refresh([FromBody] RefreshRequest req, CancellationToken ct)
@@ -127,6 +131,8 @@ public class AuthController : ControllerBase
         var result = await _identity.RefreshTokenAsync(req.RefreshToken, ct);
         return result is null ? Unauthorized() : Ok(result);
     }
+
+    [DisableRateLimiting]
 
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest req, CancellationToken ct)
@@ -139,6 +145,7 @@ public class AuthController : ControllerBase
     public record TwoFactorMethodBody(string Method);
 
     [Authorize]
+    [DisableRateLimiting]
     [HttpPut("2fa/method")]
     public async Task<IActionResult> SetTwoFactorMethod(
         [FromBody] TwoFactorMethodBody body,
@@ -204,6 +211,7 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [DisableRateLimiting]
     [HttpGet("me")]
     public async Task<ActionResult<UserSummaryDto>> Me(CancellationToken ct)
     {

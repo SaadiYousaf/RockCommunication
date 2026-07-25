@@ -138,14 +138,16 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
-    // ── Strict bucket for credential-touching endpoints. Apply via [EnableRateLimiting("auth")]
-    //   on AuthController — 5 attempts / minute per IP. Standard brute-force protection.
+    // ── Strict bucket for credential-touching endpoints. Applied per-action via
+    //   [EnableRateLimiting("auth")] on the AuthController; read/session endpoints (me, refresh,
+    //   2fa status/method/setup, logout) opt OUT with [DisableRateLimiting] so normal onboarding
+    //   and token refresh don't burn the login budget. 10 attempts / minute per IP.
     options.AddPolicy("auth", httpContext =>
     {
         var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
         return RateLimitPartition.GetFixedWindowLimiter("auth-ip:" + ip, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = builder.Configuration.GetValue("RateLimits:Auth:PerMinute", 5),
+            PermitLimit = builder.Configuration.GetValue("RateLimits:Auth:PerMinute", 10),
             Window      = TimeSpan.FromMinutes(1),
             QueueLimit  = 0,
         });

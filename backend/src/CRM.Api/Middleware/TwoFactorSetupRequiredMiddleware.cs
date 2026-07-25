@@ -24,7 +24,11 @@ public class TwoFactorSetupRequiredMiddleware
         "/api/auth/2fa/status",
         "/api/auth/2fa/method",
         "/api/auth/2fa/email/send-otp",
+        "/api/auth/2fa/verify",
         "/api/auth/change-password",
+        // Re-authentication MUST stay reachable — the FE attaches the (setup-required) token to
+        // every request incl. login, so without these a stuck user can never log back in to enrol.
+        "/api/auth/login",
         "/api/auth/logout",
         "/api/auth/me",
         "/api/auth/refresh",

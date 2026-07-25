@@ -29,6 +29,21 @@ public class BulkAssignLeadsValidator : AbstractValidator<BulkAssignLeadsCommand
     }
 }
 
+public class BulkSetStageValidator : AbstractValidator<BulkSetStageCommand>
+{
+    public BulkSetStageValidator()
+        => RuleFor(x => x.LeadIds).NotEmpty().Must(x => x.Count <= 500).WithMessage("Max 500 leads per bulk action.");
+}
+
+public class BulkEnrollCadenceValidator : AbstractValidator<BulkEnrollCadenceCommand>
+{
+    public BulkEnrollCadenceValidator()
+    {
+        RuleFor(x => x.LeadIds).NotEmpty().Must(x => x.Count <= 500).WithMessage("Max 500 leads per bulk action.");
+        RuleFor(x => x.CadenceId).NotEmpty();
+    }
+}
+
 public class BulkLeadHandler :
     IRequestHandler<BulkAssignLeadsCommand, BulkLeadActionResult>,
     IRequestHandler<BulkSetStageCommand, BulkLeadActionResult>,
@@ -104,12 +119,19 @@ public class BulkLeadHandler :
         if (!cadence.IsActive) throw new ConflictException("Cadence not active.");
 
         var firstStepDelay = cadence.Steps.OrderBy(s => s.Order).Select(s => s.DelayMinutes).FirstOrDefault();
+
+        // Only enroll leads that actually belong to the caller's agency — never trust the raw id list
+        // (a foreign/nonexistent id would otherwise create an enrollment the runner job then acts on).
+        var owned = await _db.Leads
+            .Where(l => request.LeadIds.Contains(l.Id) && l.AgencyId == _user.AgencyId)
+            .Select(l => l.Id).ToListAsync(ct);
+
         var existing = await _db.CadenceEnrollments
-            .Where(e => e.CadenceId == cadence.Id && request.LeadIds.Contains(e.LeadId))
+            .Where(e => e.CadenceId == cadence.Id && owned.Contains(e.LeadId))
             .Select(e => e.LeadId).ToListAsync(ct);
 
         var updated = 0;
-        foreach (var lid in request.LeadIds.Except(existing))
+        foreach (var lid in owned.Except(existing))
         {
             _db.CadenceEnrollments.Add(new Domain.Entities.CadenceEnrollment
             {

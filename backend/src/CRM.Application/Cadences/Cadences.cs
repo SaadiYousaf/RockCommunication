@@ -103,6 +103,12 @@ public class CadenceHandler :
             ?? throw new NotFoundException(nameof(Cadence), request.CadenceId);
         if (!cadence.IsActive) throw new ConflictException("Cadence not active.");
 
+        // The lead MUST belong to the caller's agency — otherwise a manager in agency A could enroll
+        // another tenant's lead and drive automated SMS/email against it (the runner job has no user
+        // context, so it can't re-check tenancy).
+        _ = await _db.Leads.FirstOrDefaultAsync(l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
+            ?? throw new NotFoundException("Lead", request.LeadId);
+
         var existing = await _db.CadenceEnrollments
             .FirstOrDefaultAsync(e => e.CadenceId == cadence.Id && e.LeadId == request.LeadId, ct);
         if (existing is not null)
