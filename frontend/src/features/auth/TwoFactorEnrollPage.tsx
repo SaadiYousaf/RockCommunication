@@ -116,7 +116,7 @@ export function TwoFactorEnrollPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold mb-1">Two-factor authentication</h1>
-      <p className="text-sm text-slate-600 mb-6">
+      <p className="text-sm text-ink-600 mb-6">
         Add a second step at sign-in to protect your account, even if your password is stolen.
       </p>
 
@@ -150,7 +150,7 @@ export function TwoFactorEnrollPage() {
                     {disabling ? "Disabling…" : "Yes, turn off"}
                   </button>
                   <button
-                    className="text-sm bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded"
+                    className="text-sm bg-white border border-ink-300 text-ink-700 hover:bg-ink-50 px-3 py-1.5 rounded"
                     onClick={() => setDisableConfirm(false)}>
                     Cancel
                   </button>
@@ -185,28 +185,28 @@ export function TwoFactorEnrollPage() {
       )}
 
       {!status?.enabled && step === "setup" && method === "Totp" && totpData && (
-        <div className="bg-white border border-slate-200 rounded-lg p-6 mt-6 space-y-5">
+        <div className="bg-white border border-ink-200 rounded-lg p-6 mt-6 space-y-5">
           <div>
             <div className="text-sm font-semibold mb-1">Step 1 — scan with your authenticator</div>
-            <p className="text-sm text-slate-600 mb-3">
+            <p className="text-sm text-ink-600 mb-3">
               Open your authenticator app (Google Authenticator, Authy, 1Password, etc.) and scan this QR code:
             </p>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 inline-block">
+            <div className="bg-ink-50 border border-ink-200 rounded-lg p-4 inline-block">
               {qrDataUrl ? (
                 <img src={qrDataUrl} alt="2FA QR code" className="w-60 h-60" />
               ) : (
-                <div className="w-60 h-60 grid place-items-center text-slate-400 text-sm">Generating QR…</div>
+                <div className="w-60 h-60 grid place-items-center text-ink-400 text-sm">Generating QR…</div>
               )}
             </div>
           </div>
 
-          <details className="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
+          <details className="bg-ink-50 border border-ink-200 rounded p-3 text-sm">
             <summary className="cursor-pointer font-medium">Can't scan? Enter the secret manually</summary>
             <div className="mt-2 flex gap-2 items-center">
               <code className="flex-1 font-mono text-xs bg-white border rounded px-2 py-1 break-all">
                 {totpData.secret}
               </code>
-              <button onClick={copySecret} className="bg-slate-900 text-white px-3 py-1 rounded text-xs">
+              <button onClick={copySecret} className="bg-ink-900 text-white px-3 py-1 rounded text-xs">
                 {secretCopied ? "Copied!" : "Copy"}
               </button>
             </div>
@@ -217,7 +217,7 @@ export function TwoFactorEnrollPage() {
             <form onSubmit={verify} className="flex flex-wrap gap-2 items-start">
               <input
                 inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                className="w-44 border border-slate-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
+                className="w-44 border border-ink-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
                 placeholder="000000" value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
                 required autoFocus
@@ -233,17 +233,17 @@ export function TwoFactorEnrollPage() {
       )}
 
       {!status?.enabled && step === "verify" && method === "EmailOtp" && (
-        <div className="bg-white border border-slate-200 rounded-lg p-6 mt-6 space-y-4">
+        <div className="bg-white border border-ink-200 rounded-lg p-6 mt-6 space-y-4">
           <div>
             <div className="text-sm font-semibold mb-1">Check your email</div>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-ink-600">
               We sent a 6-digit code to your account email. Enter it below to enable 2FA.
             </p>
           </div>
           <form onSubmit={verify} className="flex flex-wrap gap-2 items-center">
             <input
               inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-              className="w-44 border border-slate-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
+              className="w-44 border border-ink-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
               placeholder="000000" value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
               required autoFocus
@@ -252,7 +252,7 @@ export function TwoFactorEnrollPage() {
               disabled={enabling || code.length !== 6}>
               {enabling ? "Verifying…" : "Verify & enable"}
             </button>
-            <button type="button" className="text-sm text-slate-600 hover:text-slate-900 px-2 disabled:opacity-50"
+            <button type="button" className="text-sm text-ink-600 hover:text-ink-900 px-2 disabled:opacity-50"
               disabled={sendingOtp}
               onClick={async () => {
                 try {
@@ -287,8 +287,8 @@ export function TwoFactorEnrollPage() {
         </div>
       )}
 
-      <div className="mt-6 bg-slate-50 border border-slate-200 rounded p-4 text-xs text-slate-600">
-        <div className="font-medium text-slate-700 mb-1">🔒 Why this matters</div>
+      <div className="mt-6 bg-ink-50 border border-ink-200 rounded p-4 text-xs text-ink-600">
+        <div className="font-medium text-ink-700 mb-1">🔒 Why this matters</div>
         <p>
           Even if someone discovers your password, they can't sign in without this second factor.
           Use an authenticator app for the strongest protection — phishers can intercept email codes,
@@ -316,7 +316,7 @@ function Steps({ current }: { current: "choose" | "setup" | "verify" | "done" })
             className={`flex-1 px-3 py-1.5 rounded border ${
               state === "active" ? "bg-brand-700 text-white border-brand-700"
                 : state === "done" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                : "bg-white text-slate-500 border-slate-200"
+                : "bg-white text-ink-500 border-ink-200"
             }`}>
             <span className="font-mono mr-1">{i + 1}.</span>{s.label}
           </li>
@@ -333,7 +333,7 @@ function MethodCard({ icon, title, description, recommended, onPick, disabled }:
   return (
     <button
       onClick={onPick} disabled={disabled}
-      className="text-left bg-white border-2 border-slate-200 hover:border-brand-500 rounded-lg p-5 transition disabled:opacity-50">
+      className="text-left bg-white border-2 border-ink-200 hover:border-brand-500 rounded-lg p-5 transition disabled:opacity-50">
       <div className="flex items-center justify-between mb-2">
         <div className="text-3xl">{icon}</div>
         {recommended && (
@@ -342,8 +342,8 @@ function MethodCard({ icon, title, description, recommended, onPick, disabled }:
           </span>
         )}
       </div>
-      <div className="font-semibold text-slate-900">{title}</div>
-      <div className="text-sm text-slate-600 mt-1">{description}</div>
+      <div className="font-semibold text-ink-900">{title}</div>
+      <div className="text-sm text-ink-600 mt-1">{description}</div>
     </button>
   );
 }

@@ -70,7 +70,7 @@ export function CallDock() {
     : Math.floor((Date.now() - new Date(call.initiatedAt).getTime()) / 1000);
 
   return (
-    <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 w-auto sm:w-96 sm:max-w-[calc(100vw-2rem)] bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
+    <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 w-auto sm:w-96 sm:max-w-[calc(100vw-2rem)] bg-ink-900 text-white rounded-xl shadow-2xl border border-ink-700 overflow-hidden">
       <div className={`px-4 py-3 ${isInbound ? "bg-emerald-700" : "bg-brand-700"} flex items-center gap-3`}>
         <div className="h-8 w-8 rounded-full bg-white/20 grid place-items-center text-sm font-bold">
           {call.leadName.split(" ").map(n => n[0]).slice(0, 2).join("")}
@@ -126,7 +126,7 @@ export function CallDock() {
           <div className="grid grid-cols-3 gap-1 mb-2">
             {["1","2","3","4","5","6","7","8","9","*","0","#"].map(d => (
               <button key={d}
-                className="bg-slate-800 hover:bg-slate-700 rounded py-2 font-mono"
+                className="bg-ink-800 hover:bg-ink-700 rounded py-2 font-mono"
                 onClick={() => dtmf({ id: call.id, digits: d })}>{d}</button>
             ))}
           </div>
@@ -143,7 +143,7 @@ export function CallDock() {
             toast.error("SMS not sent", "Try again.");
           }
         }}>
-          <input className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm"
+          <input className="flex-1 bg-ink-800 border border-ink-700 rounded px-2 py-1 text-sm"
             placeholder="Quick SMS to lead..." value={smsBody} onChange={(e) => setSmsBody(e.target.value)} />
           <Button type="submit" variant="secondary" size="sm" leftIcon={<Icon name="send" size={14} />}>
             Send
@@ -167,7 +167,7 @@ function DockBtn({ children, onClick, active }: { children: ReactNode; onClick: 
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded py-2 text-sm transition ${active ? "bg-amber-500 text-slate-900" : "bg-slate-800 hover:bg-slate-700"}`}>
+      className={`inline-flex items-center justify-center gap-1.5 rounded py-2 text-sm transition ${active ? "bg-amber-500 text-ink-900" : "bg-ink-800 hover:bg-ink-700"}`}>
       {children}
     </button>
   );
@@ -177,8 +177,8 @@ function statusClass(status: string) {
   switch (status) {
     case "ringing": return "bg-amber-500/30 text-amber-200";
     case "answered": return "bg-emerald-500/30 text-emerald-200";
-    case "ended": return "bg-slate-500/30 text-slate-200";
-    default: return "bg-slate-500/30 text-slate-200";
+    case "ended": return "bg-ink-500/30 text-ink-200";
+    default: return "bg-ink-500/30 text-ink-200";
   }
 }
 
