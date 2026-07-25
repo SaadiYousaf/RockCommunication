@@ -8,7 +8,7 @@ import {
   useListSalesQuery, useListUsersQuery, type SalesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -130,6 +130,11 @@ export function SalesPage() {
               <div className="sm:col-span-2 rounded-lg border border-ink-200 bg-ink-50/50 p-3 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-ink-800">
                   <Icon name="shield" size={14} /> Bank account — validated by Lyons on submit
+                  <InfoHint title="Bank validation (Lyons)" side="bottom">
+                    On submit, Lyons validates the bank account and returns a code — 103 = cleared (the
+                    sale proceeds); 198 = flagged (attach a verification recording to proceed); any other
+                    code blocks submission.
+                  </InfoHint>
                   <Badge tone="neutral" variant="soft">typing only</Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -432,9 +437,17 @@ function SalesList() {
                     <div className="text-xs text-ink-500">${s.annualPremium.toLocaleString(undefined, { maximumFractionDigits: 0 })}/yr</div>
                   </TD>
                   <TD>
-                    <Badge tone={statusTone[s.status] ?? "neutral"} variant="soft" dot>
-                      {s.status}{s.isInternalSale ? " · internal" : ""}
-                    </Badge>
+                    <span className="inline-flex items-center gap-1">
+                      <Badge tone={statusTone[s.status] ?? "neutral"} variant="soft" dot>
+                        {s.status}{s.isInternalSale ? " · internal" : ""}
+                      </Badge>
+                      {s.isInternalSale && (
+                        <InfoHint title="Internal sale" side="left">
+                          Closed by/for an in-house agent rather than an external lead — flagged so it can
+                          be handled differently in commission and reporting.
+                        </InfoHint>
+                      )}
+                    </span>
                   </TD>
                   <TD className="text-ink-500 font-mono text-xs">{s.policyNumber ?? "—"}</TD>
                 </TR>

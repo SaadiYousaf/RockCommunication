@@ -7,7 +7,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader, Select,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Select,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -32,7 +32,15 @@ export function VerifyQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Received</TH><TH>Verifier status</TH>
+                  <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Received</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">
+                      Verifier status
+                      <InfoHint title="Verifier statuses" side="bottom">
+                        The outcome of verifying a fronted lead. 'Verified' promotes it to the closer queue; Not interested / DNC / Busy / Call Back / Dead Air keep it out of the closer queue.
+                      </InfoHint>
+                    </span>
+                  </TH>
                 </TR>
               </THead>
               <TBody>

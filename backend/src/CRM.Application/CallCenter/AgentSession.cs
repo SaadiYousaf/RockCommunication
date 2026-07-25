@@ -56,12 +56,16 @@ public class AgentSessionHandler :
         var session = new AgentSession
         {
             AgencyId = _user.AgencyId!.Value,
+            // Empty = an agency-level user with no call centre (visible only to agency-level
+            // supervisors); a pinned agent stamps their own call centre so it stays isolated.
+            CallCenterId = _user.CallCenterId ?? Guid.Empty,
             UserId = _user.UserId!.Value
         };
         _db.AgentSessions.Add(session);
         _db.AgentStatusLogs.Add(new AgentStatusLog
         {
             AgencyId = session.AgencyId,
+            CallCenterId = session.CallCenterId,
             UserId = session.UserId,
             SessionId = session.Id,
             Status = AgentStatus.Available,
@@ -86,6 +90,7 @@ public class AgentSessionHandler :
         _db.AgentStatusLogs.Add(new AgentStatusLog
         {
             AgencyId = session.AgencyId,
+            CallCenterId = session.CallCenterId,
             UserId = session.UserId,
             SessionId = session.Id,
             Status = AgentStatus.Offline,
@@ -125,6 +130,7 @@ public class AgentSessionHandler :
         _db.AgentStatusLogs.Add(new AgentStatusLog
         {
             AgencyId = session.AgencyId,
+            CallCenterId = session.CallCenterId,
             UserId = session.UserId,
             SessionId = session.Id,
             Status = request.Status,

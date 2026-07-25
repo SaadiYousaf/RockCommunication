@@ -3,7 +3,9 @@ using CRM.Domain.Enums;
 
 namespace CRM.Domain.Entities;
 
-public class AgentSession : TenantEntity
+// CallCenterEntity (not TenantEntity) so agent presence is isolated per call centre — a
+// call-centre-scoped supervisor must not see sibling call centres' live agents.
+public class AgentSession : CallCenterEntity
 {
     public Guid UserId { get; set; }
     public DateTime ClockInAt { get; set; } = DateTime.UtcNow;
@@ -14,7 +16,7 @@ public class AgentSession : TenantEntity
     public TimeSpan TotalWrapUp { get; set; }
 }
 
-public class AgentStatusLog : TenantEntity
+public class AgentStatusLog : CallCenterEntity
 {
     public Guid UserId { get; set; }
     public Guid? SessionId { get; set; }

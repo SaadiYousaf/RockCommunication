@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -77,6 +77,13 @@ export function CallCentersPage() {
     <>
       <PageHeader
         title="Call Centers"
+        badge={
+          <InfoHint title="Agency vs call centre" side="right">
+            An agency is a top-level tenant; a call centre is the finer data-isolation unit inside it.
+            Pipeline data belongs to one call centre, and call-centre-scoped agents see only their own.
+            Super Admins pick which agency to manage; agency admins are pinned to their own.
+          </InfoHint>
+        }
         description="Operational units within your agency. Assign agents to a call center to isolate their pipeline data."
         actions={
           <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setShowNew(true)}>

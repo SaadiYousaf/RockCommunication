@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
@@ -51,7 +51,14 @@ export function CloseQueuePage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Application</TH><TH></TH></TR>
+                <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>
+                  <span className="inline-flex items-center gap-1">
+                    Application
+                    <InfoHint title="Closer statuses" side="bottom">
+                      {"The closer's outcome for a verified lead. 'Complete and Sold' records the sale and sends it to the submission queue; Lost on Social / Lost on Account / DNC Lead / Not Interested (callback) do not create a sale."}
+                    </InfoHint>
+                  </span>
+                </TH><TH></TH></TR>
               </THead>
               <TBody>
                 {filtered.map((l) => (

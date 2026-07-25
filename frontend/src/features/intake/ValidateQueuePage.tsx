@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import {
@@ -45,7 +45,16 @@ export function ValidateQueuePage() {
               <THead>
                 <TR>
                   <TH>Customer</TH><TH>Agency</TH><TH>Carrier</TH><TH>Premium</TH><TH>Closer</TH>
-                  <TH>Agent</TH><TH>Status</TH><TH>Sold</TH><TH></TH>
+                  <TH>Agent</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">
+                      Status
+                      <InfoHint title="Submission statuses" side="bottom">
+                        Completed (submitted, awaiting review); Approved (validated — approval details captured); Active Paid (funded); No update in commission; Bad Bank; NSF (insufficient funds); Decline; Client Cancelled; Error in application information (banking/payor or identity).
+                      </InfoHint>
+                    </span>
+                  </TH>
+                  <TH>Sold</TH><TH></TH>
                 </TR>
               </THead>
               <TBody>
@@ -214,9 +223,19 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
   return (
     <Modal open onClose={onClose} title={`Submission — ${sale.leadName}`} description={`${sale.carrier} · ${money(sale.monthlyPremium)}/mo · closer ${sale.closerName ?? "—"}`} size="lg">
       <form onSubmit={submit} className="space-y-4">
-        <Select label="Submission status" required value={status} onChange={(e) => setStatus(e.target.value as ValidatorStatusValue)}>
-          {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </Select>
+        <div>
+          <div className="flex items-center gap-1 mb-1.5">
+            <span className="text-[12px] font-medium text-ink-700 leading-none">
+              Submission status<span className="text-rose-500 ml-0.5" aria-hidden>*</span>
+            </span>
+            <InfoHint title="Submission statuses" side="right">
+              Completed (submitted, awaiting review); Approved (validated — approval details captured); Active Paid (funded); No update in commission; Bad Bank; NSF (insufficient funds); Decline; Client Cancelled; Error in application information (banking/payor or identity).
+            </InfoHint>
+          </div>
+          <Select required value={status} onChange={(e) => setStatus(e.target.value as ValidatorStatusValue)}>
+            {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </Select>
+        </div>
 
         {status === "Approved" && (
           <>
@@ -228,10 +247,18 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
               {/* Pick the agency first, then a License Agent from that agency. */}
-              <Select label="Agency" value={agencyId}
-                onChange={(e) => { setAgencyId(e.target.value); setLicenseAgentUserId(""); }}>
-                {agencyList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
+              <div>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <span className="text-[12px] font-medium text-ink-700 leading-none">Agency</span>
+                  <InfoHint title="Assigning a License Agent" side="right">
+                    The License Agent must belong to the selected agency, so Agency defaults to the sale's own. Central submission agents can pick any agency; agency-scoped validators are pinned to their own.
+                  </InfoHint>
+                </div>
+                <Select value={agencyId}
+                  onChange={(e) => { setAgencyId(e.target.value); setLicenseAgentUserId(""); }}>
+                  {agencyList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </Select>
+              </div>
               <Select label="License Agent" value={licenseAgentUserId}
                 disabled={!agencyId || agentsLoading}
                 onChange={(e) => setLicenseAgentUserId(e.target.value)}>

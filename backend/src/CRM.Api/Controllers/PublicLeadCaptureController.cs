@@ -1,3 +1,5 @@
+using CRM.Api.Authorization;
+using CRM.Application.Common.Authorization;
 using CRM.Application.Lists;
 using CRM.Domain.Common;
 using MediatR;
@@ -56,6 +58,9 @@ public class PublicLeadCaptureController : ControllerBase
 
 [ApiController]
 [Authorize]
+// Provisioning a public lead-ingestion endpoint (and reading its signing secret) is a
+// privileged, governable action — gate it explicitly instead of relying only on the handler.
+[HasPermission(Permissions.CampaignsManage)]
 [Route("api/admin/public-endpoints")]
 public class PublicEndpointAdminController : ControllerBase
 {
