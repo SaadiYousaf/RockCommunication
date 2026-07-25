@@ -305,6 +305,11 @@ function SidebarContent({
   mobile?: boolean;
   onClose?: () => void;
 }) {
+  // Show which agency the signed-in user belongs to (SuperAdmin/central users
+  // have no agency and see the platform label instead).
+  const agencyName = useSelector((s: RootState) => s.auth.user?.agencyName);
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
+  const orgLabel = agencyName || (isSuperAdmin ? "Platform Admin" : "Insurance Agency");
   return (
     <>
       {/* Soft brand glow — bottom corner only, very subtle */}
@@ -320,7 +325,7 @@ function SidebarContent({
         {!collapsed && (
           <div className="leading-tight">
             <div className="text-sm font-semibold text-ink-900 tracking-tight">Rock Communication</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Insurance Agency</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500 truncate max-w-[150px]" title={orgLabel}>{orgLabel}</div>
           </div>
         )}
         {mobile && (

@@ -130,6 +130,8 @@ public class AgenciesHandler :
             IsActive = true
         };
         _db.Agencies.Add(agency);
+        // Every agency needs baseline dispositions or its agents can't wrap up calls.
+        _db.WrapUpCodes.AddRange(CRM.Domain.Seeding.DefaultWrapUpCodes.For(agency.Id));
         await _db.SaveChangesAsync(ct);
 
         // Provision the Agency CEO through the shared onboarding service: temporary

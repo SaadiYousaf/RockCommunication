@@ -103,6 +103,15 @@ public static class DbSeeder
         // Ensure every agency has a default call center and stamp any pre-existing pipeline
         // rows (including freshly-seeded dummy data) onto it. Additive + idempotent.
         await CallCenterBackfill.RunAsync(db);
+
+        // Ensure every agency has baseline dispositions (wrap-up codes). Agencies created via
+        // the UI before this seeding existed had none, so their agents couldn't wrap up calls.
+        // Additive + idempotent: only agencies with zero codes get the defaults.
+        var agencyIds = await db.Agencies.Select(a => a.Id).ToListAsync();
+        var agenciesWithCodes = await db.WrapUpCodes.Select(w => w.AgencyId).Distinct().ToListAsync();
+        foreach (var aid in agencyIds.Except(agenciesWithCodes))
+            db.WrapUpCodes.AddRange(CRM.Domain.Seeding.DefaultWrapUpCodes.For(aid));
+        await db.SaveChangesAsync();
     }
 
     private static async Task SeedPermissionsAsync(AppDbContext db, RoleManager<ApplicationRole> roles)

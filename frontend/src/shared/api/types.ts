@@ -3,6 +3,8 @@ export interface UserSummary {
   userName: string;
   email: string;
   agencyId: string;
+  /** The user's agency display name (null for SuperAdmin / central users with no agency). */
+  agencyName?: string | null;
   roles: string[];
   modules: string[];
   /** True for accounts created with a temporary password — they must change it before using the app. */

@@ -363,8 +363,15 @@ public class IdentityService : IIdentityService
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), modules,
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
             CallCenterId: user.CallCenterId,
-            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles));
+            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles),
+            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct));
     }
+
+    /// <summary>Agency display name for a user, or null for SuperAdmin / central users (Guid.Empty).</summary>
+    private Task<string?> ResolveAgencyNameAsync(Guid agencyId, CancellationToken ct)
+        => agencyId == Guid.Empty
+            ? Task.FromResult<string?>(null)
+            : _db.Agencies.IgnoreQueryFilters().Where(a => a.Id == agencyId).Select(a => a.Name).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default)
     {
@@ -422,7 +429,8 @@ public class IdentityService : IIdentityService
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
-            TwoFactorSetupRequired: require2Fa);
+            TwoFactorSetupRequired: require2Fa,
+            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
     }
 

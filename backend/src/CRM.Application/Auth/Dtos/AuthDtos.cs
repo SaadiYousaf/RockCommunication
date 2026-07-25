@@ -20,7 +20,10 @@ public record UserSummaryDto(
     bool IsActive = true,
     Guid? CallCenterId = null,
     /// <summary>True when a privileged user must enrol in 2FA before using the app.</summary>
-    bool TwoFactorSetupRequired = false);
+    bool TwoFactorSetupRequired = false,
+    /// <summary>The user's agency name (null for SuperAdmin / central users with no agency),
+    /// so the UI can show which agency the signed-in user belongs to.</summary>
+    string? AgencyName = null);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 
