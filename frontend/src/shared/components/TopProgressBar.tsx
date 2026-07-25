@@ -56,7 +56,7 @@ export function TopProgressBar() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed top-0 inset-x-0 z-[200] h-0.5 transition-opacity duration-200"
+      className="pointer-events-none fixed top-0 inset-x-0 z-[200] h-[3px] transition-opacity duration-200"
       style={{ opacity: visible ? 1 : 0 }}
     >
       <div
