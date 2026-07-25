@@ -27,3 +27,6 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Local production build output (created by scripts/deploy.sh)
+/api-publish/
