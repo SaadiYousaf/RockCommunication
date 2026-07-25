@@ -150,9 +150,9 @@ export function LeadDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+      <div className="surface p-5">
         <div className="flex items-start gap-4">
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center text-white font-bold text-lg">
             {(lead.firstName?.[0] ?? "?")}{(lead.lastName?.[0] ?? "")}
@@ -275,12 +275,12 @@ export function LeadDetailPage() {
       </div>
 
       {/* Two-column body */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left 2 columns */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-5">
           {/* Disposition picker */}
           <Can permission={Perm.LeadsTransition}>
-            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+            <div className="surface p-5">
               <div className="text-xs uppercase tracking-wider text-ink-500 mb-2 flex items-center gap-1">
                 Set disposition
                 <InfoHint title="Dispositions" side="right">
@@ -305,7 +305,7 @@ export function LeadDetailPage() {
           </Can>
 
           {/* Notes */}
-          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+          <div className="surface p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">Notes</div>
               {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
@@ -331,7 +331,7 @@ export function LeadDetailPage() {
           )}
 
           {/* Recent calls */}
-          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+          <div className="surface p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">Recent calls ({lead.callCount})</div>
             </div>
@@ -361,7 +361,7 @@ export function LeadDetailPage() {
           </div>
 
           {/* Timeline */}
-          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+          <div className="surface p-5">
             <div className="text-sm font-semibold mb-2">Activity timeline</div>
             <ul className="space-y-1">
               {timeline?.entries.map((e, i) => (
@@ -376,9 +376,9 @@ export function LeadDetailPage() {
         </div>
 
         {/* Right column */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* AI insights */}
-          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+          <div className="surface p-5">
             <div className="text-sm font-semibold mb-2 flex items-center gap-1">
               AI insights
               <InfoHint title="How the score is built" side="left">
@@ -404,7 +404,7 @@ export function LeadDetailPage() {
 
           {/* Recommendations */}
           {recs && recs.items.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+            <div className="surface p-5">
               <div className="text-sm font-semibold mb-2">Recommended next steps</div>
               <ul className="space-y-2">
                 {recs.items.map((r, i) => (
@@ -442,7 +442,7 @@ export function LeadDetailPage() {
 
           {/* Open callbacks */}
           {lead.openCallbackCount > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+            <div className="surface p-5">
               <div className="text-sm font-semibold mb-2">Open callbacks ({lead.openCallbackCount})</div>
               <ul className="space-y-2">
                 {lead.callbacks.filter(cb => !cb.completed).map(cb => (
@@ -458,9 +458,9 @@ export function LeadDetailPage() {
           )}
 
           {/* Lead meta */}
-          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4 text-sm">
+          <div className="surface p-5 text-sm">
             <div className="font-semibold mb-2">Details</div>
-            <dl className="space-y-1 text-xs">
+            <dl className="text-xs">
               <Row label="Source" value={lead.source} />
               <Row label="Created" value={new Date(lead.createdAt).toLocaleString()} />
               {lead.updatedAt && <Row label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />}
@@ -536,9 +536,9 @@ function Badge({ children, tone = "slate" }: { children: ReactNode; tone?: strin
 function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline gap-2">
-      <dt className="text-ink-500 w-24 shrink-0">{label}</dt>
-      <dd className={`flex-1 text-ink-800 break-all ${mono ? "font-mono" : ""}`}>{value}</dd>
+    <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-ink-100 last:border-0">
+      <dt className="text-ink-500 shrink-0">{label}</dt>
+      <dd className={`text-ink-800 text-right break-all ${mono ? "font-mono text-[11px]" : ""}`}>{value}</dd>
     </div>
   );
 }
