@@ -143,6 +143,23 @@ public record SendMessageCommand(
     string? AttachmentContentType = null,
     long? AttachmentSize = null) : IRequest<ChatMessageDto>;
 
+public class SendMessageValidator : AbstractValidator<SendMessageCommand>
+{
+    public SendMessageValidator()
+    {
+        RuleFor(x => x.RoomId).NotEmpty();
+        // Body required unless an attachment carries the message; bound everything so SQLite
+        // (which has no length limit) can't be flooded with an unbounded message.
+        RuleFor(x => x.Body).NotEmpty().When(x => string.IsNullOrWhiteSpace(x.AttachmentUrl));
+        RuleFor(x => x.Body).MaximumLength(4000);
+        RuleFor(x => x.AttachmentName).MaximumLength(260);
+        RuleFor(x => x.AttachmentContentType).MaximumLength(120);
+        RuleFor(x => x.AttachmentUrl).MaximumLength(500);
+        RuleFor(x => x.AttachmentSize).GreaterThanOrEqualTo(0).LessThanOrEqualTo(100L * 1024 * 1024)
+            .When(x => x.AttachmentSize.HasValue);
+    }
+}
+
 public class SendMessageHandler : IRequestHandler<SendMessageCommand, ChatMessageDto>
 {
     private readonly IApplicationDbContext _db;

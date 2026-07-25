@@ -181,6 +181,10 @@ public class CallControlHandler :
             .FirstOrDefaultAsync(l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
         if (string.IsNullOrEmpty(lead.PhoneNumber)) throw new ConflictException("Lead has no phone.");
+        // SMS is subject to the same DNC/TCPA guard as an outbound dial — don't let the text path bypass it.
+        var compliance = await _compliance.CheckOutboundDialAsync(lead.AgencyId, lead.PhoneNumber, lead.State, ct);
+        if (!compliance.Allowed)
+            throw new ConflictException(compliance.BlockReason ?? "Text blocked by compliance (DNC/TCPA).");
         await _sms.SendAsync(new SmsMessage(lead.PhoneNumber, request.Body, _user.UserName), ct);
         return Unit.Value;
     }

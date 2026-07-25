@@ -32,6 +32,27 @@ public class CreatePublicEndpointValidator : AbstractValidator<CreatePublicEndpo
     public CreatePublicEndpointValidator() => RuleFor(x => x.Slug).NotEmpty().Matches(@"^[a-z0-9\-]{3,40}$");
 }
 
+/// <summary>Guards the ANONYMOUS public capture endpoint — bounds every field so a signed request
+/// can't crash the handler (null name -> NRE) or bloat the DB with megabyte strings.</summary>
+public class CapturePublicLeadValidator : AbstractValidator<CapturePublicLeadCommand>
+{
+    public CapturePublicLeadValidator()
+    {
+        RuleFor(x => x.Payload).NotNull();
+        When(x => x.Payload is not null, () =>
+        {
+            RuleFor(x => x.Payload.FirstName).NotEmpty().MaximumLength(80);
+            RuleFor(x => x.Payload.LastName).NotEmpty().MaximumLength(80);
+            RuleFor(x => x.Payload.PhoneNumber).NotEmpty().MaximumLength(32);
+            RuleFor(x => x.Payload.Email).MaximumLength(160);
+            RuleFor(x => x.Payload.State).MaximumLength(40);
+            RuleFor(x => x.Payload.PostalCode).MaximumLength(15);
+            RuleFor(x => x.Payload.Source).MaximumLength(80);
+            RuleFor(x => x.Payload.JornayaLeadId).MaximumLength(64);
+        });
+    }
+}
+
 public class PublicLeadCaptureHandler :
     IRequestHandler<CreatePublicEndpointCommand, PublicEndpointWithSecretDto>,
     IRequestHandler<ListPublicEndpointsQuery, IReadOnlyList<PublicEndpointDto>>,
@@ -145,8 +166,10 @@ public class PublicLeadCaptureHandler :
                 NextRunAt = DateTime.UtcNow.AddMinutes(firstStep)
             });
         }
-        endpoint.LeadCount++;
         await _db.SaveChangesAsync(ct);
+        // Atomic increment — a plain load-mutate-save loses counts when two captures race.
+        await _db.PublicLeadCaptureEndpoints.Where(e => e.Id == endpoint.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LeadCount, e => e.LeadCount + 1), ct);
 
         await _workflow.PublishAsync(new LeadCreatedEvent
         {
