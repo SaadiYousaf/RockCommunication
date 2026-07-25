@@ -126,17 +126,27 @@ export function LeadDetailPage() {
   async function submitSms(e: React.FormEvent) {
     e.preventDefault();
     if (!smsBody.trim()) return;
-    await sendSms({ leadId: id, body: smsBody }).unwrap().catch(() => {});
-    setSmsBody("");
-    setShowSms(false);
+    try {
+      await sendSms({ leadId: id, body: smsBody }).unwrap();
+      toast.success("SMS sent");
+      setSmsBody("");
+      setShowSms(false);
+    } catch (err) {
+      toast.error("SMS not sent", getErrorDetail(err) ?? "Try again.");
+    }
   }
 
   async function submitCallback(e: React.FormEvent) {
     e.preventDefault();
     if (!callbackAt) return;
-    await scheduleCallback({ leadId: id, scheduledFor: new Date(callbackAt).toISOString(), reason: callbackReason || undefined }).unwrap().catch(() => {});
-    setCallbackAt(""); setCallbackReason(""); setShowCallback(false);
-    refetchLead();
+    try {
+      await scheduleCallback({ leadId: id, scheduledFor: new Date(callbackAt).toISOString(), reason: callbackReason || undefined }).unwrap();
+      toast.success("Callback scheduled");
+      setCallbackAt(""); setCallbackReason(""); setShowCallback(false);
+      refetchLead();
+    } catch (err) {
+      toast.error("Couldn't schedule callback", getErrorDetail(err) ?? "Try again.");
+    }
   }
 
   return (
@@ -144,7 +154,7 @@ export function LeadDetailPage() {
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
         <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 grid place-items-center text-white font-bold text-lg">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center text-white font-bold text-lg">
             {(lead.firstName?.[0] ?? "?")}{(lead.lastName?.[0] ?? "")}
           </div>
           <div className="flex-1 min-w-0">
@@ -210,8 +220,14 @@ export function LeadDetailPage() {
               defaultValue=""
               onChange={async (e) => {
                 if (!e.target.value) return;
-                await dropVm({ leadId: id, voicemailAssetId: e.target.value }).unwrap().catch(() => {});
-                e.target.value = "";
+                const sel = e.target;
+                try {
+                  await dropVm({ leadId: id, voicemailAssetId: sel.value }).unwrap();
+                  toast.success("Voicemail dropped");
+                } catch (err) {
+                  toast.error("Couldn't drop voicemail", getErrorDetail(err) ?? "Try again.");
+                }
+                sel.value = "";
               }}>
               <option value="">📥 Drop voicemail…</option>
               {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}

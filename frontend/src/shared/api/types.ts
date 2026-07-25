@@ -584,6 +584,7 @@ export interface CallSummary {
   status: string; direction: string;
   initiatedAt: string; answeredAt: string | null; endedAt: string | null;
   recordingUrl: string | null; wrapUpCode: string | null; notes: string | null;
+  leadName: string | null; leadPhone: string | null;
 }
 export interface WrapUpCode { id: string; code: string; label: string; isSale: boolean; isContact: boolean; isRetry: boolean; isActive: boolean; }
 export interface DncEntry { id: string; phoneNormalized: string; reason: string | null; source: string; expiresAt: string | null; }

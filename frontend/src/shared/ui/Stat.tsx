@@ -110,7 +110,7 @@ function Sparkline({ values, tone }: { values: number[]; tone: StatTone }) {
   const area = `${path} L ${w},${h} L 0,${h} Z`;
 
   const stroke = {
-    brand: "#1f7eff", accent: "#7c3aed", success: "#10b981",
+    brand: "#3c7269", accent: "#b28535", success: "#10b981",
     warning: "#f59e0b", danger: "#f43f5e", neutral: "#646d7e",
   }[tone];
 

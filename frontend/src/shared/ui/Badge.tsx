@@ -39,9 +39,9 @@ const tones: Record<Tone, Record<Variant, string>> = {
     outline: "border border-rose-200 text-rose-700 bg-white",
   },
   info: {
-    soft:    "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200/70",
-    solid:   "bg-sky-600 text-white",
-    outline: "border border-sky-200 text-sky-700 bg-white",
+    soft:    "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/70",
+    solid:   "bg-brand-600 text-white",
+    outline: "border border-brand-200 text-brand-700 bg-white",
   },
   neutral: {
     soft:    "bg-ink-50 text-ink-600 ring-1 ring-inset ring-ink-200/60",

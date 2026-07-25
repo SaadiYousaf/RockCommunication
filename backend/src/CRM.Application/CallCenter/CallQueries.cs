@@ -10,7 +10,8 @@ public record CallSummaryDto(
     Guid Id, Guid LeadId, Guid AgentUserId, string Provider, string ProviderCallId,
     string Status, string Direction,
     DateTime InitiatedAt, DateTime? AnsweredAt, DateTime? EndedAt,
-    string? RecordingUrl, string? WrapUpCode, string? Notes);
+    string? RecordingUrl, string? WrapUpCode, string? Notes,
+    string? LeadName = null, string? LeadPhone = null);
 
 public record FindCallByProviderQuery(string Provider, string ProviderCallId) : IRequest<CallSummaryDto?>;
 
@@ -27,9 +28,16 @@ public class FindCallByProviderHandler : IRequestHandler<FindCallByProviderQuery
         var c = await _db.CallRecords.AsNoTracking()
             .FirstOrDefaultAsync(c => c.AgencyId == _user.AgencyId
                 && c.Provider == request.Provider && c.ProviderCallId == request.ProviderCallId, ct);
-        return c is null ? null : new CallSummaryDto(c.Id, c.LeadId, c.AgentUserId, c.Provider,
+        if (c is null) return null;
+        var lead = await _db.Leads.AsNoTracking()
+            .Where(l => l.Id == c.LeadId)
+            .Select(l => new { l.FirstName, l.LastName, l.PhoneNumber })
+            .FirstOrDefaultAsync(ct);
+        return new CallSummaryDto(c.Id, c.LeadId, c.AgentUserId, c.Provider,
             c.ProviderCallId, c.Status, c.Direction, c.InitiatedAt, c.AnsweredAt, c.EndedAt,
-            c.RecordingUrl, c.WrapUpCode, c.Notes);
+            c.RecordingUrl, c.WrapUpCode, c.Notes,
+            lead is null ? null : $"{lead.FirstName} {lead.LastName}".Trim(),
+            lead?.PhoneNumber);
     }
 }
 
@@ -45,7 +53,7 @@ public class MyRecentCallsHandler : IRequestHandler<MyRecentCallsQuery, IReadOnl
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
-        return await _db.CallRecords
+        var calls = await _db.CallRecords.AsNoTracking()
             .Where(c => c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId)
             .OrderByDescending(c => c.InitiatedAt)
             .Take(Math.Min(request.Take, 200))
@@ -53,5 +61,17 @@ public class MyRecentCallsHandler : IRequestHandler<MyRecentCallsQuery, IReadOnl
                 c.ProviderCallId, c.Status, c.Direction, c.InitiatedAt, c.AnsweredAt, c.EndedAt,
                 c.RecordingUrl, c.WrapUpCode, c.Notes))
             .ToListAsync(ct);
+
+        // Resolve human-readable lead name/phone in one batched query (no N+1)
+        // so the UI can show "Outbound call to Jane Doe" instead of a raw call id.
+        var leadIds = calls.Select(c => c.LeadId).Distinct().ToList();
+        var leads = await _db.Leads.AsNoTracking()
+            .Where(l => leadIds.Contains(l.Id))
+            .Select(l => new { l.Id, l.FirstName, l.LastName, l.PhoneNumber })
+            .ToDictionaryAsync(l => l.Id, ct);
+
+        return calls.Select(c => leads.TryGetValue(c.LeadId, out var l)
+            ? c with { LeadName = $"{l.FirstName} {l.LastName}".Trim(), LeadPhone = l.PhoneNumber }
+            : c).ToList();
     }
 }

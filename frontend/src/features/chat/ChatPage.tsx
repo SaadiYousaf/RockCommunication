@@ -649,7 +649,7 @@ function ReadReceipt({ state }: { state: "sent" | "delivered" | "seen" }) {
   // WhatsApp-style ticks. Single = sent (server has it), double grey = delivered
   // (someone else is online and the broadcaster reached them), double blue = seen
   // (every other member's lastReadAt has passed this message).
-  const color = state === "seen" ? "text-sky-500" : "text-white/70";
+  const color = state === "seen" ? "text-brand-500" : "text-white/70";
   const label = state === "seen" ? "Seen" : state === "delivered" ? "Delivered" : "Sent";
   return (
     <span className={cn("inline-flex items-center gap-0.5", color)} title={label} aria-label={label}>

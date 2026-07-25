@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "./cn";
 
 const APP_NAME = "Rock Communication";
@@ -46,7 +47,7 @@ export function PageHeader({
           {breadcrumbs.map((b, i) => (
             <span key={i} className="flex items-center gap-1.5">
               {b.to
-                ? <a href={b.to} className="hover:text-ink-800 transition-colors">{b.label}</a>
+                ? <Link to={b.to} className="hover:text-ink-800 transition-colors">{b.label}</Link>
                 : <span className="text-ink-700 font-medium">{b.label}</span>}
               {i < breadcrumbs.length - 1 && (
                 <svg width="10" height="10" viewBox="0 0 12 12" className="text-ink-300" aria-hidden>

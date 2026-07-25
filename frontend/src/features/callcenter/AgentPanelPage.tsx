@@ -238,8 +238,11 @@ export function AgentPanelPage() {
             }
             subtitle={
               <span>
-                You can't go Available until you wrap up call{" "}
-                <span className="font-mono text-ink-800">{unwrapped.providerCallId ?? unwrapped.id.slice(0, 8)}</span>.
+                You can't go Available until you wrap up your{" "}
+                <span className="font-medium text-ink-800">{unwrapped.direction?.toLowerCase()}</span> call
+                {unwrapped.leadName ? <> with <span className="font-medium text-ink-800">{unwrapped.leadName}</span></> : null}
+                {unwrapped.leadPhone ? <span className="text-ink-600"> ({unwrapped.leadPhone})</span> : null}
+                {" "}from <span className="text-ink-800">{new Date(unwrapped.initiatedAt).toLocaleString()}</span>.
               </span>
             }
           />
@@ -283,6 +286,7 @@ export function AgentPanelPage() {
               <THead>
                 <TR>
                   <TH>Started</TH>
+                  <TH>Lead</TH>
                   <TH>Direction</TH>
                   <TH>Status</TH>
                   <TH>Wrap-up</TH>
@@ -293,6 +297,16 @@ export function AgentPanelPage() {
                 {recentCalls.map((c) => (
                   <TR key={c.id}>
                     <TD className="text-ink-600">{new Date(c.initiatedAt).toLocaleString()}</TD>
+                    <TD>
+                      {c.leadName ? (
+                        <div className="leading-tight">
+                          <div className="text-ink-800 font-medium">{c.leadName}</div>
+                          {c.leadPhone && <div className="text-ink-500 text-xs num">{c.leadPhone}</div>}
+                        </div>
+                      ) : (
+                        <span className="text-ink-400">—</span>
+                      )}
+                    </TD>
                     <TD>
                       <Badge tone={c.direction === "Inbound" ? "info" : "brand"} variant="soft">
                         {c.direction}

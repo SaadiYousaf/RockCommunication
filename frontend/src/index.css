@@ -6,14 +6,14 @@
 
 @layer base {
   :root {
-    --bg: 248 250 252;          /* slate-50 */
-    --surface: 255 255 255;
-    --surface-muted: 241 245 249; /* slate-100 */
-    --border: 226 232 240;       /* slate-200 */
-    --text: 15 23 42;            /* slate-900 */
-    --text-muted: 100 116 139;   /* slate-500 */
-    --brand: 14 165 233;         /* sky-500 */
-    --accent: 139 92 246;        /* violet-500 */
+    --bg: 245 242 235;          /* warm paper */
+    --surface: 255 253 250;      /* warm white */
+    --surface-muted: 240 237 230; /* ink-100 */
+    --border: 226 221 210;       /* ink-200 */
+    --text: 26 23 18;            /* ink-900 */
+    --text-muted: 125 116 99;    /* ink-500 */
+    --brand: 60 114 105;         /* muted teal (brand-500) */
+    --accent: 178 133 53;        /* muted ochre (accent-500) */
     --radius-card: 0.875rem;
     --radius-lg: 1.125rem;
     --shadow-card: 0 1px 2px 0 rgba(15,23,42,0.04), 0 1px 3px 0 rgba(15,23,42,0.06);
@@ -43,10 +43,10 @@
        app off a flat #fff. Strong enough to feel premium, subtle enough to not
        fight content. */
     background:
-      radial-gradient(1200px 800px at 110% -10%, rgba(14,165,233,0.08), transparent 60%),
-      radial-gradient(900px 600px at -10% 110%, rgba(139,92,246,0.05), transparent 60%),
-      radial-gradient(600px 400px at 50% 50%, rgba(14,165,233,0.025), transparent 60%),
-      #f8fafc;
+      radial-gradient(1200px 800px at 110% -10%, rgba(60,114,105,0.06), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(178,133,53,0.05), transparent 60%),
+      radial-gradient(600px 400px at 50% 50%, rgba(60,114,105,0.02), transparent 60%),
+      #f5f2eb;
     background-attachment: fixed;
     /* Inter feature flags for a more deliberate, modern feel */
     font-feature-settings: "cv11","ss01","ss03","cv02";
@@ -79,7 +79,7 @@
   a:hover { @apply text-brand-700; }
 
   /* Selection */
-  ::selection { background: rgba(14,165,233,0.22); color: #0f172a; }
+  ::selection { background: rgba(178,133,53,0.24); color: #1a1712; }
 
   /* Soften default disabled controls */
   :where(button, input, select, textarea):disabled { @apply cursor-not-allowed; }
@@ -176,8 +176,8 @@
   .ring-inset-glow {
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.6),
-      inset 0 0 0 1px rgba(14,165,233,0.08),
-      0 6px 18px -8px rgba(14,165,233,0.18);
+      inset 0 0 0 1px rgba(60,114,105,0.10),
+      0 6px 18px -8px rgba(60,114,105,0.20);
   }
 
   /* Sticky table header */
@@ -186,7 +186,7 @@
     top: 0;
     z-index: 1;
     backdrop-filter: saturate(1.4) blur(6px);
-    background: rgba(247, 248, 250, 0.92);
+    background: rgba(245, 242, 235, 0.92);
   }
 
   /* ---- Animation primitives ---- */
@@ -211,8 +211,8 @@
     content: "";
     position: absolute; inset: 0;
     background:
-      radial-gradient(60% 60% at 100% 0%, rgba(14,165,233,0.10), transparent 70%),
-      radial-gradient(50% 50% at 0% 100%, rgba(124,58,237,0.08), transparent 70%);
+      radial-gradient(60% 60% at 100% 0%, rgba(60,114,105,0.10), transparent 70%),
+      radial-gradient(50% 50% at 0% 100%, rgba(178,133,53,0.08), transparent 70%);
     pointer-events: none;
   }
 

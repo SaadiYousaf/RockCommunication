@@ -42,15 +42,20 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
               The page hit an unexpected error. Your session is still active —
               you can try again, or jump back to the dashboard.
             </p>
-            <details className="mt-4 text-xs text-ink-500">
-              <summary className="cursor-pointer select-none hover:text-ink-700">
-                Technical details
-              </summary>
-              <pre className="mt-2 p-3 bg-ink-50 rounded-lg overflow-auto max-h-48 whitespace-pre-wrap break-words text-[11px] font-mono text-ink-700">
-                {error.message}
-                {error.stack ? `\n\n${error.stack}` : ""}
-              </pre>
-            </details>
+            {/* Raw error text is only ever shown to developers running a dev
+                build. In production users see the calm generic message above —
+                no stack traces, no internal details. */}
+            {import.meta.env.DEV && (
+              <details className="mt-4 text-xs text-ink-500">
+                <summary className="cursor-pointer select-none hover:text-ink-700">
+                  Technical details
+                </summary>
+                <pre className="mt-2 p-3 bg-ink-50 rounded-lg overflow-auto max-h-48 whitespace-pre-wrap break-words text-[11px] font-mono text-ink-700">
+                  {error.message}
+                  {error.stack ? `\n\n${error.stack}` : ""}
+                </pre>
+              </details>
+            )}
             <div className="flex flex-wrap gap-2 mt-6">
               <Button onClick={this.reset} leftIcon={<Icon name="arrowRight" size={14} />}>
                 Try again

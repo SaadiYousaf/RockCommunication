@@ -14,6 +14,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input,
   PageHeader, Skeleton, useToast,
 } from "../../shared/ui";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 
 function fmtSize(n: number) {
@@ -31,6 +32,7 @@ export function DocumentsPage() {
   const [uploadDoc, { isLoading: uploading }] = useUploadDocumentMutation();
   const [deleteDoc] = useDeleteDocumentMutation();
   const toast = useToast();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [pending, setPending] = useState<File | null>(null);
@@ -124,7 +126,12 @@ export function DocumentsPage() {
                           tabIndex={0}
                           onClick={async (e) => {
                             e.stopPropagation();
-                            if (!confirm(`Delete "${d.name}"?`)) return;
+                            if (!(await confirm({
+                              title: `Delete "${d.name}"?`,
+                              description: "This permanently removes the document for everyone in the agency.",
+                              confirmLabel: "Delete",
+                              danger: true,
+                            }))) return;
                             try {
                               await deleteDoc(d.id).unwrap();
                               if (active?.id === d.id) setActive(null);

@@ -206,7 +206,7 @@ export function RolesPage() {
                       className={cn(
                         "w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all",
                         active
-                          ? "bg-brand-50 ring-1 ring-brand-200 shadow-[0_1px_3px_0_rgba(14,165,233,0.06)]"
+                          ? "bg-brand-50 ring-1 ring-brand-200 shadow-[0_1px_3px_0_rgba(60,114,105,0.06)]"
                           : "hover:bg-ink-50/80 ring-1 ring-transparent",
                       )}
                     >
@@ -215,7 +215,7 @@ export function RolesPage() {
                           "h-9 w-9 rounded-lg grid place-items-center shrink-0 ring-1 ring-inset transition-colors",
                           r.isSystem
                             ? active ? "bg-brand-100 text-brand-700 ring-brand-200" : "bg-ink-100 text-ink-600 ring-ink-200"
-                            : active ? "bg-violet-100 text-violet-700 ring-violet-200" : "bg-violet-50 text-violet-600 ring-violet-100",
+                            : active ? "bg-accent-100 text-accent-700 ring-accent-200" : "bg-accent-50 text-accent-600 ring-accent-100",
                         )}
                       >
                         <Icon name={r.isSystem ? "shield" : "userCog"} size={16} />
@@ -234,7 +234,7 @@ export function RolesPage() {
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all",
-                                active ? "bg-brand-500" : r.isSystem ? "bg-ink-400" : "bg-violet-500",
+                                active ? "bg-brand-500" : r.isSystem ? "bg-ink-400" : "bg-accent-500",
                               )}
                               style={{ width: `${coverage}%` }}
                             />
@@ -286,7 +286,7 @@ export function RolesPage() {
                       "h-12 w-12 rounded-xl grid place-items-center shrink-0 ring-1 ring-inset",
                       selected.isSystem
                         ? "bg-brand-50 text-brand-600 ring-brand-100"
-                        : "bg-violet-50 text-violet-600 ring-violet-100",
+                        : "bg-accent-50 text-accent-600 ring-accent-100",
                     )}
                   >
                     <Icon name={selected.isSystem ? "shield" : "userCog"} size={22} />
@@ -566,7 +566,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
       <CardBody className="p-0">
         <div className="flex items-start justify-between gap-4 p-5 border-b hairline flex-wrap">
           <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-lg grid place-items-center bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-100 shrink-0">
+            <div className="h-9 w-9 rounded-lg grid place-items-center bg-accent-50 text-accent-600 ring-1 ring-inset ring-accent-100 shrink-0">
               <Icon name="key" size={16} />
             </div>
             <div>
@@ -607,7 +607,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
               const onCount = items.filter((p) => draft.includes(p.code)).length;
               return (
                 <div key={group} className="rounded-xl border hairline overflow-hidden bg-white">
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-violet-50/40 to-white border-b hairline">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-accent-50/40 to-white border-b hairline">
                     <div className="flex items-center gap-2">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-700">{group}</div>
                       <Badge tone={onCount === items.length ? "accent" : onCount === 0 ? "neutral" : "info"} variant="soft" size="sm">
@@ -624,7 +624,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
                         ref={(el) => { if (el) el.indeterminate = someOn; }}
                         onChange={() => canEdit && toggleGroup(items)}
                         disabled={!canEdit}
-                        className="rounded border-ink-300 text-violet-600 focus:ring-violet-500"
+                        className="rounded border-ink-300 text-accent-600 focus:ring-accent-500"
                       />
                       <span>Toggle all</span>
                     </label>
@@ -637,8 +637,8 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
                           key={p.code}
                           className={cn(
                             "flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors",
-                            canEdit ? "hover:bg-violet-50/60 cursor-pointer" : "opacity-70",
-                            checked && "bg-violet-50/40",
+                            canEdit ? "hover:bg-accent-50/60 cursor-pointer" : "opacity-70",
+                            checked && "bg-accent-50/40",
                           )}
                         >
                           <input
@@ -646,7 +646,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
                             checked={checked}
                             onChange={() => canEdit && toggle(p.code)}
                             disabled={!canEdit}
-                            className="rounded border-ink-300 text-violet-600 focus:ring-violet-500"
+                            className="rounded border-ink-300 text-accent-600 focus:ring-accent-500"
                           />
                           <span className="text-sm text-ink-800 font-mono truncate">{p.code}</span>
                         </label>

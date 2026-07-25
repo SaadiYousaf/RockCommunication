@@ -25,7 +25,7 @@ const integrationTone: Record<string, string> = {
   dialer:   "bg-emerald-50 text-emerald-600",
   sms:      "bg-brand-50 text-brand-600",
   email:    "bg-amber-50 text-amber-600",
-  carriers: "bg-violet-50 text-violet-600",
+  carriers: "bg-accent-50 text-accent-600",
   funding:  "bg-rose-50 text-rose-600",
   bla:      "bg-ink-100 text-ink-700",
   trello:   "bg-ink-100 text-ink-700",

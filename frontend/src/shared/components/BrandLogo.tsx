@@ -79,9 +79,9 @@ function MarkSvg({ size, className }: { size: number; className?: string }) {
           <stop offset="100%" stopColor="#7e8693" />
         </linearGradient>
         <linearGradient id="rcBlue" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#3e98ff" />
-          <stop offset="60%" stopColor="#1f7eff" />
-          <stop offset="100%" stopColor="#0a4eba" />
+          <stop offset="0%" stopColor="#588b83" />
+          <stop offset="60%" stopColor="#3c7269" />
+          <stop offset="100%" stopColor="#233c39" />
         </linearGradient>
       </defs>
 

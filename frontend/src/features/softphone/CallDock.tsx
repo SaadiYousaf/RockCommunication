@@ -135,9 +135,13 @@ export function CallDock() {
         <form className="flex gap-1 mb-2" onSubmit={async (e) => {
           e.preventDefault();
           if (!smsBody.trim()) return;
-          await sendSms({ leadId: call.leadId, body: smsBody }).unwrap().catch(() => {});
-          setSmsBody("");
-          toast.success("SMS sent");
+          try {
+            await sendSms({ leadId: call.leadId, body: smsBody }).unwrap();
+            setSmsBody("");
+            toast.success("SMS sent");
+          } catch {
+            toast.error("SMS not sent", "Try again.");
+          }
         }}>
           <input className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm"
             placeholder="Quick SMS to lead..." value={smsBody} onChange={(e) => setSmsBody(e.target.value)} />

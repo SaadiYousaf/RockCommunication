@@ -218,7 +218,7 @@ function CommissionConfigSection() {
             {RULES.map((name) => {
               const r = ruleByName(name);
               return <RuleRow key={name} ruleName={name} initial={r}
-                onSave={(v) => upsert(v).unwrap().catch(() => {})} />;
+                onSave={(v) => upsert(v).unwrap()} />;
             })}
           </tbody>
         </table>
@@ -231,7 +231,7 @@ function CommissionConfigSection() {
 function RuleRow({ ruleName, initial, onSave }: {
   ruleName: string;
   initial?: { amount: number | null; threshold: number | null; enabled: boolean };
-  onSave: (v: { ruleName: string; amount: number | null; threshold: number | null; enabled: boolean }) => void;
+  onSave: (v: { ruleName: string; amount: number | null; threshold: number | null; enabled: boolean }) => Promise<unknown>;
 }) {
   const [amount, setAmount] = useState(initial?.amount?.toString() ?? "");
   const [threshold, setThreshold] = useState(initial?.threshold?.toString() ?? "");
@@ -254,14 +254,18 @@ function RuleRow({ ruleName, initial, onSave }: {
       </td>
       <td className="px-5 py-2">
         <Button size="sm"
-          onClick={() => {
-            onSave({
-              ruleName,
-              amount: amount === "" ? null : parseFloat(amount),
-              threshold: threshold === "" ? null : parseFloat(threshold),
-              enabled,
-            });
-            toast.success("Rule saved", ruleName);
+          onClick={async () => {
+            try {
+              await onSave({
+                ruleName,
+                amount: amount === "" ? null : parseFloat(amount),
+                threshold: threshold === "" ? null : parseFloat(threshold),
+                enabled,
+              });
+              toast.success("Rule saved", ruleName);
+            } catch {
+              toast.error("Couldn't save rule", ruleName);
+            }
           }}>Save</Button>
       </td>
     </tr>

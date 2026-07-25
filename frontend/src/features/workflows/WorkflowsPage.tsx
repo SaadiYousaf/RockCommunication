@@ -265,12 +265,12 @@ function RuleCard({
   const tone = eventTone[rule.eventType] ?? "neutral";
   const toneRing: Record<Tone, string> = {
     brand: "bg-brand-50 text-brand-600 ring-brand-100",
-    info: "bg-cyan-50 text-cyan-600 ring-cyan-100",
+    info: "bg-brand-50 text-brand-600 ring-brand-100",
     warning: "bg-amber-50 text-amber-600 ring-amber-100",
     success: "bg-emerald-50 text-emerald-600 ring-emerald-100",
     danger: "bg-rose-50 text-rose-600 ring-rose-100",
     neutral: "bg-ink-100 text-ink-600 ring-ink-200",
-    accent: "bg-violet-50 text-violet-600 ring-violet-100",
+    accent: "bg-accent-50 text-accent-600 ring-accent-100",
   };
   return (
     <Card className={cn("transition-all hover:shadow-card-hover hover:border-ink-300", !rule.isActive && "opacity-75")}>

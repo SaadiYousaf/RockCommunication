@@ -19,14 +19,14 @@ const stageOrder: WorkflowStage[] = [
 
 const stageBar: Record<WorkflowStage, string> = {
   New:       "from-brand-400 to-brand-600",
-  Fronted:   "from-sky-400 to-sky-600",
-  Verified:  "from-cyan-400 to-cyan-600",
+  Fronted:   "from-brand-400 to-brand-600",
+  Verified:  "from-brand-400 to-brand-600",
   JrClosed:  "from-amber-400 to-amber-600",
   Closed:    "from-orange-400 to-orange-600",
   Validated: "from-emerald-400 to-emerald-600",
   Funded:    "from-emerald-500 to-teal-600",
-  Followup:  "from-violet-400 to-violet-600",
-  Winback:   "from-fuchsia-400 to-fuchsia-600",
+  Followup:  "from-accent-400 to-accent-600",
+  Winback:   "from-accent-400 to-accent-600",
   Lost:      "from-rose-400 to-rose-600",
 };
 
@@ -176,8 +176,8 @@ function Hero({
       className="relative overflow-hidden rounded-3xl mb-5 ring-1 ring-brand-100/80"
       style={{
         background:
-          "radial-gradient(ellipse at top right, rgba(14,165,233,0.20), transparent 55%), " +
-          "radial-gradient(ellipse at bottom left, rgba(139,92,246,0.10), transparent 55%), " +
+          "radial-gradient(ellipse at top right, rgba(60,114,105,0.20), transparent 55%), " +
+          "radial-gradient(ellipse at bottom left, rgba(178,133,53,0.10), transparent 55%), " +
           "linear-gradient(135deg, #f0f9ff 0%, #ffffff 55%, #f5f3ff 100%)",
       }}
     >
@@ -185,7 +185,7 @@ function Hero({
       <div
         className="pointer-events-none absolute inset-0 opacity-50"
         style={{
-          backgroundImage: "radial-gradient(rgba(14,165,233,0.10) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(rgba(60,114,105,0.10) 1px, transparent 1px)",
           backgroundSize: "22px 22px",
         }}
       />
@@ -268,7 +268,7 @@ function focusToneCls(tone: "brand" | "warning" | "success" | "info") {
     brand:   "bg-brand-50 text-brand-600 ring-brand-100",
     warning: "bg-amber-50 text-amber-600 ring-amber-100",
     success: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    info:    "bg-cyan-50 text-cyan-600 ring-cyan-100",
+    info:    "bg-brand-50 text-brand-600 ring-brand-100",
   })[tone];
 }
 
@@ -338,7 +338,7 @@ const kpiToneMap: Record<"brand" | "success" | "accent" | "warning",
   { iconBg: string; iconText: string; spark: string; ring: string }> = {
   brand:   { iconBg: "bg-brand-50",   iconText: "text-brand-600",   spark: "#6366f1", ring: "ring-brand-100" },
   success: { iconBg: "bg-emerald-50", iconText: "text-emerald-600", spark: "#10b981", ring: "ring-emerald-100" },
-  accent:  { iconBg: "bg-violet-50",  iconText: "text-violet-600",  spark: "#8b5cf6", ring: "ring-violet-100" },
+  accent:  { iconBg: "bg-accent-50",  iconText: "text-accent-600",  spark: "#b28535", ring: "ring-accent-100" },
   warning: { iconBg: "bg-amber-50",   iconText: "text-amber-600",   spark: "#f59e0b", ring: "ring-amber-100" },
 };
 
@@ -730,7 +730,7 @@ function QuickActions() {
     { to: "/leads",     label: "Leads",       description: "Manage your pipeline and transition leads.", icon: "list",      tone: "bg-brand-50 text-brand-600 ring-brand-100" },
     { to: "/agent",     label: "Agent Panel", description: "Take live calls and dispositions.",           icon: "phone",     tone: "bg-emerald-50 text-emerald-600 ring-emerald-100" },
     { to: "/callbacks", label: "Callbacks",   description: "Scheduled customer follow-ups.",              icon: "calendar",  tone: "bg-amber-50 text-amber-600 ring-amber-100" },
-    { to: "/sales",     label: "Sales",       description: "Record, validate and fund deals.",            icon: "briefcase", tone: "bg-violet-50 text-violet-600 ring-violet-100" },
+    { to: "/sales",     label: "Sales",       description: "Record, validate and fund deals.",            icon: "briefcase", tone: "bg-accent-50 text-accent-600 ring-accent-100" },
     { to: "/kpis",      label: "KPIs",        description: "Performance dashboards and metrics.",          icon: "chart",     tone: "bg-brand-50 text-brand-600 ring-brand-100" },
     { to: "/2fa",       label: "Enable 2FA",  description: "Add an extra layer of account security.",     icon: "shield",    tone: "bg-rose-50 text-rose-600 ring-rose-100" },
   ];

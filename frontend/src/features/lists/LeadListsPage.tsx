@@ -90,7 +90,7 @@ export function LeadListsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <SmallTile label="Total lists"  value={stats.total}      icon="inbox"     tone="bg-brand-50 text-brand-600" />
         <SmallTile label="Active"       value={stats.active}     icon="check"     tone="bg-emerald-50 text-emerald-600" />
-        <SmallTile label="Total leads"  value={stats.totalLeads} icon="list"      tone="bg-violet-50 text-violet-600" />
+        <SmallTile label="Total leads"  value={stats.totalLeads} icon="list"      tone="bg-accent-50 text-accent-600" />
       </div>
 
       <Card className="mb-4">

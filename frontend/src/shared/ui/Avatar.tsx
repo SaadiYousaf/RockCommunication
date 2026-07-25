@@ -19,9 +19,9 @@ function colorFor(seed: string) {
     "from-emerald-500 to-emerald-700",
     "from-amber-400 to-amber-600",
     "from-rose-500 to-rose-700",
-    "from-sky-500 to-sky-700",
-    "from-violet-500 to-violet-700",
-    "from-fuchsia-500 to-fuchsia-700",
+    "from-brand-500 to-brand-700",
+    "from-accent-500 to-accent-700",
+    "from-accent-500 to-accent-700",
     "from-teal-500 to-teal-700",
   ];
   let h = 0;

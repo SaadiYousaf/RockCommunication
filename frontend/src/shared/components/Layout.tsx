@@ -9,6 +9,7 @@ import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
 import { BrandLogo } from "./BrandLogo";
 import { NotificationsBell } from "./NotificationsBell";
 import { ScrollToTop } from "./ScrollToTop";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { AgentStatusBar } from "./AgentStatusBar";
 import { usePersistentState } from "../hooks/usePersistentState";
 
@@ -273,11 +274,14 @@ function LayoutInner() {
 
         <main className="flex-1 overflow-auto">
           <div className="max-w-[1920px] 2xl:max-w-[2200px] mx-auto p-4 sm:p-6 lg:p-8 xl:p-10 2xl:p-12">
-            {/* Suspense boundary for the route-split (React.lazy) pages — shows a
-                spinner while the page's chunk downloads. See router.tsx. */}
-            <Suspense fallback={<div className="p-10 flex justify-center"><Spinner /></div>}>
-              <Outlet />
-            </Suspense>
+            {/* Per-page error boundary keeps a single crashing page from taking
+                down the whole shell — the nav stays usable. Wraps the Suspense
+                boundary for the route-split (React.lazy) pages. See router.tsx. */}
+            <RouteErrorBoundary>
+              <Suspense fallback={<div className="p-10 flex justify-center"><Spinner /></div>}>
+                <Outlet />
+              </Suspense>
+            </RouteErrorBoundary>
           </div>
         </main>
       </div>
@@ -311,7 +315,7 @@ function SidebarContent({
         <BrandLogo
           variant="mark"
           size={collapsed ? 32 : 36}
-          className="drop-shadow-[0_2px_12px_rgba(14,165,233,0.30)]"
+          className="drop-shadow-[0_2px_12px_rgba(60,114,105,0.30)]"
         />
         {!collapsed && (
           <div className="leading-tight">
@@ -353,7 +357,7 @@ function SidebarContent({
                       "group relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium",
                       "transition-all duration-150",
                       isActive
-                        ? "text-brand-700 bg-brand-50 ring-1 ring-brand-100 shadow-[0_1px_2px_0_rgba(14,165,233,0.06)]"
+                        ? "text-brand-700 bg-brand-50 ring-1 ring-brand-100 shadow-[0_1px_2px_0_rgba(60,114,105,0.06)]"
                         : "text-ink-600 hover:bg-ink-100/80 hover:text-ink-900",
                       collapsed && "justify-center",
                     )
@@ -363,7 +367,7 @@ function SidebarContent({
                     <>
                       {/* Active accent bar */}
                       {isActive && !collapsed && (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-gradient-to-b from-brand-400 to-brand-600 shadow-[0_0_8px_rgba(14,165,233,0.45)]" />
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-gradient-to-b from-brand-400 to-brand-600 shadow-[0_0_8px_rgba(60,114,105,0.45)]" />
                       )}
                       <Icon
                         name={i.icon}

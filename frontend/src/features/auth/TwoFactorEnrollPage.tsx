@@ -8,12 +8,14 @@ import {
 } from "../../shared/api/baseApi";
 import { clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
+import { useToast } from "../../shared/ui";
 
 type Method = "Totp" | "EmailOtp";
 
 export function TwoFactorEnrollPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const toast = useToast();
   // True when the user was sent here by the mandatory-2FA gate (privileged role,
   // not yet enrolled). Their live tokens carry the "twofa_setup" claim, so the
   // server revokes them on enable — we must send them back to a fresh sign-in.
@@ -250,10 +252,17 @@ export function TwoFactorEnrollPage() {
               disabled={enabling || code.length !== 6}>
               {enabling ? "Verifying…" : "Verify & enable"}
             </button>
-            <button type="button" className="text-sm text-slate-600 hover:text-slate-900 px-2"
+            <button type="button" className="text-sm text-slate-600 hover:text-slate-900 px-2 disabled:opacity-50"
               disabled={sendingOtp}
-              onClick={() => sendEmailOtp().unwrap().catch(() => {})}>
-              Resend
+              onClick={async () => {
+                try {
+                  await sendEmailOtp().unwrap();
+                  toast.success("Code sent", "Check your email for a fresh code.");
+                } catch (err) {
+                  toast.error("Couldn't resend code", getErrorDetail(err) ?? "Try again.");
+                }
+              }}>
+              {sendingOtp ? "Sending…" : "Resend"}
             </button>
           </form>
           {error && <div className="text-sm text-rose-700">{error}</div>}
