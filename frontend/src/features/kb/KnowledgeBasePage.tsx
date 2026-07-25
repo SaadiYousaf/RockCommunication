@@ -6,6 +6,7 @@ import {
   Badge, Button, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Textarea, useToast, cn,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 export function KnowledgeBasePage() {
   const [q, setQ] = useState("");
@@ -36,7 +37,7 @@ export function KnowledgeBasePage() {
       <PageHeader
         title="Knowledge Base"
         description="Searchable team knowledge — talking points, FAQs, scripts, and onboarding."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New article</Button>}
+        actions={<Can permission={Perm.KnowledgeWrite}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New article</Button></Can>}
       />
 
       <div className="grid grid-cols-12 gap-5 h-[calc(100vh-14rem)]">
@@ -60,7 +61,7 @@ export function KnowledgeBasePage() {
                   icon={<Icon name="doc" size={18} />}
                   title="No articles"
                   description={q ? `No results for "${q}"` : "Get started by creating your first article."}
-                  action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={openNew}>New article</Button>}
+                  action={<Can permission={Perm.KnowledgeWrite}><Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={openNew}>New article</Button></Can>}
                 />
               </div>
             ) : (
@@ -111,8 +112,10 @@ export function KnowledgeBasePage() {
                       <span>· {article.viewCount ?? 0} views</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" leftIcon={<Icon name="cog" size={14} />}
-                    onClick={() => setEditing(article)}>Edit</Button>
+                  <Can permission={Perm.KnowledgeWrite}>
+                    <Button variant="outline" size="sm" leftIcon={<Icon name="cog" size={14} />}
+                      onClick={() => setEditing(article)}>Edit</Button>
+                  </Can>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-6">

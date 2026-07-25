@@ -5,6 +5,7 @@ import {
   Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 export function DncPage() {
   const { data: list, isLoading } = useListDncQuery();
@@ -54,7 +55,7 @@ export function DncPage() {
       <PageHeader
         title="Do Not Call list"
         description="Phone numbers your team is prohibited from contacting. Auto-checked before every dial."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Add number</Button>}
+        actions={<Can permission={Perm.DncManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Add number</Button></Can>}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
@@ -119,11 +120,13 @@ export function DncPage() {
                   </TD>
                   <TD>
                     <div className="flex justify-end">
-                      <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
-                        leftIcon={<Icon name="trash" size={13} />}
-                        onClick={() => setConfirmRemove(e)}>
-                        Remove
-                      </Button>
+                      <Can permission={Perm.DncManage}>
+                        <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
+                          leftIcon={<Icon name="trash" size={13} />}
+                          onClick={() => setConfirmRemove(e)}>
+                          Remove
+                        </Button>
+                      </Can>
                     </div>
                   </TD>
                 </TR>

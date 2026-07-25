@@ -6,6 +6,7 @@ import {
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
 } from "../../shared/ui";
 import type { Cadence, CadenceStep } from "../../shared/api/types";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 const KINDS = ["Call", "Sms", "Email", "Wait"] as const;
 type Kind = typeof KINDS[number];
@@ -61,7 +62,7 @@ export function CadencesPage() {
       <PageHeader
         title="Cadences"
         description="Multi-touch outreach sequences. Enroll a lead and steps fire automatically: Call → wait → SMS → wait → Email."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button>}
+        actions={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}
       />
 
       {isLoading ? (
@@ -72,7 +73,7 @@ export function CadencesPage() {
             icon={<Icon name="filter" size={20} />}
             title="No cadences yet"
             description="Build a multi-touch sequence to consistently engage leads over time."
-            action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button>}
+            action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}
           />
         </CardBody></Card>
       ) : (
@@ -91,8 +92,10 @@ export function CadencesPage() {
                     </div>
                     {c.description && <p className="text-sm text-ink-600 mt-1">{c.description}</p>}
                   </div>
-                  <Button variant="outline" size="sm" leftIcon={<Icon name="cog" size={14} />}
-                    onClick={() => setEditing(c)}>Edit</Button>
+                  <Can permission={Perm.CampaignsManage}>
+                    <Button variant="outline" size="sm" leftIcon={<Icon name="cog" size={14} />}
+                      onClick={() => setEditing(c)}>Edit</Button>
+                  </Can>
                 </div>
 
                 {/* Step timeline */}
@@ -175,7 +178,9 @@ export function CadencesPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button loading={saving} onClick={handleSave}>Save cadence</Button>
+            <Can permission={Perm.CampaignsManage}>
+              <Button loading={saving} onClick={handleSave}>Save cadence</Button>
+            </Can>
           </>
         }
       >
@@ -225,7 +230,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
         <div className="space-y-2">
           {cadence.steps.map((s, i: number) => (
             <div key={i} className="p-3 rounded-lg border hairline bg-ink-50/40 space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="h-7 w-7 rounded-md bg-brand-100 text-brand-700 grid place-items-center text-xs font-semibold">
                   {s.order}
                 </div>

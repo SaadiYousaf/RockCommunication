@@ -9,6 +9,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 export function LeadListsPage() {
   const { data: lists, isLoading } = useLeadListsQuery();
@@ -83,7 +84,7 @@ export function LeadListsPage() {
       <PageHeader
         title="Lead lists"
         description="Group leads into named lists, import via CSV (DNC-scrubbed automatically), and run cadences against them."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button>}
+        actions={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button></Can>}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -110,7 +111,7 @@ export function LeadListsPage() {
             icon={<Icon name="inbox" size={20} />}
             title={search ? "No lists match" : "No lead lists yet"}
             description={search ? "Try a different search." : "Create a list to organize leads and import contacts in bulk."}
-            action={!search ? <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button> : undefined}
+            action={!search ? <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button></Can> : undefined}
           />
         </CardBody></Card>
       ) : (
@@ -149,9 +150,11 @@ export function LeadListsPage() {
                         onClick={() => setActiveListId(l.id)}>
                         {isActive ? "Selected" : "Select"}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggle(l)}>
-                        {l.isActive ? "Disable" : "Enable"}
-                      </Button>
+                      <Can permission={Perm.CampaignsManage}>
+                        <Button variant="ghost" size="sm" onClick={() => toggle(l)}>
+                          {l.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      </Can>
                     </div>
                   </TD>
                 </TR>
@@ -183,6 +186,7 @@ export function LeadListsPage() {
           />
           <CardBody className="pt-0">
             {/* File picker row */}
+            <Can permission={Perm.LeadsImport}>
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end mb-5">
               <label className="flex-1 cursor-pointer">
                 <div className="text-xs font-medium text-ink-700 mb-1.5">CSV file</div>
@@ -209,6 +213,7 @@ export function LeadListsPage() {
                 Import {filename ? `"${filename.length > 20 ? filename.slice(0, 20) + "…" : filename}"` : ""}
               </Button>
             </div>
+            </Can>
 
             <div className="text-xs font-semibold text-ink-700 uppercase tracking-wider mb-2">Recent imports</div>
             {batchesLoading ? (

@@ -5,6 +5,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Textarea, useToast,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 export function QaPage() {
   const { data: rubrics, isLoading } = useRubricsQuery();
@@ -36,7 +37,7 @@ export function QaPage() {
       <PageHeader
         title="Quality Assurance"
         description="Define scoring rubrics that QA reviewers use to evaluate calls."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New rubric</Button>}
+        actions={<Can permission={Perm.QaWrite}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New rubric</Button></Can>}
       />
 
       {isLoading ? (
@@ -49,7 +50,7 @@ export function QaPage() {
             icon={<Icon name="star" size={20} />}
             title="No rubrics yet"
             description="Create a rubric to standardize how your team scores calls."
-            action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New rubric</Button>}
+            action={<Can permission={Perm.QaWrite}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New rubric</Button></Can>}
           />
         </CardBody></Card>
       ) : (

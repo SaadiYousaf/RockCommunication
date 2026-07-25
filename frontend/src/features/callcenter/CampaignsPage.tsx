@@ -9,6 +9,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 type TabKey = "campaigns" | "sources" | "skills" | "wrapup";
 
@@ -76,7 +77,7 @@ function CampaignsSection() {
   return (
     <Card>
       <CardHeader title="Campaigns" subtitle="Outbound dialer campaigns and verticals."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button>} />
+        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>} />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -86,7 +87,7 @@ function CampaignsSection() {
               icon={<Icon name="target" size={20} />}
               title="No campaigns yet"
               description="Create a campaign to group dialer activity and lead sources."
-              action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button>}
+              action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>}
             />
           </div>
         ) : (
@@ -104,9 +105,11 @@ function CampaignsSection() {
                   </TD>
                   <TD>
                     <div className="flex justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => toggle(c)}>
-                        {c.isActive ? "Disable" : "Enable"}
-                      </Button>
+                      <Can permission={Perm.CampaignsManage}>
+                        <Button variant="ghost" size="sm" onClick={() => toggle(c)}>
+                          {c.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      </Can>
                     </div>
                   </TD>
                 </TR>
@@ -116,16 +119,18 @@ function CampaignsSection() {
         )}
       </CardBody>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New campaign" size="md"
-        footer={<>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="camp-form" type="submit" loading={saving}>Create</Button>
-        </>}>
-        <form id="camp-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
-          <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="OEP-Q1" />
-          <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="OEP Q1 Push" />
-        </form>
-      </Modal>
+      <Can permission={Perm.CampaignsManage}>
+        <Modal open={open} onClose={() => setOpen(false)} title="New campaign" size="md"
+          footer={<>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button form="camp-form" type="submit" loading={saving}>Create</Button>
+          </>}>
+          <form id="camp-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
+            <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="OEP-Q1" />
+            <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="OEP Q1 Push" />
+          </form>
+        </Modal>
+      </Can>
     </Card>
   );
 }
@@ -156,7 +161,7 @@ function LeadSourcesSection() {
   return (
     <Card>
       <CardHeader title="Lead sources" subtitle="Where your leads come from and what they cost."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button>} />
+        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>} />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -184,21 +189,23 @@ function LeadSourcesSection() {
         )}
       </CardBody>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New lead source" size="md"
-        footer={<>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="src-form" type="submit" loading={saving}>Create</Button>
-        </>}>
-        <form id="src-form" onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="FB" />
-          <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Facebook Ads" />
-          <Input label="$ per lead" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
-          <Select label="Campaign" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
-            <option value="">— none —</option>
-            {campaigns?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-        </form>
-      </Modal>
+      <Can permission={Perm.CampaignsManage}>
+        <Modal open={open} onClose={() => setOpen(false)} title="New lead source" size="md"
+          footer={<>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button form="src-form" type="submit" loading={saving}>Create</Button>
+          </>}>
+          <form id="src-form" onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="FB" />
+            <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Facebook Ads" />
+            <Input label="$ per lead" type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
+            <Select label="Campaign" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+              <option value="">— none —</option>
+              {campaigns?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          </form>
+        </Modal>
+      </Can>
     </Card>
   );
 }
@@ -228,7 +235,7 @@ function SkillsSection() {
   return (
     <Card>
       <CardHeader title="Skills" subtitle="Capabilities used by skill-based call routing."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button>} />
+        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>} />
       <CardBody className="pt-0">
         {isLoading ? (
           <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -243,25 +250,29 @@ function SkillsSection() {
                 {s.isActive
                   ? <Badge tone="success" variant="soft" dot>Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
-                <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
-                  {s.isActive ? "Disable" : "Enable"}
-                </Button>
+                <Can permission={Perm.CampaignsManage}>
+                  <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
+                    {s.isActive ? "Disable" : "Enable"}
+                  </Button>
+                </Can>
               </li>
             ))}
           </ul>
         )}
       </CardBody>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New skill" size="md"
-        footer={<>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="skill-form" type="submit" loading={saving}>Create</Button>
-        </>}>
-        <form id="skill-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
-          <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="ES" />
-          <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Spanish" />
-        </form>
-      </Modal>
+      <Can permission={Perm.CampaignsManage}>
+        <Modal open={open} onClose={() => setOpen(false)} title="New skill" size="md"
+          footer={<>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button form="skill-form" type="submit" loading={saving}>Create</Button>
+          </>}>
+          <form id="skill-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
+            <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="ES" />
+            <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Spanish" />
+          </form>
+        </Modal>
+      </Can>
     </Card>
   );
 }
@@ -289,7 +300,7 @@ function WrapUpCodesSection() {
   return (
     <Card>
       <CardHeader title="Wrap-up codes" subtitle="Dispositions agents pick after every call."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button>} />
+        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>} />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -320,29 +331,31 @@ function WrapUpCodesSection() {
         )}
       </CardBody>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New wrap-up code" size="md"
-        footer={<>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="wu-form" type="submit" loading={saving}>Create</Button>
-        </>}>
-        <form id="wu-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
-          <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="SALE" />
-          <Input label="Label" required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Closed sale" />
-          <div className="flex flex-wrap gap-3">
-            {([
-              ["Sale",    isSale,    setIsSale],
-              ["Contact", isContact, setIsContact],
-              ["Retry",   isRetry,   setIsRetry],
-            ] as [string, boolean, (v: boolean) => void][]).map(([lbl, val, setter]) => (
-              <label key={lbl} className="inline-flex items-center gap-2 text-sm text-ink-700">
-                <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-                  checked={val} onChange={(e) => setter(e.target.checked)} />
-                {lbl}
-              </label>
-            ))}
-          </div>
-        </form>
-      </Modal>
+      <Can permission={Perm.CampaignsManage}>
+        <Modal open={open} onClose={() => setOpen(false)} title="New wrap-up code" size="md"
+          footer={<>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button form="wu-form" type="submit" loading={saving}>Create</Button>
+          </>}>
+          <form id="wu-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
+            <Input label="Code" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="SALE" />
+            <Input label="Label" required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Closed sale" />
+            <div className="flex flex-wrap gap-3">
+              {([
+                ["Sale",    isSale,    setIsSale],
+                ["Contact", isContact, setIsContact],
+                ["Retry",   isRetry,   setIsRetry],
+              ] as [string, boolean, (v: boolean) => void][]).map(([lbl, val, setter]) => (
+                <label key={lbl} className="inline-flex items-center gap-2 text-sm text-ink-700">
+                  <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                    checked={val} onChange={(e) => setter(e.target.checked)} />
+                  {lbl}
+                </label>
+              ))}
+            </div>
+          </form>
+        </Modal>
+      </Can>
     </Card>
   );
 }

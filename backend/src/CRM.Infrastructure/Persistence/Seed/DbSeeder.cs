@@ -120,10 +120,19 @@ public static class DbSeeder
         await db.SaveChangesAsync();
 
         // Permissions the broad "everything" bundles must never hand out:
-        //   AgenciesCreate        — only a Super Admin provisions agencies.
+        //   AgenciesCreate/Manage — only a Super Admin provisions/administers agencies.
         //   CallCenterProfileEdit — only the Call Center Admin edits their own call center's
         //                           profile; Agency CEO / Super Admin are read-only by design.
-        string[] restricted = { Permissions.AgenciesCreate, Permissions.CallCenterProfileEdit };
+        //   Roles/PermissionsManage — roles and their permission maps are GLOBAL resources
+        //                           (no AgencyId). If a per-agency Admin/CEO could edit them
+        //                           they'd rewrite RBAC for every tenant and self-escalate.
+        //                           Reserved for the global SuperAdmin (via the '*' override).
+        string[] restricted =
+        {
+            Permissions.AgenciesCreate, Permissions.AgenciesManage,
+            Permissions.CallCenterProfileEdit,
+            Permissions.RolesManage, Permissions.PermissionsManage,
+        };
         string[] everythingExceptRestricted = Permissions.All
             .Where(p => !restricted.Contains(p))
             .ToArray();
@@ -250,6 +259,24 @@ public static class DbSeeder
             }
         }
         await db.SaveChangesAsync();
+
+        // SECURITY (enforced every startup): the grant loop above only ADDS, so it can't undo a
+        // dangerous permission already on a role (seeded before this rule, or hand-granted via the
+        // Roles UI). Roles, permission maps and agencies are GLOBAL resources — hard-remove these
+        // from every role except SuperAdmin so a per-agency Admin/CEO/ProgramManager can never
+        // rewrite cross-tenant RBAC or reach the SuperAdmin agency APIs. SuperAdmin keeps them
+        // (both explicitly and via the '*' PermissionHandler override).
+        string[] superAdminOnlyPerms = { Permissions.RolesManage, Permissions.PermissionsManage, Permissions.AgenciesManage };
+        var lockedIds = await db.Permissions.Where(p => superAdminOnlyPerms.Contains(p.Code)).Select(p => p.Id).ToListAsync();
+        var superAdminRole = await roles.FindByNameAsync(Roles.SuperAdmin);
+        var stale = await db.RolePermissions
+            .Where(rp => lockedIds.Contains(rp.PermissionId) && (superAdminRole == null || rp.RoleId != superAdminRole.Id))
+            .ToListAsync();
+        if (stale.Count > 0)
+        {
+            db.RolePermissions.RemoveRange(stale);
+            await db.SaveChangesAsync();
+        }
     }
 
     private static async Task SeedModulesAsync(AppDbContext db, RoleManager<ApplicationRole> roles)
@@ -309,6 +336,9 @@ public static class DbSeeder
             [Domain.Enums.Roles.SuperAdmin] = all,
             [Domain.Enums.Roles.Admin] = all,
             [Domain.Enums.Roles.CEO] = all,
+            // Call Center Admin manages its own call center's users + profile — give it the nav
+            // it needs (User Management is its core screen) and nothing agency-wide.
+            [Domain.Enums.Roles.CallCenterAdmin] = new[] { Modules.Dashboard, Modules.Team, Modules.UsersManagement, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.ProjectManager] = manager,
             [Domain.Enums.Roles.QAManager] = new[] { Modules.Dashboard, Modules.Qa, Modules.Supervisor, Modules.Reports, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.TechLead] = manager,

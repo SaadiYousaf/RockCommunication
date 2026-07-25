@@ -26,6 +26,7 @@ import { AdminPage } from "../features/admin/AdminPage";
 import { AgenciesPage } from "../features/admin/AgenciesPage";
 import { AgencyDetailPage } from "../features/admin/AgencyDetailPage";
 import { SubmissionAgentsPage } from "../features/admin/SubmissionAgentsPage";
+import { SecurityCenterPage } from "../features/admin/SecurityCenterPage";
 import { AuditLogPage } from "../features/admin/AuditLogPage";
 import { CallCentersPage } from "../features/admin/CallCentersPage";
 import { TeamPage } from "../features/team/TeamPage";
@@ -153,8 +154,6 @@ const router = createBrowserRouter([
             children: [
               { path: "/leads",                  element: <LeadsPage /> },
               { path: "/leads/:id",              element: <LeadDetailPage /> },
-              { path: "/leads/:id/troubleshoot", element: <LeadTroubleshootPage /> },
-              { path: "/leads/troubleshoot",     element: <LeadTroubleshootPage /> },
             ],
           },
           {
@@ -176,6 +175,9 @@ const router = createBrowserRouter([
             children: [
               { path: "/supervisor", element: <SupervisorPage /> },
               { path: "/wallboard",  element: <WallboardPage /> },
+              // Lead troubleshooting is a supervisory diagnostics tool, not a floor-agent one.
+              { path: "/leads/troubleshoot",     element: <LeadTroubleshootPage /> },
+              { path: "/leads/:id/troubleshoot", element: <LeadTroubleshootPage /> },
             ],
           },
           {
@@ -205,9 +207,9 @@ const router = createBrowserRouter([
             ],
           },
 
-          // Lead lifecycle config (TeamLead+)
+          // Lead lifecycle config (manager-tier — not floor agents)
           {
-            element: <ProtectedRoute modules={[M.Leads]} />,
+            element: <ProtectedRoute modules={[M.Campaigns]} />,
             children: [
               { path: "/lists",     element: <LeadListsPage /> },
               { path: "/cadences",  element: <CadencesPage /> },
@@ -239,7 +241,10 @@ const router = createBrowserRouter([
           },
           {
             element: <ProtectedRoute modules={[M.RolesManagement]} roles={adminRoles} />,
-            children: [{ path: "/admin/roles", element: <RolesPage /> }],
+            children: [
+              { path: "/admin/roles",    element: <RolesPage /> },
+              { path: "/admin/security", element: <SecurityCenterPage /> },
+            ],
           },
           {
             element: <ProtectedRoute modules={[M.Workflows]} roles={adminRoles} />,

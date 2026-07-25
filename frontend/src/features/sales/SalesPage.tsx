@@ -11,6 +11,7 @@ import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
   Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "brand"> = {
   funded: "success", validated: "info", pending: "warning", internal: "brand",
@@ -101,6 +102,7 @@ export function SalesPage() {
       <>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
         {/* Record sale */}
+        <Can permission={Perm.SalesRecord}>
         <Card className="xl:col-span-2">
           <CardHeader title="Record a sale" subtitle="Capture a new closed deal." />
           <CardBody>
@@ -182,25 +184,30 @@ export function SalesPage() {
             </form>
           </CardBody>
         </Card>
+        </Can>
 
         {/* Validate / Fund */}
         <Card>
           <CardHeader title="Validate & fund" subtitle="Move sales through QA and funding." />
           <CardBody>
-            <SaleActionForm
-              label="Validate" placeholder="Sale ID to validate" tone="success"
-              actions={[
-                { label: "Approve", variant: "success", onClick: (id) => doValidate(id, true) },
-                { label: "Reject",  variant: "danger",  onClick: (id) => doValidate(id, false) },
-              ]}
-              loading={validating}
-            />
+            <Can permission={Perm.SalesValidate}>
+              <SaleActionForm
+                label="Validate" placeholder="Sale ID to validate" tone="success"
+                actions={[
+                  { label: "Approve", variant: "success", onClick: (id) => doValidate(id, true) },
+                  { label: "Reject",  variant: "danger",  onClick: (id) => doValidate(id, false) },
+                ]}
+                loading={validating}
+              />
+            </Can>
             <div className="my-4 border-t hairline" />
-            <SaleActionForm
-              label="Fund" placeholder="Sale ID to fund" tone="info"
-              actions={[{ label: "Fund", variant: "primary", onClick: (id) => doFund(id) }]}
-              loading={funding}
-            />
+            <Can permission={Perm.SalesFund}>
+              <SaleActionForm
+                label="Fund" placeholder="Sale ID to fund" tone="info"
+                actions={[{ label: "Fund", variant: "primary", onClick: (id) => doFund(id) }]}
+                loading={funding}
+              />
+            </Can>
           </CardBody>
         </Card>
       </div>

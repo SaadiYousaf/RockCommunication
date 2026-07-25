@@ -17,6 +17,7 @@ import {
   useVerifyJornayaMutation,
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
+import { Can, Perm, usePermission } from "../../shared/auth/permissions";
 import { Icon, useSecureEntry } from "../../shared/ui";
 
 const STAGES: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed","Validated","Funded","Followup","Winback","Lost"];
@@ -39,6 +40,7 @@ export function LeadDetailPage() {
   const [sendSms] = useSendQuickSmsMutation();
   const [scheduleCallback] = useScheduleCallbackMutation();
   const [dropVm] = useDropVoicemailMutation();
+  const canEditNotes = usePermission(Perm.LeadsWrite);
 
   const [compliance, setCompliance] = useState<{ allowed: boolean; blockReason: string | null; warnings: string[] } | null>(null);
   const [notes, setNotes] = useState("");
@@ -157,13 +159,15 @@ export function LeadDetailPage() {
             🛡 Verify Jornaya
           </button>
           <div className="flex-1" />
-          {STAGES.map(s => (
-            <button key={s} onClick={() => doTransition(s, lead.disposition as LeadDisposition)}
-              disabled={s === lead.stage}
-              className={`px-3 py-2 rounded text-xs ${s === lead.stage ? "bg-slate-300 text-slate-500" : "bg-white border border-slate-300 hover:bg-slate-50"}`}>
-              → {s}
-            </button>
-          ))}
+          <Can permission={Perm.LeadsTransition}>
+            {STAGES.map(s => (
+              <button key={s} onClick={() => doTransition(s, lead.disposition as LeadDisposition)}
+                disabled={s === lead.stage}
+                className={`px-3 py-2 rounded text-xs ${s === lead.stage ? "bg-slate-300 text-slate-500" : "bg-white border border-slate-300 hover:bg-slate-50"}`}>
+                → {s}
+              </button>
+            ))}
+          </Can>
         </div>
 
         {showSms && (
@@ -174,7 +178,7 @@ export function LeadDetailPage() {
           </form>
         )}
         {showCallback && (
-          <form onSubmit={submitCallback} className="mt-3 flex gap-2 bg-slate-50 rounded p-2">
+          <form onSubmit={submitCallback} className="mt-3 flex flex-wrap gap-2 bg-slate-50 rounded p-2">
             <input type="datetime-local" className="border rounded px-2 py-1.5 text-sm" value={callbackAt} onChange={e => setCallbackAt(e.target.value)} required />
             <input className="flex-1 border rounded px-3 py-1.5 text-sm" placeholder="Reason (optional)" value={callbackReason} onChange={e => setCallbackReason(e.target.value)} />
             <button className="bg-brand-700 text-white rounded px-4 text-sm">Schedule</button>
@@ -193,18 +197,20 @@ export function LeadDetailPage() {
         {/* Left 2 columns */}
         <div className="lg:col-span-2 space-y-4">
           {/* Disposition picker */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-            <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Set disposition</div>
-            <div className="flex flex-wrap gap-1">
-              {DISPOSITIONS.map(d => (
-                <button key={d}
-                  onClick={() => doTransition(lead.stage as WorkflowStage, d)}
-                  className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-slate-100 hover:bg-slate-200"}`}>
-                  {d}
-                </button>
-              ))}
+          <Can permission={Perm.LeadsTransition}>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+              <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Set disposition</div>
+              <div className="flex flex-wrap gap-1">
+                {DISPOSITIONS.map(d => (
+                  <button key={d}
+                    onClick={() => doTransition(lead.stage as WorkflowStage, d)}
+                    className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-slate-100 hover:bg-slate-200"}`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </Can>
 
           {/* Notes */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
@@ -217,6 +223,7 @@ export function LeadDetailPage() {
               rows={5} placeholder="Type call notes here…"
               value={notes} onChange={e => setNotes(e.target.value)}
               onBlur={saveNotes}
+              readOnly={!canEditNotes}
               {...secureNotes}
             />
             <div className="text-xs text-slate-500 mt-1">Notes auto-save when you click out.</div>

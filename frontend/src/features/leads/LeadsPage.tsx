@@ -19,6 +19,7 @@ import {
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 
 
@@ -219,12 +220,16 @@ export function LeadsPage() {
         description="Search, transition, and manage every lead in your pipeline."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" leftIcon={<Icon name="download" size={15} />} onClick={exportCsv}>
-              Export CSV
-            </Button>
-            <Button leftIcon={<Icon name="plus" size={15} />} onClick={() => setOpen(true)}>
-              New lead
-            </Button>
+            <Can permission={Perm.LeadsExport}>
+              <Button variant="outline" leftIcon={<Icon name="download" size={15} />} onClick={exportCsv}>
+                Export CSV
+              </Button>
+            </Can>
+            <Can permission={Perm.LeadsWrite}>
+              <Button leftIcon={<Icon name="plus" size={15} />} onClick={() => setOpen(true)}>
+                New lead
+              </Button>
+            </Can>
           </div>
         }
       />
@@ -279,28 +284,36 @@ export function LeadsPage() {
             <div className="h-8 w-px bg-ink-200/70" />
             <Select className="h-9 w-44 text-sm" value={bulkAction} onChange={(e) => setBulkAction(e.target.value as "none" | "assign" | "stage" | "cadence")}>
               <option value="none">Choose action…</option>
-              <option value="assign">Assign agent</option>
+              <Can permission={Perm.LeadsAssign}>
+                <option value="assign">Assign agent</option>
+              </Can>
               <option value="stage">Set stage</option>
-              <option value="cadence">Enroll in cadence</option>
+              <Can permission={Perm.LeadsAssign}>
+                <option value="cadence">Enroll in cadence</option>
+              </Can>
             </Select>
 
-            {bulkAction === "assign" && (
-              <Select className="h-9 w-56 text-sm" value={bulkAssignee} onChange={(e) => setBulkAssignee(e.target.value)}>
-                <option value="">Pick user…</option>
-                {users?.map((u) => <option key={u.id} value={u.id}>{u.userName}</option>)}
-              </Select>
-            )}
+            <Can permission={Perm.LeadsAssign}>
+              {bulkAction === "assign" && (
+                <Select className="h-9 w-56 text-sm" value={bulkAssignee} onChange={(e) => setBulkAssignee(e.target.value)}>
+                  <option value="">Pick user…</option>
+                  {users?.map((u) => <option key={u.id} value={u.id}>{u.userName}</option>)}
+                </Select>
+              )}
+            </Can>
             {bulkAction === "stage" && (
               <Select className="h-9 w-44 text-sm" value={bulkStageVal} onChange={(e) => setBulkStageVal(e.target.value as WorkflowStage)}>
                 {stages.map((s) => <option key={s} value={s}>{s}</option>)}
               </Select>
             )}
-            {bulkAction === "cadence" && (
-              <Select className="h-9 w-56 text-sm" value={bulkCadence} onChange={(e) => setBulkCadence(e.target.value)}>
-                <option value="">Pick cadence…</option>
-                {cadences?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-            )}
+            <Can permission={Perm.LeadsAssign}>
+              {bulkAction === "cadence" && (
+                <Select className="h-9 w-56 text-sm" value={bulkCadence} onChange={(e) => setBulkCadence(e.target.value)}>
+                  <option value="">Pick cadence…</option>
+                  {cadences?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Select>
+              )}
+            </Can>
 
             <div className="ml-auto flex gap-2">
               <Button size="sm" variant="ghost" onClick={clearSelection} leftIcon={<Icon name="x" size={13} />}>Clear</Button>

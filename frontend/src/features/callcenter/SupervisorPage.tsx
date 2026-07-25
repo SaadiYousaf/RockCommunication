@@ -1,4 +1,5 @@
 import type { IconName } from "../../shared/ui";
+import { Can, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
@@ -169,21 +170,23 @@ export function SupervisorPage() {
                     : <span className="text-ink-400">—</span>}
                 </TD>
                 <TD>
-                  <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                    <Button variant="ghost" size="sm" leftIcon={<Icon name="clock" size={14} />}
-                      onClick={() => force(a.userId, "Break", "Break", "Supervisor break")}>Break</Button>
-                    <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
-                      leftIcon={<Icon name="logout" size={14} />}
-                      onClick={() => force(a.userId, "Offline", "Logout", "Forced logout")}>Logout</Button>
-                    <div className="h-5 w-px bg-ink-200 mx-1" />
-                    <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
-                      onClick={() => doCoach(a.userId, "monitor", a.userName)}>Listen</Button>
-                    <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
-                      onClick={() => doCoach(a.userId, "whisper", a.userName)}>Whisper</Button>
-                    <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
-                      className="text-emerald-700 hover:bg-emerald-50"
-                      onClick={() => doCoach(a.userId, "barge", a.userName)}>Barge</Button>
-                  </div>
+                  <Can permission={Perm.SupervisorControl}>
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      <Button variant="ghost" size="sm" leftIcon={<Icon name="clock" size={14} />}
+                        onClick={() => force(a.userId, "Break", "Break", "Supervisor break")}>Break</Button>
+                      <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
+                        leftIcon={<Icon name="logout" size={14} />}
+                        onClick={() => force(a.userId, "Offline", "Logout", "Forced logout")}>Logout</Button>
+                      <div className="h-5 w-px bg-ink-200 mx-1" />
+                      <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        onClick={() => doCoach(a.userId, "monitor", a.userName)}>Listen</Button>
+                      <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        onClick={() => doCoach(a.userId, "whisper", a.userName)}>Whisper</Button>
+                      <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        className="text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => doCoach(a.userId, "barge", a.userName)}>Barge</Button>
+                    </div>
+                  </Can>
                 </TD>
               </TR>
             ))}

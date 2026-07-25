@@ -8,6 +8,7 @@ import {
   Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { Can, Perm } from "../../shared/auth/permissions";
 
 const STAGES = ["New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost"];
 const ROLES  = ["Fronter", "Verifier", "JrCloser", "Closer", "Validator", "Followups", "Winbacks"];
@@ -65,7 +66,7 @@ export function ScriptsPage() {
       <PageHeader
         title="Scripts"
         description="Reusable call scripts agents see in the dialer based on stage, role, and campaign."
-        actions={<Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button>}
+        actions={<Can permission={Perm.ScriptsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button></Can>}
       />
 
       <Card className="mb-4">
@@ -86,7 +87,7 @@ export function ScriptsPage() {
             icon={<Icon name="doc" size={20} />}
             title={search ? "No scripts match" : "No scripts yet"}
             description={search ? "Try a different search." : "Create call scripts your agents can use during calls."}
-            action={!search ? <Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button> : undefined}
+            action={!search ? <Can permission={Perm.ScriptsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button></Can> : undefined}
           />
         </CardBody></Card>
       ) : (
@@ -112,13 +113,15 @@ export function ScriptsPage() {
                     </div>
                   }
                   action={
-                    <div className="flex gap-1.5">
-                      <Button variant="ghost" size="sm" leftIcon={<Icon name="cog" size={14} />}
-                        onClick={() => setEditing(s)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
-                        {s.isActive ? "Disable" : "Enable"}
-                      </Button>
-                    </div>
+                    <Can permission={Perm.ScriptsManage}>
+                      <div className="flex gap-1.5">
+                        <Button variant="ghost" size="sm" leftIcon={<Icon name="cog" size={14} />}
+                          onClick={() => setEditing(s)}>Edit</Button>
+                        <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
+                          {s.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      </div>
+                    </Can>
                   }
                 />
                 <CardBody className="pt-0">
