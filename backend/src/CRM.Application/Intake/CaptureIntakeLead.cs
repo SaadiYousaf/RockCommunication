@@ -25,7 +25,8 @@ public record IntakeLeadDto(
     DateTime BirthDate,
     int AgeYears,
     string Email,
-    string? JornayaLeadId);
+    string? JornayaLeadId,
+    string? Notes = null);
 
 public record IntakeLeadResult(Guid LeadId, string FirstName, string LastName, WorkflowStage Stage);
 
@@ -96,6 +97,7 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             MaritalStatus = d.MaritalStatus.Trim(),
             AgeYears = d.AgeYears,
             JornayaLeadId = d.JornayaLeadId,
+            Notes = string.IsNullOrWhiteSpace(d.Notes) ? null : d.Notes.Trim(),
             ConsentCaptured = true,
             Source = toCloser ? AppConstants.LeadSources.CloserIntake : AppConstants.LeadSources.FronterIntake,
             Stage = request.EntryStage,

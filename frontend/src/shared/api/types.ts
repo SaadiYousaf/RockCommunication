@@ -189,6 +189,7 @@ export interface IntakeLeadInput {
   ageYears: number;
   email: string;
   jornayaLeadId?: string;
+  notes?: string;
 }
 
 export type VerifierStatusValue = "None" | "Verified" | "NotInterested" | "Dnc" | "Busy" | "CallBack" | "DeadAir";

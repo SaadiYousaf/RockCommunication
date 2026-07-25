@@ -1,13 +1,13 @@
 import { MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
 import { useState } from "react";
 import type { IntakeLeadInput } from "../../shared/api/types";
-import { Button, Icon, Input, Select } from "../../shared/ui";
+import { Button, Icon, Input, Select, Textarea } from "../../shared/ui";
 
 
 const empty = {
   firstName: "", lastName: "", maritalStatus: "", createdDate: new Date().toISOString().slice(0, 10),
   streetAddress: "", city: "", state: "", zipcode: "", phoneNumber: "",
-  birthDate: "", ageYears: "", email: "", jornayaLeadId: "",
+  birthDate: "", ageYears: "", email: "", jornayaLeadId: "", notes: "",
 };
 
 /**
@@ -24,7 +24,7 @@ export function IntakeLeadForm({
   submitLabel: string;
 }) {
   const [f, setF] = useState({ ...empty });
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF({ ...f, [k]: e.target.value });
 
   async function submit(e: React.FormEvent) {
@@ -36,6 +36,7 @@ export function IntakeLeadForm({
       phoneNumber: f.phoneNumber, birthDate: new Date(f.birthDate).toISOString(),
       ageYears: parseInt(f.ageYears, 10) || 0, email: f.email,
       jornayaLeadId: f.jornayaLeadId || undefined,
+      notes: f.notes.trim() || undefined,
     });
     if (ok) setF({ ...empty });
   }
@@ -58,6 +59,11 @@ export function IntakeLeadForm({
       <Input label="Age (years)" type="number" required min={1} max={129} value={f.ageYears} onChange={set("ageYears")} />
       <Input label="Email" type="email" required secure containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
       <Input label="Jornaya LeadiD" containerClassName="sm:col-span-2" placeholder="Optional token" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
+      <Textarea
+        label="Notes" containerClassName="sm:col-span-2" rows={3}
+        placeholder="Optional — context for this lead (why they're interested, best time to call, etc.)"
+        value={f.notes} onChange={set("notes")}
+      />
       <div className="sm:col-span-2 flex justify-end pt-1">
         <Button type="submit" loading={isLoading} leftIcon={<Icon name="check" size={16} />}>
           {submitLabel}
