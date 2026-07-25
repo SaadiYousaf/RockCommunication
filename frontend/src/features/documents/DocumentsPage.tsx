@@ -3,7 +3,6 @@ import { API_URL } from "../../shared/config";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import * as XLSX from "xlsx";
 import DOMPurify from "dompurify";
 import {
   useListDocumentsQuery, useUploadDocumentMutation, useDeleteDocumentMutation,
@@ -183,6 +182,8 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         const buf = await res.arrayBuffer();
         let rendered = "";
         if (doc.kind === "spreadsheet") {
+          // Lazy-import xlsx so it doesn't bloat the main bundle (mirrors mammoth below).
+          const XLSX = await import("xlsx");
           const wb = XLSX.read(buf, { type: "array" });
           rendered = wb.SheetNames.map((sn) => {
             const sheetHtml = XLSX.utils.sheet_to_html(wb.Sheets[sn]);

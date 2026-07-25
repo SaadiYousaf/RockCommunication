@@ -19,6 +19,6 @@ public class WorkflowTransitionTests
     [InlineData(WorkflowStage.Funded, WorkflowStage.New, false)]
     public void CanTransition_Honors_StateMachine(WorkflowStage from, WorkflowStage to, bool expected)
     {
-        Assert.Equal(expected, TransitionLeadHandler.CanTransition(from, to));
+        Assert.Equal(expected, LeadStagePolicy.CanTransition(from, to));
     }
 }

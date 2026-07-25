@@ -63,10 +63,9 @@ public class WallboardHandler : IRequestHandler<GetWallboardQuery, WallboardSnap
             .GroupBy(s => s.CloserUserId)
             .Select(g => new { UserId = g.Key, Sales = g.Count(), Premium = g.Sum(x => (decimal?)x.MonthlyPremium) })
             .OrderByDescending(x => x.Sales).Take(5).ToListAsync(ct);
-        var users = await _identity.ListUsersAsync(aid, ct);
-        var byId = users.ToDictionary(u => u.Id);
+        var byId = await _identity.ListUserNamesAsync(aid, ct);
         var top = topRaw.Select(t => new TopAgentDto(t.UserId,
-            byId.TryGetValue(t.UserId, out var u) ? u.UserName : t.UserId.ToString(),
+            byId.TryGetValue(t.UserId, out var u) ? u : t.UserId.ToString(),
             t.Sales, 0, t.Premium)).ToList();
 
         return new WallboardSnapshot(clockedIn, available, onCall, onBreak,
@@ -99,7 +98,7 @@ public class LeaderboardHandler : IRequestHandler<GetLeaderboardQuery, IReadOnly
             _ => DateTime.UtcNow.Date
         };
 
-        var users = await _identity.ListUsersAsync(aid, ct);
+        var users = await _identity.ListUserNamesAsync(aid, ct);
 
         var calls = await _db.CallRecords.AsNoTracking()
             .Where(c => c.AgencyId == aid && c.InitiatedAt >= since)
@@ -117,11 +116,11 @@ public class LeaderboardHandler : IRequestHandler<GetLeaderboardQuery, IReadOnly
             .GroupBy(a => a.UserId).Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
 
-        return users.Select(u => new AgentLeaderboardDto(u.Id, u.UserName,
-            calls.GetValueOrDefault(u.Id, 0),
-            sales.TryGetValue(u.Id, out var s1) ? s1.Count : 0,
-            sales.TryGetValue(u.Id, out var s2) ? s2.Premium : 0,
-            transitions.GetValueOrDefault(u.Id, 0)))
+        return users.OrderBy(u => u.Value).Select(u => new AgentLeaderboardDto(u.Key, u.Value,
+            calls.GetValueOrDefault(u.Key, 0),
+            sales.TryGetValue(u.Key, out var s1) ? s1.Count : 0,
+            sales.TryGetValue(u.Key, out var s2) ? s2.Premium : 0,
+            transitions.GetValueOrDefault(u.Key, 0)))
             .OrderByDescending(x => x.SalesToday)
             .ThenByDescending(x => x.PremiumToday)
             .Take(50).ToList();

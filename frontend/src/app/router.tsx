@@ -1,6 +1,7 @@
+import { lazy } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+// Small / always-hit pages stay eager so they're part of the initial bundle.
 import { LoginPage } from "../features/auth/LoginPage";
-import { TwoFactorEnrollPage } from "../features/auth/TwoFactorEnrollPage";
 import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { ConfirmEmailPage } from "../features/auth/ConfirmEmailPage";
@@ -12,47 +13,54 @@ import { CloseQueuePage } from "../features/intake/CloseQueuePage";
 import { ClosingApplicationPage } from "../features/intake/ClosingApplicationPage";
 import { ValidateQueuePage } from "../features/intake/ValidateQueuePage";
 import { LeadDetailPage } from "../features/leads/LeadDetailPage";
-import { LeadSearchPage } from "../features/leads/LeadSearchPage";
-import { LeadTroubleshootPage } from "../features/leads/LeadTroubleshootPage";
 import { UsersPage } from "../features/users/UsersPage";
 import { SalesPage } from "../features/sales/SalesPage";
-import { CommissionsPage } from "../features/sales/CommissionsPage";
 import { CallbacksPage } from "../features/callbacks/CallbacksPage";
-import { KpiDashboardPage } from "../features/dashboard/KpiDashboardPage";
-import { QaPage } from "../features/qa/QaPage";
-import { QaBrowserPage } from "../features/qa/QaBrowserPage";
 import { ChatPage } from "../features/chat/ChatPage";
 import { AdminPage } from "../features/admin/AdminPage";
 import { AgenciesPage } from "../features/admin/AgenciesPage";
-import { AgencyDetailPage } from "../features/admin/AgencyDetailPage";
-import { SubmissionAgentsPage } from "../features/admin/SubmissionAgentsPage";
-import { SecurityCenterPage } from "../features/admin/SecurityCenterPage";
-import { AuditLogPage } from "../features/admin/AuditLogPage";
 import { CallCentersPage } from "../features/admin/CallCentersPage";
 import { TeamPage } from "../features/team/TeamPage";
-import { CallsHistoryPage } from "../features/callcenter/CallsHistoryPage";
 import { UserManagementPage } from "../features/admin/UserManagementPage";
-import { RolesPage } from "../features/admin/RolesPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
-import { GlobalSearchPage } from "../features/search/GlobalSearchPage";
 import { AgentPanelPage } from "../features/callcenter/AgentPanelPage";
-import { SupervisorPage } from "../features/callcenter/SupervisorPage";
-import { DncPage } from "../features/callcenter/DncPage";
-import { CampaignsPage } from "../features/callcenter/CampaignsPage";
-import { ScriptsPage } from "../features/callcenter/ScriptsPage";
-import { WorkflowsPage } from "../features/workflows/WorkflowsPage";
-import { LeadListsPage } from "../features/lists/LeadListsPage";
-import { CadencesPage } from "../features/cadences/CadencesPage";
-import { WallboardPage } from "../features/wallboard/WallboardPage";
-import { KnowledgeBasePage } from "../features/kb/KnowledgeBasePage";
-import { DocumentsPage } from "../features/documents/DocumentsPage";
-import { QueuesPage } from "../features/queues/QueuesPage";
 import { Dashboard } from "../pages/Dashboard";
 import { Layout } from "../shared/components/Layout";
 import { ProtectedRoute } from "../shared/components/ProtectedRoute";
 import { ForbiddenPage } from "../shared/components/ForbiddenPage";
-import { IntegrationsPage } from "../features/admin/IntegrationsPage";
+
+// Heavy / rarely-hit pages are route-split via React.lazy so each lands in its own
+// chunk instead of the 1.3 MB initial bundle. Every one of these routes renders
+// inside <Layout>, whose <Outlet> is wrapped in a <Suspense> boundary (see
+// Layout.tsx) that shows a spinner while the chunk downloads. These are NAMED
+// exports, so we map the export onto `default` for React.lazy.
+const TwoFactorEnrollPage = lazy(() => import("../features/auth/TwoFactorEnrollPage").then(m => ({ default: m.TwoFactorEnrollPage })));
+const LeadSearchPage = lazy(() => import("../features/leads/LeadSearchPage").then(m => ({ default: m.LeadSearchPage })));
+const LeadTroubleshootPage = lazy(() => import("../features/leads/LeadTroubleshootPage").then(m => ({ default: m.LeadTroubleshootPage })));
+const CommissionsPage = lazy(() => import("../features/sales/CommissionsPage").then(m => ({ default: m.CommissionsPage })));
+const KpiDashboardPage = lazy(() => import("../features/dashboard/KpiDashboardPage").then(m => ({ default: m.KpiDashboardPage })));
+const QaPage = lazy(() => import("../features/qa/QaPage").then(m => ({ default: m.QaPage })));
+const QaBrowserPage = lazy(() => import("../features/qa/QaBrowserPage").then(m => ({ default: m.QaBrowserPage })));
+const AgencyDetailPage = lazy(() => import("../features/admin/AgencyDetailPage").then(m => ({ default: m.AgencyDetailPage })));
+const SubmissionAgentsPage = lazy(() => import("../features/admin/SubmissionAgentsPage").then(m => ({ default: m.SubmissionAgentsPage })));
+const SecurityCenterPage = lazy(() => import("../features/admin/SecurityCenterPage").then(m => ({ default: m.SecurityCenterPage })));
+const AuditLogPage = lazy(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
+const CallsHistoryPage = lazy(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
+const RolesPage = lazy(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
+const GlobalSearchPage = lazy(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
+const SupervisorPage = lazy(() => import("../features/callcenter/SupervisorPage").then(m => ({ default: m.SupervisorPage })));
+const DncPage = lazy(() => import("../features/callcenter/DncPage").then(m => ({ default: m.DncPage })));
+const CampaignsPage = lazy(() => import("../features/callcenter/CampaignsPage").then(m => ({ default: m.CampaignsPage })));
+const ScriptsPage = lazy(() => import("../features/callcenter/ScriptsPage").then(m => ({ default: m.ScriptsPage })));
+const WorkflowsPage = lazy(() => import("../features/workflows/WorkflowsPage").then(m => ({ default: m.WorkflowsPage })));
+const LeadListsPage = lazy(() => import("../features/lists/LeadListsPage").then(m => ({ default: m.LeadListsPage })));
+const CadencesPage = lazy(() => import("../features/cadences/CadencesPage").then(m => ({ default: m.CadencesPage })));
+const WallboardPage = lazy(() => import("../features/wallboard/WallboardPage").then(m => ({ default: m.WallboardPage })));
+const KnowledgeBasePage = lazy(() => import("../features/kb/KnowledgeBasePage").then(m => ({ default: m.KnowledgeBasePage })));
+const DocumentsPage = lazy(() => import("../features/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
+const QueuesPage = lazy(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
+const IntegrationsPage = lazy(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 

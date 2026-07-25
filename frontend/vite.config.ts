@@ -17,6 +17,14 @@ export default defineConfig({
         entryFileNames: `assets/[name]-[hash].${buildId}.js`,
         chunkFileNames: `assets/[name]-[hash].${buildId}.js`,
         assetFileNames: `assets/[name]-[hash].${buildId}[extname]`,
+        // Split the core framework libraries into a long-lived `vendor` chunk so
+        // they cache independently of app code and don't re-download on every deploy.
+        // (rolldown-vite types this as a function, not the object form.)
+        manualChunks(id: string) {
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|react-redux|@reduxjs[\\/]toolkit)[\\/]/.test(id)) {
+            return "vendor"
+          }
+        },
       },
     },
   },

@@ -2,7 +2,6 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import QRCode from "qrcode";
 import {
   useEnable2FaMutation, useSendEmailOtpMutation, useSetTwoFactorMethodMutation, useSetup2FaMutation,
   useDisable2FaMutation, useGet2FaStatusQuery,
@@ -36,9 +35,20 @@ export function TwoFactorEnrollPage() {
 
   useEffect(() => {
     if (!totpData?.qrCodeUri) { setQrDataUrl(null); return; }
-    QRCode.toDataURL(totpData.qrCodeUri, { width: 240, margin: 2 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null));
+    const uri = totpData.qrCodeUri;
+    let cancelled = false;
+    (async () => {
+      try {
+        // Lazy-import qrcode so it doesn't ship in the main bundle — this page is
+        // rarely hit and the QR is only ever needed during TOTP enrolment.
+        const QRCode = (await import("qrcode")).default;
+        const url = await QRCode.toDataURL(uri, { width: 240, margin: 2 });
+        if (!cancelled) setQrDataUrl(url);
+      } catch {
+        if (!cancelled) setQrDataUrl(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [totpData?.qrCodeUri]);
 
   async function chooseMethod(m: Method) {

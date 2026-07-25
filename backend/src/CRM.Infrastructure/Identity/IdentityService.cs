@@ -377,6 +377,14 @@ public class IdentityService : IIdentityService
         return result;
     }
 
+    public async Task<IReadOnlyDictionary<Guid, string>> ListUserNamesAsync(Guid? agencyId, CancellationToken ct = default)
+    {
+        var q = _users.Users.AsNoTracking();
+        if (agencyId is { } aid) q = q.Where(u => u.AgencyId == aid);
+        var pairs = await q.Select(u => new { u.Id, u.UserName }).ToListAsync(ct);
+        return pairs.ToDictionary(u => u.Id, u => u.UserName ?? string.Empty);
+    }
+
     private async Task<LoginResponse> IssueLoginAsync(ApplicationUser user, CancellationToken ct)
     {
         var roles = (await _users.GetRolesAsync(user)).ToList();

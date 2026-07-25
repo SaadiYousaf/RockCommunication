@@ -70,7 +70,7 @@ public class BulkLeadHandler :
         var errors = new List<string>();
         foreach (var lead in leads)
         {
-            if (!CanTransition(lead.Stage, request.ToStage))
+            if (!LeadStagePolicy.CanTransition(lead.Stage, request.ToStage))
             {
                 errors.Add($"{lead.FirstName} {lead.LastName}: cannot {lead.Stage} → {request.ToStage}");
                 continue;
@@ -133,20 +133,4 @@ public class BulkLeadHandler :
             throw new ForbiddenAccessException();
     }
 
-    private static readonly Dictionary<WorkflowStage, WorkflowStage[]> Allowed = new()
-    {
-        [WorkflowStage.New]       = new[] { WorkflowStage.Fronted, WorkflowStage.Lost },
-        [WorkflowStage.Fronted]   = new[] { WorkflowStage.Verified, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.Verified]  = new[] { WorkflowStage.JrClosed, WorkflowStage.Closed, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.JrClosed]  = new[] { WorkflowStage.Closed, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.Closed]    = new[] { WorkflowStage.Validated, WorkflowStage.Lost },
-        [WorkflowStage.Validated] = new[] { WorkflowStage.Funded, WorkflowStage.Lost },
-        [WorkflowStage.Funded]    = new[] { WorkflowStage.Followup },
-        [WorkflowStage.Followup]  = new[] { WorkflowStage.Fronted, WorkflowStage.Verified, WorkflowStage.Closed, WorkflowStage.Winback, WorkflowStage.Lost },
-        [WorkflowStage.Winback]   = new[] { WorkflowStage.Fronted, WorkflowStage.Lost },
-        [WorkflowStage.Lost]      = new[] { WorkflowStage.Winback }
-    };
-
-    private static bool CanTransition(WorkflowStage from, WorkflowStage to) =>
-        Allowed.TryGetValue(from, out var next) && next.Contains(to);
 }

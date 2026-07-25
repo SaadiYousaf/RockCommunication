@@ -30,27 +30,36 @@ public class LiveAgentBoardHandler : IRequestHandler<LiveAgentBoardQuery, IReadO
     {
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        var aid = _user.AgencyId.Value;
 
-        var openSessions = await _db.AgentSessions
-            .Where(s => s.AgencyId == _user.AgencyId && s.ClockOutAt == null)
+        var openSessions = await _db.AgentSessions.AsNoTracking()
+            .Where(s => s.AgencyId == aid && s.ClockOutAt == null)
             .Select(s => s.Id)
             .ToListAsync(ct);
 
-        var logs = await _db.AgentStatusLogs
+        var logs = await _db.AgentStatusLogs.AsNoTracking()
             .Where(l => openSessions.Contains(l.SessionId!.Value) && l.UntilAt == null)
             .ToListAsync(ct);
 
-        var users = await _identity.ListUsersAsync(_user.AgencyId, ct);
-        var byId = users.ToDictionary(u => u.Id);
+        var byId = await _identity.ListUserNamesAsync(aid, ct);
+
+        // Batch the "current live call per agent" lookup into one query instead of one
+        // round-trip per agent. Ordering by InitiatedAt descending keeps g.First() the most
+        // recent open call, matching the previous per-agent FirstOrDefault behaviour.
+        var userIds = logs.Select(l => l.UserId).Distinct().ToList();
+        var liveByUser = (await _db.CallRecords.AsNoTracking()
+                .Where(c => c.AgencyId == aid && c.EndedAt == null && userIds.Contains(c.AgentUserId))
+                .OrderByDescending(c => c.InitiatedAt)
+                .ToListAsync(ct))
+            .GroupBy(c => c.AgentUserId)
+            .ToDictionary(g => g.Key, g => g.First());
 
         var list = new List<LiveAgentDto>();
         foreach (var l in logs)
         {
-            byId.TryGetValue(l.UserId, out var u);
-            var liveCall = await _db.CallRecords
-                .Where(c => c.AgentUserId == l.UserId && c.AgencyId == _user.AgencyId && c.EndedAt == null)
-                .OrderByDescending(c => c.InitiatedAt).FirstOrDefaultAsync(ct);
-            list.Add(new LiveAgentDto(l.UserId, u?.UserName ?? l.UserId.ToString(),
+            byId.TryGetValue(l.UserId, out var name);
+            liveByUser.TryGetValue(l.UserId, out var liveCall);
+            list.Add(new LiveAgentDto(l.UserId, name ?? l.UserId.ToString(),
                 l.Status, l.Reason, l.FromAt, DateTime.UtcNow - l.FromAt,
                 liveCall?.Id, liveCall?.Status));
         }

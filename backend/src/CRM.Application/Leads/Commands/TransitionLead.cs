@@ -23,23 +23,6 @@ public class TransitionLeadValidator : AbstractValidator<TransitionLeadCommand>
 
 public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, LeadDto>
 {
-    private static readonly Dictionary<WorkflowStage, WorkflowStage[]> Allowed = new()
-    {
-        [WorkflowStage.New]       = new[] { WorkflowStage.Fronted, WorkflowStage.Lost },
-        [WorkflowStage.Fronted]   = new[] { WorkflowStage.Verified, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.Verified]  = new[] { WorkflowStage.JrClosed, WorkflowStage.Closed, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.JrClosed]  = new[] { WorkflowStage.Closed, WorkflowStage.Lost, WorkflowStage.Followup },
-        [WorkflowStage.Closed]    = new[] { WorkflowStage.Validated, WorkflowStage.Lost },
-        [WorkflowStage.Validated] = new[] { WorkflowStage.Funded, WorkflowStage.Lost },
-        [WorkflowStage.Funded]    = new[] { WorkflowStage.Followup },
-        [WorkflowStage.Followup]  = new[] { WorkflowStage.Fronted, WorkflowStage.Verified, WorkflowStage.Closed, WorkflowStage.Winback, WorkflowStage.Lost },
-        [WorkflowStage.Winback]   = new[] { WorkflowStage.Fronted, WorkflowStage.Lost },
-        [WorkflowStage.Lost]      = new[] { WorkflowStage.Winback }
-    };
-
-    public static bool CanTransition(WorkflowStage from, WorkflowStage to) =>
-        Allowed.TryGetValue(from, out var next) && next.Contains(to);
-
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
@@ -60,7 +43,7 @@ public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, Lead
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
 
         var to = request.Input.ToStage;
-        if (!CanTransition(lead.Stage, to))
+        if (!LeadStagePolicy.CanTransition(lead.Stage, to))
             throw new ConflictException($"Cannot transition lead from {lead.Stage} to {to}.");
 
         var activity = new LeadActivity

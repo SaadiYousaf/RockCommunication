@@ -61,6 +61,13 @@ public interface IIdentityService
     Task<UserSummaryDto?> GetUserAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Lightweight id→username lookup for hot polling paths (wallboards, live boards). Unlike
+    /// <see cref="ListUsersAsync"/> it issues a single projection query and skips the per-user
+    /// role/module round-trips, so it must only be used where names are all that's needed.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, string>> ListUserNamesAsync(Guid? agencyId, CancellationToken ct = default);
+
     Task SendEmailConfirmationAsync(string email, CancellationToken ct = default);
     Task ConfirmEmailAsync(Guid userId, string token, CancellationToken ct = default);
     Task ForgotPasswordAsync(string email, CancellationToken ct = default);

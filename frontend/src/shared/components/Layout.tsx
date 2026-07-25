@@ -1,9 +1,9 @@
 import { roleLabel } from "../constants/roles";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, type RootState } from "../../app/store";
-import { Avatar, Badge, Icon, type IconName, cn } from "../ui";
+import { Avatar, Badge, Icon, type IconName, Spinner, cn } from "../ui";
 import { CallDock } from "../../features/softphone/CallDock";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
 import { BrandLogo } from "./BrandLogo";
@@ -273,7 +273,11 @@ function LayoutInner() {
 
         <main className="flex-1 overflow-auto">
           <div className="max-w-[1920px] 2xl:max-w-[2200px] mx-auto p-4 sm:p-6 lg:p-8 xl:p-10 2xl:p-12">
-            <Outlet />
+            {/* Suspense boundary for the route-split (React.lazy) pages — shows a
+                spinner while the page's chunk downloads. See router.tsx. */}
+            <Suspense fallback={<div className="p-10 flex justify-center"><Spinner /></div>}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

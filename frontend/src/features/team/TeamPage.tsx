@@ -1,8 +1,10 @@
 import { roleLabel } from "../../shared/constants/roles";
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import {
-  useOrgTreeQuery, useSetTeamLeadMutation, useSetUserTeamMutation,
+  useOrgTreeQuery, useSetTeamLeadMutation, useSetUserTeamMutation, useAgencyOptionsQuery,
 } from "../../shared/api/baseApi";
 import type { OrgPersonDto, OrgTeamDto, OrgTreeDto } from "../../shared/api/types";
 import {
@@ -16,7 +18,19 @@ import { usePermission, Perm } from "../../shared/auth/permissions";
  * Read-only for now; the data is sourced from `/api/org/tree`.
  */
 export function TeamPage() {
-  const { data, isLoading } = useOrgTreeQuery();
+  // SuperAdmin has no agency of their own, so the org tree needs a target agency;
+  // everyone else is scoped to their own automatically.
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
+  const { data: agencyOptions } = useAgencyOptionsQuery(undefined, { skip: !isSuperAdmin });
+  const [agencyId, setAgencyId] = useState("");
+  useEffect(() => {
+    if (isSuperAdmin && !agencyId && agencyOptions && agencyOptions.length) setAgencyId(agencyOptions[0].id);
+  }, [isSuperAdmin, agencyOptions, agencyId]);
+
+  const { data, isLoading } = useOrgTreeQuery(
+    isSuperAdmin ? { agencyId } : undefined,
+    { skip: isSuperAdmin && !agencyId },
+  );
   const [setUserTeam, { isLoading: moving }] = useSetUserTeamMutation();
   const [setTeamLead] = useSetTeamLeadMutation();
   const toast = useToast();
@@ -62,6 +76,12 @@ export function TeamPage() {
         description="Hierarchy of your call center — from the CEO down to team members."
         breadcrumbs={[{ label: "Workspace" }, { label: "Team" }]}
         badge={data && <Badge tone="brand" variant="soft">{data.agencyName}</Badge>}
+        actions={isSuperAdmin ? (
+          <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
+            {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
+            {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </Select>
+        ) : undefined}
       />
 
       {!canEdit && (

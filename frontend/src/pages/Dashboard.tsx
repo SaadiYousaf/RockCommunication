@@ -7,6 +7,7 @@ import {
   type IconName,
 } from "../shared/ui";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery } from "../shared/api/baseApi";
+import { usePermission, Perm } from "../shared/auth/permissions";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage } from "../shared/api/types";
 import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
 import type { WallboardSnapshot, AgentLeaderboard } from "../shared/api/types";
@@ -61,9 +62,19 @@ export function Dashboard() {
   const userName = auth.user?.userName ?? "there";
   const role = auth.user?.roles?.[0] ?? null;
 
+  // Wallboard + leaderboard are the two most expensive endpoints (backend N+1s).
+  // Only supervisory users get them polled — a floor agent should not poll these.
+  const canSeeSupervision = usePermission(Perm.SupervisorView);
+
   const { data, isLoading, isError, refetch } = useDashboardSummaryQuery();
-  const { data: leaders } = useLeaderboardQuery("today", { pollingInterval: 60_000 });
-  const { data: wall } = useWallboardQuery(undefined, { pollingInterval: 30_000 });
+  const { data: leaders } = useLeaderboardQuery("today", {
+    pollingInterval: 60_000,
+    skip: !canSeeSupervision,
+  });
+  const { data: wall } = useWallboardQuery(undefined, {
+    pollingInterval: 30_000,
+    skip: !canSeeSupervision,
+  });
 
   return (
     <>
