@@ -105,9 +105,9 @@ export function AgenciesPage() {
     <>
       <PageHeader
         eyebrow="Administration"
-        title="Call Centers"
-        description="Provision new agencies and assign their CEO. Each call center is a fully isolated tenant."
-        breadcrumbs={[{ label: "Admin" }, { label: "Call Centers" }]}
+        title="Agencies"
+        description="Provision new agencies and assign their CEO. Each agency is a fully isolated tenant."
+        breadcrumbs={[{ label: "Admin" }, { label: "Agencies" }]}
         badge={
           <Badge tone="brand" variant="soft">
             <Icon name="shield" size={11} className="-ml-0.5" /> SuperAdmin
@@ -135,7 +135,7 @@ export function AgenciesPage() {
           label="Total users"
           value={stats.users}
           icon={<Icon name="users" size={18} />}
-          hint="Across all call centers"
+          hint="Across all agencies"
           tone="accent"
         />
         <Stat
@@ -151,7 +151,7 @@ export function AgenciesPage() {
       <Card accent="brand" className="mb-4">
         <CardHeader
           eyebrow="Provision"
-          title="New call center"
+          title="New agency"
           subtitle="Names must be unique. Optional short code (e.g. PHX) helps you spot the agency in logs."
           bordered
         />
@@ -207,7 +207,7 @@ export function AgenciesPage() {
             <div className="px-5 py-4">
               <EmptyState
                 icon={<Icon name="building" size={20} />}
-                title="No call centers yet"
+                title="No agencies yet"
                 description="Use the form above to create your first one."
               />
             </div>
