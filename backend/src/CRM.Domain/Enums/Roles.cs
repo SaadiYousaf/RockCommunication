@@ -58,10 +58,11 @@ public static class Roles
     };
 
     /// <summary>
-    /// Roles for which two-factor authentication is mandatory — they hold cross-tenant or
-    /// agency-wide privileges, so 2FA is enforced (see TwoFactorSetupRequiredMiddleware).
+    /// Roles for which two-factor authentication is mandatory (see TwoFactorSetupRequiredMiddleware).
+    /// SuperAdmin and Admin were removed by request; the CEO still requires it. Central
+    /// (cross-agency) Submission Agents are also forced, handled via <see cref="IsCentralSubmissionAgent"/>.
     /// </summary>
-    public static readonly string[] RequireTwoFactor = { SuperAdmin, Admin, CEO };
+    public static readonly string[] RequireTwoFactor = { CEO };
 
     /// <summary>True if any of the given roles makes two-factor authentication mandatory.</summary>
     public static bool TwoFactorMandatory(IEnumerable<string> roles) =>
