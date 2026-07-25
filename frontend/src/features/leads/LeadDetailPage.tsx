@@ -461,6 +461,17 @@ export function LeadDetailPage() {
           <div className="surface p-5 text-sm">
             <div className="font-semibold mb-2">Details</div>
             <dl className="text-xs">
+              <Row label="Lead ID" mono value={
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard?.writeText(lead.id); toast.success("Lead ID copied", "Paste it into the sale form."); }}
+                  className="inline-flex items-center gap-1 hover:text-brand-700"
+                  title="Copy lead ID"
+                >
+                  {lead.id}
+                  <Icon name="copy" size={11} />
+                </button>
+              } />
               <Row label="Source" value={lead.source} />
               <Row label="Created" value={new Date(lead.createdAt).toLocaleString()} />
               {lead.updatedAt && <Row label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />}

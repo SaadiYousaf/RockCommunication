@@ -37,9 +37,11 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
         Guard.AgainstNull(request);
         EnsureManager();
 
-        // AuditEntry is not a TenantEntity (no global filter), so scope explicitly. Only
-        // agency Admin/ProgramManager reach here (EnsureManager), so pin to their agency.
-        var q = _db.AuditEntries.AsNoTracking().Where(a => a.AgencyId == _user.AgencyId);
+        // AuditEntry is not a TenantEntity (no global filter), so scope explicitly. SuperAdmin is the
+        // platform overseer and sees the whole audit trail across every agency; agency managers are
+        // pinned to their own agency.
+        var q = _db.AuditEntries.AsNoTracking();
+        if (!_user.IsSuperAdmin) q = q.Where(a => a.AgencyId == _user.AgencyId);
         if (!string.IsNullOrWhiteSpace(request.EntityName))
             q = q.Where(a => a.EntityName == request.EntityName);
         if (!string.IsNullOrWhiteSpace(request.EntityId))
@@ -75,6 +77,7 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
 
     private void EnsureManager()
     {
+        if (_user.IsSuperAdmin) return;   // platform operator — cross-tenant read
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
             throw new ForbiddenAccessException();
@@ -97,11 +100,15 @@ public class DistinctAuditFiltersHandler : IRequestHandler<DistinctAuditFiltersQ
     public async Task<DistinctAuditFiltersDto> Handle(DistinctAuditFiltersQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
-            throw new ForbiddenAccessException();
+        if (!_user.IsSuperAdmin)
+        {
+            if (_user.AgencyId is null) throw new ForbiddenAccessException();
+            if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
+                throw new ForbiddenAccessException();
+        }
 
-        var scoped = _db.AuditEntries.AsNoTracking().Where(a => a.AgencyId == _user.AgencyId);
+        var scoped = _db.AuditEntries.AsNoTracking();
+        if (!_user.IsSuperAdmin) scoped = scoped.Where(a => a.AgencyId == _user.AgencyId);
         var entityNames = await scoped
             .Select(a => a.EntityName).Distinct().OrderBy(x => x).ToListAsync(ct);
         var actions = await scoped

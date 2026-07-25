@@ -80,6 +80,14 @@ public interface ICurrentUser
     IReadOnlyList<string> Roles { get; }
     bool IsAuthenticated { get; }
     string? IpAddress { get; }
+
+    /// <summary>
+    /// True when the caller is the cross-tenant platform operator. SuperAdmin has no agency,
+    /// bypasses the EF tenant query filter and every <c>[HasPermission]</c> gate, and must be
+    /// treated as privileged by hand-written handler checks too (role gates + agency filters),
+    /// otherwise those defeat the bypass and wrongly 403 / empty out SuperAdmin.
+    /// </summary>
+    bool IsSuperAdmin => Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin);
 }
 
 public interface IJwtTokenService

@@ -87,6 +87,10 @@ public static class DbSeeder
             if (!privileged.IsActive) { privileged.IsActive = true; changed = true; }
             if (privileged.LockoutEnd is not null) { privileged.LockoutEnd = null; changed = true; }
             if (privileged.AccessFailedCount != 0) { privileged.AccessFailedCount = 0; changed = true; }
+            // A pending password-change also walls these accounts off from everything but the
+            // change-password endpoint (PasswordChangeRequiredMiddleware). Clear it too so the
+            // break-glass admin/superadmin are never stuck behind it.
+            if (privileged.MustChangePassword) { privileged.MustChangePassword = false; changed = true; }
             if (changed) await users.UpdateAsync(privileged);
         }
 
