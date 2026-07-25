@@ -34,8 +34,9 @@ public record ListAgencyCallCentersQuery(Guid AgencyId) : IRequest<IReadOnlyList
 /// <summary>SuperAdmin provisions an agency-level License Agent (reuses the shared invitation service).</summary>
 public record CreateLicenseAgentCommand(Guid AgencyId, string Name, string Email) : IRequest<LicenseAgentDto>;
 
-/// <summary>SuperAdmin creates a call center inside a target agency AND invites its Call Center Admin.</summary>
-public record CreateCallCenterInAgencyCommand(Guid AgencyId, string Name, string? Code, string AdminName, string AdminEmail)
+/// <summary>SuperAdmin creates a call center inside a target agency. Optionally invites a Call
+/// Center Admin — leave the admin fields blank to just create the centre and assign people later.</summary>
+public record CreateCallCenterInAgencyCommand(Guid AgencyId, string Name, string? Code, string? AdminName = null, string? AdminEmail = null)
     : IRequest<CallCenterDto>;
 
 /// <summary>SuperAdmin edits a call center inside a target agency. Disabling it force-logs-out its agents.</summary>
@@ -64,8 +65,12 @@ public class CreateCallCenterInAgencyValidator : AbstractValidator<CreateCallCen
     {
         RuleFor(x => x.AgencyId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.AdminName).NotEmpty().MaximumLength(120);
-        RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().MaximumLength(200);
+        // Admin invite is optional; validate the fields only when an email is supplied.
+        When(x => !string.IsNullOrWhiteSpace(x.AdminEmail), () =>
+        {
+            RuleFor(x => x.AdminEmail).EmailAddress().MaximumLength(200);
+            RuleFor(x => x.AdminName).MaximumLength(120);
+        });
     }
 }
 
@@ -192,20 +197,26 @@ public class AgencyPanelHandler :
         if (await _db.CallCenters.IgnoreQueryFilters().AnyAsync(c => c.AgencyId == agency.Id && !c.IsDeleted && c.Name == name, ct))
             throw new ConflictException($"A call center named \"{name}\" already exists in this agency.");
 
-        await _invitations.EnsureEmailAvailableAsync(request.AdminEmail.Trim(), ct);
+        // Inviting a Call Center Admin is OPTIONAL — the centre can be created on its own and staffed
+        // later (see "Assign people" on the agency panel). Only validate/invite when an email is given.
+        var adminEmail = request.AdminEmail?.Trim();
+        var inviteAdmin = !string.IsNullOrWhiteSpace(adminEmail);
+        if (inviteAdmin)
+            await _invitations.EnsureEmailAvailableAsync(adminEmail!, ct);
 
         var cc = new CcEntity { AgencyId = agency.Id, Name = name, Code = request.Code?.Trim(), IsActive = true };
         _db.CallCenters.Add(cc);
         await _db.SaveChangesAsync(ct);
 
-        await _invitations.InviteAsync(new InvitationRequest(
-            Email: request.AdminEmail.Trim(),
-            FullName: request.AdminName.Trim(),
-            AgencyId: agency.Id,
-            CallCenterId: cc.Id,
-            Roles: new[] { DomainRoles.CallCenterAdmin },
-            AgencyName: agency.Name,
-            CallCenterName: cc.Name), ct);
+        if (inviteAdmin)
+            await _invitations.InviteAsync(new InvitationRequest(
+                Email: adminEmail!,
+                FullName: string.IsNullOrWhiteSpace(request.AdminName) ? adminEmail! : request.AdminName!.Trim(),
+                AgencyId: agency.Id,
+                CallCenterId: cc.Id,
+                Roles: new[] { DomainRoles.CallCenterAdmin },
+                AgencyName: agency.Name,
+                CallCenterName: cc.Name), ct);
 
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, 0);
     }

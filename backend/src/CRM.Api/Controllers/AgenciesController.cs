@@ -93,7 +93,7 @@ public class AgenciesController : ControllerBase
     public async Task<IActionResult> CallCenters(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new ListAgencyCallCentersQuery(id), ct));
 
-    public record CreateCallCenterInAgencyBody(string Name, string? Code, string AdminName, string AdminEmail);
+    public record CreateCallCenterInAgencyBody(string Name, string? Code, string? AdminName, string? AdminEmail);
 
     [HttpPost("{id:guid}/call-centers")]
     [HasPermission(Permissions.AgenciesManage)]

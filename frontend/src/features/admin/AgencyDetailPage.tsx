@@ -243,17 +243,20 @@ function NewCallCenterModal({ agencyId, onClose }: { agencyId: string; onClose: 
   }
 
   return (
-    <Modal open onClose={onClose} title="New call centre" description="Creates the call centre and invites its Call Center Admin.">
+    <Modal open onClose={onClose} title="New call centre" description="Create the call centre. Inviting a Call Center Admin is optional — you can create it now and assign people later.">
       <form onSubmit={submit} className="space-y-3">
         <Input label="Call centre name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Input label="Short code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
+        <div className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-ink-500">Invite an admin — optional</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Admin name" required value={form.adminName} onChange={(e) => setForm({ ...form, adminName: e.target.value })} />
-          <Input label="Admin email" type="email" required leftIcon={<Icon name="mail" size={14} />} value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
+          <Input label="Admin name" labelHint="Optional" value={form.adminName} onChange={(e) => setForm({ ...form, adminName: e.target.value })} />
+          <Input label="Admin email" labelHint="Optional" type="email" leftIcon={<Icon name="mail" size={14} />} value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
         </div>
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={isLoading} leftIcon={<Icon name="plus" size={15} />}>Create + invite admin</Button>
+          <Button type="submit" loading={isLoading} leftIcon={<Icon name="plus" size={15} />}>
+            {form.adminEmail.trim() ? "Create + invite admin" : "Create call centre"}
+          </Button>
         </div>
       </form>
     </Modal>
