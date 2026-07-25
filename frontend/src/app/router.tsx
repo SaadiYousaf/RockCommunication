@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, type ComponentType } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 // Small / always-hit pages stay eager so they're part of the initial bundle.
 import { LoginPage } from "../features/auth/LoginPage";
@@ -30,37 +30,61 @@ import { Layout } from "../shared/components/Layout";
 import { ProtectedRoute } from "../shared/components/ProtectedRoute";
 import { ForbiddenPage } from "../shared/components/ForbiddenPage";
 
+/**
+ * React.lazy that survives deploys. When a new build ships, this tab's `index.html`
+ * still points at the OLD chunk filenames — which are gone from the server — so the
+ * dynamic import() 404s and the page can't render. Instead of crashing, we reload
+ * ONCE to pull the fresh index.html + current chunks. A sessionStorage guard prevents
+ * an infinite reload loop if the chunk is genuinely broken (not just stale); it's
+ * cleared on the first successful load so future deploys can self-heal again.
+ */
+function lazyWithReload<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  const KEY = "lazy-chunk-reloaded";
+  return lazy(async () => {
+    try {
+      const mod = await factory();
+      sessionStorage.removeItem(KEY);
+      return mod;
+    } catch (err) {
+      if (sessionStorage.getItem(KEY)) throw err;       // already reloaded once → surface the error
+      sessionStorage.setItem(KEY, "1");
+      window.location.reload();
+      return await new Promise<{ default: T }>(() => {}); // hang (Suspense spinner) until reload
+    }
+  });
+}
+
 // Heavy / rarely-hit pages are route-split via React.lazy so each lands in its own
 // chunk instead of the 1.3 MB initial bundle. Every one of these routes renders
 // inside <Layout>, whose <Outlet> is wrapped in a <Suspense> boundary (see
 // Layout.tsx) that shows a spinner while the chunk downloads. These are NAMED
 // exports, so we map the export onto `default` for React.lazy.
-const TwoFactorEnrollPage = lazy(() => import("../features/auth/TwoFactorEnrollPage").then(m => ({ default: m.TwoFactorEnrollPage })));
-const LeadSearchPage = lazy(() => import("../features/leads/LeadSearchPage").then(m => ({ default: m.LeadSearchPage })));
-const LeadTroubleshootPage = lazy(() => import("../features/leads/LeadTroubleshootPage").then(m => ({ default: m.LeadTroubleshootPage })));
-const CommissionsPage = lazy(() => import("../features/sales/CommissionsPage").then(m => ({ default: m.CommissionsPage })));
-const KpiDashboardPage = lazy(() => import("../features/dashboard/KpiDashboardPage").then(m => ({ default: m.KpiDashboardPage })));
-const QaPage = lazy(() => import("../features/qa/QaPage").then(m => ({ default: m.QaPage })));
-const QaBrowserPage = lazy(() => import("../features/qa/QaBrowserPage").then(m => ({ default: m.QaBrowserPage })));
-const AgencyDetailPage = lazy(() => import("../features/admin/AgencyDetailPage").then(m => ({ default: m.AgencyDetailPage })));
-const SubmissionAgentsPage = lazy(() => import("../features/admin/SubmissionAgentsPage").then(m => ({ default: m.SubmissionAgentsPage })));
-const SecurityCenterPage = lazy(() => import("../features/admin/SecurityCenterPage").then(m => ({ default: m.SecurityCenterPage })));
-const AuditLogPage = lazy(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
-const CallsHistoryPage = lazy(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
-const RolesPage = lazy(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
-const GlobalSearchPage = lazy(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
-const SupervisorPage = lazy(() => import("../features/callcenter/SupervisorPage").then(m => ({ default: m.SupervisorPage })));
-const DncPage = lazy(() => import("../features/callcenter/DncPage").then(m => ({ default: m.DncPage })));
-const CampaignsPage = lazy(() => import("../features/callcenter/CampaignsPage").then(m => ({ default: m.CampaignsPage })));
-const ScriptsPage = lazy(() => import("../features/callcenter/ScriptsPage").then(m => ({ default: m.ScriptsPage })));
-const WorkflowsPage = lazy(() => import("../features/workflows/WorkflowsPage").then(m => ({ default: m.WorkflowsPage })));
-const LeadListsPage = lazy(() => import("../features/lists/LeadListsPage").then(m => ({ default: m.LeadListsPage })));
-const CadencesPage = lazy(() => import("../features/cadences/CadencesPage").then(m => ({ default: m.CadencesPage })));
-const WallboardPage = lazy(() => import("../features/wallboard/WallboardPage").then(m => ({ default: m.WallboardPage })));
-const KnowledgeBasePage = lazy(() => import("../features/kb/KnowledgeBasePage").then(m => ({ default: m.KnowledgeBasePage })));
-const DocumentsPage = lazy(() => import("../features/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
-const QueuesPage = lazy(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
-const IntegrationsPage = lazy(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
+const TwoFactorEnrollPage = lazyWithReload(() => import("../features/auth/TwoFactorEnrollPage").then(m => ({ default: m.TwoFactorEnrollPage })));
+const LeadSearchPage = lazyWithReload(() => import("../features/leads/LeadSearchPage").then(m => ({ default: m.LeadSearchPage })));
+const LeadTroubleshootPage = lazyWithReload(() => import("../features/leads/LeadTroubleshootPage").then(m => ({ default: m.LeadTroubleshootPage })));
+const CommissionsPage = lazyWithReload(() => import("../features/sales/CommissionsPage").then(m => ({ default: m.CommissionsPage })));
+const KpiDashboardPage = lazyWithReload(() => import("../features/dashboard/KpiDashboardPage").then(m => ({ default: m.KpiDashboardPage })));
+const QaPage = lazyWithReload(() => import("../features/qa/QaPage").then(m => ({ default: m.QaPage })));
+const QaBrowserPage = lazyWithReload(() => import("../features/qa/QaBrowserPage").then(m => ({ default: m.QaBrowserPage })));
+const AgencyDetailPage = lazyWithReload(() => import("../features/admin/AgencyDetailPage").then(m => ({ default: m.AgencyDetailPage })));
+const SubmissionAgentsPage = lazyWithReload(() => import("../features/admin/SubmissionAgentsPage").then(m => ({ default: m.SubmissionAgentsPage })));
+const SecurityCenterPage = lazyWithReload(() => import("../features/admin/SecurityCenterPage").then(m => ({ default: m.SecurityCenterPage })));
+const AuditLogPage = lazyWithReload(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
+const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
+const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
+const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
+const SupervisorPage = lazyWithReload(() => import("../features/callcenter/SupervisorPage").then(m => ({ default: m.SupervisorPage })));
+const DncPage = lazyWithReload(() => import("../features/callcenter/DncPage").then(m => ({ default: m.DncPage })));
+const CampaignsPage = lazyWithReload(() => import("../features/callcenter/CampaignsPage").then(m => ({ default: m.CampaignsPage })));
+const ScriptsPage = lazyWithReload(() => import("../features/callcenter/ScriptsPage").then(m => ({ default: m.ScriptsPage })));
+const WorkflowsPage = lazyWithReload(() => import("../features/workflows/WorkflowsPage").then(m => ({ default: m.WorkflowsPage })));
+const LeadListsPage = lazyWithReload(() => import("../features/lists/LeadListsPage").then(m => ({ default: m.LeadListsPage })));
+const CadencesPage = lazyWithReload(() => import("../features/cadences/CadencesPage").then(m => ({ default: m.CadencesPage })));
+const WallboardPage = lazyWithReload(() => import("../features/wallboard/WallboardPage").then(m => ({ default: m.WallboardPage })));
+const KnowledgeBasePage = lazyWithReload(() => import("../features/kb/KnowledgeBasePage").then(m => ({ default: m.KnowledgeBasePage })));
+const DocumentsPage = lazyWithReload(() => import("../features/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
+const QueuesPage = lazyWithReload(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
+const IntegrationsPage = lazyWithReload(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 

@@ -45,7 +45,12 @@ echo "▸ [2/5] Building frontend (VITE_BUILD_ID=$SHORT)…"
 echo "▸ [3/5] Syncing artifacts to the box…"
 rsync -az --delete --exclude 'appsettings.Production.json' \
   -e "ssh ${SSH_OPTS[*]}" "$ROOT/api-publish/" "$SSH_HOST:$BOX_REPO/api-publish/"
-rsync -az --delete \
+# Frontend: NO --delete. index.html (stable name) is overwritten with the new
+# build's chunk references, but the previous build's hashed assets/*.js are KEPT.
+# That way a browser tab still holding the OLD index.html can keep lazy-loading
+# its old chunks after a deploy instead of 404-ing ("This page ran into a problem").
+# Assets accumulate slowly (~1-2 MB/build); prune old ones occasionally if needed.
+rsync -az \
   -e "ssh ${SSH_OPTS[*]}" "$ROOT/frontend/dist/" "$SSH_HOST:$BOX_REPO/frontend/dist/"
 
 echo "▸ [4/5] Restarting services…"

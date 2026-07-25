@@ -71,9 +71,12 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             api-publish/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/api-publish/"
 
+      # NO --delete: keep previous builds' hashed chunks so open tabs holding an
+      # older index.html can still lazy-load after a deploy instead of 404-ing.
+      # (index.html itself has a stable name and is overwritten with the new build.)
       - name: Sync frontend
         run: |
-          rsync -az --delete \
+          rsync -az \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             frontend/dist/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/frontend/dist/"
 
