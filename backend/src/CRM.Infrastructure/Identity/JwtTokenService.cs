@@ -92,6 +92,12 @@ public class JwtTokenService : IJwtTokenService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == existing.UserId, ct);
         if (user is null || !user.IsActive) return null;
 
+        // Company / call-center kill switch: once a SuperAdmin disables the user's agency
+        // or call center, their existing session can't be refreshed either — the next access
+        // token expires (<=15 min) and they're forced back to login, which then blocks them.
+        if (!await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
+            return null;
+
         var roles = await (from ur in _db.UserRoles
                            join r in _db.Roles on ur.RoleId equals r.Id
                            where ur.UserId == user.Id
@@ -120,6 +126,31 @@ public class JwtTokenService : IJwtTokenService
         var now = DateTime.UtcNow;
         var active = await _db.RefreshTokens
             .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ToListAsync(ct);
+        foreach (var t in active) t.RevokedAt = now;
+        if (active.Count > 0) await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task RevokeAllForAgencyAsync(Guid agencyId, CancellationToken ct = default)
+    {
+        if (agencyId == Guid.Empty) return;   // never mass-revoke platform (SuperAdmin/central) users
+        var userIds = await _db.Users.Where(u => u.AgencyId == agencyId).Select(u => u.Id).ToListAsync(ct);
+        await RevokeForUserIdsAsync(userIds, ct);
+    }
+
+    public async Task RevokeAllForCallCenterAsync(Guid callCenterId, CancellationToken ct = default)
+    {
+        if (callCenterId == Guid.Empty) return;
+        var userIds = await _db.Users.Where(u => u.CallCenterId == callCenterId).Select(u => u.Id).ToListAsync(ct);
+        await RevokeForUserIdsAsync(userIds, ct);
+    }
+
+    private async Task RevokeForUserIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct)
+    {
+        if (userIds.Count == 0) return;
+        var now = DateTime.UtcNow;
+        var active = await _db.RefreshTokens
+            .Where(t => userIds.Contains(t.UserId) && t.RevokedAt == null)
             .ToListAsync(ct);
         foreach (var t in active) t.RevokedAt = now;
         if (active.Count > 0) await _db.SaveChangesAsync(ct);

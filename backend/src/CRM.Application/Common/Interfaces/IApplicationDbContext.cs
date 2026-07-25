@@ -97,6 +97,13 @@ public interface IJwtTokenService
     Task<TokenResult?> RefreshAsync(string refreshToken, CancellationToken ct = default);
     Task RevokeAsync(string refreshToken, CancellationToken ct = default);
     Task RevokeAllForUserAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Force-logout: revoke every active refresh token for all users of an agency
+    /// (used when a SuperAdmin disables the agency). Platform users (Guid.Empty) are untouched.</summary>
+    Task RevokeAllForAgencyAsync(Guid agencyId, CancellationToken ct = default);
+
+    /// <summary>Force-logout: revoke every active refresh token for all users pinned to a call center.</summary>
+    Task RevokeAllForCallCenterAsync(Guid callCenterId, CancellationToken ct = default);
 }
 
 public record TokenResult(string AccessToken, string RefreshToken, DateTime ExpiresAt);

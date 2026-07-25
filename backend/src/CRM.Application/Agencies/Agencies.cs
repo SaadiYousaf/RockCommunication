@@ -65,19 +65,22 @@ public class AgenciesHandler :
     private readonly IIdentityService _identity;
     private readonly IUserAdminService _userAdmin;
     private readonly IInvitationService _invitations;
+    private readonly IJwtTokenService _jwt;
 
     public AgenciesHandler(
         IApplicationDbContext db,
         ICurrentUser user,
         IIdentityService identity,
         IUserAdminService userAdmin,
-        IInvitationService invitations)
+        IInvitationService invitations,
+        IJwtTokenService jwt)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _userAdmin = Guard.AgainstNull(userAdmin);
         _invitations = Guard.AgainstNull(invitations);
+        _jwt = Guard.AgainstNull(jwt);
     }
 
     public async Task<IReadOnlyList<AgencyDto>> Handle(ListAgenciesQuery request, CancellationToken ct)
@@ -149,10 +152,18 @@ public class AgenciesHandler :
         var agency = await _db.Agencies.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Agency), request.Id);
 
+        var wasActive = agency.IsActive;
         agency.Name = request.Name.Trim();
         agency.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim();
         agency.IsActive = request.IsActive;
         await _db.SaveChangesAsync(ct);
+
+        // Disabling an agency is a kill switch: force-logout every user underneath it so they
+        // can't keep working on a still-valid access token. Login/refresh are already blocked
+        // (TenantLoginGate), so they stay locked out until the agency is re-enabled.
+        if (wasActive && !request.IsActive)
+            await _jwt.RevokeAllForAgencyAsync(agency.Id, ct);
+
         return await ToDtoAsync(agency, ct);
     }
 

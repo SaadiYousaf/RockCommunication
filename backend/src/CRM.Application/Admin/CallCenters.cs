@@ -56,9 +56,10 @@ public class CallCenterHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IInvitationService _invitations;
+    private readonly IJwtTokenService _jwt;
 
-    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user, IInvitationService invitations)
-    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _invitations = Guard.AgainstNull(invitations); }
+    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user, IInvitationService invitations, IJwtTokenService jwt)
+    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _invitations = Guard.AgainstNull(invitations); _jwt = Guard.AgainstNull(jwt); }
 
     public async Task<IReadOnlyList<CallCenterDto>> Handle(ListCallCentersQuery request, CancellationToken ct)
     {
@@ -129,10 +130,17 @@ public class CallCenterHandler :
             throw new ForbiddenAccessException("Super Admins manage call centres from the Agency panel — open an agency (Agencies) and use \"New call centre\".");
         var cc = await _db.CallCenters.FirstOrDefaultAsync(c => c.Id == request.Id, ct)
             ?? throw new NotFoundException("CallCenter", request.Id);
+        var wasActive = cc.IsActive;
         cc.Name = request.Name.Trim();
         cc.Code = request.Code?.Trim();
         cc.IsActive = request.IsActive;
         await _db.SaveChangesAsync(ct);
+
+        // Disabling a call center force-logs-out every agent pinned to it (login/refresh are
+        // already blocked by TenantLoginGate), so they're locked out until it's re-enabled.
+        if (wasActive && !request.IsActive)
+            await _jwt.RevokeAllForCallCenterAsync(cc.Id, ct);
+
         var leads = await _db.Leads.CountAsync(l => l.CallCenterId == cc.Id, ct);
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads);
     }

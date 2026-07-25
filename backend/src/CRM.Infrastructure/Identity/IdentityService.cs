@@ -215,6 +215,13 @@ public class IdentityService : IIdentityService
         // a wrong password. (Checking it earlier leaked account existence via response time.)
         if (!user.IsActive) throw new ForbiddenAccessException(generic);
 
+        // Company / call-center kill switch: if a SuperAdmin has disabled the user's agency
+        // (or their call center), lock every user underneath it out of login — even though
+        // their individual account is still active. Runs after the password check (so it can
+        // safely reveal a specific reason) and before any 2FA challenge is sent.
+        if (!await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
+            throw new ForbiddenAccessException(TenantLoginGate.DisabledMessage);
+
         // Clean slate on every successful password check — even when 2FA still has to run.
         await _users.ResetAccessFailedCountAsync(user);
 
@@ -387,6 +394,12 @@ public class IdentityService : IIdentityService
 
     private async Task<LoginResponse> IssueLoginAsync(ApplicationUser user, CancellationToken ct)
     {
+        // Final tenant kill-switch check before any token is minted — also covers the
+        // 2FA-completion path (VerifyTwoFactorAsync), which reaches token issuance here
+        // without passing back through LoginAsync's earlier gate.
+        if (!await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
+            throw new ForbiddenAccessException(TenantLoginGate.DisabledMessage);
+
         var roles = (await _users.GetRolesAsync(user)).ToList();
         var modules = await _moduleAccess.GetCodesForUserAsync(user.Id, ct);
 
