@@ -59,6 +59,10 @@ type Handler = (event: AgentHubEvent, payload: AgentHubPayload) => void;
  */
 export function useAgentHub(handler: Handler) {
   const token = useSelector((s: RootState) => s.auth.accessToken);
+  // Users still finishing onboarding (must change password / must enrol 2FA) are blocked by the
+  // server from everything but the setup endpoints — connecting the hub only 403-loops. Skip it.
+  const onboarding = useSelector((s: RootState) =>
+    !!(s.auth.user?.mustChangePassword || s.auth.user?.twoFactorSetupRequired));
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
   // Live ref so SignalR's accessTokenFactory always reads the freshest value.
@@ -66,7 +70,7 @@ export function useAgentHub(handler: Handler) {
   tokenRef.current = token;
 
   useEffect(() => {
-    if (!token) return; // unauthenticated → no hub
+    if (!token || onboarding) return; // unauthenticated or mid-onboarding → no hub
 
     const conn: HubConnection = new HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/agent`, {
@@ -101,5 +105,5 @@ export function useAgentHub(handler: Handler) {
         conn.stop().catch(() => {});
       }
     };
-  }, [token]);
+  }, [token, onboarding]);
 }

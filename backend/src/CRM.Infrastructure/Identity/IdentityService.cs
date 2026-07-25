@@ -311,8 +311,12 @@ public class IdentityService : IIdentityService
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
 
-        var secret = await _users.GetAuthenticatorKeyAsync(user);
-        if (string.IsNullOrEmpty(secret) || !_twoFactor.Verify(secret, code))
+        // Verify against the user's SELECTED method (authenticator app OR email OTP). Previously this
+        // always checked the TOTP authenticator key, so anyone enrolling via email OTP entered a
+        // valid emailed code and still got "Invalid code" — 2FA email enrolment was impossible.
+        var kind = ParseKind(user.PreferredTwoFactorMethod);
+        var ok = await _factorRegistry.Get(kind).VerifyAsync(user.Id, (code ?? string.Empty).Trim(), ct);
+        if (!ok)
             throw new ForbiddenAccessException("Invalid code.");
 
         await _users.SetTwoFactorEnabledAsync(user, true);

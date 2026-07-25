@@ -21,12 +21,16 @@ import { useAgentHub } from "../hooks/useAgentHub";
  */
 export function NotificationsBell() {
   const auth = useSelector((s: RootState) => s.auth);
+  // During onboarding (must change password / enrol 2FA) the server blocks everything but the
+  // setup endpoints — skip these background reads + the chat hub so they don't 403-loop.
+  const onboarding = !!(auth.user?.mustChangePassword || auth.user?.twoFactorSetupRequired);
+  const gated = !auth.accessToken || onboarding;
   const { data: unread = [], refetch: refetchUnread } = useChatUnreadQuery(undefined, {
-    skip: !auth.accessToken,
+    skip: gated,
     pollingInterval: 30_000,
   });
-  const { data: rooms } = useChatRoomsQuery(undefined, { skip: !auth.accessToken });
-  const { data: users } = useListUsersQuery(undefined, { skip: !auth.accessToken });
+  const { data: rooms } = useChatRoomsQuery(undefined, { skip: gated });
+  const { data: users } = useListUsersQuery(undefined, { skip: gated });
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -78,7 +82,7 @@ export function NotificationsBell() {
 
   // Global chat hub — toasts a notification whenever the user is NOT on the chat page.
   useEffect(() => {
-    if (!auth.accessToken) return;
+    if (!auth.accessToken || onboarding) return;
 
     const conn = new HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/chat`, { accessTokenFactory: () => tokenRef.current ?? "" })
@@ -136,7 +140,7 @@ export function NotificationsBell() {
       if (conn.state !== HubConnectionState.Disconnected) conn.stop().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.accessToken]);
+  }, [auth.accessToken, onboarding]);
 
   // Subscribe (JoinRoom) to every room the user belongs to once the connection
   // is up and the room list has loaded. Without this, the chat hub never
