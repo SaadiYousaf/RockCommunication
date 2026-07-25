@@ -59,10 +59,32 @@ public static class Roles
 
     /// <summary>
     /// Roles for which two-factor authentication is mandatory (see TwoFactorSetupRequiredMiddleware).
-    /// SuperAdmin and Admin were removed by request; the CEO still requires it. Central
-    /// (cross-agency) Submission Agents are also forced, handled via <see cref="IsCentralSubmissionAgent"/>.
+    /// SuperAdmin and Admin remain excluded <b>by explicit user request</b> — do not re-add without
+    /// asking. The CEO already required it; ProgramManager and CallCenterAdmin are added here because
+    /// they are admin-equivalent (they hold <c>users.manage</c> and can reshape their part of the org),
+    /// so cross-user power without 2FA was the real audit gap. Central (cross-agency) Submission Agents
+    /// are also forced, handled via <see cref="IsCentralSubmissionAgent"/>.
     /// </summary>
-    public static readonly string[] RequireTwoFactor = { CEO };
+    public static readonly string[] RequireTwoFactor = { CEO, ProgramManager, CallCenterAdmin };
+
+    /// <summary>
+    /// Agency-admin-equivalent roles. Handing one of these out is a privilege escalation, so only
+    /// SuperAdmin / Admin / CEO may grant them. Enforced on BOTH the create (register) and the
+    /// update-roles paths so a plain <c>users.manage</c> holder can never mint agency-admin power.
+    /// </summary>
+    public static readonly string[] Elevated = { Admin, CEO, ProgramManager, CallCenterAdmin };
+
+    /// <summary>True if the given roles include an agency-admin-equivalent (elevated) role.</summary>
+    public static bool GrantsElevated(IEnumerable<string> roles) =>
+        roles.Any(r => Elevated.Contains(r, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Only SuperAdmin / Admin / CEO are permitted to hand out <see cref="Elevated"/> roles.
+    /// </summary>
+    public static bool CanGrantElevated(IEnumerable<string> callerRoles) =>
+        callerRoles.Any(r => string.Equals(r, SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(r, Admin, StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(r, CEO, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>True if any of the given roles makes two-factor authentication mandatory.</summary>
     public static bool TwoFactorMandatory(IEnumerable<string> roles) =>

@@ -34,8 +34,9 @@ public class ModuleAccessService : IModuleAccessService
         var roleNames = await _users.GetRolesAsync(user);
         if (roleNames.Count == 0) return Array.Empty<string>();
 
+        // Same tenant-scoping as PermissionService — never resolve another agency's same-named role.
         var roleIds = await _db.Roles
-            .Where(r => roleNames.Contains(r.Name!))
+            .Where(r => roleNames.Contains(r.Name!) && (r.AgencyId == null || r.AgencyId == user.AgencyId))
             .Select(r => r.Id)
             .ToListAsync(ct);
 

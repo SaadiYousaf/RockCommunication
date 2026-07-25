@@ -35,9 +35,9 @@ public class IpAllowlistHandler :
     public async Task<IReadOnlyList<IpAllowlistDto>> Handle(ListIpAllowlistQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        EnsureAdmin();
+        EnsureSuperAdmin();
+        // Platform-global control — return every entry, not just one agency's.
         return await _db.IpAllowlist
-            .Where(e => e.AgencyId == _user.AgencyId)
             .OrderBy(e => e.CidrOrIp)
             .Select(e => new IpAllowlistDto(e.Id, e.CidrOrIp, e.Note))
             .ToListAsync(ct);
@@ -46,10 +46,11 @@ public class IpAllowlistHandler :
     public async Task<IpAllowlistDto> Handle(AddIpAllowlistCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        EnsureAdmin();
+        EnsureSuperAdmin();
         var entry = new IpAllowlistEntry
         {
-            AgencyId = _user.AgencyId!.Value,
+            // Provenance only — SuperAdmin has no agency, so null marks a platform-owned entry.
+            AgencyId = _user.AgencyId == Guid.Empty ? null : _user.AgencyId,
             CidrOrIp = request.CidrOrIp.Trim(),
             Note = request.Note
         };
@@ -61,18 +62,20 @@ public class IpAllowlistHandler :
     public async Task<Unit> Handle(RemoveIpAllowlistCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        EnsureAdmin();
-        var entry = await _db.IpAllowlist.FirstOrDefaultAsync(
-            e => e.Id == request.Id && e.AgencyId == _user.AgencyId, ct)
+        EnsureSuperAdmin();
+        var entry = await _db.IpAllowlist.FirstOrDefaultAsync(e => e.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(IpAllowlistEntry), request.Id);
         _db.IpAllowlist.Remove(entry);
         await _db.SaveChangesAsync(ct);
         return Unit.Value;
     }
 
-    // Controller enforces [HasPermission]; backstop only verifies tenant context.
-    private void EnsureAdmin()
+    // Controller enforces [HasPermission(IpAllowlistManage)] (SuperAdmin-only via seed);
+    // this backstop re-verifies the role so the platform allowlist can never be altered
+    // by a tenant user even if the permission grant were ever misconfigured.
+    private void EnsureSuperAdmin()
     {
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        if (_user.Roles is null || !_user.Roles.Contains(Domain.Enums.Roles.SuperAdmin))
+            throw new ForbiddenAccessException();
     }
 }

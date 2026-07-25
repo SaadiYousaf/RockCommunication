@@ -10,15 +10,21 @@ public class AdminFlowTests : IClassFixture<CrmWebAppFactory>
     [Fact]
     public async Task IpAllowlist_crud_works()
     {
+        // The IP allowlist is a platform-level control — SuperAdmin only. A plain agency admin
+        // must NOT be able to touch it (see DbSeeder superAdminOnlyPerms / restricted).
         var admin = await _factory.LoginAdminAsync();
+        var forbidden = await admin.PostAsJsonAsync("/api/admin/ip-allowlist", new { cidrOrIp = "10.0.0.0/24", note = "office" });
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, forbidden.StatusCode);
 
-        var added = await admin.PostJsonAsync("/api/admin/ip-allowlist", new { cidrOrIp = "10.0.0.0/24", note = "office" });
+        var sa = await _factory.LoginAsync("superadmin", "SuperAdmin@123!");
+
+        var added = await sa.PostJsonAsync("/api/admin/ip-allowlist", new { cidrOrIp = "10.0.0.0/24", note = "office" });
         var id = added.GetProperty("id").GetGuid();
 
-        var list = await admin.GetJsonAsync("/api/admin/ip-allowlist");
+        var list = await sa.GetJsonAsync("/api/admin/ip-allowlist");
         Assert.Contains(list.EnumerateArray(), e => e.GetProperty("id").GetGuid() == id);
 
-        var del = await admin.DeleteAsync($"/api/admin/ip-allowlist/{id}");
+        var del = await sa.DeleteAsync($"/api/admin/ip-allowlist/{id}");
         Assert.Equal(System.Net.HttpStatusCode.NoContent, del.StatusCode);
     }
 

@@ -121,7 +121,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("commission-config")]
-    [HasPermission(Permissions.CommissionsView)]
+    [HasPermission(Permissions.PayrollProcess)]   // management config — not the rank-and-file CommissionsView
     public async Task<IActionResult> CommissionConfig(CancellationToken ct)
         => Ok(await _mediator.Send(new ListCommissionConfigQuery(), ct));
 

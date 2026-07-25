@@ -46,6 +46,12 @@ public class AuthController : ControllerBase
         if (!isSuperAdmin && req.Roles.Any(r => string.Equals(r, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)))
             return Forbid();
 
+        // Same anti-escalation rule as the update-roles path: only SuperAdmin/Admin/CEO may create
+        // an account that already holds an agency-admin-equivalent role. A plain users.manage holder
+        // (ProgramManager / CallCenterAdmin / ...) must not mint agency-admin power via register either.
+        if (!Roles.CanGrantElevated(_user.Roles) && Roles.GrantsElevated(req.Roles))
+            return Forbid();
+
         Guid agencyId;
         if (req.AgencyId is { } requested)
         {

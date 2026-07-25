@@ -16,7 +16,6 @@ public class Agency : BaseEntity
 
     public ICollection<Team> Teams { get; set; } = new List<Team>();
     public ICollection<CallCenter> CallCenters { get; set; } = new List<CallCenter>();
-    public ICollection<IpAllowlistEntry> IpAllowlist { get; set; } = new List<IpAllowlistEntry>();
 }
 
 /// <summary>
@@ -40,8 +39,16 @@ public class Team : TenantEntity
     public Guid? TeamLeadUserId { get; set; }
 }
 
-public class IpAllowlistEntry : TenantEntity
+/// <summary>
+/// A platform-level source-IP allowlist entry. Enforced globally by
+/// <c>IpAllowlistMiddleware</c> for every tenant, so it is deliberately NOT a
+/// <see cref="TenantEntity"/> (no agency FK, no tenant query filter) and is managed by
+/// SuperAdmin only. <see cref="AgencyId"/> is optional provenance — which SuperAdmin/agency
+/// added it — and never scopes enforcement.
+/// </summary>
+public class IpAllowlistEntry : BaseEntity
 {
+    public Guid? AgencyId { get; set; }
     public string CidrOrIp { get; set; } = string.Empty;
     public string? Note { get; set; }
 }

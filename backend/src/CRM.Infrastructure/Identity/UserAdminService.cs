@@ -35,6 +35,12 @@ public class UserAdminService : IUserAdminService
 
     private bool CallerIsSuperAdmin => _current.Roles?.Contains(Roles.SuperAdmin) == true;
 
+    // Only SuperAdmin, Admin or CEO may HAND OUT an agency-admin-equivalent role (Roles.Elevated) —
+    // otherwise a users.manage holder (CallCenterAdmin / ProgramManager / ProjectManager) could
+    // escalate itself or others to agency-wide admin power in a single request. The same rule is
+    // enforced on the register (create) path in AuthController.
+    private bool CallerCanGrantElevated => Roles.CanGrantElevated(_current.Roles ?? Array.Empty<string>());
+
     /// <summary>
     /// Tenant + privilege guard for user-admin operations. A non-SuperAdmin caller may
     /// only act on users inside their own agency, and never on a SuperAdmin account.
@@ -81,6 +87,17 @@ public class UserAdminService : IUserAdminService
                 throw new ConflictException($"Role '{role}' does not exist.");
 
         var existing = await _users.GetRolesAsync(user);
+
+        // Anti-escalation: block granting an administrative role unless the caller is SuperAdmin/Admin/CEO.
+        if (!CallerCanGrantElevated)
+        {
+            var newlyElevated = roles.Except(existing, StringComparer.OrdinalIgnoreCase)
+                .Where(r => Roles.Elevated.Contains(r, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (newlyElevated.Count > 0)
+                throw new ForbiddenAccessException(
+                    $"You are not permitted to assign the role(s): {string.Join(", ", newlyElevated)}.");
+        }
+
         var toRemove = existing.Except(roles, StringComparer.OrdinalIgnoreCase).ToList();
         var toAdd = roles.Except(existing, StringComparer.OrdinalIgnoreCase).ToList();
 

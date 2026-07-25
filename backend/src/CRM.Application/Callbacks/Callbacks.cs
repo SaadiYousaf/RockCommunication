@@ -76,6 +76,14 @@ public class CompleteCallbackHandler : IRequestHandler<CompleteCallbackCommand, 
         var cb = await _db.ScheduledCallbacks.FirstOrDefaultAsync(
             x => x.Id == request.Id && x.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(ScheduledCallback), request.Id);
+        // A callback is a per-agent task — only its owner (or a manager) may complete it, so one
+        // agent can't silently clear another agent's follow-up out of their queue.
+        var isManager = _user.Roles.Contains(CRM.Domain.Enums.Roles.TeamLead)
+            || _user.Roles.Contains(CRM.Domain.Enums.Roles.ProgramManager)
+            || _user.Roles.Contains(CRM.Domain.Enums.Roles.Admin)
+            || _user.Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin);
+        if (cb.AssignedUserId != _user.UserId && !isManager)
+            throw new ForbiddenAccessException("You can only complete your own callbacks.");
         cb.Completed = true;
         await _db.SaveChangesAsync(ct);
         return new CallbackDto(cb.Id, cb.LeadId, cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);

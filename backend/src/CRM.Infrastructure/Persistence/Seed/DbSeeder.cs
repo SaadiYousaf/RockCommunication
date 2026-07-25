@@ -141,6 +141,9 @@ public static class DbSeeder
             Permissions.AgenciesCreate, Permissions.AgenciesManage,
             Permissions.CallCenterProfileEdit,
             Permissions.RolesManage, Permissions.PermissionsManage,
+            // The IP allowlist is enforced platform-wide (the middleware runs pre-auth with no tenant
+            // context), so a per-agency admin holding it could lock out every OTHER tenant. SuperAdmin only.
+            Permissions.IpAllowlistManage,
         };
         string[] everythingExceptRestricted = Permissions.All
             .Where(p => !restricted.Contains(p))
@@ -275,7 +278,7 @@ public static class DbSeeder
         // from every role except SuperAdmin so a per-agency Admin/CEO/ProgramManager can never
         // rewrite cross-tenant RBAC or reach the SuperAdmin agency APIs. SuperAdmin keeps them
         // (both explicitly and via the '*' PermissionHandler override).
-        string[] superAdminOnlyPerms = { Permissions.RolesManage, Permissions.PermissionsManage, Permissions.AgenciesManage };
+        string[] superAdminOnlyPerms = { Permissions.RolesManage, Permissions.PermissionsManage, Permissions.AgenciesManage, Permissions.IpAllowlistManage };
         var lockedIds = await db.Permissions.Where(p => superAdminOnlyPerms.Contains(p.Code)).Select(p => p.Id).ToListAsync();
         var superAdminRole = await roles.FindByNameAsync(Roles.SuperAdmin);
         var stale = await db.RolePermissions

@@ -57,8 +57,10 @@ public class PermissionService : IPermissionService
         if (user is null) return Array.Empty<string>();
         var roleNames = await _users.GetRolesAsync(user);
 
+        // Match the user's roles by name BUT only global templates (AgencyId == null) or roles of the
+        // user's OWN agency — otherwise a same-named role in another tenant would bleed its permissions in.
         var roleIds = await _db.Roles
-            .Where(r => roleNames.Contains(r.Name!))
+            .Where(r => roleNames.Contains(r.Name!) && (r.AgencyId == null || r.AgencyId == user.AgencyId))
             .Select(r => r.Id).ToListAsync(ct);
 
         return await (from rp in _db.RolePermissions
