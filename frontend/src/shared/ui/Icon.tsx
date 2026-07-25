@@ -13,7 +13,7 @@ import {
   SkipBack, Save, Share2, Globe, MapPin, Home, User, UserCheck, UserCog, UserX,
   Shield, Key, Database, Server, Cpu, Activity, FileSpreadsheet, FilePlus,
   FolderKanban, Workflow, GitBranch, Layers, Grid3x3, List as ListIcon, Columns3,
-  Smile, File as FileIcon,
+  Smile, File as FileIcon, BookOpen, Ban,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import { cn } from "./cn";
@@ -134,6 +134,8 @@ const icons = {
   cols:         Columns3,
   smile:        Smile,
   file:         FileIcon,
+  book:         BookOpen,   // Knowledge Base
+  ban:          Ban,        // DNC / prohibited
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons;
@@ -141,12 +143,16 @@ export type IconName = keyof typeof icons;
 export function Icon({
   name, size = 18, className, strokeWidth = 1.75,
 }: {
-  name: IconName;
+  // Accept a plain string too: some names arrive at runtime from the backend (module catalog,
+  // audit actions, cadence step kinds) and aren't provable against the union at compile time.
+  name: IconName | (string & {});
   size?: number;
   className?: string;
   strokeWidth?: number;
 }) {
-  const Cmp = icons[name];
+  // Fall back to a neutral glyph if an unknown name slips through — never crash the page with an
+  // "Element type is invalid" error, which is what an undefined component would cause.
+  const Cmp = icons[name as IconName] ?? icons.doc;
   return (
     <Cmp
       width={size}

@@ -9,13 +9,14 @@ import type { Cadence, CadenceStep } from "../../shared/api/types";
 import { Can, Perm } from "../../shared/auth/permissions";
 
 const KINDS = ["Call", "Sms", "Email", "Wait"] as const;
-type Kind = typeof KINDS[number];
 
-const kindIcon: Record<Kind, IconName> = {
+// Keyed by string (not the KINDS union) so an unrecognised backend step kind falls through to the
+// `?? "doc"` / `?? "neutral"` defaults instead of forcing an unsafe cast at the call site.
+const kindIcon: Record<string, IconName> = {
   Call: "phone", Sms: "chat", Email: "doc", Wait: "clock",
 };
 
-const kindTone: Record<Kind, "brand" | "info" | "warning" | "neutral"> = {
+const kindTone: Record<string, "brand" | "info" | "warning" | "neutral"> = {
   Call: "brand", Sms: "info", Email: "warning", Wait: "neutral",
 };
 
@@ -106,8 +107,8 @@ export function CadencesPage() {
                     .map((s, idx: number) => (
                     <div key={s.id ?? idx} className="flex items-center gap-2">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-ink-50/80 border hairline">
-                        <Icon name={kindIcon[s.stepKind as Kind] ?? "doc"} size={14} className="text-ink-600" />
-                        <Badge tone={kindTone[s.stepKind as Kind] ?? "neutral"} variant="soft">
+                        <Icon name={kindIcon[s.stepKind] ?? "doc"} size={14} className="text-ink-600" />
+                        <Badge tone={kindTone[s.stepKind] ?? "neutral"} variant="soft">
                           {s.order}. {s.stepKind}
                         </Badge>
                         <span className="text-xs text-ink-500 font-mono">{formatDelay(s.delayMinutes)}</span>

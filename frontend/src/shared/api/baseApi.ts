@@ -189,7 +189,14 @@ export const baseApi = createApi({
     }),
     verifyJornaya: b.mutation<Lead, string>({
       query: (id) => ({ url: `/api/integrations/jornaya/verify/${id}`, method: "POST" }),
-      invalidatesTags: (_r, _e, id) => ["Leads", { type: "Lead", id }],
+      // Verification changes the lead's score AND its AI insights/recommendations, so refetch
+      // those too — otherwise the "Run Jornaya verification" next-step lingers after success.
+      invalidatesTags: (_r, _e, id) => [
+        "Leads",
+        { type: "Lead", id },
+        { type: "AiRecs", id },
+        { type: "AiScore", id },
+      ],
     }),
     dial: b.mutation<{ callId: string; status: string }, { leadId: string }>({
       query: (body) => ({ url: "/api/integrations/dialer/dial", method: "POST", body }),
@@ -948,6 +955,10 @@ export const baseApi = createApi({
       query: (params) => ({ url: "/api/sales", params: params ?? undefined }),
       providesTags: ["Sales"],
     }),
+    saleDetail: b.query<SaleDetail, string>({
+      query: (id) => `/api/sales/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Sales", id }],
+    }),
 
     // ===== Calls list =====
     listCalls: b.query<PagedCallsResult, CallsQuery | void>({
@@ -1006,6 +1017,29 @@ export interface SaleListItem {
 export interface PagedSalesResult {
   items: SaleListItem[]; total: number; skip: number; take: number;
   totalPremium: number; fundedCount: number; validatedCount: number; pendingCount: number; internalCount: number;
+}
+export interface SaleCommissionLine {
+  id: string; agentUserId: string; agentName: string | null;
+  ruleName: string; amount: number; paid: boolean; createdAt: string;
+}
+export interface SaleDetail {
+  id: string; saleNumber: number; status: string;
+  leadId: string; leadName: string; leadPhone: string; leadEmail: string | null; leadState: string | null;
+  closerUserId: string; closerName: string | null;
+  validatorUserId: string | null; validatorName: string | null;
+  licenseAgentUserId: string | null; licenseAgentName: string | null;
+  callCenterName: string | null;
+  carrier: string; policyNumber: string | null;
+  monthlyPremium: number; annualPremium: number;
+  validatorStatus: string;
+  carrierApproved: string | null; planApproved: string | null;
+  coverageApproved: number | null; premiumApproved: number | null;
+  declineReason: string | null;
+  bankingCode: number; bankRoutingNumber: string | null; bankAccountLast4: string | null;
+  bankName: string | null; lyonsReference: string | null; bankingNote: string | null; hasRecording: boolean;
+  isInternalSale: boolean; internalSaleReason: string | null;
+  totalCommission: number; commissions: SaleCommissionLine[];
+  soldAt: string; validatedAt: string | null; fundedAt: string | null; createdAt: string;
 }
 export interface SalesQuery {
   closerUserId?: string; carrier?: string; status?: string;
@@ -1159,7 +1193,7 @@ export const {
   useSetTwoFactorMethodMutation, useSendEmailOtpMutation,
   useBulkAssignLeadsMutation, useBulkSetStageMutation, useBulkEnrollCadenceMutation,
   useListAuditQuery, useAuditFiltersQuery,
-  useListSalesQuery, useListCallsQuery,
+  useListSalesQuery, useSaleDetailQuery, useListCallsQuery,
   useForgotPasswordMutation, useResetPasswordMutation,
   useConfirmEmailMutation, useResendEmailConfirmationMutation,
   useMyPermissionsQuery, useListPermissionsQuery,

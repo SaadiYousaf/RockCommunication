@@ -1,7 +1,7 @@
 import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   useCarriersQuery, useListLeadsQuery, useRecordSaleMutation,
   useValidateSaleMutation, useFundSaleMutation, useUploadSaleRecordingMutation,
@@ -300,6 +300,7 @@ export function SalesPage() {
 }
 
 function SalesList() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<SalesQuery>({ skip: 0, take: 50, sort: "soldAt-desc" });
   const { data, isLoading, isFetching } = useListSalesQuery(filters);
   const { data: users } = useListUsersQuery();
@@ -413,12 +414,13 @@ function SalesList() {
             </THead>
             <TBody>
               {data.items.map((s) => (
-                <TR key={s.id}>
+                <TR key={s.id} className="cursor-pointer" onClick={() => navigate(`/sales/${s.id}`)}>
                   <TD className="text-ink-600 whitespace-nowrap text-xs">
                     {new Date(s.soldAt).toLocaleString()}
                   </TD>
                   <TD>
-                    <Link to={`/leads/${s.leadId}`} className="block hover:underline">
+                    {/* Clicking the name jumps to the LEAD; clicking anywhere else opens the SALE. */}
+                    <Link to={`/leads/${s.leadId}`} onClick={(e) => e.stopPropagation()} className="block hover:underline">
                       <div className="font-medium text-ink-900">{s.leadName}</div>
                       <div className="text-xs text-ink-500">{s.leadPhone}</div>
                     </Link>

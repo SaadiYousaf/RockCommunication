@@ -61,7 +61,24 @@
       "Bash(echo \"exit $?\")",
       "Bash(python3 -)",
       "Bash(echo \"test exit $?\")",
-      "Bash(echo \"tsc exit $?\")"
+      "Bash(echo \"tsc exit $?\")",
+      "Bash(python3 -c ' *)",
+      "Bash(git checkout *)",
+      "Bash(grep -nA3 \"resendInvitation:\" src/shared/api/baseApi.ts)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(grep -nA4 \"createAgency:\\\\|createCallCenter:\" src/shared/api/baseApi.ts)",
+      "Bash(echo \"=== FE build exit: $? ===\")",
+      "Bash(git reset *)",
+      "Bash(git commit *)",
+      "Bash(git rev-list *)",
+      "Bash(git push *)",
+      "Bash(gh run *)",
+      "Bash(grep -rnB2 -A2 \"Migrate\" src/CRM.Infrastructure/Persistence/Seed/DbSeeder.cs src/CRM.Api/Program.cs)",
+      "Bash(curl -s --max-time 15 https://app.smhachieverslifegroup.com/index.html)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 15 https://api.smhachieverslifegroup.com/health)",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" --max-time 15 https://api.smhachieverslifegroup.com/health)",
+      "Bash(curl -s -o /dev/null -w \"horizontals: %{http_code}\\\\n\" --max-time 15 https://api.smhachieverslifegroup.com/api/admin/horizontals)",
+      "Bash(curl -s -o /dev/null -w \"resend: %{http_code}\\\\n\" --max-time 15 -X POST https://api.smhachieverslifegroup.com/api/admin/users/00000000-0000-0000-0000-000000000000/resend-invitation)"
     ]
   }
 }

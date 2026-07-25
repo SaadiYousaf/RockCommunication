@@ -100,6 +100,15 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
         var breakdown = scoring.Breakdown
             .Select(b => new LeadScoreLineDto(b.Rule, b.Points, b.Note)).ToList();
 
+        // Persist the freshly-computed score if the stored (denormalized) value has drifted — e.g.
+        // a scoring input changed via a path that didn't rescore. This self-heals the value the
+        // leads list/queue read, and guarantees the header score below always matches its breakdown.
+        if (scoring.Score != lead.Score)
+        {
+            lead.Score = scoring.Score;
+            await _db.SaveChangesAsync(ct);
+        }
+
         // Exact calendar age — DayOfYear comparison is off by a day across leap-year boundaries.
         int? age = null;
         if (lead.DateOfBirth is { } dob)

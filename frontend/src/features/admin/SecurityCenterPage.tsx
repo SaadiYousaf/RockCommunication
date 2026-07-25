@@ -3,6 +3,7 @@ import {
   Badge, Card, CardBody, CardHeader, Icon, PageHeader, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
+import type { IconName } from "../../shared/ui/Icon";
 
 /**
  * Security Center — a read-only overview of the access model: which level each role sits at,
@@ -64,7 +65,7 @@ const TIERS: { tier: Tier; tone: BadgeTone; blurb: string; roles: RoleRow[] }[] 
   },
 ];
 
-const ISOLATION = [
+const ISOLATION: { icon: IconName; title: string; body: string }[] = [
   { icon: "building", title: "Agencies never share data", body: "Every agency is a fully isolated tenant. A user in one agency can never read another agency's leads, sales, customers, users or reports — enforced by a fail-closed database filter, not just the UI." },
   { icon: "shield", title: "Call centres are isolated within an agency", body: "A user pinned to a call centre sees only that call centre's pipeline (leads, sales, calls, commissions). Agency-level roles (CEO/Admin) see all call centres in their agency." },
   { icon: "users", title: "Only Super Admin crosses agencies", body: "Cross-agency access exists solely for the global Super Admin and the central Submission Agents (for sale validation). Roles & permissions are global and only the Super Admin can change them." },
@@ -87,7 +88,7 @@ export function SecurityCenterPage() {
             {ISOLATION.map((b) => (
               <div key={b.title} className="rounded-lg border border-ink-200 bg-ink-50/40 p-4">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-brand-600"><Icon name={b.icon as never} size={16} /></span>
+                  <span className="text-brand-600"><Icon name={b.icon} size={16} /></span>
                   <span className="font-semibold text-sm text-ink-900">{b.title}</span>
                 </div>
                 <p className="text-xs text-ink-600 leading-relaxed">{b.body}</p>

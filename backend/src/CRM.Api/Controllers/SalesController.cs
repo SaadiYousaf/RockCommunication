@@ -69,6 +69,11 @@ public class SalesController : ControllerBase
         => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.ListSalesQuery(
             closerUserId, carrier, status, from, to, sort, skip, take, agencyId), ct));
 
+    [HttpGet("{id:guid}")]
+    [HasPermission(Permissions.SalesRead)]
+    public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
+        => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.GetSaleDetailQuery(id), ct));
+
     public record ValidateBody(bool Approve, string? Notes);
 
     [HttpPost("{id:guid}/validate")]

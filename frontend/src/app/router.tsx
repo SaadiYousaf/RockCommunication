@@ -63,6 +63,7 @@ const TwoFactorEnrollPage = lazyWithReload(() => import("../features/auth/TwoFac
 const LeadSearchPage = lazyWithReload(() => import("../features/leads/LeadSearchPage").then(m => ({ default: m.LeadSearchPage })));
 const LeadTroubleshootPage = lazyWithReload(() => import("../features/leads/LeadTroubleshootPage").then(m => ({ default: m.LeadTroubleshootPage })));
 const CommissionsPage = lazyWithReload(() => import("../features/sales/CommissionsPage").then(m => ({ default: m.CommissionsPage })));
+const SaleDetailPage = lazyWithReload(() => import("../features/sales/SaleDetailPage").then(m => ({ default: m.SaleDetailPage })));
 const KpiDashboardPage = lazyWithReload(() => import("../features/dashboard/KpiDashboardPage").then(m => ({ default: m.KpiDashboardPage })));
 const QaPage = lazyWithReload(() => import("../features/qa/QaPage").then(m => ({ default: m.QaPage })));
 const QaBrowserPage = lazyWithReload(() => import("../features/qa/QaBrowserPage").then(m => ({ default: m.QaBrowserPage })));
@@ -195,7 +196,10 @@ const router = createBrowserRouter([
           },
           {
             element: <ProtectedRoute modules={[M.Sales]} />,
-            children: [{ path: "/sales", element: <SalesPage /> }],
+            children: [
+              { path: "/sales",     element: <SalesPage /> },
+              { path: "/sales/:id", element: <SaleDetailPage /> },
+            ],
           },
           {
             element: <ProtectedRoute modules={[M.Commissions]} />,
