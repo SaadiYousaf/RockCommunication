@@ -622,5 +622,23 @@ export interface WallboardSnapshot {
 
 export interface LeadList { id: string; name: string; campaignId: string | null; leadSourceId: string | null; isActive: boolean; leadCount: number; }
 
+/** SuperAdmin chat oversight — a room across any agency + its transcript. */
+export interface ChatOversightRoom {
+  id: string;
+  name: string;
+  isDirect: boolean;
+  agencyName: string;
+  members: string[];
+  messageCount: number;
+  lastMessageAt: string | null;
+}
+export interface ChatOversightMessage {
+  id: string;
+  sender: string;
+  body: string;
+  attachmentName: string | null;
+  sentAt: string;
+}
+
 /** Payload for an upsert mutation: any subset of the entity; `id` absent/null means "create". */
 export type Upsert<T> = Partial<Omit<T, "id">> & { id?: string | null };

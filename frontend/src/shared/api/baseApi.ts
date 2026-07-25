@@ -6,7 +6,7 @@ import type { RootState } from "../../app/store";
 import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
-  Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage,
+  Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
   WorkflowStage, LeadDisposition, DashboardSummary,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
@@ -322,6 +322,13 @@ export const baseApi = createApi({
     chatUnread: b.query<{ roomId: string; unreadCount: number; lastReadAt: string | null }[], void>({
       query: () => "/api/chat/unread",
       providesTags: ["Rooms"],
+    }),
+    // SuperAdmin oversight — read-only, cross-agency.
+    chatOversightRooms: b.query<ChatOversightRoom[], { agencyId?: string } | void>({
+      query: (p) => ({ url: "/api/admin/chat-oversight/rooms", params: p ?? undefined }),
+    }),
+    chatOversightMessages: b.query<ChatOversightMessage[], string>({
+      query: (roomId) => `/api/admin/chat-oversight/rooms/${roomId}/messages`,
     }),
     markRoomRead: b.mutation<void, string>({
       query: (id) => ({ url: `/api/chat/rooms/${id}/read`, method: "POST" }),
@@ -1098,6 +1105,7 @@ export const {
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,
   useChatRoomsQuery, useCreateRoomMutation, useRoomMessagesQuery, useSendMessageMutation, useSendAttachmentMutation,
+  useChatOversightRoomsQuery, useChatOversightMessagesQuery,
   useChatUnreadQuery, useMarkRoomReadMutation,
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,

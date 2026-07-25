@@ -68,6 +68,7 @@ const QaPage = lazyWithReload(() => import("../features/qa/QaPage").then(m => ({
 const QaBrowserPage = lazyWithReload(() => import("../features/qa/QaBrowserPage").then(m => ({ default: m.QaBrowserPage })));
 const AgencyDetailPage = lazyWithReload(() => import("../features/admin/AgencyDetailPage").then(m => ({ default: m.AgencyDetailPage })));
 const SubmissionAgentsPage = lazyWithReload(() => import("../features/admin/SubmissionAgentsPage").then(m => ({ default: m.SubmissionAgentsPage })));
+const ChatOversightPage = lazyWithReload(() => import("../features/admin/ChatOversightPage").then(m => ({ default: m.ChatOversightPage })));
 const SecurityCenterPage = lazyWithReload(() => import("../features/admin/SecurityCenterPage").then(m => ({ default: m.SecurityCenterPage })));
 const AuditLogPage = lazyWithReload(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
@@ -299,6 +300,7 @@ const router = createBrowserRouter([
               { path: "/admin/agencies", element: <AgenciesPage /> },
               { path: "/admin/agencies/:agencyId", element: <AgencyDetailPage /> },
               { path: "/admin/submission-agents", element: <SubmissionAgentsPage /> },
+              { path: "/admin/chat-oversight", element: <ChatOversightPage /> },
             ],
           },
         ],

@@ -78,6 +78,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/admin/agencies",     label: "Agencies",         icon: "building", superAdminOnly: true },
       { to: "/admin/submission-agents", label: "Submission Agents", icon: "shield", superAdminOnly: true },
+      { to: "/admin/chat-oversight", label: "Chat Oversight",  icon: "chat", superAdminOnly: true },
       { to: "/admin/call-centers", label: "Call Centers",     icon: "building", module: "admin" },
       { to: "/admin/users",    label: "User Mgmt",        icon: "users",    module: "users.manage" },
       { to: "/admin/roles",    label: "Role Management",  icon: "shield",   module: "roles.manage" },
