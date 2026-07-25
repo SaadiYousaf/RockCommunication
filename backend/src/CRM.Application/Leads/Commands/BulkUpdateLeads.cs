@@ -51,13 +51,20 @@ public class BulkLeadHandler :
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIdentityService _identity;
 
-    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity); }
 
     public async Task<BulkLeadActionResult> Handle(BulkAssignLeadsCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
         EnsureManager();
+        // The assignee must be a real user in the caller's agency (not a foreign/arbitrary id).
+        var agencyUserIds = await _identity.ListUserNamesAsync(_user.AgencyId, ct);
+        if (!agencyUserIds.ContainsKey(request.AssigneeUserId))
+            throw new NotFoundException("User", request.AssigneeUserId);
+
         var leads = await _db.Leads
             .Where(l => request.LeadIds.Contains(l.Id) && l.AgencyId == _user.AgencyId)
             .ToListAsync(ct);

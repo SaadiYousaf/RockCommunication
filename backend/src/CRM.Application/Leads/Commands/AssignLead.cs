@@ -27,12 +27,14 @@ public class AssignLeadHandler : IRequestHandler<AssignLeadCommand, LeadDto>
     private readonly IApplicationDbContext _db;
     private readonly IAssignmentService _assignment;
     private readonly ICurrentUser _user;
+    private readonly IIdentityService _identity;
 
-    public AssignLeadHandler(IApplicationDbContext db, IAssignmentService assignment, ICurrentUser user)
+    public AssignLeadHandler(IApplicationDbContext db, IAssignmentService assignment, ICurrentUser user, IIdentityService identity)
     {
         _db = Guard.AgainstNull(db);
         _assignment = Guard.AgainstNull(assignment);
         _user = Guard.AgainstNull(user);
+        _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<LeadDto> Handle(AssignLeadCommand request, CancellationToken ct)
@@ -46,6 +48,11 @@ public class AssignLeadHandler : IRequestHandler<AssignLeadCommand, LeadDto>
 
         if (request.ExplicitUserId is { } uid)
         {
+            // The assignee MUST be a real user in the caller's agency — never trust a raw id
+            // (otherwise a lead could be "assigned" to a foreign or non-existent user).
+            var agencyUserIds = await _identity.ListUserNamesAsync(_user.AgencyId, ct);
+            if (!agencyUserIds.ContainsKey(uid))
+                throw new NotFoundException("User", uid);
             lead.AssignedUserId = uid;
         }
         else
