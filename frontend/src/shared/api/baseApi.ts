@@ -729,6 +729,10 @@ export const baseApi = createApi({
       query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/call-centers`, method: "POST", body }),
       invalidatesTags: ["CallCenters", "Agencies"],
     }),
+    updateCallCenterInAgency: b.mutation<CallCenterDto, { agencyId: string; callCenterId: string; name: string; code?: string | null; isActive: boolean }>({
+      query: ({ agencyId, callCenterId, ...body }) => ({ url: `/api/agencies/${agencyId}/call-centers/${callCenterId}`, method: "PUT", body }),
+      invalidatesTags: ["CallCenters", "Agencies"],
+    }),
     listSubmissionAgents: b.query<SubmissionAgent[], void>({
       query: () => "/api/agencies/submission-agents",
       providesTags: [{ type: "Users", id: "submission-agents" }],
@@ -1128,7 +1132,7 @@ export const {
   useListAgenciesQuery, useGetAgencyQuery, useCreateAgencyMutation,
   useUpdateAgencyMutation, useAssignAgencyCeoMutation,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery, useCreateLicenseAgentMutation,
-  useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
+  useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation, useUpdateCallCenterInAgencyMutation,
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
   useRegisterMutation,

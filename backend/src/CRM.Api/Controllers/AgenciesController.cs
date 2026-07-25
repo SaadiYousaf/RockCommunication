@@ -103,6 +103,16 @@ public class AgenciesController : ControllerBase
         return Ok(await _mediator.Send(new CreateCallCenterInAgencyCommand(id, body.Name, body.Code, body.AdminName, body.AdminEmail), ct));
     }
 
+    public record UpdateCallCenterInAgencyBody(string Name, string? Code, bool IsActive);
+
+    [HttpPut("{id:guid}/call-centers/{callCenterId:guid}")]
+    [HasPermission(Permissions.AgenciesManage)]
+    public async Task<IActionResult> UpdateCallCenter(Guid id, Guid callCenterId, [FromBody] UpdateCallCenterInAgencyBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new UpdateCallCenterInAgencyCommand(id, callCenterId, body.Name, body.Code, body.IsActive), ct));
+    }
+
     [HttpGet("submission-agents")]
     [HasPermission(Permissions.AgenciesManage)]
     public async Task<IActionResult> SubmissionAgents(CancellationToken ct)

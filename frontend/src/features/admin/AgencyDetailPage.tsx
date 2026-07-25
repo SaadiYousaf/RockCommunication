@@ -4,7 +4,9 @@ import { Link, useParams } from "react-router-dom";
 import {
   useGetAgencyQuery, useListSalesQuery, useAgencyLicenseAgentsQuery,
   useCreateCallCenterInAgencyMutation, useCreateLicenseAgentMutation,
+  useAgencyCallCentersQuery, useUpdateCallCenterInAgencyMutation,
 } from "../../shared/api/baseApi";
+import type { CallCenterDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
@@ -30,8 +32,10 @@ export function AgencyDetailPage() {
   const { data: sales, isLoading: salesLoading } = useListSalesQuery(
     { agencyId, skip, take: PAGE, sort: "soldAt-desc" }, { skip: !agencyId });
 
+  const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
   const [showCallCenter, setShowCallCenter] = useState(false);
   const [showAgent, setShowAgent] = useState(false);
+  const [editCc, setEditCc] = useState<CallCenterDto | null>(null);
 
   const total = sales?.total ?? 0;
   const items = sales?.items ?? [];
@@ -79,6 +83,42 @@ export function AgencyDetailPage() {
                   {a.name}{a.isActive ? "" : " (inactive)"}
                 </Badge>
               ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Call centres */}
+      <Card className="mb-4">
+        <CardHeader
+          title="Call centres"
+          subtitle={callCenters ? `${callCenters.length} call centre(s)` : undefined}
+          action={<Button variant="outline" size="sm" leftIcon={<Icon name="building" size={14} />} onClick={() => setShowCallCenter(true)}>New call centre</Button>}
+        />
+        <CardBody>
+          {!callCenters ? <Skeleton className="h-24" /> : callCenters.length === 0 ? (
+            <EmptyState icon={<Icon name="building" size={18} />} title="No call centres yet"
+              description="Add one with the button above — its admin is emailed an invitation." />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <THead>
+                  <TR><TH>Name</TH><TH>Code</TH><TH numeric>Leads</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
+                </THead>
+                <TBody>
+                  {callCenters.map((c) => (
+                    <TR key={c.id}>
+                      <TD className="font-medium text-ink-900">{c.name}</TD>
+                      <TD className="font-mono text-xs text-ink-500">{c.code ?? "—"}</TD>
+                      <TD numeric className="text-sm text-ink-600">{c.leadCount}</TD>
+                      <TD><Badge tone={c.isActive ? "success" : "neutral"} variant="soft">{c.isActive ? "Active" : "Disabled"}</Badge></TD>
+                      <TD className="text-right">
+                        <Button variant="ghost" size="sm" leftIcon={<Icon name="edit" size={14} />} onClick={() => setEditCc(c)}>Edit</Button>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             </div>
           )}
         </CardBody>
@@ -139,7 +179,44 @@ export function AgencyDetailPage() {
 
       {showCallCenter && <NewCallCenterModal agencyId={agencyId} onClose={() => setShowCallCenter(false)} />}
       {showAgent && <NewLicenseAgentModal agencyId={agencyId} onClose={() => setShowAgent(false)} />}
+      {editCc && <EditCallCenterModal agencyId={agencyId} cc={editCc} onClose={() => setEditCc(null)} />}
     </>
+  );
+}
+
+function EditCallCenterModal({ agencyId, cc, onClose }: { agencyId: string; cc: CallCenterDto; onClose: () => void }) {
+  const [update, { isLoading }] = useUpdateCallCenterInAgencyMutation();
+  const toast = useToast();
+  const [name, setName] = useState(cc.name);
+  const [code, setCode] = useState(cc.code ?? "");
+  const [isActive, setIsActive] = useState(cc.isActive);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await update({ agencyId, callCenterId: cc.id, name: name.trim(), code: code.trim() || null, isActive }).unwrap();
+      toast.success("Call centre saved", isActive ? cc.name : `${cc.name} disabled — its agents are logged out`);
+      onClose();
+    } catch (err: unknown) {
+      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the fields and try again.");
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Edit call centre" description="Rename, re-code, or disable this call centre. Disabling it immediately signs out and locks out every agent pinned to it.">
+      <form onSubmit={submit} className="space-y-3">
+        <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} />
+        <Input label="Code" value={code} onChange={(e) => setCode(e.target.value)} />
+        <label className="flex items-center gap-2 text-sm text-ink-700 select-none">
+          <input type="checkbox" className="accent-brand-600" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+          Active {!isActive && <span className="text-amber-700">— agents will be locked out</span>}
+        </label>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" loading={isLoading} leftIcon={<Icon name="check" size={15} />}>Save</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

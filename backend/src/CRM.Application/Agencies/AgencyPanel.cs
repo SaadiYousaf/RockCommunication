@@ -38,6 +38,10 @@ public record CreateLicenseAgentCommand(Guid AgencyId, string Name, string Email
 public record CreateCallCenterInAgencyCommand(Guid AgencyId, string Name, string? Code, string AdminName, string AdminEmail)
     : IRequest<CallCenterDto>;
 
+/// <summary>SuperAdmin edits a call center inside a target agency. Disabling it force-logs-out its agents.</summary>
+public record UpdateCallCenterInAgencyCommand(Guid AgencyId, Guid CallCenterId, string Name, string? Code, bool IsActive)
+    : IRequest<CallCenterDto>;
+
 /// <summary>SuperAdmin lists the central (SMH-level) Submission Agents.</summary>
 public record ListSubmissionAgentsQuery() : IRequest<IReadOnlyList<SubmissionAgentDto>>;
 
@@ -65,6 +69,16 @@ public class CreateCallCenterInAgencyValidator : AbstractValidator<CreateCallCen
     }
 }
 
+public class UpdateCallCenterInAgencyValidator : AbstractValidator<UpdateCallCenterInAgencyCommand>
+{
+    public UpdateCallCenterInAgencyValidator()
+    {
+        RuleFor(x => x.AgencyId).NotEmpty();
+        RuleFor(x => x.CallCenterId).NotEmpty();
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+    }
+}
+
 public class CreateSubmissionAgentValidator : AbstractValidator<CreateSubmissionAgentCommand>
 {
     public CreateSubmissionAgentValidator()
@@ -80,6 +94,7 @@ public class AgencyPanelHandler :
     IRequestHandler<ListAgencyCallCentersQuery, IReadOnlyList<CallCenterDto>>,
     IRequestHandler<CreateLicenseAgentCommand, LicenseAgentDto>,
     IRequestHandler<CreateCallCenterInAgencyCommand, CallCenterDto>,
+    IRequestHandler<UpdateCallCenterInAgencyCommand, CallCenterDto>,
     IRequestHandler<ListSubmissionAgentsQuery, IReadOnlyList<SubmissionAgentDto>>,
     IRequestHandler<CreateSubmissionAgentCommand, SubmissionAgentDto>
 {
@@ -87,13 +102,15 @@ public class AgencyPanelHandler :
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
     private readonly IInvitationService _invitations;
+    private readonly IJwtTokenService _jwt;
 
-    public AgencyPanelHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IInvitationService invitations)
+    public AgencyPanelHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IInvitationService invitations, IJwtTokenService jwt)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _invitations = Guard.AgainstNull(invitations);
+        _jwt = Guard.AgainstNull(jwt);
     }
 
     public async Task<IReadOnlyList<AgencyOptionDto>> Handle(ListAgencyOptionsQuery request, CancellationToken ct)
@@ -191,6 +208,35 @@ public class AgencyPanelHandler :
             CallCenterName: cc.Name), ct);
 
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, 0);
+    }
+
+    public async Task<CallCenterDto> Handle(UpdateCallCenterInAgencyCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdmin();
+        // Look up within the target agency (SuperAdmin bypasses the tenant filter, so scope explicitly).
+        var cc = await _db.CallCenters.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == request.CallCenterId && c.AgencyId == request.AgencyId && !c.IsDeleted, ct)
+            ?? throw new NotFoundException("CallCenter", request.CallCenterId);
+
+        var name = request.Name.Trim();
+        if (await _db.CallCenters.IgnoreQueryFilters()
+                .AnyAsync(c => c.AgencyId == request.AgencyId && c.Id != cc.Id && !c.IsDeleted && c.Name == name, ct))
+            throw new ConflictException($"A call center named \"{name}\" already exists in this agency.");
+
+        var wasActive = cc.IsActive;
+        cc.Name = name;
+        cc.Code = request.Code?.Trim();
+        cc.IsActive = request.IsActive;
+        await _db.SaveChangesAsync(ct);
+
+        // Disabling a call center is a kill switch: force-logout every agent pinned to it
+        // (login/refresh are already blocked by TenantLoginGate).
+        if (wasActive && !request.IsActive)
+            await _jwt.RevokeAllForCallCenterAsync(cc.Id, ct);
+
+        var leads = await _db.Leads.IgnoreQueryFilters().CountAsync(l => l.CallCenterId == cc.Id && !l.IsDeleted, ct);
+        return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads);
     }
 
     public async Task<IReadOnlyList<SubmissionAgentDto>> Handle(ListSubmissionAgentsQuery request, CancellationToken ct)
