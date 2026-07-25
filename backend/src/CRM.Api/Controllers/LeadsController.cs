@@ -176,6 +176,16 @@ public class LeadsController : ControllerBase
         return Ok(await _mediator.Send(new TransitionLeadCommand(id, dto), ct));
     }
 
+    public record DispositionBody(LeadDisposition Disposition, string? Notes);
+    // Records the call outcome without moving the lead's stage (a same-stage transition would 409).
+    [HttpPost("{id:guid}/disposition")]
+    [HasPermission(Permissions.LeadsTransition)]
+    public async Task<ActionResult<LeadDto>> SetDisposition(Guid id, [FromBody] DispositionBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetLeadDispositionCommand(id, body.Disposition, body.Notes), ct));
+    }
+
     public record AssignBody(string TargetRole, string Strategy = "round-robin", Guid? UserId = null);
 
     [HttpPost("{id:guid}/assign")]

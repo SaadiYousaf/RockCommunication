@@ -1,10 +1,10 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
-  useCheckIntegrationMutation, useListIntegrationsQuery,
+  useCheckIntegrationMutation, useListIntegrationsQuery, useTestDialMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
   Skeleton, useToast, cn, type IconName,
 } from "../../shared/ui";
 import type { IntegrationInfo, IntegrationHealthResult } from "../../shared/api/types";
@@ -101,6 +101,8 @@ export function IntegrationsPage() {
         </div>
       )}
 
+      <TestDialerCard />
+
       <Card className="mt-6 bg-ink-50/40">
         <CardBody className="flex items-start gap-4">
           <div className="h-10 w-10 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
@@ -125,6 +127,57 @@ export function IntegrationsPage() {
         </CardBody>
       </Card>
     </>
+  );
+}
+
+function TestDialerCard() {
+  const [testDial, { isLoading }] = useTestDialMutation();
+  const toast = useToast();
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState<{ callId: string; status: string; provider: string; warnings: string[] } | null>(null);
+
+  async function run(e: React.FormEvent) {
+    e.preventDefault();
+    if (!phone.trim()) return;
+    setResult(null);
+    try {
+      const r = await testDial({ phoneNumber: phone.trim() }).unwrap();
+      setResult(r);
+      toast.success("Test call placed", `Provider ${r.provider} · ${r.status}`);
+    } catch (err: unknown) {
+      toast.error("Test call failed", getErrorDetail(err) ?? "Try again.");
+    }
+  }
+
+  return (
+    <Card className="mt-6" accent="brand">
+      <CardHeader eyebrow="Telephony" title="Test dialer" bordered
+        subtitle="Place a test call to a phone number to verify telephony end to end." />
+      <CardBody>
+        <form onSubmit={run} className="flex flex-wrap items-end gap-2">
+          <Input label="Phone number" placeholder="+1 555 123 4567" value={phone}
+            onChange={(e) => setPhone(e.target.value)} leftIcon={<Icon name="phone" size={14} />}
+            containerClassName="flex-1 min-w-[220px]" />
+          <Button type="submit" loading={isLoading} leftIcon={<Icon name="phone" size={15} />}>Place test call</Button>
+        </form>
+
+        <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <Icon name="info" size={14} className="mt-0.5 shrink-0" />
+          <div>
+            This exercises the full dial path (including the DNC/TCPA compliance check). It only <strong>rings a real phone</strong> when a live telephony provider is configured (Zoom/RingCentral, or Vici with a logged-in session). Otherwise it runs the stub — it reports success without ringing.
+          </div>
+        </div>
+
+        {result && (
+          <div className="mt-3 text-sm rounded-lg border border-ink-200 bg-ink-50/50 p-3 space-y-1">
+            <div>Provider: <strong>{result.provider}</strong></div>
+            <div>Status: <strong>{result.status}</strong></div>
+            <div className="font-mono text-xs text-ink-500">Call id: {result.callId}</div>
+            {result.warnings.length > 0 && <div className="text-amber-700">Warnings: {result.warnings.join("; ")}</div>}
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

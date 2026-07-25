@@ -26,6 +26,10 @@ public record SendDtmfCommand(Guid CallId, string Digits) : IRequest<Unit>;
 public record SendQuickSmsCommand(Guid LeadId, string Body) : IRequest<Unit>;
 public record GetMyActiveCallQuery() : IRequest<ActiveCallDto?>;
 
+/// <summary>Places a test call to a raw phone number (no lead) so telephony can be verified.</summary>
+public record TestDialCommand(string PhoneNumber) : IRequest<TestDialResult>;
+public record TestDialResult(string CallId, string Status, string Provider, IReadOnlyList<string> Warnings);
+
 public class StartOutboundCallValidator : AbstractValidator<StartOutboundCallCommand>
 {
     public StartOutboundCallValidator() => RuleFor(x => x.LeadId).NotEmpty();
@@ -39,7 +43,8 @@ public class CallControlHandler :
     IRequestHandler<ToggleMuteCommand, ActiveCallDto>,
     IRequestHandler<SendDtmfCommand, Unit>,
     IRequestHandler<SendQuickSmsCommand, Unit>,
-    IRequestHandler<GetMyActiveCallQuery, ActiveCallDto?>
+    IRequestHandler<GetMyActiveCallQuery, ActiveCallDto?>,
+    IRequestHandler<TestDialCommand, TestDialResult>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -92,6 +97,22 @@ public class CallControlHandler :
         var dto = ToDto(call, lead, _state[call.Id]);
         await _notifier.PushAsync(_user.UserId.Value, AgentEvents.CallRinging, dto, ct);
         return dto;
+    }
+
+    public async Task<TestDialResult> Handle(TestDialCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureAgent();
+        var phone = (request.PhoneNumber ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(phone)) throw new ConflictException("Enter a phone number to test.");
+
+        // Honor compliance even for test calls so we never dial a DNC number (state unknown for a raw number).
+        var compliance = await _compliance.CheckOutboundDialAsync(_user.AgencyId!.Value, phone, null, ct);
+        if (!compliance.Allowed)
+            throw new ConflictException(compliance.BlockReason ?? "Call blocked by compliance.");
+
+        var dial = await _dialer.DialAsync(_user.UserId!.Value, phone, Guid.Empty, ct);
+        return new TestDialResult(dial.CallId, dial.Status, _dialer.Name, compliance.Warnings);
     }
 
     public async Task<ActiveCallDto> Handle(AnswerCallCommand request, CancellationToken ct)

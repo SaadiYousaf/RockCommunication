@@ -12,16 +12,23 @@ import {
   useDropVoicemailMutation,
   useScheduleCallbackMutation,
   useSendQuickSmsMutation,
+  useSetLeadDispositionMutation,
   useTransitionLeadMutation,
   useUpdateLeadNotesMutation,
   useVerifyJornayaMutation,
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Icon, useSecureEntry } from "../../shared/ui";
+import { Icon, InfoHint, useSecureEntry, useToast } from "../../shared/ui";
+import { getErrorDetail } from "../../shared/api/apiError";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
+import {
+  ALLOWED_TRANSITIONS, TERMINAL_STAGES, STAGE_DESCRIPTIONS, DISPOSITION_DESCRIPTIONS, WORKFLOW_STAGES,
+} from "../../shared/constants/leadStage";
 
-const STAGES: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed","Validated","Funded","Followup","Winback","Lost"];
 const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","CallBack","DoNotCall","Sold","NotQualified","Voicemail","NoAnswer","WrongNumber"];
+// The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
+const PIPELINE: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed","Validated","Funded"];
 
 export function LeadDetailPage() {
   const { id = "" } = useParams();
@@ -32,6 +39,7 @@ export function LeadDetailPage() {
   const { data: voicemails } = useListVoicemailsQuery();
 
   const [transition] = useTransitionLeadMutation();
+  const [setDisposition] = useSetLeadDispositionMutation();
   const [verifyJornaya] = useVerifyJornayaMutation();
   const [dial] = useDialLeadMutation();
   const [checkCompliance] = useCheckComplianceMutation();
@@ -41,6 +49,8 @@ export function LeadDetailPage() {
   const [scheduleCallback] = useScheduleCallbackMutation();
   const [dropVm] = useDropVoicemailMutation();
   const canEditNotes = usePermission(Perm.LeadsWrite);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [compliance, setCompliance] = useState<{ allowed: boolean; blockReason: string | null; warnings: string[] } | null>(null);
   const [notes, setNotes] = useState("");
@@ -62,20 +72,55 @@ export function LeadDetailPage() {
   async function safeDial() {
     setCompliance(null);
     if (!lead) return;
-    const result = await checkCompliance({ phone: lead.phoneNumber, state: lead.state ?? undefined }).unwrap().catch(() => null);
-    if (!result) { await dial({ leadId: id }); return; }
-    setCompliance(result);
-    if (result.allowed) await dial({ leadId: id });
+    // Fail CLOSED: if the compliance/DNC check can't be reached, block the call rather than
+    // dialing blind (a DNC/TCPA violation risk).
+    try {
+      const result = await checkCompliance({ phone: lead.phoneNumber, state: lead.state ?? undefined }).unwrap();
+      setCompliance(result);
+      if (!result.allowed) { toast.error("Call blocked", result.blockReason ?? "Compliance check failed."); return; }
+    } catch {
+      toast.error("Can't verify compliance", "The DNC/TCPA check is unavailable — the call was not placed.");
+      return;
+    }
+    try {
+      await dial({ leadId: id }).unwrap();
+    } catch (err: unknown) {
+      toast.error("Couldn't place call", getErrorDetail(err) ?? "Try again.");
+    }
   }
 
-  async function doTransition(toStage: WorkflowStage, disposition: LeadDisposition) {
-    await transition({ id, toStage, disposition }).unwrap().catch(() => {});
-    refetchLead();
+  async function doTransition(toStage: WorkflowStage) {
+    if (TERMINAL_STAGES.includes(toStage)) {
+      const ok = await confirm({ title: `Move to ${toStage}?`, description: "This takes the lead off the active pipeline.", danger: true, confirmLabel: `Move to ${toStage}` });
+      if (!ok) return;
+    }
+    try {
+      await transition({ id, toStage, disposition: lead!.disposition as LeadDisposition }).unwrap();
+      toast.success("Stage updated", `Moved to ${toStage}.`);
+      refetchLead();
+    } catch (err: unknown) {
+      toast.error("Couldn't move stage", getErrorDetail(err) ?? "That transition isn't allowed.");
+    }
+  }
+
+  async function doDisposition(disposition: LeadDisposition) {
+    try {
+      await setDisposition({ id, disposition }).unwrap();
+      toast.success("Disposition set", disposition);
+      refetchLead();
+    } catch (err: unknown) {
+      toast.error("Couldn't set disposition", getErrorDetail(err) ?? "Try again.");
+    }
   }
 
   async function saveNotes() {
-    await updateNotes({ id, notes }).unwrap().catch(() => {});
-    setSavedAt(new Date().toLocaleTimeString());
+    if (!canEditNotes || notes === (lead?.notes ?? "")) return;   // nothing to save / read-only
+    try {
+      await updateNotes({ id, notes }).unwrap();
+      setSavedAt(new Date().toLocaleTimeString());
+    } catch (err: unknown) {
+      toast.error("Notes not saved", getErrorDetail(err) ?? "Your changes weren't saved — try again.");
+    }
   }
 
   async function submitSms(e: React.FormEvent) {
@@ -108,10 +153,20 @@ export function LeadDetailPage() {
               <StageBadge stage={lead.stage} />
               <DispositionBadge disposition={lead.disposition} />
               {lead.jornayaVerified && (
-                <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />Jornaya verified</Badge>
+                <span className="inline-flex items-center gap-1">
+                  <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />Jornaya verified</Badge>
+                  <InfoHint title="Jornaya verified" side="bottom">
+                    The lead's Jornaya LeadiD token was validated — independent proof of when and where the prospect submitted their info and consented. Supports TCPA compliance.
+                  </InfoHint>
+                </span>
               )}
               {lead.consentCaptured && (
-                <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />TCPA consent</Badge>
+                <span className="inline-flex items-center gap-1">
+                  <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />TCPA consent</Badge>
+                  <InfoHint title="TCPA consent" side="bottom">
+                    The prospect gave prior express written consent to be contacted (TCPA). Required before auto-dialing or texting; without it, a call can be blocked.
+                  </InfoHint>
+                </span>
               )}
             </div>
             <div className="text-sm text-slate-600 flex items-center gap-3 flex-wrap mt-2">
@@ -124,9 +179,17 @@ export function LeadDetailPage() {
           </div>
           <div className="flex flex-col items-end">
             <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
-            <div className="text-xs text-slate-500 uppercase tracking-wider">Lead score</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              Lead score
+              <InfoHint title="Lead score (0–100)" side="left">
+                A rules-based heuristic of how likely this lead is to convert — higher is better. Built from the weighted factors in the AI insights breakdown (recency, engagement, data completeness, disposition…). It's a heuristic, not an ML prediction.
+              </InfoHint>
+            </div>
           </div>
         </div>
+
+        {/* Pipeline progress */}
+        <Stepper current={lead.stage as WorkflowStage} />
 
         <div className="flex flex-wrap gap-2 mt-4">
           <button onClick={safeDial}
@@ -160,13 +223,27 @@ export function LeadDetailPage() {
           </button>
           <div className="flex-1" />
           <Can permission={Perm.LeadsTransition}>
-            {STAGES.map(s => (
-              <button key={s} onClick={() => doTransition(s, lead.disposition as LeadDisposition)}
-                disabled={s === lead.stage}
-                className={`px-3 py-2 rounded text-xs ${s === lead.stage ? "bg-slate-300 text-slate-500" : "bg-white border border-slate-300 hover:bg-slate-50"}`}>
+            <span className="inline-flex items-center gap-1 text-xs text-slate-500 mr-1 self-center">
+              Move to
+              <InfoHint title="Pipeline stages" side="bottom">
+                <ul className="space-y-0.5">
+                  {WORKFLOW_STAGES.map((s) => (
+                    <li key={s}><strong className="text-ink-800">{s}</strong> — {STAGE_DESCRIPTIONS[s]}</li>
+                  ))}
+                </ul>
+              </InfoHint>
+            </span>
+            {(ALLOWED_TRANSITIONS[lead.stage as WorkflowStage] ?? []).map(s => (
+              <button key={s} onClick={() => doTransition(s)}
+                className={`px-3 py-2 rounded text-xs border ${TERMINAL_STAGES.includes(s)
+                  ? "bg-white border-rose-300 text-rose-700 hover:bg-rose-50"
+                  : "bg-white border-slate-300 hover:bg-slate-50"}`}>
                 → {s}
               </button>
             ))}
+            {(ALLOWED_TRANSITIONS[lead.stage as WorkflowStage] ?? []).length === 0 && (
+              <span className="text-xs text-slate-400 self-center">No further moves from {lead.stage}</span>
+            )}
           </Can>
         </div>
 
@@ -199,11 +276,21 @@ export function LeadDetailPage() {
           {/* Disposition picker */}
           <Can permission={Perm.LeadsTransition}>
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-              <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">Set disposition</div>
+              <div className="text-xs uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1">
+                Set disposition
+                <InfoHint title="Dispositions" side="right">
+                  The outcome of the last contact attempt (doesn't change the pipeline stage).
+                  <ul className="mt-1 space-y-0.5">
+                    {Object.entries(DISPOSITION_DESCRIPTIONS).map(([d, desc]) => (
+                      <li key={d}><strong className="text-ink-800">{d}</strong> — {desc}</li>
+                    ))}
+                  </ul>
+                </InfoHint>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {DISPOSITIONS.map(d => (
                   <button key={d}
-                    onClick={() => doTransition(lead.stage as WorkflowStage, d)}
+                    onClick={() => doDisposition(d)}
                     className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-slate-100 hover:bg-slate-200"}`}>
                     {d}
                   </button>
@@ -287,7 +374,12 @@ export function LeadDetailPage() {
         <div className="space-y-4">
           {/* AI insights */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-            <div className="text-sm font-semibold mb-2">AI insights</div>
+            <div className="text-sm font-semibold mb-2 flex items-center gap-1">
+              AI insights
+              <InfoHint title="How the score is built" side="left">
+                Each line below is a scoring rule that added (+) or subtracted (–) points to reach the total. Green raises the score, red lowers it — factors include recency, engagement, data completeness and disposition.
+              </InfoHint>
+            </div>
             <div className="flex items-center gap-3 mb-3">
               <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
               <div className="text-xs text-slate-600">Heuristic score</div>
@@ -375,6 +467,37 @@ export function LeadDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Horizontal progress stepper across the linear pipeline (New → … → Funded). */
+function Stepper({ current }: { current: WorkflowStage }) {
+  const offTrack = !PIPELINE.includes(current);
+  const currentIdx = PIPELINE.indexOf(current);
+  return (
+    <div className="mt-4 flex items-center gap-1 overflow-x-auto pb-1">
+      {PIPELINE.map((s, i) => {
+        const done = !offTrack && i < currentIdx;
+        const active = !offTrack && i === currentIdx;
+        return (
+          <div key={s} className="flex items-center gap-1 shrink-0">
+            <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium ${
+              active ? "bg-brand-600 text-white"
+                : done ? "bg-emerald-100 text-emerald-800"
+                : "bg-slate-100 text-slate-500"}`}>
+              {done && <Icon name="success" size={11} />}{s}
+            </span>
+            {i < PIPELINE.length - 1 && <span className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-slate-200"}`} />}
+          </div>
+        );
+      })}
+      {offTrack && (
+        <span className={`ml-2 shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full ${
+          current === "Lost" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>
+          {current} · off the main pipeline
+        </span>
+      )}
     </div>
   );
 }

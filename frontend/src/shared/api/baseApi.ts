@@ -178,6 +178,11 @@ export const baseApi = createApi({
       query: ({ id, ...body }) => ({ url: `/api/leads/${id}/transition`, method: "POST", body }),
       invalidatesTags: (_r, _e, arg) => ["Leads", { type: "Lead", id: arg.id }],
     }),
+    // Set the call outcome without changing the workflow stage.
+    setLeadDisposition: b.mutation<Lead, { id: string; disposition: LeadDisposition; notes?: string }>({
+      query: ({ id, ...body }) => ({ url: `/api/leads/${id}/disposition`, method: "POST", body }),
+      invalidatesTags: (_r, _e, arg) => ["Leads", { type: "Lead", id: arg.id }],
+    }),
     assignLead: b.mutation<Lead, { id: string; targetRole: string; strategy?: string; userId?: string }>({
       query: ({ id, ...body }) => ({ url: `/api/leads/${id}/assign`, method: "POST", body }),
       invalidatesTags: ["Leads"],
@@ -886,6 +891,10 @@ export const baseApi = createApi({
     dialLead: b.mutation<ActiveCall, { leadId: string }>({
       query: (body) => ({ url: "/api/cc/calls/dial", method: "POST", body }),
     }),
+    // Test call to a raw number (no lead) — exercises the dial path end to end.
+    testDial: b.mutation<{ callId: string; status: string; provider: string; warnings: string[] }, { phoneNumber: string }>({
+      query: (body) => ({ url: "/api/cc/calls/test-dial", method: "POST", body }),
+    }),
     answerCall: b.mutation<ActiveCall, string>({
       query: (id) => ({ url: `/api/cc/calls/${id}/answer`, method: "POST" }),
     }),
@@ -1072,7 +1081,7 @@ export const {
   useDisable2FaMutation, useGet2FaStatusQuery,
   useMeQuery, useListUsersQuery, useUserDirectoryQuery,
   useListLeadsQuery, useMyLeadsQuery, useLeadTimelineQuery,
-  useCreateLeadMutation, useTransitionLeadMutation, useAssignLeadMutation,
+  useCreateLeadMutation, useTransitionLeadMutation, useSetLeadDispositionMutation, useAssignLeadMutation,
   useVerifyJornayaMutation, useDialMutation, useCarriersQuery,
   useRecordSaleMutation, useValidateSaleMutation, useFundSaleMutation, useUploadSaleRecordingMutation,
   useListDocumentsQuery, useUploadDocumentMutation, useDeleteDocumentMutation,
@@ -1132,7 +1141,7 @@ export const {
   useWallboardQuery, useLeaderboardQuery,
   useSearchKbQuery, useGetKbArticleQuery, useUpsertKbArticleMutation,
   useListPublicEndpointsQuery, useCreatePublicEndpointMutation,
-  useActiveCallQuery, useDialLeadMutation, useAnswerCallMutation, useHangupCallMutation,
+  useActiveCallQuery, useDialLeadMutation, useTestDialMutation, useAnswerCallMutation, useHangupCallMutation,
   useHoldCallMutation, useMuteCallMutation, useSendDtmfMutation, useSendQuickSmsMutation,
   useLeadDetailQuery, useUpdateLeadNotesMutation,
   useSetTwoFactorMethodMutation, useSendEmailOtpMutation,

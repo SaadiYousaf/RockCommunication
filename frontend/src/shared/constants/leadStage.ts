@@ -26,6 +26,54 @@ export const DISPOSITION_MAP: Record<number | string, string> = {
 export const stageOf = (s: number | string): WorkflowStage => STAGE_MAP[s] ?? "New";
 export const dispOf = (d: number | string): string => DISPOSITION_MAP[d] ?? "None";
 
+/**
+ * Valid next stages per current stage — mirrors the backend TransitionLeadHandler.Allowed map
+ * (backend/src/CRM.Application/Leads/Commands/TransitionLead.cs). Used to show only the moves
+ * that will succeed instead of every stage button (invalid ones 409).
+ */
+export const ALLOWED_TRANSITIONS: Record<WorkflowStage, WorkflowStage[]> = {
+  New:       ["Fronted", "Lost"],
+  Fronted:   ["Verified", "Lost", "Followup"],
+  Verified:  ["JrClosed", "Closed", "Lost", "Followup"],
+  JrClosed:  ["Closed", "Lost", "Followup"],
+  Closed:    ["Validated", "Lost"],
+  Validated: ["Funded", "Lost"],
+  Funded:    ["Followup"],
+  Followup:  ["Fronted", "Verified", "Closed", "Winback", "Lost"],
+  Winback:   ["Fronted", "Lost"],
+  Lost:      ["Winback"],
+};
+
+/** Terminal / off-track stages that warrant a confirmation before moving there. */
+export const TERMINAL_STAGES: WorkflowStage[] = ["Lost"];
+
+/** One-line, plain-language meaning of each pipeline stage (for the InfoHint glossary). */
+export const STAGE_DESCRIPTIONS: Record<WorkflowStage, string> = {
+  New: "Fresh lead, not yet worked.",
+  Fronted: "A fronter made initial contact and pitched.",
+  Verified: "A verifier confirmed the details; ready for a closer.",
+  JrClosed: "A junior closer worked it before the senior close.",
+  Closed: "The closing application was taken (a sale exists).",
+  Validated: "A submission agent approved the sale.",
+  Funded: "The policy funded — commission-eligible.",
+  Followup: "Parked for a later follow-up / callback.",
+  Winback: "Being re-engaged after being lost.",
+  Lost: "Not moving forward (off the pipeline).",
+};
+
+/** Plain-language meaning of each call-outcome disposition. */
+export const DISPOSITION_DESCRIPTIONS: Record<string, string> = {
+  Interested: "Prospect is interested — keep working it.",
+  NotInterested: "Prospect declined.",
+  CallBack: "Prospect asked to be called back later.",
+  DoNotCall: "Prospect asked not to be contacted (should be added to DNC).",
+  Sold: "Sale completed on this contact.",
+  NotQualified: "Doesn't meet qualification criteria.",
+  Voicemail: "Left a voicemail.",
+  NoAnswer: "No answer.",
+  WrongNumber: "Number doesn't reach the prospect.",
+};
+
 /** Badge tone per stage. String-keyed so callers can index with a raw API value + `?? "neutral"`. */
 export const STAGE_TONE: Record<string, BadgeTone> = {
   New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",

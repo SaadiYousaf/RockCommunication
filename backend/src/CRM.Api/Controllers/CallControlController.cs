@@ -32,6 +32,15 @@ public class CallControlController : ControllerBase
         return Ok(await _mediator.Send(new StartOutboundCallCommand(body.LeadId), ct));
     }
 
+    public record TestDialBody(string PhoneNumber);
+    // Test call to a raw number (no lead) — verifies the dial path end to end.
+    [HttpPost("test-dial")]
+    public async Task<IActionResult> TestDial([FromBody] TestDialBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new TestDialCommand(body.PhoneNumber), ct));
+    }
+
     [HttpPost("{id:guid}/answer")]
     public async Task<IActionResult> Answer(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new AnswerCallCommand(id), ct));
