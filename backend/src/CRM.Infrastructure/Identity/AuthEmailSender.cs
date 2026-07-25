@@ -70,6 +70,7 @@ public class AuthEmailSender
         var labelRow = string.IsNullOrEmpty(label) ? "" : Row("Role", $"<strong style='font-size:15px'>{Html(label)}</strong>");
         var orgRow = string.IsNullOrWhiteSpace(agencyName) ? "" : Row("Agency", $"<strong style='font-size:15px'>{Html(agencyName!)}</strong>");
         var ccRow = string.IsNullOrWhiteSpace(callCenterName) ? "" : Row("Call center", $"<strong style='font-size:15px'>{Html(callCenterName!)}</strong>");
+        var emailRow = Row("Email", $"<strong style='font-size:15px'>{Html(to)}</strong>");
         var usernameRow = Row("Username", $"<strong style='font-size:15px'>{Html(userName)}</strong>");
         var passwordRow = Row("Temporary password",
             $"<span style='font-family:ui-monospace,Menlo,monospace;font-size:15px;background:#fff;border:1px solid #e5e7eb;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:4px'>{Html(temporaryPassword)}</span>",
@@ -88,8 +89,8 @@ public class AuthEmailSender
 {badge}
 {intro}
 {blurbHtml}
-<p>Use the temporary password below to sign in — you'll be asked to set your own password the first time you log in.</p>
-<table cellpadding='0' cellspacing='0' style='width:100%;margin:20px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px'>{labelRow}{orgRow}{ccRow}{usernameRow}{passwordRow}</table>
+<p>Sign in with <strong>either your email or your username</strong> and the temporary password below — you'll be asked to set your own password the first time you log in.</p>
+<table cellpadding='0' cellspacing='0' style='width:100%;margin:20px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px'>{labelRow}{orgRow}{ccRow}{emailRow}{usernameRow}{passwordRow}</table>
 {Button("Sign in", loginLink, accent)}
 <p style='color:#6b7280;font-size:13px'>For your security, please change this password immediately after signing in. If you weren't expecting this invitation, you can safely ignore this email.</p>");
         var result = await _email.SendAsync(new EmailMessage(to, subject, body, IsHtml: true, FromName: _opts.FromName), ct);

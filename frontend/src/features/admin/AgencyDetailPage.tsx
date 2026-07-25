@@ -5,11 +5,13 @@ import {
   useGetAgencyQuery, useListSalesQuery, useAgencyLicenseAgentsQuery,
   useCreateCallCenterInAgencyMutation, useCreateLicenseAgentMutation,
   useAgencyCallCentersQuery, useUpdateCallCenterInAgencyMutation,
+  useListUsersQuery, useSetUserCallCenterMutation,
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
+import { roleLabel } from "../../shared/constants/roles";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 const money = (n: number | null | undefined) =>
@@ -33,9 +35,21 @@ export function AgencyDetailPage() {
     { agencyId, skip, take: PAGE, sort: "soldAt-desc" }, { skip: !agencyId });
 
   const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
+  const { data: people } = useListUsersQuery({ agencyId }, { skip: !agencyId });
+  const [setUserCc] = useSetUserCallCenterMutation();
+  const toast = useToast();
   const [showCallCenter, setShowCallCenter] = useState(false);
   const [showAgent, setShowAgent] = useState(false);
   const [editCc, setEditCc] = useState<CallCenterDto | null>(null);
+
+  async function assignCallCentre(userId: string, value: string) {
+    try {
+      await setUserCc({ userId, callCenterId: value || null }).unwrap();
+      toast.success("Assignment saved", value ? "Pinned to the call centre." : "Set to agency-wide.");
+    } catch (err: unknown) {
+      toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
+    }
+  }
 
   const total = sales?.total ?? 0;
   const items = sales?.items ?? [];
@@ -114,6 +128,59 @@ export function AgencyDetailPage() {
                       <TD><Badge tone={c.isActive ? "success" : "neutral"} variant="soft">{c.isActive ? "Active" : "Disabled"}</Badge></TD>
                       <TD className="text-right">
                         <Button variant="ghost" size="sm" leftIcon={<Icon name="edit" size={14} />} onClick={() => setEditCc(c)}>Edit</Button>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* People — assign to call centres */}
+      <Card className="mb-4">
+        <CardHeader
+          title="People"
+          subtitle={people ? `${people.length} user(s) — assign each to a call centre or leave agency-wide` : undefined}
+        />
+        <CardBody>
+          {!people ? <Skeleton className="h-24" /> : people.length === 0 ? (
+            <EmptyState icon={<Icon name="users" size={18} />} title="No users yet"
+              description="Invite a CEO, call-centre admin, or license agent — they'll appear here to assign." />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <THead>
+                  <TR><TH>User</TH><TH>Roles</TH><TH>Call centre</TH></TR>
+                </THead>
+                <TBody>
+                  {people.map((u) => (
+                    <TR key={u.id}>
+                      <TD>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={u.userName} size={30} />
+                          <div className="leading-tight">
+                            <div className="font-medium text-ink-900">{u.userName}</div>
+                            <div className="text-xs text-ink-500">{u.email}</div>
+                          </div>
+                        </div>
+                      </TD>
+                      <TD>
+                        <div className="flex flex-wrap gap-1">
+                          {u.roles.map((r) => <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>)}
+                        </div>
+                      </TD>
+                      <TD>
+                        <Select
+                          aria-label={`Call centre for ${u.userName}`}
+                          className="w-52"
+                          value={u.callCenterId ?? ""}
+                          onChange={(e) => assignCallCentre(u.id, e.target.value)}
+                        >
+                          <option value="">Agency-wide (no call centre)</option>
+                          {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.isActive ? "" : " (disabled)"}</option>)}
+                        </Select>
                       </TD>
                     </TR>
                   ))}
