@@ -28,6 +28,9 @@ public record ListAgencyOptionsQuery() : IRequest<IReadOnlyList<AgencyOptionDto>
 /// <summary>License Agents of one agency — for the panel roster and the approval popup's dependent Agent picker.</summary>
 public record ListAgencyLicenseAgentsQuery(Guid AgencyId) : IRequest<IReadOnlyList<LicenseAgentDto>>;
 
+/// <summary>Call centres of one agency — lets a SuperAdmin scope the Call Centers page to a chosen agency.</summary>
+public record ListAgencyCallCentersQuery(Guid AgencyId) : IRequest<IReadOnlyList<CallCenterDto>>;
+
 /// <summary>SuperAdmin provisions an agency-level License Agent (reuses the shared invitation service).</summary>
 public record CreateLicenseAgentCommand(Guid AgencyId, string Name, string Email) : IRequest<LicenseAgentDto>;
 
@@ -74,6 +77,7 @@ public class CreateSubmissionAgentValidator : AbstractValidator<CreateSubmission
 public class AgencyPanelHandler :
     IRequestHandler<ListAgencyOptionsQuery, IReadOnlyList<AgencyOptionDto>>,
     IRequestHandler<ListAgencyLicenseAgentsQuery, IReadOnlyList<LicenseAgentDto>>,
+    IRequestHandler<ListAgencyCallCentersQuery, IReadOnlyList<CallCenterDto>>,
     IRequestHandler<CreateLicenseAgentCommand, LicenseAgentDto>,
     IRequestHandler<CreateCallCenterInAgencyCommand, CallCenterDto>,
     IRequestHandler<ListSubmissionAgentsQuery, IReadOnlyList<SubmissionAgentDto>>,
@@ -118,6 +122,18 @@ public class AgencyPanelHandler :
             .OrderBy(u => u.UserName)
             .Select(u => new LicenseAgentDto(u.Id, u.UserName, u.Email, u.IsActive))
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<CallCenterDto>> Handle(ListAgencyCallCentersQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        if (!IsSuperAdmin && _user.AgencyId != request.AgencyId) throw new ForbiddenAccessException();
+        return await _db.CallCenters.AsNoTracking().IgnoreQueryFilters()
+            .Where(c => c.AgencyId == request.AgencyId && !c.IsDeleted)
+            .OrderBy(c => c.Name)
+            .Select(c => new CallCenterDto(c.Id, c.Name, c.Code, c.IsActive,
+                _db.Leads.IgnoreQueryFilters().Count(l => l.CallCenterId == c.Id && !l.IsDeleted)))
+            .ToListAsync(ct);
     }
 
     public async Task<LicenseAgentDto> Handle(CreateLicenseAgentCommand request, CancellationToken ct)

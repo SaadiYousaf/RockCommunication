@@ -63,7 +63,10 @@ public class CallCenterHandler :
     public async Task<IReadOnlyList<CallCenterDto>> Handle(ListCallCentersQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // A SuperAdmin has no agency (Guid.Empty); this agency-scoped page can't create/list
+        // for them without a real agency. Fail clearly instead of hitting a FK constraint.
+        if (_user.AgencyId is null || _user.AgencyId == Guid.Empty)
+            throw new ForbiddenAccessException("Super Admins manage call centres from the Agency panel — open an agency (Agencies) and use \"New call centre\".");
         // Explicit agency scope as a backstop: SuperAdmin bypasses the global tenant filter, so
         // without this an accidental SuperAdmin caller would see every agency's call centers.
         return await _db.CallCenters
@@ -78,7 +81,10 @@ public class CallCenterHandler :
     public async Task<CallCenterDto> Handle(CreateCallCenterCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // A SuperAdmin has no agency (Guid.Empty); this agency-scoped page can't create/list
+        // for them without a real agency. Fail clearly instead of hitting a FK constraint.
+        if (_user.AgencyId is null || _user.AgencyId == Guid.Empty)
+            throw new ForbiddenAccessException("Super Admins manage call centres from the Agency panel — open an agency (Agencies) and use \"New call centre\".");
         var name = request.Name.Trim();
         // Name is unique WITHIN the agency — the query filter already scopes this check.
         if (await _db.CallCenters.AnyAsync(c => c.Name == name, ct))
@@ -117,7 +123,10 @@ public class CallCenterHandler :
     public async Task<CallCenterDto> Handle(UpdateCallCenterCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // A SuperAdmin has no agency (Guid.Empty); this agency-scoped page can't create/list
+        // for them without a real agency. Fail clearly instead of hitting a FK constraint.
+        if (_user.AgencyId is null || _user.AgencyId == Guid.Empty)
+            throw new ForbiddenAccessException("Super Admins manage call centres from the Agency panel — open an agency (Agencies) and use \"New call centre\".");
         var cc = await _db.CallCenters.FirstOrDefaultAsync(c => c.Id == request.Id, ct)
             ?? throw new NotFoundException("CallCenter", request.Id);
         cc.Name = request.Name.Trim();

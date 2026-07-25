@@ -88,6 +88,11 @@ public class AgenciesController : ControllerBase
         return Ok(await _mediator.Send(new CreateLicenseAgentCommand(id, body.Name, body.Email), ct));
     }
 
+    [HttpGet("{id:guid}/call-centers")]
+    [HasPermission(Permissions.AgenciesManage)]
+    public async Task<IActionResult> CallCenters(Guid id, CancellationToken ct)
+        => Ok(await _mediator.Send(new ListAgencyCallCentersQuery(id), ct));
+
     public record CreateCallCenterInAgencyBody(string Name, string? Code, string AdminName, string AdminEmail);
 
     [HttpPost("{id:guid}/call-centers")]

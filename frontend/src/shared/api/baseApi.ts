@@ -716,6 +716,10 @@ export const baseApi = createApi({
       query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/license-agents`, method: "POST", body }),
       invalidatesTags: (_r, _e, arg) => [{ type: "Users", id: `license-agents:${arg.agencyId}` }, "Users"],
     }),
+    agencyCallCenters: b.query<CallCenterDto[], string>({
+      query: (agencyId) => `/api/agencies/${agencyId}/call-centers`,
+      providesTags: ["CallCenters"],
+    }),
     createCallCenterInAgency: b.mutation<CallCenterDto, { agencyId: string; name: string; code?: string | null; adminName: string; adminEmail: string }>({
       query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/call-centers`, method: "POST", body }),
       invalidatesTags: ["CallCenters", "Agencies"],
@@ -1115,7 +1119,8 @@ export const {
   useListAgenciesQuery, useGetAgencyQuery, useCreateAgencyMutation,
   useUpdateAgencyMutation, useAssignAgencyCeoMutation,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery, useCreateLicenseAgentMutation,
-  useCreateCallCenterInAgencyMutation, useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
+  useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
+  useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
   useRegisterMutation,
   useChangePasswordMutation,

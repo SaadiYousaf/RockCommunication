@@ -1,22 +1,41 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import {
   useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation,
+  useAgencyOptionsQuery, useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /**
- * Manage the call centers within the current agency. Call centers are the finer
- * data-isolation unit: pipeline data belongs to one, and call-center-scoped agents
- * only see their own. Agency-level admins/managers see and manage all of them.
+ * Manage the call centers within an agency. Call centers are the finer data-isolation
+ * unit: pipeline data belongs to one, and call-center-scoped agents only see their own.
+ * A Super Admin has no agency of their own, so they first pick which agency to manage;
+ * agency-level admins/managers work within their own agency automatically.
  */
 export function CallCentersPage() {
-  const { data: list, isLoading } = useListCallCentersQuery();
+  const roles = useSelector((s: RootState) => s.auth.user?.roles ?? []);
+  const isSuperAdmin = roles.includes("SuperAdmin");
+
+  // SuperAdmin scopes the page to a chosen agency; others are pinned to their own.
+  const { data: agencyOptions } = useAgencyOptionsQuery(undefined, { skip: !isSuperAdmin });
+  const [agencyId, setAgencyId] = useState("");
+  useEffect(() => {
+    if (isSuperAdmin && !agencyId && agencyOptions && agencyOptions.length) setAgencyId(agencyOptions[0].id);
+  }, [isSuperAdmin, agencyOptions, agencyId]);
+
+  const own = useListCallCentersQuery(undefined, { skip: isSuperAdmin });
+  const scoped = useAgencyCallCentersQuery(agencyId, { skip: !isSuperAdmin || !agencyId });
+  const list = isSuperAdmin ? scoped.data : own.data;
+  const isLoading = isSuperAdmin ? (scoped.isLoading || !agencyId) : own.isLoading;
+
   const [createCc, { isLoading: creating }] = useCreateCallCenterMutation();
+  const [createCcInAgency, { isLoading: creatingSa }] = useCreateCallCenterInAgencyMutation();
   const [updateCc, { isLoading: saving }] = useUpdateCallCenterMutation();
   const toast = useToast();
 
@@ -28,7 +47,10 @@ export function CallCentersPage() {
     e.preventDefault();
     try {
       if (!form.adminName.trim() || !form.adminEmail.trim()) { toast.error("Admin required", "A Call Center Admin name and email are required."); return; }
-      await createCc({ name: form.name.trim(), code: form.code.trim() || null, adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim() }).unwrap();
+      if (isSuperAdmin && !agencyId) { toast.error("Agency required", "Choose which agency this call centre belongs to."); return; }
+      const body = { name: form.name.trim(), code: form.code.trim() || null, adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim() };
+      if (isSuperAdmin) await createCcInAgency({ agencyId, ...body }).unwrap();
+      else await createCc(body).unwrap();
       toast.success("Call center created", `${form.name} — the admin has been emailed an invitation.`);
       setShowNew(false); setForm({ name: "", code: "", adminName: "", adminEmail: "" });
     } catch (err: unknown) {
@@ -63,7 +85,16 @@ export function CallCentersPage() {
         }
       />
       <Card>
-        <CardHeader title="Call centers" subtitle={list ? `${list.length} total` : undefined} />
+        <CardHeader
+          title="Call centers"
+          subtitle={list ? `${list.length} total` : undefined}
+          action={isSuperAdmin ? (
+            <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
+              {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
+              {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </Select>
+          ) : undefined}
+        />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
             <EmptyState icon={<Icon name="building" size={20} />} title="No call centers yet"
@@ -93,7 +124,8 @@ export function CallCentersPage() {
         </CardBody>
       </Card>
 
-      <Modal open={showNew} onClose={() => setShowNew(false)} title="New call center">
+      <Modal open={showNew} onClose={() => setShowNew(false)} title="New call center"
+        description={isSuperAdmin ? `In agency: ${agencyOptions?.find((a) => a.id === agencyId)?.name ?? "—"}` : undefined}>
         <form onSubmit={submitNew} className="space-y-3">
           <Input label="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Input label="Code" placeholder="Optional short code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
@@ -107,7 +139,7 @@ export function CallCentersPage() {
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-            <Button type="submit" loading={creating}>Create</Button>
+            <Button type="submit" loading={creating || creatingSa}>Create</Button>
           </div>
         </form>
       </Modal>

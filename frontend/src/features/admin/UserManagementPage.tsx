@@ -176,7 +176,7 @@ export function UserManagementPage() {
                   <Select
                     value={u.callCenterId ?? ""}
                     onChange={(e) => assignCallCenter(u.id, e.target.value)}
-                    className="text-xs"
+                    className="text-xs min-w-[9rem]"
                   >
                     <option value="">Agency-level (all)</option>
                     {(callCenters ?? []).map((c) => (
@@ -185,21 +185,19 @@ export function UserManagementPage() {
                   </Select>
                 </TD>
                 <TD>
-                  <div className="flex items-center justify-end gap-1.5">
+                  {/* Icon-only actions with tooltips so the row fits without horizontal scroll. */}
+                  <div className="flex items-center justify-end gap-1">
                     <Button
-                      variant="outline" size="sm"
-                      leftIcon={<Icon name="userCog" size={13} />}
+                      variant="outline" size="sm" title="Edit roles" aria-label="Edit roles"
                       onClick={() => setEditing({ id: u.id, userName: u.userName, roles: u.roles })}
-                    >Roles</Button>
+                    ><Icon name="userCog" size={15} /></Button>
                     <Button
-                      variant="ghost" size="sm"
-                      leftIcon={<Icon name="key" size={13} />}
+                      variant="ghost" size="sm" title="Reset password" aria-label="Reset password"
                       onClick={() => { setResetting({ id: u.id, userName: u.userName }); setNewPwd(""); }}
-                    >Reset</Button>
+                    ><Icon name="key" size={15} /></Button>
                     {active && !u.invitationAcceptedAt && (
                       <Button
-                        variant="ghost" size="sm" disabled={resending}
-                        leftIcon={<Icon name="mail" size={13} />}
+                        variant="ghost" size="sm" disabled={resending} title="Resend invitation" aria-label="Resend invitation"
                         onClick={async () => {
                           try {
                             await resendInvite(u.id).unwrap();
@@ -208,18 +206,16 @@ export function UserManagementPage() {
                             toast.error("Couldn't resend invitation", getErrorDetail(err) ?? "Try again.");
                           }
                         }}
-                      >Resend invite</Button>
+                      ><Icon name="mail" size={15} /></Button>
                     )}
                     {active ? (
                       <Button
-                        variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
-                        leftIcon={<Icon name="userX" size={13} />}
+                        variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" title="Deactivate user" aria-label="Deactivate user"
                         onClick={() => setConfirmDeactivate({ id: u.id, userName: u.userName })}
-                      >Deactivate</Button>
+                      ><Icon name="userX" size={15} /></Button>
                     ) : (
                       <Button
-                        variant="ghost" size="sm" className="text-emerald-700 hover:bg-emerald-50"
-                        leftIcon={<Icon name="userCheck" size={13} />}
+                        variant="ghost" size="sm" className="text-emerald-700 hover:bg-emerald-50" title="Reactivate user" aria-label="Reactivate user"
                         onClick={async () => {
                           try {
                             await setActive({ id: u.id, isActive: true }).unwrap();
@@ -228,7 +224,7 @@ export function UserManagementPage() {
                             toast.error("Couldn't reactivate", getErrorDetail(err) ?? "Try again.");
                           }
                         }}
-                      >Reactivate</Button>
+                      ><Icon name="userCheck" size={15} /></Button>
                     )}
                   </div>
                 </TD>
