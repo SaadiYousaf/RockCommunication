@@ -19,7 +19,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Icon, InfoHint, useSecureEntry, useToast } from "../../shared/ui";
+import { Button, Icon, InfoHint, useSecureEntry, useToast } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
@@ -66,7 +66,7 @@ export function LeadDetailPage() {
   }, [lead?.id]);
 
   if (!lead) {
-    return <div className="text-slate-500">Loading lead…</div>;
+    return <div className="text-ink-500">Loading lead…</div>;
   }
 
   async function safeDial() {
@@ -152,7 +152,7 @@ export function LeadDetailPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
         <div className="flex items-start gap-4">
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center text-white font-bold text-lg">
             {(lead.firstName?.[0] ?? "?")}{(lead.lastName?.[0] ?? "")}
@@ -179,7 +179,7 @@ export function LeadDetailPage() {
                 </span>
               )}
             </div>
-            <div className="text-sm text-slate-600 flex items-center gap-3 flex-wrap mt-2">
+            <div className="text-sm text-ink-600 flex items-center gap-3 flex-wrap mt-2">
               <span className="font-mono">{formatPhone(lead.phoneNumber)}</span>
               {lead.email && <a href={`mailto:${lead.email}`} className="text-brand-700 hover:underline">{lead.email}</a>}
               {lead.state && <span>{[lead.city, lead.state, lead.postalCode].filter(Boolean).join(", ")}</span>}
@@ -189,7 +189,7 @@ export function LeadDetailPage() {
           </div>
           <div className="flex flex-col items-end">
             <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
-            <div className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
+            <div className="text-xs text-ink-500 uppercase tracking-wider flex items-center gap-1">
               Lead score
               <InfoHint title="Lead score (0–100)" side="left">
                 A rules-based heuristic of how likely this lead is to convert — higher is better. Built from the weighted factors in the AI insights breakdown (recency, engagement, data completeness, disposition…). It's a heuristic, not an ML prediction.
@@ -202,21 +202,13 @@ export function LeadDetailPage() {
         <Stepper current={lead.stage as WorkflowStage} />
 
         <div className="flex flex-wrap gap-2 mt-4">
-          <button onClick={safeDial}
-            className="bg-brand-700 hover:bg-brand-800 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2">
-            📞 Dial
-          </button>
-          <button onClick={() => setShowSms(s => !s)}
-            className="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded text-sm font-medium">
-            💬 SMS
-          </button>
-          <button onClick={() => setShowCallback(s => !s)}
-            className="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded text-sm font-medium">
-            📅 Schedule callback
-          </button>
+          <Button onClick={safeDial} leftIcon={<Icon name="phone" size={16} />}>Dial</Button>
+          <Button variant="secondary" onClick={() => setShowSms(s => !s)} leftIcon={<Icon name="chat" size={16} />}>SMS</Button>
+          <Button variant="secondary" onClick={() => setShowCallback(s => !s)} leftIcon={<Icon name="calendar" size={16} />}>Schedule callback</Button>
           {voicemails && voicemails.length > 0 && (
             <select
-              className="bg-slate-200 hover:bg-slate-300 px-3 py-2 rounded text-sm cursor-pointer"
+              aria-label="Drop voicemail"
+              className="border border-ink-200 rounded-lg px-3 py-2 text-sm bg-white hover:border-ink-300 cursor-pointer transition-colors"
               defaultValue=""
               onChange={async (e) => {
                 if (!e.target.value) return;
@@ -229,17 +221,14 @@ export function LeadDetailPage() {
                 }
                 sel.value = "";
               }}>
-              <option value="">📥 Drop voicemail…</option>
+              <option value="">Drop voicemail…</option>
               {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           )}
-          <button onClick={async () => { await verifyJornaya(id); refetchLead(); }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm font-medium">
-            🛡 Verify Jornaya
-          </button>
+          <Button variant="success" onClick={async () => { await verifyJornaya(id); refetchLead(); }} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
           <div className="flex-1" />
           <Can permission={Perm.LeadsTransition}>
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500 mr-1 self-center">
+            <span className="inline-flex items-center gap-1 text-xs text-ink-500 mr-1 self-center">
               Move to
               <InfoHint title="Pipeline stages" side="bottom">
                 <ul className="space-y-0.5">
@@ -253,28 +242,28 @@ export function LeadDetailPage() {
               <button key={s} onClick={() => doTransition(s)}
                 className={`px-3 py-2 rounded text-xs border ${TERMINAL_STAGES.includes(s)
                   ? "bg-white border-rose-300 text-rose-700 hover:bg-rose-50"
-                  : "bg-white border-slate-300 hover:bg-slate-50"}`}>
+                  : "bg-white border-ink-300 hover:bg-ink-50"}`}>
                 → {s}
               </button>
             ))}
             {(ALLOWED_TRANSITIONS[lead.stage as WorkflowStage] ?? []).length === 0 && (
-              <span className="text-xs text-slate-400 self-center">No further moves from {lead.stage}</span>
+              <span className="text-xs text-ink-400 self-center">No further moves from {lead.stage}</span>
             )}
           </Can>
         </div>
 
         {showSms && (
-          <form onSubmit={submitSms} className="mt-3 flex gap-2 bg-slate-50 rounded p-2">
-            <input className="flex-1 border rounded px-3 py-1.5 text-sm" placeholder="Quick SMS…"
+          <form onSubmit={submitSms} className="mt-3 flex gap-2 surface-muted p-2">
+            <input className="input-base flex-1" placeholder="Quick SMS…"
               value={smsBody} onChange={e => setSmsBody(e.target.value)} autoFocus />
-            <button className="bg-brand-700 text-white rounded px-4 text-sm">Send</button>
+            <Button type="submit" size="sm" leftIcon={<Icon name="send" size={14} />}>Send</Button>
           </form>
         )}
         {showCallback && (
-          <form onSubmit={submitCallback} className="mt-3 flex flex-wrap gap-2 bg-slate-50 rounded p-2">
-            <input type="datetime-local" className="border rounded px-2 py-1.5 text-sm" value={callbackAt} onChange={e => setCallbackAt(e.target.value)} required />
-            <input className="flex-1 border rounded px-3 py-1.5 text-sm" placeholder="Reason (optional)" value={callbackReason} onChange={e => setCallbackReason(e.target.value)} />
-            <button className="bg-brand-700 text-white rounded px-4 text-sm">Schedule</button>
+          <form onSubmit={submitCallback} className="mt-3 flex flex-wrap gap-2 surface-muted p-2">
+            <input type="datetime-local" className="input-base w-auto" value={callbackAt} onChange={e => setCallbackAt(e.target.value)} required />
+            <input className="input-base flex-1 min-w-[8rem]" placeholder="Reason (optional)" value={callbackReason} onChange={e => setCallbackReason(e.target.value)} />
+            <Button type="submit" size="sm" leftIcon={<Icon name="calendar" size={14} />}>Schedule</Button>
           </form>
         )}
 
@@ -291,8 +280,8 @@ export function LeadDetailPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Disposition picker */}
           <Can permission={Perm.LeadsTransition}>
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-              <div className="text-xs uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1">
+            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
+              <div className="text-xs uppercase tracking-wider text-ink-500 mb-2 flex items-center gap-1">
                 Set disposition
                 <InfoHint title="Dispositions" side="right">
                   The outcome of the last contact attempt (doesn't change the pipeline stage).
@@ -307,7 +296,7 @@ export function LeadDetailPage() {
                 {DISPOSITIONS.map(d => (
                   <button key={d}
                     onClick={() => doDisposition(d)}
-                    className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-slate-100 hover:bg-slate-200"}`}>
+                    className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-ink-100 hover:bg-ink-200"}`}>
                     {d}
                   </button>
                 ))}
@@ -316,20 +305,20 @@ export function LeadDetailPage() {
           </Can>
 
           {/* Notes */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">Notes</div>
               {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
             </div>
             <textarea
-              className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono"
+              className="w-full border border-ink-300 rounded px-3 py-2 text-sm font-mono"
               rows={5} placeholder="Type call notes here…"
               value={notes} onChange={e => setNotes(e.target.value)}
               onBlur={saveNotes}
               readOnly={!canEditNotes}
               {...secureNotes}
             />
-            <div className="text-xs text-slate-500 mt-1">Notes auto-save when you click out.</div>
+            <div className="text-xs text-ink-500 mt-1">Notes auto-save when you click out.</div>
           </div>
 
           {/* Script */}
@@ -337,32 +326,32 @@ export function LeadDetailPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="text-xs uppercase tracking-wider text-amber-800 mb-1">Script — {lead.stage}</div>
               <div className="font-medium text-amber-900 mb-2">{scripts[0].name}</div>
-              <pre className="whitespace-pre-wrap text-sm text-slate-800">{scripts[0].body}</pre>
+              <pre className="whitespace-pre-wrap text-sm text-ink-800">{scripts[0].body}</pre>
             </div>
           )}
 
           {/* Recent calls */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">Recent calls ({lead.callCount})</div>
             </div>
             {lead.recentCalls.length === 0 ? (
-              <div className="text-sm text-slate-500">No calls yet.</div>
+              <div className="text-sm text-ink-500">No calls yet.</div>
             ) : (
               <div className="space-y-2">
                 {lead.recentCalls.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 py-2 border-b last:border-0 border-slate-100">
+                  <div key={c.id} className="flex items-center gap-3 py-2 border-b last:border-0 border-ink-100">
                     <div className={`w-2 h-2 rounded-full ${c.direction === "Inbound" ? "bg-emerald-500" : "bg-brand-500"}`} />
                     <div className="flex-1 text-sm">
                       <div className="font-medium">
                         {c.direction} · {c.status}
-                        {c.wrapUpCode && <span className="ml-2 text-xs bg-slate-100 px-1.5 py-0.5 rounded">{c.wrapUpCode}</span>}
+                        {c.wrapUpCode && <span className="ml-2 text-xs bg-ink-100 px-1.5 py-0.5 rounded">{c.wrapUpCode}</span>}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-ink-500">
                         {new Date(c.initiatedAt).toLocaleString()}
                         {c.answeredAt && c.endedAt && <> · {Math.round((new Date(c.endedAt).getTime() - new Date(c.answeredAt).getTime()) / 1000)}s</>}
                       </div>
-                      {c.notes && <div className="text-xs text-slate-700 mt-0.5">{c.notes}</div>}
+                      {c.notes && <div className="text-xs text-ink-700 mt-0.5">{c.notes}</div>}
                     </div>
                     {c.recordingUrl && <audio controls src={c.recordingUrl} className="h-7 w-48" />}
                   </div>
@@ -372,13 +361,13 @@ export function LeadDetailPage() {
           </div>
 
           {/* Timeline */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
             <div className="text-sm font-semibold mb-2">Activity timeline</div>
             <ul className="space-y-1">
               {timeline?.entries.map((e, i) => (
-                <li key={i} className="text-xs border-l-2 border-slate-200 pl-3 py-1">
-                  <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase mr-2">{e.type}</span>
-                  <span className="text-slate-500">{new Date(e.at).toLocaleString()}</span>
+                <li key={i} className="text-xs border-l-2 border-ink-200 pl-3 py-1">
+                  <span className="bg-ink-100 px-1.5 py-0.5 rounded text-[10px] uppercase mr-2">{e.type}</span>
+                  <span className="text-ink-500">{new Date(e.at).toLocaleString()}</span>
                   <span className="ml-2">{e.description}</span>
                 </li>
               ))}
@@ -389,7 +378,7 @@ export function LeadDetailPage() {
         {/* Right column */}
         <div className="space-y-4">
           {/* AI insights */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
             <div className="text-sm font-semibold mb-2 flex items-center gap-1">
               AI insights
               <InfoHint title="How the score is built" side="left">
@@ -398,24 +387,24 @@ export function LeadDetailPage() {
             </div>
             <div className="flex items-center gap-3 mb-3">
               <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
-              <div className="text-xs text-slate-600">Heuristic score</div>
+              <div className="text-xs text-ink-600">Heuristic score</div>
             </div>
             <div className="space-y-1">
               {lead.scoreBreakdown.map((b, i) => (
                 <div key={i} className="text-xs flex items-center justify-between">
-                  <span className="text-slate-600">{b.note ?? b.rule}</span>
+                  <span className="text-ink-600">{b.note ?? b.rule}</span>
                   <span className={`font-mono ${b.points >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                     {b.points >= 0 ? "+" : ""}{b.points}
                   </span>
                 </div>
               ))}
-              {lead.scoreBreakdown.length === 0 && <div className="text-xs text-slate-400">No factors yet.</div>}
+              {lead.scoreBreakdown.length === 0 && <div className="text-xs text-ink-400">No factors yet.</div>}
             </div>
           </div>
 
           {/* Recommendations */}
           {recs && recs.items.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
               <div className="text-sm font-semibold mb-2">Recommended next steps</div>
               <ul className="space-y-2">
                 {recs.items.map((r, i) => (
@@ -425,7 +414,7 @@ export function LeadDetailPage() {
                     </span>
                     <div>
                       <div className="font-medium">{r.action}</div>
-                      <div className="text-xs text-slate-600">{r.reason}</div>
+                      <div className="text-xs text-ink-600">{r.reason}</div>
                     </div>
                   </li>
                 ))}
@@ -437,15 +426,15 @@ export function LeadDetailPage() {
           {lead.sale && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
               <div className="text-sm font-semibold mb-2 text-emerald-900">Sale</div>
-              <div className="text-sm text-slate-700 space-y-1">
+              <div className="text-sm text-ink-700 space-y-1">
                 <div>Carrier: <strong>{lead.sale.carrier}</strong></div>
                 {lead.sale.policyNumber && <div>Policy: <span className="font-mono">{lead.sale.policyNumber}</span></div>}
                 <div>Premium: <strong>${lead.sale.monthlyPremium}/mo</strong> · ${lead.sale.annualPremium}/yr</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-ink-500">
                   Sold {new Date(lead.sale.soldAt).toLocaleDateString()}
                   {lead.sale.validatedAt && ` · validated`}
                   {lead.sale.fundedAt && ` · funded`}
-                  {lead.sale.isInternalSale && " · ⚠ internal"}
+                  {lead.sale.isInternalSale && <span className="text-amber-700"> · internal</span>}
                 </div>
               </div>
             </div>
@@ -453,13 +442,13 @@ export function LeadDetailPage() {
 
           {/* Open callbacks */}
           {lead.openCallbackCount > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4">
               <div className="text-sm font-semibold mb-2">Open callbacks ({lead.openCallbackCount})</div>
               <ul className="space-y-2">
                 {lead.callbacks.filter(cb => !cb.completed).map(cb => (
                   <li key={cb.id} className="text-sm">
                     <div className="font-medium">{new Date(cb.scheduledFor).toLocaleString()}</div>
-                    <div className="text-xs text-slate-600">
+                    <div className="text-xs text-ink-600">
                       {cb.reason ?? "—"} · {cb.assignedUserName ?? "unassigned"}
                     </div>
                   </li>
@@ -469,7 +458,7 @@ export function LeadDetailPage() {
           )}
 
           {/* Lead meta */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 text-sm">
+          <div className="bg-white rounded-lg shadow-sm border border-ink-200 p-4 text-sm">
             <div className="font-semibold mb-2">Details</div>
             <dl className="space-y-1 text-xs">
               <Row label="Source" value={lead.source} />
@@ -501,10 +490,10 @@ function Stepper({ current }: { current: WorkflowStage }) {
             <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium ${
               active ? "bg-brand-600 text-white"
                 : done ? "bg-emerald-100 text-emerald-800"
-                : "bg-slate-100 text-slate-500"}`}>
+                : "bg-ink-100 text-ink-500"}`}>
               {done && <Icon name="success" size={11} />}{s}
             </span>
-            {i < PIPELINE.length - 1 && <span className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-slate-200"}`} />}
+            {i < PIPELINE.length - 1 && <span className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-ink-200"}`} />}
           </div>
         );
       })}
@@ -539,7 +528,7 @@ function Badge({ children, tone = "slate" }: { children: ReactNode; tone?: strin
     emerald: "bg-emerald-100 text-emerald-800",
     amber: "bg-amber-100 text-amber-800",
     rose: "bg-rose-100 text-rose-800",
-    slate: "bg-slate-100 text-slate-700",
+    slate: "bg-ink-100 text-ink-700",
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full ${cls[tone]}`}>{children}</span>;
 }
@@ -548,8 +537,8 @@ function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: b
   if (!value) return null;
   return (
     <div className="flex items-baseline gap-2">
-      <dt className="text-slate-500 w-24 shrink-0">{label}</dt>
-      <dd className={`flex-1 text-slate-800 break-all ${mono ? "font-mono" : ""}`}>{value}</dd>
+      <dt className="text-ink-500 w-24 shrink-0">{label}</dt>
+      <dd className={`flex-1 text-ink-800 break-all ${mono ? "font-mono" : ""}`}>{value}</dd>
     </div>
   );
 }
