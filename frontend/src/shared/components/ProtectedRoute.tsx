@@ -32,8 +32,10 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   }
 
   // Then force 2FA enrolment for privileged roles (mirrors the server-side gate).
-  // Reuses the existing enrolment page at /2fa.
-  if (auth.user.twoFactorSetupRequired && pathname !== "/2fa") {
+  // Reuses the existing enrolment page at /2fa. IMPORTANT: this must NOT fire while a
+  // password change is still pending — a newly-invited privileged user has BOTH flags set,
+  // and enforcing both would ping-pong /change-password <-> /2fa forever (blank page).
+  if (!auth.user.mustChangePassword && auth.user.twoFactorSetupRequired && pathname !== "/2fa") {
     return <Navigate to="/2fa" replace />;
   }
 
