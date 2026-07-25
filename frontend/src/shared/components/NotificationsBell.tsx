@@ -181,7 +181,7 @@ export function NotificationsBell() {
       </Tooltip>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 surface-elevated overflow-hidden animate-scale-in z-40">
+        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] surface-elevated overflow-hidden animate-scale-in z-40">
           <div className="px-4 py-3 border-b hairline bg-gradient-to-b from-brand-soft to-white">
             <div className="flex items-center justify-between">
               <div>

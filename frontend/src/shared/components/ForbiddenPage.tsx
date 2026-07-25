@@ -38,7 +38,7 @@ export function ForbiddenPage() {
             ))}
           </div>
 
-          <div className="flex justify-center gap-2 mt-7">
+          <div className="flex flex-wrap justify-center gap-2 mt-7">
             <Link to="/dashboard">
               <Button leftIcon={<Icon name="dashboard" size={16} />}>Back to dashboard</Button>
             </Link>

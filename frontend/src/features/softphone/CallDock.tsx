@@ -70,7 +70,7 @@ export function CallDock() {
   return (
     <>
       {toast && <Toast kind={toast.kind} text={toast.text} />}
-      <div className="fixed bottom-4 right-4 z-50 w-96 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
+      <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 w-auto sm:w-96 sm:max-w-[calc(100vw-2rem)] bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
         <div className={`px-4 py-3 ${isInbound ? "bg-emerald-700" : "bg-brand-700"} flex items-center gap-3`}>
           <div className="h-8 w-8 rounded-full bg-white/20 grid place-items-center text-sm font-bold">
             {call.leadName.split(" ").map(n => n[0]).slice(0, 2).join("")}

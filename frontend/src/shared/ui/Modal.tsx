@@ -77,6 +77,9 @@ export function Modal({
         className={cn(
           "relative w-full bg-white rounded-2xl shadow-pop border border-ink-200/70 overflow-hidden",
           "animate-rise",
+          // Cap the dialog to the viewport so tall content scrolls internally
+          // (critical on phones / short landscape windows) instead of clipping.
+          "flex flex-col max-h-[calc(100dvh-2rem)]",
           // Soft inner highlight on top edge — gives the dialog "lit-from-above" feel
           "before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white before:to-transparent",
           sizes[size],
@@ -91,17 +94,17 @@ export function Modal({
         )}
 
         {(title || description) && (
-          <div className="px-6 pt-7 pb-3">
+          <div className="px-6 pt-7 pb-3 shrink-0">
             {title && <h2 className="text-[18px] font-semibold text-ink-900 leading-tight tracking-tight">{title}</h2>}
             {description && <p className="text-sm text-ink-500 mt-1.5 leading-relaxed">{description}</p>}
           </div>
         )}
-        <div className="px-6 pb-6">{children}</div>
+        <div className="px-6 pb-6 flex-1 min-h-0 overflow-y-auto">{children}</div>
         {footer && (
           <div className={cn(
-            "px-6 py-3.5 border-t hairline",
+            "px-6 py-3.5 border-t hairline shrink-0",
             "bg-gradient-to-b from-ink-50/40 to-ink-50/80",
-            "flex justify-end gap-2 items-center",
+            "flex flex-wrap justify-end gap-2 items-center",
           )}>
             {footer}
           </div>

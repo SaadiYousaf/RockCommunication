@@ -72,9 +72,9 @@ export function WallboardPage() {
         }}
       />
 
-      <div className="relative max-w-[1800px] mx-auto p-8 lg:p-10">
+      <div className="relative max-w-[1800px] mx-auto p-4 sm:p-8 lg:p-10">
         {/* Header */}
-        <div className="flex items-start justify-between mb-10 pb-6 border-b border-white/5">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10 pb-6 border-b border-white/5">
           <div className="flex items-center gap-5">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-600 grid place-items-center shadow-[0_0_40px_rgba(31,126,255,0.4)]">
               <Icon name="chart" size={26} />
@@ -120,7 +120,7 @@ export function WallboardPage() {
 
             {/* Agents */}
             <SectionHeading label="Agents" right={`${w.agentsClockedIn} on the floor`} />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               <BigTile label="Clocked In"  value={w.agentsClockedIn} icon="users"   accent="brand"   total={w.agentsClockedIn} />
               <BigTile label="Available"   value={w.agentsAvailable} icon="check"   accent="emerald" total={w.agentsClockedIn} />
               <BigTile label="On Call"     value={w.agentsOnCall}    icon="phone"   accent="amber"   total={w.agentsClockedIn} />
@@ -129,7 +129,7 @@ export function WallboardPage() {
 
             {/* Today */}
             <SectionHeading label="Today" />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               <BigTile label="Calls Answered"   value={w.callsAnsweredToday}  icon="phone"     accent="emerald" />
               <BigTile label="Calls Abandoned"  value={w.callsAbandonedToday} icon="x"         accent="rose" />
               <BigTile label="Leads Created"    value={w.leadsCreatedToday}   icon="list"      accent="brand" />

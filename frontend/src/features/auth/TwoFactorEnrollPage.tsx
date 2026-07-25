@@ -202,7 +202,7 @@ export function TwoFactorEnrollPage() {
 
           <div>
             <div className="text-sm font-semibold mb-1">Step 2 — enter the 6-digit code</div>
-            <form onSubmit={verify} className="flex gap-2 items-start">
+            <form onSubmit={verify} className="flex flex-wrap gap-2 items-start">
               <input
                 inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
                 className="w-44 border border-slate-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
@@ -228,7 +228,7 @@ export function TwoFactorEnrollPage() {
               We sent a 6-digit code to your account email. Enter it below to enable 2FA.
             </p>
           </div>
-          <form onSubmit={verify} className="flex gap-2 items-center">
+          <form onSubmit={verify} className="flex flex-wrap gap-2 items-center">
             <input
               inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
               className="w-44 border border-slate-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"

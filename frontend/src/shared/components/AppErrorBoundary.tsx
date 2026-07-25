@@ -51,7 +51,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
                 {error.stack ? `\n\n${error.stack}` : ""}
               </pre>
             </details>
-            <div className="flex gap-2 mt-6">
+            <div className="flex flex-wrap gap-2 mt-6">
               <Button onClick={this.reset} leftIcon={<Icon name="arrowRight" size={14} />}>
                 Try again
               </Button>

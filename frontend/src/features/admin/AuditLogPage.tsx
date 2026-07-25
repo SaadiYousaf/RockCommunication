@@ -274,7 +274,7 @@ export function AuditLogPage() {
                         <TR>
                           <TD colSpan={6} className="bg-ink-50 p-0">
                             {changes ? (
-                              <div className="p-4">
+                              <div className="p-4 overflow-x-auto">
                                 <table className="w-full text-xs">
                                   <thead>
                                     <tr className="text-ink-500">

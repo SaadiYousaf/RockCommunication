@@ -268,7 +268,7 @@ function focusToneCls(tone: "brand" | "warning" | "success" | "info") {
 function KpiStrip({ data, loading }: { data?: DashboardSummary; loading: boolean }) {
   if (loading || !data) {
     return (
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="surface p-5">
             <Skeleton className="h-3 w-20 mb-3" />
@@ -289,7 +289,7 @@ function KpiStrip({ data, loading }: { data?: DashboardSummary; loading: boolean
   const sparkSales = synthesizeTrend(data.salesPrior7Days, data.salesThisWeek);
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
       <KpiTile
         to="/leads" label="Active Leads" value={data.activeLeads.toLocaleString()}
         delta={leadDelta.delta} trend={leadDelta.trend} icon="list" tone="brand" sparkline={sparkLead}

@@ -420,7 +420,7 @@ function RuleEditor({
         </div>
         <div className="space-y-2">
           {rule.actions.map((a, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-start bg-ink-50/60 border hairline rounded-xl p-3">
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start bg-ink-50/60 border hairline rounded-xl p-3">
               <div className="col-span-1">
                 <Input type="number" value={a.order}
                   onChange={(e) => setAction(i, { order: parseInt(e.target.value) || 1 })} />

@@ -89,7 +89,7 @@ export function CallsHistoryPage() {
             <option value="initiatedAt-asc">Oldest first</option>
             <option value="talkTime-desc">Longest talk time</option>
           </Select>
-          <div className="md:col-span-3 lg:col-span-6 flex items-center justify-between text-xs text-ink-500 pt-1">
+          <div className="md:col-span-3 lg:col-span-6 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500 pt-1">
             <div>{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
             <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={13} />}
               onClick={() => setFilters({ skip: 0, take: 50, sort: "initiatedAt-desc" })}>
@@ -165,7 +165,7 @@ export function CallsHistoryPage() {
             </TBody>
           </Table>
 
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
             <div className="text-xs text-ink-500">{pageInfo}</div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={skip === 0}

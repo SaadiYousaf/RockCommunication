@@ -341,8 +341,12 @@ export function ChatPage() {
 
   return (
     <div className="flex h-[calc(100vh-9rem)] surface overflow-hidden -m-1">
-      {/* Sidebar */}
-      <aside className="w-72 bg-ink-50/60 border-r hairline flex flex-col">
+      {/* Sidebar — on mobile this is the master list: full-width when no room is
+          open, hidden once a room is selected (the message pane takes over). */}
+      <aside className={cn(
+        "w-full md:w-72 bg-ink-50/60 border-r hairline flex-col shrink-0",
+        activeRoom ? "hidden md:flex" : "flex",
+      )}>
         <div className="p-4 border-b hairline">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-ink-900">Conversations</h2>
@@ -426,8 +430,12 @@ export function ChatPage() {
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col bg-white min-w-0">
+      {/* Main — on mobile this replaces the list once a room is open; the empty
+          state only ever shows on desktop (mobile shows the list instead). */}
+      <main className={cn(
+        "flex-1 flex-col bg-white min-w-0",
+        activeRoom ? "flex" : "hidden md:flex",
+      )}>
         {!activeRoom ? (
           <div className="flex-1 grid place-items-center p-6">
             <EmptyState
@@ -444,7 +452,14 @@ export function ChatPage() {
         ) : (
           <>
             {/* Conversation header */}
-            <div className="h-16 border-b hairline px-5 flex items-center gap-3 shrink-0">
+            <div className="h-16 border-b hairline px-4 sm:px-5 flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setActiveRoom(null)}
+                className="md:hidden -ml-1 p-1.5 rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900 transition-colors"
+                aria-label="Back to conversations"
+              >
+                <Icon name="chevronLeft" size={20} />
+              </button>
               <Avatar name={activeRoomData?.name ?? "?"} size={36} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-ink-900 truncate">

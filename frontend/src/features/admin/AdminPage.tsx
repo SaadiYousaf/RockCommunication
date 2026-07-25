@@ -203,6 +203,7 @@ function CommissionConfigSection() {
     <Card>
       <CardHeader title="Commission rules" subtitle="Per-agency overrides for each rule. Empty = use system default." />
       <CardBody className="px-0 pt-0">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-ink-50/60 text-left">
             <tr>
@@ -221,6 +222,7 @@ function CommissionConfigSection() {
             })}
           </tbody>
         </table>
+        </div>
       </CardBody>
     </Card>
   );

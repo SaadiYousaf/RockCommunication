@@ -272,7 +272,7 @@ export function KpiDashboardPage() {
       </Card>
 
       {isFetching && !values ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : !values || values.length === 0 ? (
@@ -291,7 +291,7 @@ export function KpiDashboardPage() {
               <Badge tone="neutral" variant="soft">{list?.length ?? 0}</Badge>
               <div className="flex-1 h-px bg-ink-200" />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {list?.map((v) => (
                 <div
                   key={v.key}

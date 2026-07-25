@@ -95,7 +95,7 @@ export function CommissionsPage() {
             <Button size="sm" variant="ghost" onClick={() => setRange(30)}>30d</Button>
             <Button size="sm" variant="ghost" onClick={() => setRange(90)}>90d</Button>
           </div>
-          <div className="flex gap-3 ml-auto">
+          <div className="flex flex-wrap gap-3 ml-auto">
             <Tile label="Total"  value={`$${total.toFixed(2)}`}  tone="bg-brand-50 text-brand-600" />
             <Tile label="Paid"   value={`$${paid.toFixed(2)}`}   tone="bg-emerald-50 text-emerald-600" />
             <Tile label="Unpaid" value={`$${unpaid.toFixed(2)}`} tone="bg-amber-50 text-amber-600" />

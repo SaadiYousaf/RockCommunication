@@ -214,7 +214,7 @@ export function AgenciesPage() {
           ) : (
             <ul className="divide-y hairline">
               {agencies.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 px-5 py-3">
+                <li key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3">
                   <div
                     className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${
                       a.isActive
@@ -257,7 +257,7 @@ export function AgenciesPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-1.5 shrink-0">
+                  <div className="flex flex-wrap gap-1.5 shrink-0">
                     <Link to={`/admin/agencies/${a.id}`}>
                       <Button variant="outline" size="sm" leftIcon={<Icon name="building" size={13} />}>
                         Manage

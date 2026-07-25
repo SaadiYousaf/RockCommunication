@@ -298,7 +298,7 @@ function DuplicateGroup({
       </div>
       <ul className="divide-y hairline">
         {group.leads.map((l, idx) => (
-          <li key={l.id} className="flex items-center gap-3 px-4 py-2 hover:bg-ink-50/50">
+          <li key={l.id} className="flex items-center gap-3 flex-wrap px-4 py-2 hover:bg-ink-50/50">
             <Avatar name={`${l.firstName} ${l.lastName}`} size={28} />
             <div className="flex-1 min-w-0">
               <Link to={`/leads/${l.id}`} className="font-medium text-ink-900 hover:text-brand-700">
