@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http.Json;
 
 namespace CRM.Api.IntegrationTests;
@@ -62,6 +63,29 @@ public class LeadLifecycleTests : IClassFixture<CrmWebAppFactory>
         resp.EnsureSuccessStatusCode();
         var metrics = await resp.Content.ReadFromJsonAsync<List<MetricValue>>();
         Assert.Contains(metrics!, m => m.Key == "sales.funded" && m.Value >= 1);
+    }
+
+    [Fact]
+    public async Task Universal_script_shows_for_every_stage()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        (await admin.PutAsJsonAsync("/api/cc/scripts", new { name = "Universal opener", body = "Hi", isActive = true }))
+            .EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/cc/scripts", new { name = "Verified only", stage = "Verified", body = "V", isActive = true }))
+            .EnsureSuccessStatusCode();
+
+        // Querying by stage must include the Universal (null-stage) script, not just the exact-stage one.
+        var verified = await admin.GetJsonAsync("/api/cc/scripts?stage=Verified");
+        var vNames = verified.EnumerateArray().Select(s => s.GetProperty("name").GetString()).ToList();
+        Assert.Contains("Universal opener", vNames);
+        Assert.Contains("Verified only", vNames);
+
+        // A different stage still shows the Universal one, but not the Verified-only one.
+        var fronted = await admin.GetJsonAsync("/api/cc/scripts?stage=Fronted");
+        var fNames = fronted.EnumerateArray().Select(s => s.GetProperty("name").GetString()).ToList();
+        Assert.Contains("Universal opener", fNames);
+        Assert.DoesNotContain("Verified only", fNames);
     }
 
     [Fact]

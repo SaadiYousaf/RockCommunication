@@ -165,8 +165,10 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             Notes = $"Sale recorded: {sale.Carrier} ${sale.MonthlyPremium}/mo"
         });
 
-        await _db.SaveChangesAsync(ct);
-
+        // Compute commissions from the in-memory sale and stage them in the SAME unit of work,
+        // so the sale + its commission entries commit atomically. (Previously the commissions were
+        // a second, independent SaveChanges — a failure between them left a committed sale with NO
+        // commissions, and the duplicate-sale guard then blocked any retry from ever creating them.)
         var lines = await _commission.CalculateForSaleAsync(sale, ct);
         foreach (var line in lines)
         {

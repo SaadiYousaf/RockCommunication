@@ -63,6 +63,11 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
             sale.ValidatedAt = null;
             lead.Stage = WorkflowStage.Followup;
             lead.Disposition = LeadDisposition.NotQualified;
+
+            // A rejected sale didn't pass validation — void its still-unpaid commission so payroll
+            // never pays out for it. Already-paid entries are left untouched.
+            var unpaid = await _db.CommissionEntries.Where(c => c.SaleId == sale.Id && !c.Paid).ToListAsync(ct);
+            _db.CommissionEntries.RemoveRange(unpaid);
         }
 
         _db.LeadActivities.Add(new LeadActivity

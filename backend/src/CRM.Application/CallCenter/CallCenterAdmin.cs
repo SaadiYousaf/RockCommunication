@@ -390,7 +390,9 @@ public class ScriptHandler :
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.Scripts.Where(s => s.AgencyId == _user.AgencyId && s.IsActive);
-        if (request.Stage is { } st) q = q.Where(s => s.Stage == st);
+        // A "Universal" script has Stage == null and must apply to every stage — an exact
+        // match on the requested stage would wrongly exclude it (so it never showed on any lead).
+        if (request.Stage is { } st) q = q.Where(s => s.Stage == null || s.Stage == st);
         if (!string.IsNullOrEmpty(request.Role)) q = q.Where(s => s.Role == request.Role);
         if (request.CampaignId is { } cid) q = q.Where(s => s.CampaignId == cid);
         return await q.OrderByDescending(s => s.Version)

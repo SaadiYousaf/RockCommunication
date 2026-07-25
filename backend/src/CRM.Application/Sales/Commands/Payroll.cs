@@ -31,18 +31,12 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
         Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
 
-        var unpaid = await _db.CommissionEntries
-            .Where(c => c.AgencyId == _user.AgencyId && !c.Paid
-                        && c.EarnedAt >= request.PeriodStart && c.EarnedAt < request.PeriodEnd)
-            .ToListAsync(ct);
-
-        var total = unpaid.Sum(c => c.Amount);
         var run = new PayrollRun
         {
             AgencyId = _user.AgencyId.Value,
             PeriodStart = request.PeriodStart,
             PeriodEnd = request.PeriodEnd,
-            TotalAmount = total,
+            TotalAmount = 0m,               // set once we know exactly what this run claimed
             Status = "Processed",
             ProcessedAt = DateTime.UtcNow,
             ProcessedByUserId = _user.UserId.Value
@@ -50,12 +44,21 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
         _db.PayrollRuns.Add(run);
         await _db.SaveChangesAsync(ct);
 
-        foreach (var c in unpaid)
-        {
-            c.Paid = true;
-            c.PaidAt = run.ProcessedAt;
-            c.PayrollRunId = run.Id;
-        }
+        // Atomically CLAIM every still-unpaid entry in the period for THIS run in one conditional
+        // UPDATE. Because it filters on !Paid (and SQLite serialises writes), a second concurrent
+        // payroll run finds nothing left to claim — preventing the double-payout TOCTOU.
+        await _db.CommissionEntries
+            .Where(c => c.AgencyId == _user.AgencyId && !c.Paid
+                        && c.EarnedAt >= request.PeriodStart && c.EarnedAt < request.PeriodEnd)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.Paid, true)
+                .SetProperty(c => c.PaidAt, run.ProcessedAt)
+                .SetProperty(c => c.PayrollRunId, run.Id), ct);
+
+        // Total = exactly the entries this run claimed (summed in memory — SQLite has no decimal SUM).
+        var claimed = await _db.CommissionEntries
+            .Where(c => c.PayrollRunId == run.Id).Select(c => c.Amount).ToListAsync(ct);
+        run.TotalAmount = claimed.Sum();
         await _db.SaveChangesAsync(ct);
 
         return new PayrollRunDto(run.Id, run.PeriodStart, run.PeriodEnd, run.TotalAmount, run.Status, run.ProcessedAt);
