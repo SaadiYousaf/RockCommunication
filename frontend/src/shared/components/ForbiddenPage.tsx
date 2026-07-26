@@ -1,15 +1,15 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { Button, Icon, Card, CardBody } from "../ui";
 
 /**
  * 403 / "no access" screen rendered when a route guard rejects the current user.
- * Shows the path they tried, their roles, and offers a way back to a safe page.
+ * Deliberately generic — it never echoes the attempted path (which can contain
+ * record GUIDs / internal identifiers), only the user's own account + roles.
  */
 export function ForbiddenPage() {
   const auth = useSelector((s: RootState) => s.auth);
-  const location = useLocation();
 
   return (
     <div className="min-h-[calc(100vh-9rem)] grid place-items-center px-4">
@@ -23,11 +23,8 @@ export function ForbiddenPage() {
             You don't have access to this page
           </h1>
           <p className="text-sm text-ink-600 mt-2 max-w-sm mx-auto">
-            Your account ({auth.user?.userName ?? "unknown"}) doesn't have permission to view{" "}
-            <code className="bg-ink-100 text-ink-800 px-1.5 py-0.5 rounded text-[11px] font-mono">
-              {location.pathname}
-            </code>.
-            If you think this is wrong, contact an administrator.
+            Your account doesn't have permission to view this page. If you think this
+            is a mistake, contact an administrator.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">

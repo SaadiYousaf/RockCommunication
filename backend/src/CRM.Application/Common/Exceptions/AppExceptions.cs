@@ -10,8 +10,12 @@ public class ValidationException : Exception
 
 public class NotFoundException : Exception
 {
+    /// <summary>The entity type (e.g. "Sale") — safe to show a user. The key is NOT, so it's
+    /// kept only in <see cref="Exception.Message"/> for server logs and never surfaced to clients.</summary>
+    public string Entity { get; }
+
     public NotFoundException(string entity, object key)
-        : base($"{entity} with key '{key}' was not found.") { }
+        : base($"{entity} with key '{key}' was not found.") => Entity = entity;
 }
 
 public class ForbiddenAccessException : Exception

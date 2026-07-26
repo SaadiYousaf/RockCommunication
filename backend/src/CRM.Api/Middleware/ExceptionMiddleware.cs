@@ -40,11 +40,13 @@ public class ExceptionMiddleware
                 Status = (int)HttpStatusCode.BadRequest,
                 Detail = JsonSerializer.Serialize(v.Errors)
             }),
-            NotFoundException => ((int)HttpStatusCode.NotFound, new ProblemDetails
+            // Never echo ex.Message here — it embeds the record key/GUID. Show only the entity type
+            // (the full message with the key is still captured in the server log below).
+            NotFoundException nf => ((int)HttpStatusCode.NotFound, new ProblemDetails
             {
                 Title = "Resource not found",
                 Status = (int)HttpStatusCode.NotFound,
-                Detail = ex.Message
+                Detail = $"The requested {nf.Entity.ToLowerInvariant()} was not found."
             }),
             ForbiddenAccessException => ((int)HttpStatusCode.Forbidden, new ProblemDetails
             {
