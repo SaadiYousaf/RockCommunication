@@ -639,6 +639,8 @@ export interface ChatOversightMessage {
   attachmentName: string | null;
   sentAt: string;
 }
+export interface OversightAgency { id: string; name: string; roomCount: number; }
+export interface OversightCallCenter { id: string; name: string; roomCount: number; }
 
 /** Payload for an upsert mutation: any subset of the entity; `id` absent/null means "create". */
 export type Upsert<T> = Partial<Omit<T, "id">> & { id?: string | null };

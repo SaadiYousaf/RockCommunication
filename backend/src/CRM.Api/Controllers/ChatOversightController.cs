@@ -22,9 +22,21 @@ public class ChatOversightController : ControllerBase
     private readonly IMediator _mediator;
     public ChatOversightController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
+    // Drill-down level 1: every agency + its chat-room count.
+    [HttpGet("agencies")]
+    public async Task<IActionResult> Agencies(CancellationToken ct)
+        => Ok(await _mediator.Send(new ListOversightAgenciesQuery(), ct));
+
+    // Drill-down level 2: the call centers of one agency (+ an "Agency-wide" bucket) with room counts.
+    [HttpGet("agencies/{agencyId:guid}/call-centers")]
+    public async Task<IActionResult> CallCenters(Guid agencyId, CancellationToken ct)
+        => Ok(await _mediator.Send(new ListOversightCallCentersQuery(agencyId), ct));
+
+    // Drill-down level 3: rooms, optionally scoped to an agency and a call center
+    // (callCenterId = 00000000-… means the agency-wide bucket).
     [HttpGet("rooms")]
-    public async Task<IActionResult> Rooms([FromQuery] Guid? agencyId, CancellationToken ct)
-        => Ok(await _mediator.Send(new ListAllChatRoomsQuery(agencyId), ct));
+    public async Task<IActionResult> Rooms([FromQuery] Guid? agencyId, [FromQuery] Guid? callCenterId, CancellationToken ct)
+        => Ok(await _mediator.Send(new ListAllChatRoomsQuery(agencyId, callCenterId), ct));
 
     [HttpGet("rooms/{roomId:guid}/messages")]
     public async Task<IActionResult> Messages(Guid roomId, CancellationToken ct)

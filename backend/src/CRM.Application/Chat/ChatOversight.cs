@@ -20,15 +20,34 @@ public record ChatOversightRoomDto(
 public record ChatOversightMessageDto(
     Guid Id, string Sender, string Body, string? AttachmentName, DateTime SentAt);
 
-/// <summary>Every chat room across every agency (optionally scoped to one agency).</summary>
-public record ListAllChatRoomsQuery(Guid? AgencyId = null) : IRequest<IReadOnlyList<ChatOversightRoomDto>>;
+/// <summary>
+/// Every chat room across every agency, optionally scoped to one agency and — since chat rooms are
+/// agency-level (no CallCenterId) — optionally to one call center by its members. CallCenterId set
+/// to <see cref="Guid.Empty"/> means "agency-wide" (rooms with at least one agency-level member).
+/// </summary>
+public record ListAllChatRoomsQuery(Guid? AgencyId = null, Guid? CallCenterId = null)
+    : IRequest<IReadOnlyList<ChatOversightRoomDto>>;
 
 /// <summary>Full message transcript of one room (any agency).</summary>
 public record GetChatRoomTranscriptQuery(Guid RoomId) : IRequest<IReadOnlyList<ChatOversightMessageDto>>;
 
+// ── Drill-down: agencies → call centers → chats ──────────────────────────────
+public record OversightAgencyDto(Guid Id, string Name, int RoomCount);
+/// <summary>Top level of the oversight drill-down: every agency with its chat-room count.</summary>
+public record ListOversightAgenciesQuery() : IRequest<IReadOnlyList<OversightAgencyDto>>;
+
+public record OversightCallCenterDto(Guid Id, string Name, int RoomCount);
+/// <summary>
+/// Second level: the call centers of an agency, each with how many chat rooms involve their members,
+/// plus a synthetic "Agency-wide" bucket (<see cref="Guid.Empty"/>) for rooms with agency-level members.
+/// </summary>
+public record ListOversightCallCentersQuery(Guid AgencyId) : IRequest<IReadOnlyList<OversightCallCenterDto>>;
+
 public class ChatOversightHandler :
     IRequestHandler<ListAllChatRoomsQuery, IReadOnlyList<ChatOversightRoomDto>>,
-    IRequestHandler<GetChatRoomTranscriptQuery, IReadOnlyList<ChatOversightMessageDto>>
+    IRequestHandler<GetChatRoomTranscriptQuery, IReadOnlyList<ChatOversightMessageDto>>,
+    IRequestHandler<ListOversightAgenciesQuery, IReadOnlyList<OversightAgencyDto>>,
+    IRequestHandler<ListOversightCallCentersQuery, IReadOnlyList<OversightCallCenterDto>>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -75,6 +94,20 @@ public class ChatOversightHandler :
             .ToListAsync(ct);
         var statsByRoom = stats.ToDictionary(s => s.RoomId, s => (s.Count, s.Last));
 
+        // Optional call-center scope: chat rooms are agency-level, so "belongs to a call center" means
+        // a member of that room is pinned to it. Guid.Empty = the agency-wide bucket (agency-level member).
+        if (request.CallCenterId is { } ccFilter && request.AgencyId is { } agId)
+        {
+            var ccByUser = (await _identity.ListUsersAsync(agId, ct)).ToDictionary(u => u.Id, u => u.CallCenterId);
+            bool Matches(Guid roomId)
+            {
+                var ccs = members.Where(m => m.RoomId == roomId)
+                    .Select(m => ccByUser.TryGetValue(m.UserId, out var cc) ? cc : null);
+                return ccFilter == Guid.Empty ? ccs.Any(c => c is null) : ccs.Any(c => c == ccFilter);
+            }
+            rooms = rooms.Where(r => Matches(r.Id)).ToList();
+        }
+
         return rooms
             .Select(r =>
             {
@@ -104,5 +137,58 @@ public class ChatOversightHandler :
             .Select(m => new ChatOversightMessageDto(
                 m.Id, names.TryGetValue(m.SenderUserId, out var n) ? n : "—", m.Body, m.AttachmentName, m.SentAt))
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<OversightAgencyDto>> Handle(ListOversightAgenciesQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdmin();
+
+        var roomCounts = (await _db.ChatRooms.IgnoreQueryFilters().AsNoTracking()
+                .Where(r => !r.IsDeleted).Select(r => r.AgencyId).ToListAsync(ct))
+            .GroupBy(a => a).ToDictionary(g => g.Key, g => g.Count());
+
+        var agencies = await _db.Agencies.IgnoreQueryFilters().AsNoTracking()
+            .Select(a => new { a.Id, a.Name }).ToListAsync(ct);
+
+        return agencies
+            .Select(a => new OversightAgencyDto(a.Id, a.Name, roomCounts.TryGetValue(a.Id, out var c) ? c : 0))
+            .OrderByDescending(a => a.RoomCount).ThenBy(a => a.Name)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<OversightCallCenterDto>> Handle(ListOversightCallCentersQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdmin();
+
+        var roomIds = await _db.ChatRooms.IgnoreQueryFilters().AsNoTracking()
+            .Where(r => !r.IsDeleted && r.AgencyId == request.AgencyId).Select(r => r.Id).ToListAsync(ct);
+        var members = await _db.ChatRoomMembers.IgnoreQueryFilters().AsNoTracking()
+            .Where(m => roomIds.Contains(m.RoomId) && !m.IsDeleted)
+            .Select(m => new { m.RoomId, m.UserId }).ToListAsync(ct);
+        var ccByUser = (await _identity.ListUsersAsync(request.AgencyId, ct)).ToDictionary(u => u.Id, u => u.CallCenterId);
+
+        // room → distinct member call centers (null member CC → the agency-wide bucket).
+        int CountRoomsFor(Guid? cc) => roomIds.Count(rid =>
+            members.Where(m => m.RoomId == rid)
+                   .Select(m => ccByUser.TryGetValue(m.UserId, out var c) ? c : null)
+                   .Any(c => c == cc));
+
+        var callCenters = await _db.CallCenters.IgnoreQueryFilters().AsNoTracking()
+            .Where(c => c.AgencyId == request.AgencyId && !c.IsDeleted)
+            .Select(c => new { c.Id, c.Name }).ToListAsync(ct);
+
+        var result = callCenters
+            .Select(c => new OversightCallCenterDto(c.Id, c.Name, CountRoomsFor(c.Id)))
+            .OrderBy(c => c.Name)
+            .ToList();
+
+        // Synthetic "Agency-wide" bucket for rooms whose members are agency-level (no call center).
+        var agencyWide = CountRoomsFor(null);
+        if (agencyWide > 0)
+            result.Insert(0, new OversightCallCenterDto(Guid.Empty, "Agency-wide", agencyWide));
+
+        return result;
     }
 }

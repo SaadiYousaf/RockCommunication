@@ -7,6 +7,7 @@ import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
+  OversightAgency, OversightCallCenter,
   WorkflowStage, LeadDisposition, DashboardSummary,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
@@ -330,8 +331,14 @@ export const baseApi = createApi({
       query: () => "/api/chat/unread",
       providesTags: ["Rooms"],
     }),
-    // SuperAdmin oversight — read-only, cross-agency.
-    chatOversightRooms: b.query<ChatOversightRoom[], { agencyId?: string } | void>({
+    // SuperAdmin oversight — read-only, cross-agency. Drill-down: agencies → call centers → chats.
+    chatOversightAgencies: b.query<OversightAgency[], void>({
+      query: () => "/api/admin/chat-oversight/agencies",
+    }),
+    chatOversightCallCenters: b.query<OversightCallCenter[], string>({
+      query: (agencyId) => `/api/admin/chat-oversight/agencies/${agencyId}/call-centers`,
+    }),
+    chatOversightRooms: b.query<ChatOversightRoom[], { agencyId?: string; callCenterId?: string } | void>({
       query: (p) => ({ url: "/api/admin/chat-oversight/rooms", params: p ?? undefined }),
     }),
     chatOversightMessages: b.query<ChatOversightMessage[], string>({
@@ -1139,6 +1146,7 @@ export const {
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,
   useChatRoomsQuery, useCreateRoomMutation, useRoomMessagesQuery, useSendMessageMutation, useSendAttachmentMutation,
+  useChatOversightAgenciesQuery, useChatOversightCallCentersQuery,
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
   useChatUnreadQuery, useMarkRoomReadMutation,
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,

@@ -161,6 +161,18 @@ public class UserAdminService : IUserAdminService
         var result = await _users.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
+        // Account recovery: an admin reset hands the account to someone who does NOT have the
+        // original owner's authenticator or email inbox. If 2FA is enabled, logging in would demand
+        // a code we can't obtain — a lockout. So clear the existing enrolment; the new password alone
+        // gets them in. If their role still mandates 2FA they'll enrol a FRESH device after login
+        // (a new QR / OTP target they control), which re-secures the account without the lockout.
+        if (user.TwoFactorEnabled)
+        {
+            await _users.SetTwoFactorEnabledAsync(user, false);
+            await _users.ResetAuthenticatorKeyAsync(user);
+            user.PreferredTwoFactorMethod = null;
+        }
+
         // An admin-set password is temporary by definition: force the user to choose their
         // own on next login (mirrors the invitation flow) and drop their live sessions.
         user.MustChangePassword = true;
