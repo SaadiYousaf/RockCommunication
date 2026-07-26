@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
@@ -78,10 +79,10 @@ public class CompleteCallbackHandler : IRequestHandler<CompleteCallbackCommand, 
             ?? throw new NotFoundException(nameof(ScheduledCallback), request.Id);
         // A callback is a per-agent task — only its owner (or a manager) may complete it, so one
         // agent can't silently clear another agent's follow-up out of their queue.
-        var isManager = _user.Roles.Contains(CRM.Domain.Enums.Roles.TeamLead)
-            || _user.Roles.Contains(CRM.Domain.Enums.Roles.ProgramManager)
-            || _user.Roles.Contains(CRM.Domain.Enums.Roles.Admin)
-            || _user.Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin);
+        var isManager = _user.Roles.Contains(DomainRoles.TeamLead)
+            || _user.Roles.Contains(DomainRoles.ProgramManager)
+            || _user.Roles.Contains(DomainRoles.Admin)
+            || _user.Roles.Contains(DomainRoles.SuperAdmin);
         if (cb.AssignedUserId != _user.UserId && !isManager)
             throw new ForbiddenAccessException("You can only complete your own callbacks.");
         cb.Completed = true;

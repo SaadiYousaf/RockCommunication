@@ -1,4 +1,6 @@
 using CRM.Api.Authorization;
+using CRM.Application.Users.Commands;
+using CRM.Infrastructure.Identity;
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
@@ -161,19 +163,19 @@ public class AuthController : ControllerBase
         Guard.AgainstNull(body);
         Guard.AgainstNull(mediator);
         if (_user.UserId is null) return Forbid();
-        await mediator.Send(new CRM.Application.Users.Commands.SetPreferred2FaCommand(_user.UserId.Value, body.Method), ct);
+        await mediator.Send(new SetPreferred2FaCommand(_user.UserId.Value, body.Method), ct);
         return NoContent();
     }
 
     [Authorize]
     [HttpPost("2fa/email/send-otp")]
     public async Task<IActionResult> SendEmailOtp(
-        [FromServices] CRM.Infrastructure.Identity.SecondFactorRegistry registry,
+        [FromServices] SecondFactorRegistry registry,
         CancellationToken ct)
     {
         Guard.AgainstNull(registry);
         if (_user.UserId is null) return Forbid();
-        var method = registry.Get(CRM.Application.Common.Interfaces.SecondFactorKind.EmailOtp);
+        var method = registry.Get(SecondFactorKind.EmailOtp);
         await method.ChallengeAsync(_user.UserId.Value, ct);
         return NoContent();
     }

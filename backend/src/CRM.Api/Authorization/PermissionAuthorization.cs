@@ -1,4 +1,5 @@
 using CRM.Application.Common.Authorization;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +29,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
         if (_user.UserId is null) return;
         // Only SuperAdmin (global, cross-tenant) bypasses the permission framework.
         // Per-agency roles (Admin, CEO, …) must still hold the explicit permission grant.
-        if (_user.Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin))
+        if (_user.Roles.Contains(DomainRoles.SuperAdmin))
         {
             context.Succeed(requirement);
             return;

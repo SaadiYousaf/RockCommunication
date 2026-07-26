@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
 using CRM.Domain.Common;
@@ -84,7 +85,7 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
             !_user.Roles.Contains("TeamLead") &&
             !_user.Roles.Contains("Validator"))
         {
-            q = _user.Roles.Contains(CRM.Domain.Enums.Roles.LicenseAgent)
+            q = _user.Roles.Contains(DomainRoles.LicenseAgent)
                 ? q.Where(s => s.LicenseAgentUserId == _user.UserId)
                 : q.Where(s => s.CloserUserId == _user.UserId);
         }

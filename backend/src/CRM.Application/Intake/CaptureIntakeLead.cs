@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
 using CRM.Application.Common.Workflow;
@@ -134,10 +135,10 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
 
         // Notify the receiving queue's role that a new lead has landed.
         if (toCloser)
-            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
+            await _notifier.NotifyQueueAsync(lead, DomainRoles.Closer, "New lead to close",
                 $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.CloseQueue, ct);
         else
-            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Verifier, "New lead to verify",
+            await _notifier.NotifyQueueAsync(lead, DomainRoles.Verifier, "New lead to verify",
                 $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.VerifyQueue, ct);
 
         return new IntakeLeadResult(lead.Id, lead.FirstName, lead.LastName, lead.Stage);

@@ -1,4 +1,6 @@
 using CRM.Domain.Entities;
+using CcEntity = CRM.Domain.Entities.CallCenter;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Application.Common.Interfaces;
@@ -6,7 +8,7 @@ namespace CRM.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Agency> Agencies { get; }
-    DbSet<CRM.Domain.Entities.CallCenter> CallCenters { get; }
+    DbSet<CcEntity> CallCenters { get; }
     DbSet<Team> Teams { get; }
     DbSet<IpAllowlistEntry> IpAllowlist { get; }
     DbSet<Lead> Leads { get; }
@@ -87,7 +89,7 @@ public interface ICurrentUser
     /// treated as privileged by hand-written handler checks too (role gates + agency filters),
     /// otherwise those defeat the bypass and wrongly 403 / empty out SuperAdmin.
     /// </summary>
-    bool IsSuperAdmin => Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin);
+    bool IsSuperAdmin => Roles.Contains(DomainRoles.SuperAdmin);
 }
 
 public interface IJwtTokenService

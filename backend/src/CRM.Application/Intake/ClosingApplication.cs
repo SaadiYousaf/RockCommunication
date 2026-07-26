@@ -1,4 +1,5 @@
 using CRM.Application.Common.Compliance;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
@@ -191,7 +192,7 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
 
         // "Complete and Sold" created a sale → it's now in the Submission (validator) queue.
         if (saleId is not null)
-            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Validator, "New sale to submit",
+            await _notifier.NotifyQueueAsync(lead, DomainRoles.Validator, "New sale to submit",
                 $"{lead.FirstName} {lead.LastName} — {d.Carrier}", AppConstants.QueueRoutes.ValidateQueue, ct);
 
         return new ClosingApplicationResult(lead.Id, request.Status, lead.Stage, saleId);

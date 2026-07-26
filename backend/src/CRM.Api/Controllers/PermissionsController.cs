@@ -1,4 +1,5 @@
 using CRM.Api.Authorization;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -38,7 +39,7 @@ public class PermissionsController : ControllerBase
     {
         if (_currentUser.UserId is null) return Unauthorized();
         // SuperAdmin bypasses the framework — surface "*" so the UI knows everything is allowed.
-        if (_currentUser.Roles.Contains(CRM.Domain.Enums.Roles.SuperAdmin))
+        if (_currentUser.Roles.Contains(DomainRoles.SuperAdmin))
             return Ok(new[] { "*" }.Concat(Permissions.All).ToList());
         var perms = await _permissions.GetForUserAsync(_currentUser.UserId.Value, ct);
         return Ok(perms);

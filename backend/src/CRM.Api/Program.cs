@@ -1,4 +1,8 @@
 using CRM.Api.Hubs;
+using CRM.Application.Common.RealTime;
+using CRM.Api.Authorization;
+using CRM.Api.BackgroundJobs;
+using CRM.Infrastructure.BackgroundJobs;
 using CRM.Api.Middleware;
 using CRM.Api.Services;
 using CRM.Application;
@@ -19,14 +23,14 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
 
 // Real-time agent push
-builder.Services.AddSingleton<CRM.Application.Common.RealTime.IAgentNotifier,
-    CRM.Api.Hubs.AgentNotifier>();
+builder.Services.AddSingleton<IAgentNotifier,
+    AgentNotifier>();
 
 // Permission-based authorization
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
-    CRM.Api.Authorization.PermissionPolicyProvider>();
+    PermissionPolicyProvider>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
-    CRM.Api.Authorization.PermissionHandler>();
+    PermissionHandler>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -59,7 +63,7 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
             StackExchange.Redis.RedisChannel.Literal(channel));
     }
 }
-builder.Services.AddScoped<CRM.Application.Common.Interfaces.IChatBroadcaster, CRM.Api.Hubs.ChatBroadcaster>();
+builder.Services.AddScoped<IChatBroadcaster, ChatBroadcaster>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -166,7 +170,7 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 });
-builder.Services.AddHostedService<CRM.Api.BackgroundJobs.SupervisorBroadcaster>();
+builder.Services.AddHostedService<SupervisorBroadcaster>();
 
 var app = builder.Build();
 
@@ -220,11 +224,11 @@ if (builder.Configuration.GetValue("BackgroundJobs:Provider", "InProcess")
 {
     app.UseHangfireDashboard("/jobs", new Hangfire.DashboardOptions
     {
-        Authorization = new[] { new CRM.Api.Authorization.HangfireAdminFilter() }
+        Authorization = new[] { new HangfireAdminFilter() }
     });
-    Hangfire.RecurringJob.AddOrUpdate<CRM.Infrastructure.BackgroundJobs.CallbackReminderJob>(
+    Hangfire.RecurringJob.AddOrUpdate<CallbackReminderJob>(
         "callback-reminders", j => j.RunAsync(CancellationToken.None), Hangfire.Cron.Minutely());
-    Hangfire.RecurringJob.AddOrUpdate<CRM.Infrastructure.BackgroundJobs.CadenceRunnerJob>(
+    Hangfire.RecurringJob.AddOrUpdate<CadenceRunnerJob>(
         "cadence-runner", j => j.RunAsync(CancellationToken.None), Hangfire.Cron.Minutely());
 }
 app.MapHealthChecks("/health");

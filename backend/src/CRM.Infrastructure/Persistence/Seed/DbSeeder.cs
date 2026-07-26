@@ -1,4 +1,5 @@
 using CRM.Application.Common.Authorization;
+using CRM.Domain.Seeding;
 using CRM.Domain.Entities;
 using Modules = CRM.Application.Common.Authorization.Modules;
 using CRM.Domain.Enums;
@@ -114,7 +115,7 @@ public static class DbSeeder
         var agencyIds = await db.Agencies.Select(a => a.Id).ToListAsync();
         var agenciesWithCodes = await db.WrapUpCodes.Select(w => w.AgencyId).Distinct().ToListAsync();
         foreach (var aid in agencyIds.Except(agenciesWithCodes))
-            db.WrapUpCodes.AddRange(CRM.Domain.Seeding.DefaultWrapUpCodes.For(aid));
+            db.WrapUpCodes.AddRange(DefaultWrapUpCodes.For(aid));
         await db.SaveChangesAsync();
     }
 

@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
@@ -31,7 +32,7 @@ public class SelfValidateSaleHandler : IRequestHandler<SelfValidateSaleCommand, 
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains(CRM.Domain.Enums.Roles.SelfValidator))
+        if (!_user.Roles.Contains(DomainRoles.SelfValidator))
             throw new ForbiddenAccessException("SelfValidator role required.");
 
         var sale = await _db.Sales.FirstOrDefaultAsync(

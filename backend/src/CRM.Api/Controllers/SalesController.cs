@@ -1,4 +1,5 @@
 using CRM.Api.Authorization;
+using CRM.Application.Sales.Queries;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
@@ -66,13 +67,13 @@ public class SalesController : ControllerBase
         [FromQuery] int take = 50,
         [FromQuery] Guid? agencyId = null,   // SuperAdmin Agency Panel only; ignored for tenant-scoped callers
         CancellationToken ct = default)
-        => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.ListSalesQuery(
+        => Ok(await _mediator.Send(new ListSalesQuery(
             closerUserId, carrier, status, from, to, sort, skip, take, agencyId), ct));
 
     [HttpGet("{id:guid}")]
     [HasPermission(Permissions.SalesRead)]
     public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
-        => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.GetSaleDetailQuery(id), ct));
+        => Ok(await _mediator.Send(new GetSaleDetailQuery(id), ct));
 
     public record AssignLicenseAgentBody(Guid? LicenseAgentUserId);
 
@@ -82,7 +83,7 @@ public class SalesController : ControllerBase
     public async Task<IActionResult> AssignLicenseAgent(Guid id, [FromBody] AssignLicenseAgentBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        await _mediator.Send(new CRM.Application.Sales.Commands.AssignSaleLicenseAgentCommand(id, body.LicenseAgentUserId), ct);
+        await _mediator.Send(new AssignSaleLicenseAgentCommand(id, body.LicenseAgentUserId), ct);
         return NoContent();
     }
 
@@ -120,12 +121,12 @@ public class SalesController : ControllerBase
         // Same inclusive-end rule as MyCommissions: a date-only "to" (midnight) would drop everything
         // earned on that day, silently under-reporting the payroll export. Roll to next-day start.
         var toInclusive = to is { } tv ? tv.Date.AddDays(1) : to;
-        var rows = await mediator.Send(new CRM.Application.Sales.Queries.ExportPayrollQuery(runId, from, toInclusive), ct);
+        var rows = await mediator.Send(new ExportPayrollQuery(runId, from, toInclusive), ct);
         var csv = BuildCsv(rows);
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"payroll-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
     }
 
-    private static string BuildCsv(IReadOnlyList<CRM.Application.Sales.Queries.PayrollExportRow> rows)
+    private static string BuildCsv(IReadOnlyList<PayrollExportRow> rows)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("AgentUserName,AgentEmail,RuleName,Amount,EarnedAt,Paid");

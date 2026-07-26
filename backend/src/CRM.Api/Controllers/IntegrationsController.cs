@@ -1,4 +1,5 @@
 using CRM.Api.Authorization;
+using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Leads.Commands;
@@ -39,7 +40,7 @@ public class IntegrationsController : ControllerBase
 
     [HttpPost("dialer/dial")]
     [HasPermission(Permissions.AgentPanelUse)]
-    public async Task<IActionResult> Dial([FromBody] DialBody body, [FromServices] CRM.Application.Common.Interfaces.ICurrentUser user, CancellationToken ct)
+    public async Task<IActionResult> Dial([FromBody] DialBody body, [FromServices] ICurrentUser user, CancellationToken ct)
     {
         Guard.AgainstNull(body);
         Guard.AgainstNull(user);

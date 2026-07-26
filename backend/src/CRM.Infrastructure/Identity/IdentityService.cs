@@ -1,4 +1,5 @@
 using CRM.Application.Auth.Dtos;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
@@ -324,7 +325,7 @@ public class IdentityService : IIdentityService
         // still carry the stale "twofa_setup" claim — revoke them so their next sign-in is a
         // clean 2FA challenge. Voluntary enrollers (non-privileged) keep their session.
         var roles = await _users.GetRolesAsync(user);
-        if (_enforce2Fa && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+        if (_enforce2Fa && DomainRoles.TwoFactorMandatory(roles))
             await _jwt.RevokeAllForUserAsync(userId, ct);
     }
 
@@ -335,7 +336,7 @@ public class IdentityService : IIdentityService
 
         // 2FA is mandatory for privileged roles — they may not turn it off.
         var roles = await _users.GetRolesAsync(user);
-        if (_enforce2Fa && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles))
+        if (_enforce2Fa && DomainRoles.TwoFactorMandatory(roles))
             throw new ForbiddenAccessException("Two-factor authentication is mandatory for this role and cannot be disabled.");
 
         await _users.SetTwoFactorEnabledAsync(user, false);
@@ -367,7 +368,7 @@ public class IdentityService : IIdentityService
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), modules,
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
             CallCenterId: user.CallCenterId,
-            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && CRM.Domain.Enums.Roles.TwoFactorMandatory(roles),
+            TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && DomainRoles.TwoFactorMandatory(roles),
             AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct));
     }
 
@@ -425,8 +426,8 @@ public class IdentityService : IIdentityService
         // until they enrol (TwoFactorSetupRequiredMiddleware). Cleared once they enable 2FA and
         // re-login (their next login is a normal 2FA challenge).
         var require2Fa = _enforce2Fa && !user.TwoFactorEnabled &&
-            (CRM.Domain.Enums.Roles.TwoFactorMandatory(roles) ||
-             CRM.Domain.Enums.Roles.IsCentralSubmissionAgent(user.AgencyId, roles));
+            (DomainRoles.TwoFactorMandatory(roles) ||
+             DomainRoles.IsCentralSubmissionAgent(user.AgencyId, roles));
         if (require2Fa)
             (extra ??= new())[CustomJwtClaims.TwoFactorSetupRequired] = "true";
 

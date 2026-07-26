@@ -1,4 +1,5 @@
 using CRM.Application.Common.Compliance;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -107,7 +108,7 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
 
         // Verified → the lead is now in the Closer queue; notify the closers.
         if (request.Status == VerifierStatus.Verified)
-            await _notifier.NotifyQueueAsync(lead, CRM.Domain.Enums.Roles.Closer, "New lead to close",
+            await _notifier.NotifyQueueAsync(lead, DomainRoles.Closer, "New lead to close",
                 $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", AppConstants.QueueRoutes.CloseQueue, ct);
 
         return new VerifierStatusResult(lead.Id, lead.VerifierStatus, lead.Stage);
