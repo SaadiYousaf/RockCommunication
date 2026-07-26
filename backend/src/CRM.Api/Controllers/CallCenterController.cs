@@ -19,6 +19,19 @@ public class CallCenterController : ControllerBase
     private readonly IMediator _mediator;
     public CallCenterController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
+    // ---- Attendance (clock-in / break / status timesheets) ----
+    [HttpGet("attendance")]
+    [HasPermission(Permissions.AttendanceView)]
+    public async Task<IActionResult> Attendance(
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? userId,
+        [FromQuery] Guid? agencyId,   // SuperAdmin only; ignored for tenant-scoped callers
+        CancellationToken ct = default)
+    {
+        var f = from ?? DateTime.UtcNow.Date.AddDays(-7);
+        var t = to ?? DateTime.UtcNow.AddDays(1);
+        return Ok(await _mediator.Send(new AttendanceQuery(f, t, userId, agencyId), ct));
+    }
+
     // ---- Agent session ----
 
     [HttpPost("clock-in")]

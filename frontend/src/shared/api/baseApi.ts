@@ -7,7 +7,7 @@ import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
-  OversightAgency, OversightCallCenter,
+  OversightAgency, OversightCallCenter, AttendanceRow,
   WorkflowStage, LeadDisposition, DashboardSummary,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
@@ -502,6 +502,12 @@ export const baseApi = createApi({
     }),
     qaScorecards: b.query<AgentScorecard[], { from?: string; to?: string }>({
       query: (params) => ({ url: "/api/qa/scorecards", params }),
+    }),
+
+    // ===== Attendance (clock-in / break / status timesheets) =====
+    attendance: b.query<AttendanceRow[], { from?: string; to?: string; userId?: string; agencyId?: string } | void>({
+      query: (p) => ({ url: "/api/cc/attendance", params: p ?? undefined }),
+      providesTags: ["Metrics"],
     }),
 
     // ===== Call center: agent session =====
@@ -1146,6 +1152,7 @@ export const {
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,
   useChatRoomsQuery, useCreateRoomMutation, useRoomMessagesQuery, useSendMessageMutation, useSendAttachmentMutation,
+  useAttendanceQuery,
   useChatOversightAgenciesQuery, useChatOversightCallCentersQuery,
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
   useChatUnreadQuery, useMarkRoomReadMutation,

@@ -18,6 +18,7 @@ public static class Modules
     public const string Sales = "sales";
     public const string Callbacks = "callbacks";
     public const string Supervisor = "supervisor";
+    public const string Attendance = "attendance";
     public const string CallCenter = "callcenter";
     public const string Qa = "qa";
     public const string Commissions = "commissions";
@@ -45,6 +46,7 @@ public static class Modules
         new(Sales,             "Sales",              "Pipeline",       "/sales",          "briefcase", 60),
         new(Callbacks,         "Callbacks",          "Pipeline",       "/callbacks",      "clock",     70),
         new(Supervisor,        "Supervisor",         "Operations",     "/supervisor",     "shield",    80),
+        new(Attendance,        "Attendance",         "Operations",     "/attendance",     "clock",     85),
         new(CallCenter,        "Call Center",        "Operations",     "/callcenter",     "phone",     90),
         new(Qa,                "Quality Assurance",  "Operations",     "/qa",             "check",    100),
         new(Commissions,       "Commissions",        "Finance",        "/commissions",    "dollar",   110),

@@ -34,6 +34,7 @@ public static class Permissions
     // Operations
     public const string SupervisorView = "supervisor.view";
     public const string SupervisorControl = "supervisor.control";
+    public const string AttendanceView = "attendance.view";   // clock-in / break / status timesheets
     public const string CallCenterView = "callcenter.view";
     public const string CallCenterControl = "callcenter.control";
     public const string QaView = "qa.view";

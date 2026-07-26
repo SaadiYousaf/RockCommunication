@@ -46,5 +46,31 @@ public class CurrentUserService : ICurrentUser
 
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 
-    public string? IpAddress => _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+    /// <summary>
+    /// The real client IP. Behind Cloudflare + nginx the socket address is just the proxy
+    /// (127.0.0.1 / "localhost"), so prefer the forwarded headers the proxies set: Cloudflare's
+    /// CF-Connecting-IP first (authoritative when traffic only enters via Cloudflare), then the
+    /// left-most X-Forwarded-For entry, then X-Real-IP, and only then the raw socket address.
+    /// </summary>
+    public string? IpAddress
+    {
+        get
+        {
+            var ctx = _accessor.HttpContext;
+            if (ctx is null) return null;
+
+            string? FromHeader(string name)
+            {
+                var raw = ctx.Request.Headers[name].ToString();
+                if (string.IsNullOrWhiteSpace(raw)) return null;
+                var first = raw.Split(',')[0].Trim();
+                return string.IsNullOrWhiteSpace(first) ? null : first;
+            }
+
+            return FromHeader("CF-Connecting-IP")
+                ?? FromHeader("X-Forwarded-For")
+                ?? FromHeader("X-Real-IP")
+                ?? ctx.Connection.RemoteIpAddress?.ToString();
+        }
+    }
 }

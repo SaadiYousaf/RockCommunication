@@ -76,6 +76,7 @@ const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/Cal
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
 const SupervisorPage = lazyWithReload(() => import("../features/callcenter/SupervisorPage").then(m => ({ default: m.SupervisorPage })));
+const AttendancePage = lazyWithReload(() => import("../features/callcenter/AttendancePage").then(m => ({ default: m.AttendancePage })));
 const DncPage = lazyWithReload(() => import("../features/callcenter/DncPage").then(m => ({ default: m.DncPage })));
 const CampaignsPage = lazyWithReload(() => import("../features/callcenter/CampaignsPage").then(m => ({ default: m.CampaignsPage })));
 const ScriptsPage = lazyWithReload(() => import("../features/callcenter/ScriptsPage").then(m => ({ default: m.ScriptsPage })));
@@ -107,6 +108,7 @@ const M = {
   MyQueue: "queue",
   CallCenter: "callcenter",
   Supervisor: "supervisor",
+  Attendance: "attendance",
   Knowledge: "knowledge",
   Documents: "documents",
   Dnc: "dnc",
@@ -216,6 +218,10 @@ const router = createBrowserRouter([
               { path: "/leads/troubleshoot",     element: <LeadTroubleshootPage /> },
               { path: "/leads/:id/troubleshoot", element: <LeadTroubleshootPage /> },
             ],
+          },
+          {
+            element: <ProtectedRoute modules={[M.Attendance]} />,
+            children: [{ path: "/attendance", element: <AttendancePage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Reports]} />,

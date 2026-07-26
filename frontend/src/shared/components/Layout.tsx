@@ -60,6 +60,7 @@ const groups: NavGroup[] = [
     label: "Operations",
     items: [
       { to: "/supervisor", label: "Supervisor", icon: "shield", module: "supervisor" },
+      { to: "/attendance", label: "Attendance", icon: "clock",  module: "attendance" },
       { to: "/wallboard",  label: "Wallboard",  icon: "chart",  module: "reports" },
       { to: "/kpis",       label: "KPIs",       icon: "chart",  module: "reports" },
       { to: "/queues",     label: "Queues + IVR", icon: "phone", module: "callcenter" },

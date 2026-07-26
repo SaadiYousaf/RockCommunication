@@ -642,5 +642,21 @@ export interface ChatOversightMessage {
 export interface OversightAgency { id: string; name: string; roomCount: number; }
 export interface OversightCallCenter { id: string; name: string; roomCount: number; }
 
+export interface AttendanceSegment {
+  status: string; reason: string | null; fromAt: string; untilAt: string | null; minutes: number;
+}
+export interface AttendanceSession {
+  id: string; clockInAt: string; clockOutAt: string | null;
+  clockedMinutes: number; availableMinutes: number; onCallMinutes: number; breakMinutes: number;
+  segments: AttendanceSegment[];
+}
+export interface AttendanceRow {
+  userId: string; userName: string;
+  clockedIn: boolean; currentStatus: string;
+  sessionCount: number; firstClockIn: string | null; lastActivity: string | null;
+  totalClockedMinutes: number; totalAvailableMinutes: number; totalOnCallMinutes: number; totalBreakMinutes: number;
+  sessions: AttendanceSession[];
+}
+
 /** Payload for an upsert mutation: any subset of the entity; `id` absent/null means "create". */
 export type Upsert<T> = Partial<Omit<T, "id">> & { id?: string | null };

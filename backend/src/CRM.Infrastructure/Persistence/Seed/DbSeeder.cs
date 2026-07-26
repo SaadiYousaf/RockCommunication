@@ -164,6 +164,7 @@ public static class DbSeeder
             Permissions.DashboardView,
             Permissions.UsersRead, Permissions.UsersManage,
             Permissions.CallCentersView, Permissions.CallCenterProfileEdit,
+            Permissions.AttendanceView,
             Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
         };
 
@@ -337,7 +338,7 @@ public static class DbSeeder
             Modules.Dashboard, Modules.Team, Modules.AgentPanel, Modules.MyQueue,
             Modules.Leads, Modules.LeadsSearch,
             Modules.Sales, Modules.Callbacks,
-            Modules.Supervisor, Modules.CallCenter, Modules.Qa,
+            Modules.Supervisor, Modules.Attendance, Modules.CallCenter, Modules.Qa,
             Modules.Commissions,
             Modules.Knowledge, Modules.Chat, Modules.Reports,
             Modules.Campaigns, Modules.Scripts, Modules.Dnc,
@@ -354,7 +355,7 @@ public static class DbSeeder
             [Domain.Enums.Roles.CEO] = all,
             // Call Center Admin manages its own call center's users + profile — give it the nav
             // it needs (User Management is its core screen) and nothing agency-wide.
-            [Domain.Enums.Roles.CallCenterAdmin] = new[] { Modules.Dashboard, Modules.Team, Modules.UsersManagement, Modules.Knowledge, Modules.Chat },
+            [Domain.Enums.Roles.CallCenterAdmin] = new[] { Modules.Dashboard, Modules.Team, Modules.UsersManagement, Modules.Attendance, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.ProjectManager] = manager,
             [Domain.Enums.Roles.QAManager] = new[] { Modules.Dashboard, Modules.Qa, Modules.Supervisor, Modules.Reports, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.TechLead] = manager,
