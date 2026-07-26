@@ -53,8 +53,8 @@ export function IntakeLeadForm({
       <Input label="Street address" required secure containerClassName="sm:col-span-2" value={f.streetAddress} onChange={set("streetAddress")} />
       <Input label="City" required secure value={f.city} onChange={set("city")} />
       <Input label="State" required secure value={f.state} onChange={set("state")} />
-      <Input label="Zipcode" required secure inputMode="numeric" value={f.zipcode} onChange={set("zipcode")} />
-      <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} value={f.phoneNumber} onChange={set("phoneNumber")} />
+      <Input label="Zipcode" required secure inputMode="numeric" className="tabular-nums" value={f.zipcode} onChange={set("zipcode")} />
+      <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} className="tabular-nums" value={f.phoneNumber} onChange={set("phoneNumber")} />
       <Input label="Birth date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
       <Input label="Age (years)" type="number" required min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
       <Input label="Email" type="email" required secure leftIcon={<Icon name="mail" size={14} />} containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />

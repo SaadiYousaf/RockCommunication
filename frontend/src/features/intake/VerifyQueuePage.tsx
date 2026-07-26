@@ -23,7 +23,7 @@ export function VerifyQueuePage() {
     <>
       <PageHeader title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
       <Card>
-        <CardHeader title="Awaiting verification" subtitle={queue ? `${filtered.length} of ${queue.length} lead(s)` : undefined}
+        <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
           action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
@@ -150,7 +150,7 @@ function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => voi
           <Input label="Street address" secure containerClassName="sm:col-span-2" value={f.streetAddress} onChange={set("streetAddress")} />
           <Input label="City" secure value={f.city} onChange={set("city")} />
           <Input label="State" secure value={f.state} onChange={set("state")} />
-          <Input label="Zipcode" secure inputMode="numeric" value={f.zipcode} onChange={set("zipcode")} />
+          <Input label="Zipcode" secure inputMode="numeric" className="tabular-nums" value={f.zipcode} onChange={set("zipcode")} />
           <Input label="Birth date" type="date" leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
           <Input label="Age (years)" type="number" min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
           <Input label="Email" type="email" secure leftIcon={<Icon name="mail" size={14} />} value={f.email} onChange={set("email")} />

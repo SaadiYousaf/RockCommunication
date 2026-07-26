@@ -35,7 +35,7 @@ export function ValidateQueuePage() {
         description="Sales submitted by closers. Open a sale to copy its details into the carrier portal, then set its submission status."
       />
       <Card>
-        <CardHeader title="Submitted sales" subtitle={queue ? `${filtered.length} of ${queue.length} sale(s)` : undefined}
+        <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} sale(s)</span> : undefined}
           action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
@@ -244,8 +244,8 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
               <Input label="Carrier Approved" required value={carrierApproved} onChange={(e) => setCarrierApproved(e.target.value)} />
               <Input label="Plan Approved" required value={planApproved} onChange={(e) => setPlanApproved(e.target.value)} />
-              <Input label="Coverage Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={coverageApproved} onChange={(e) => setCoverageApproved(e.target.value)} />
-              <Input label="Premium Approved" type="number" min={0} step="0.01" required leftIcon={<Icon name="dollar" size={14} />} value={premiumApproved} onChange={(e) => setPremiumApproved(e.target.value)} />
+              <Input label="Coverage Approved" type="number" min={0} step="0.01" required className="tabular-nums" leftIcon={<Icon name="dollar" size={14} />} value={coverageApproved} onChange={(e) => setCoverageApproved(e.target.value)} />
+              <Input label="Premium Approved" type="number" min={0} step="0.01" required className="tabular-nums" leftIcon={<Icon name="dollar" size={14} />} value={premiumApproved} onChange={(e) => setPremiumApproved(e.target.value)} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
               {/* Pick the agency first, then a License Agent from that agency. */}

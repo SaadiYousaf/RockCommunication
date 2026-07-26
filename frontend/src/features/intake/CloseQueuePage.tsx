@@ -43,7 +43,7 @@ export function CloseQueuePage() {
         }
       />
       <Card>
-        <CardHeader title="Ready to close" subtitle={queue ? `${filtered.length} of ${queue.length} lead(s)` : undefined}
+        <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
           action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
