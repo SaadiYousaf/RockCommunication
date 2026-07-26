@@ -195,7 +195,7 @@ export function LeadSearchPage() {
                       <TH>Stage</TH>
                       <TH>Disposition</TH>
                       <TH>Created</TH>
-                      <TH className="text-right">Actions</TH>
+                      <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -221,7 +221,7 @@ export function LeadSearchPage() {
                         <TD className="text-xs text-ink-500 tabular-nums whitespace-nowrap">
                           {new Date(l.createdAt).toLocaleDateString()}
                         </TD>
-                        <TD>
+                        <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost" size="sm" leftIcon={<Icon name="phone" size={14} />}

@@ -205,7 +205,7 @@ export function GlobalSearchPage() {
                       <TH>Email</TH>
                       <TH>Stage</TH>
                       <TH>State</TH>
-                      <TH className="text-right">Actions</TH>
+                      <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -232,7 +232,7 @@ export function GlobalSearchPage() {
                           <Badge tone={stageTone[l.stage] ?? "neutral"} variant="soft">{l.stage}</Badge>
                         </TD>
                         <TD className="text-sm text-ink-700">{l.state ?? "—"}</TD>
-                        <TD onClick={(e) => e.stopPropagation()} className="text-right">
+                        <TD onClick={(e) => e.stopPropagation()} className="text-right sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                           <div className="inline-flex gap-1.5">
                             <Button
                               size="sm"

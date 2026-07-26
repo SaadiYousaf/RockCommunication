@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import { clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
-import { useToast } from "../../shared/ui";
+import { Input, useToast } from "../../shared/ui";
 
 type Method = "Totp" | "EmailOtp";
 
@@ -215,9 +215,9 @@ export function TwoFactorEnrollPage() {
           <div>
             <div className="text-sm font-semibold mb-1">Step 2 — enter the 6-digit code</div>
             <form onSubmit={verify} className="flex flex-wrap gap-2 items-start">
-              <input
+              <Input
                 inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                className="w-44 border border-ink-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
+                className="w-44 font-mono text-center text-lg tracking-[0.4em]"
                 placeholder="000000" value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
                 required autoFocus
@@ -241,9 +241,9 @@ export function TwoFactorEnrollPage() {
             </p>
           </div>
           <form onSubmit={verify} className="flex flex-wrap gap-2 items-center">
-            <input
+            <Input
               inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-              className="w-44 border border-ink-300 rounded px-3 py-2 font-mono text-center text-lg tracking-[0.4em]"
+              className="w-44 font-mono text-center text-lg tracking-[0.4em]"
               placeholder="000000" value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
               required autoFocus

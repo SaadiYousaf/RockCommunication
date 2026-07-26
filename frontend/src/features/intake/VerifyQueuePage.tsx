@@ -33,7 +33,7 @@ export function VerifyQueuePage() {
               <THead>
                 <TR>
                   <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Received</TH>
-                  <TH>
+                  <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                     <span className="inline-flex items-center gap-1">
                       Verifier status
                       <InfoHint title="Verifier statuses" side="bottom">
@@ -77,7 +77,7 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
       <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>
       <TD className="text-sm tabular-nums">{lead.ageYears ?? "—"}</TD>
       <TD className="text-xs text-ink-500 whitespace-nowrap tabular-nums">{new Date(lead.createdAt).toLocaleString()}</TD>
-      <TD>
+      <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" leftIcon={<Icon name="edit" size={14} />} onClick={onEdit}>Open</Button>
           <Select className="h-9 w-40 text-sm" value={status} onChange={(e) => setStatusVal(e.target.value as VerifierStatusValue)}>

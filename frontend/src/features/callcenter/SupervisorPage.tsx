@@ -142,7 +142,7 @@ export function SupervisorPage() {
               <TH>Reason</TH>
               <TH>Duration</TH>
               <TH>Call</TH>
-              <TH className="text-right">Actions</TH>
+              <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -169,7 +169,7 @@ export function SupervisorPage() {
                     ? <Badge tone="info" variant="soft" dot>{a.currentCallStatus}</Badge>
                     : <span className="text-ink-400">—</span>}
                 </TD>
-                <TD>
+                <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                   <Can permission={Perm.SupervisorControl}>
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       <Button variant="ghost" size="sm" leftIcon={<Icon name="clock" size={14} />}

@@ -363,7 +363,7 @@ export function LeadsPage() {
               <TH>Stage</TH>
               <TH>Disposition</TH>
               <TH>Created</TH>
-              <TH className="text-right">Actions</TH>
+              <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -391,7 +391,7 @@ export function LeadsPage() {
                   <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
                   <TD className="text-ink-600 text-xs">{dispOf(l.disposition)}</TD>
                   <TD className="text-ink-500 text-xs tabular-nums whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</TD>
-                  <TD>
+                  <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                     <div className="flex items-center justify-end gap-1.5">
                       <Button variant="outline" size="sm" leftIcon={<Icon name="phoneCall" size={13} />}
                         onClick={() => dialFromRow(l.id)}>Dial</Button>

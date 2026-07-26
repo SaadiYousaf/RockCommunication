@@ -149,7 +149,7 @@ export function UserManagementPage() {
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
               <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
               <TH>Call center</TH>
-              <TH className="text-right">Actions</TH>
+              <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -203,7 +203,7 @@ export function UserManagementPage() {
                     ))}
                   </Select>
                 </TD>
-                <TD>
+                <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                   {/* Icon-only actions with tooltips so the row fits without horizontal scroll. */}
                   <div className="flex items-center justify-end gap-1">
                     <Button
