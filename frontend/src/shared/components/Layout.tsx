@@ -32,6 +32,7 @@ const groups: NavGroup[] = [
     label: "Workspace",
     items: [
       { to: "/dashboard", label: "Dashboard",   icon: "dashboard", module: "dashboard" },
+      { to: "/guide",     label: "Guide",       icon: "book" },
       { to: "/team",      label: "Team",        icon: "users",     module: "team" },
       { to: "/agent",     label: "Agent Panel", icon: "phone",     module: "agent" },
       { to: "/queue",     label: "My Queue",    icon: "inbox",     module: "queue" },

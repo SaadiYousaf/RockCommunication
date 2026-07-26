@@ -88,6 +88,7 @@ const KnowledgeBasePage = lazyWithReload(() => import("../features/kb/KnowledgeB
 const DocumentsPage = lazyWithReload(() => import("../features/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const QueuesPage = lazyWithReload(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
 const IntegrationsPage = lazyWithReload(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
+const GuidePage = lazyWithReload(() => import("../features/guide/GuidePage").then(m => ({ default: m.GuidePage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 
@@ -141,6 +142,7 @@ const router = createBrowserRouter([
         children: [
           // Always available to any authenticated user
           { path: "/dashboard", element: <Dashboard /> },
+          { path: "/guide",     element: <GuidePage /> },
           { path: "/search",    element: <GlobalSearchPage /> },
           { path: "/2fa",       element: <TwoFactorEnrollPage /> },
           { path: "/team",      element: <TeamPage /> },
