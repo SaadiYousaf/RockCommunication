@@ -20,7 +20,11 @@ namespace CRM.Application.Agencies;
 
 public record AgencyOptionDto(Guid Id, string Name, bool IsActive);
 public record LicenseAgentDto(Guid Id, string Name, string Email, bool IsActive);
-public record SubmissionAgentDto(Guid Id, string Name, string Email, bool IsActive);
+/// <param name="PendingInvite">
+/// True until the agent accepts the invitation (they still have a must-change temp password and
+/// haven't signed in / enrolled in 2FA). Drives the "Awaiting sign-in" badge and gates Resend.
+/// </param>
+public record SubmissionAgentDto(Guid Id, string Name, string Email, bool IsActive, bool PendingInvite);
 
 /// <summary>Lightweight agency list for the approval popup's Agency picker (SuperAdmin or a central Submission Agent).</summary>
 public record ListAgencyOptionsQuery() : IRequest<IReadOnlyList<AgencyOptionDto>>;
@@ -261,7 +265,9 @@ public class AgencyPanelHandler :
             .Where(u => u.Roles.Contains(DomainRoles.Validator, StringComparer.OrdinalIgnoreCase)
                      && !u.Roles.Contains(DomainRoles.SuperAdmin, StringComparer.OrdinalIgnoreCase))
             .OrderBy(u => u.UserName)
-            .Select(u => new SubmissionAgentDto(u.Id, u.UserName, u.Email, u.IsActive))
+            // MustChangePassword is our "hasn't accepted the invite yet" signal: it's set at
+            // invite time and cleared the moment the agent chooses their own password on first login.
+            .Select(u => new SubmissionAgentDto(u.Id, u.UserName, u.Email, u.IsActive, PendingInvite: u.MustChangePassword))
             .ToList();
     }
 
@@ -277,7 +283,7 @@ public class AgencyPanelHandler :
             CallCenterId: null,
             Roles: new[] { DomainRoles.Validator }), ct);
 
-        return new SubmissionAgentDto(result.UserId, request.Name.Trim(), result.Email, IsActive: true);
+        return new SubmissionAgentDto(result.UserId, request.Name.Trim(), result.Email, IsActive: true, PendingInvite: true);
     }
 
     private bool IsSuperAdmin => _user.Roles.Contains(DomainRoles.SuperAdmin);

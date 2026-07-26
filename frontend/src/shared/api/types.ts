@@ -252,6 +252,8 @@ export interface SubmissionAgent {
   name: string;
   email: string;
   isActive: boolean;
+  /** True until the agent accepts their invite (still on a temp password, not signed in / 2FA-enrolled). */
+  pendingInvite: boolean;
 }
 
 export interface IntakeQueueItem {

@@ -476,6 +476,8 @@ export const baseApi = createApi({
     }),
     resetUserPassword: b.mutation<void, { id: string; newPassword: string }>({
       query: ({ id, newPassword }) => ({ url: `/api/admin/users/${id}/password`, method: "PUT", body: { newPassword } }),
+      // A reset re-flags MustChangePassword, so refresh user lists (incl. the submission-agents roster).
+      invalidatesTags: ["Users"],
     }),
     resendInvitation: b.mutation<void, string>({
       query: (id) => ({ url: `/api/admin/users/${id}/resend-invitation`, method: "POST" }),
