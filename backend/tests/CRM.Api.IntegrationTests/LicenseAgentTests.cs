@@ -178,6 +178,13 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         //    (GetSaleDetail previously scoped to the closer only and 404'd the assigned license agent.)
         var detail = await agent.GetAsync($"/api/sales/{saleId}");
         Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+
+        // 5) The assignment dispatched a DURABLE in-app notification the agent can see in their inbox
+        //    (the persisted-notification read API — previously the rows were write-only).
+        var inbox = await agent.GetJsonAsync("/api/notifications");
+        Assert.NotEmpty(inbox.EnumerateArray());
+        var unreadCount = await agent.GetJsonAsync("/api/notifications/unread-count");
+        Assert.True(unreadCount.GetProperty("count").GetInt32() >= 1);
     }
 
     [Fact]

@@ -7,7 +7,7 @@ import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
-  OversightAgency, OversightCallCenter, AttendanceRow,
+  OversightAgency, OversightCallCenter, AttendanceRow, AppNotification,
   WorkflowStage, LeadDisposition, DashboardSummary,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
@@ -90,7 +90,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -330,6 +330,25 @@ export const baseApi = createApi({
     chatUnread: b.query<{ roomId: string; unreadCount: number; lastReadAt: string | null }[], void>({
       query: () => "/api/chat/unread",
       providesTags: ["Rooms"],
+    }),
+
+    // ===== Notification inbox (pipeline / work-assignment alerts) =====
+    notifications: b.query<AppNotification[], { take?: number; unreadOnly?: boolean } | void>({
+      query: (p) => ({ url: "/api/notifications", params: p ?? undefined }),
+      providesTags: ["Notifications"],
+    }),
+    notificationsUnreadCount: b.query<number, void>({
+      query: () => "/api/notifications/unread-count",
+      transformResponse: (r: { count: number }) => r.count,
+      providesTags: ["Notifications"],
+    }),
+    markNotificationRead: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/notifications/${id}/read`, method: "POST" }),
+      invalidatesTags: ["Notifications"],
+    }),
+    markAllNotificationsRead: b.mutation<void, void>({
+      query: () => ({ url: "/api/notifications/read-all", method: "POST" }),
+      invalidatesTags: ["Notifications"],
     }),
     // SuperAdmin oversight — read-only, cross-agency. Drill-down: agencies → call centers → chats.
     chatOversightAgencies: b.query<OversightAgency[], void>({
@@ -1165,6 +1184,8 @@ export const {
   useChatOversightAgenciesQuery, useChatOversightCallCentersQuery,
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
   useChatUnreadQuery, useMarkRoomReadMutation,
+  useNotificationsQuery, useNotificationsUnreadCountQuery,
+  useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,

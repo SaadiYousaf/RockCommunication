@@ -247,6 +247,15 @@ export interface LicenseAgent {
   email: string;
   isActive: boolean;
 }
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  url: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SubmissionAgent {
   id: string;
   name: string;
