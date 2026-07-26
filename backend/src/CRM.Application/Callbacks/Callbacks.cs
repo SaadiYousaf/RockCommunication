@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CRM.Application.Callbacks;
 
 public record ScheduleCallbackDto(Guid LeadId, DateTime ScheduledFor, string? Reason);
-public record CallbackDto(Guid Id, Guid LeadId, Guid AssignedUserId, DateTime ScheduledFor, string? Reason, bool Completed);
+public record CallbackDto(Guid Id, Guid LeadId, string LeadName, string LeadPhone, Guid AssignedUserId, DateTime ScheduledFor, string? Reason, bool Completed);
 
 public record ScheduleCallbackCommand(ScheduleCallbackDto Input) : IRequest<CallbackDto>;
 
@@ -67,7 +67,8 @@ public class ScheduleCallbackHandler : IRequestHandler<ScheduleCallbackCommand, 
                 $"Call back {lead.FirstName} {lead.LastName} on {input.ScheduledFor.ToLocalTime():g}.",
                 AppConstants.QueueRoutes.Callbacks, ct);
 
-        return new CallbackDto(cb.Id, cb.LeadId, cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);
+        return new CallbackDto(cb.Id, cb.LeadId, $"{lead.FirstName} {lead.LastName}".Trim(), lead.PhoneNumber,
+            cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);
     }
 }
 
@@ -100,7 +101,10 @@ public class CompleteCallbackHandler : IRequestHandler<CompleteCallbackCommand, 
             throw new ForbiddenAccessException("You can only complete your own callbacks.");
         cb.Completed = true;
         await _db.SaveChangesAsync(ct);
-        return new CallbackDto(cb.Id, cb.LeadId, cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);
+        var lead = await _db.Leads.AsNoTracking().FirstOrDefaultAsync(l => l.Id == cb.LeadId, ct);
+        return new CallbackDto(cb.Id, cb.LeadId,
+            lead is null ? "—" : $"{lead.FirstName} {lead.LastName}".Trim(), lead?.PhoneNumber ?? "—",
+            cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);
     }
 }
 
@@ -122,8 +126,20 @@ public class MyCallbacksHandler : IRequestHandler<MyCallbacksQuery, IReadOnlyLis
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
         var q = _db.ScheduledCallbacks.Where(c => c.AgencyId == _user.AgencyId && c.AssignedUserId == _user.UserId);
         if (!request.IncludeCompleted) q = q.Where(c => !c.Completed);
-        return await q.OrderBy(c => c.ScheduledFor)
-            .Select(c => new CallbackDto(c.Id, c.LeadId, c.AssignedUserId, c.ScheduledFor, c.Reason, c.Completed))
-            .ToListAsync(ct);
+        var cbs = await q.OrderBy(c => c.ScheduledFor).ToListAsync(ct);
+
+        // Resolve the lead's name + phone so the queue shows WHO to call — not a raw GUID. One query,
+        // dictionary lookup with a fallback so a callback isn't dropped if its lead was removed.
+        var leadIds = cbs.Select(c => c.LeadId).Distinct().ToList();
+        var byId = (await _db.Leads.AsNoTracking().Where(l => leadIds.Contains(l.Id))
+                .Select(l => new { l.Id, l.FirstName, l.LastName, l.PhoneNumber }).ToListAsync(ct))
+            .ToDictionary(l => l.Id);
+        return cbs.Select(c =>
+        {
+            byId.TryGetValue(c.LeadId, out var l);
+            return new CallbackDto(c.Id, c.LeadId,
+                l is null ? "—" : $"{l.FirstName} {l.LastName}".Trim(), l?.PhoneNumber ?? "—",
+                c.AssignedUserId, c.ScheduledFor, c.Reason, c.Completed);
+        }).ToList();
     }
 }

@@ -393,6 +393,8 @@ export interface PayrollRun {
 export interface Callback {
   id: string;
   leadId: string;
+  leadName: string;
+  leadPhone: string;
   assignedUserId: string;
   scheduledFor: string;
   reason: string | null;

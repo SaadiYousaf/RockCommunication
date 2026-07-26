@@ -1,10 +1,10 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation } from "../../shared/api/baseApi";
+import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 
 type Bucket = "overdue" | "today" | "upcoming" | "completed" | "all";
@@ -40,6 +40,7 @@ export function CallbacksPage() {
 
   const [open, setOpen] = useState(false);
   const [leadId, setLeadId] = useState("");
+  const { data: myLeads = [] } = useMyLeadsQuery();
   const [when, setWhen] = useState(() => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16));
   const [reason, setReason] = useState("");
 
@@ -162,10 +163,11 @@ export function CallbacksPage() {
                     <div className="text-ink-900">{w.abs}</div>
                     {!c.completed && <Badge tone={w.tone} variant="soft" className="mt-1">{w.rel}</Badge>}
                   </TD>
-                  <TD className="font-mono text-xs">
-                    <Link to={`/leads/${c.leadId}`} className="text-brand-700 hover:underline">
-                      {c.leadId.slice(0, 8)}…
+                  <TD>
+                    <Link to={`/leads/${c.leadId}`} className="font-medium text-brand-700 hover:underline">
+                      {c.leadName}
                     </Link>
+                    <div className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{c.leadPhone}</div>
                   </TD>
                   <TD className="text-ink-600">{c.reason ?? <span className="text-ink-400">—</span>}</TD>
                   <TD>
@@ -205,13 +207,19 @@ export function CallbacksPage() {
         }
       >
         <form id="schedule-cb" onSubmit={submit} className="grid grid-cols-1 gap-3">
-          <Input
-            label="Lead ID" required
-            placeholder="UUID of the lead"
+          <Select
+            label="Lead" required
             value={leadId}
             onChange={(e) => setLeadId(e.target.value)}
-            hint="Find the lead's ID from the Leads list."
-          />
+            hint={myLeads.length === 0 ? "No leads in your queue yet — you can also schedule a callback from a lead's page." : "Pick the lead to follow up with."}
+          >
+            <option value="" disabled>Select a lead…</option>
+            {myLeads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.firstName} {l.lastName}{l.phoneNumber ? ` — ${l.phoneNumber}` : ""}
+              </option>
+            ))}
+          </Select>
           <Input
             label="When" type="datetime-local" required
             value={when} onChange={(e) => setWhen(e.target.value)}
