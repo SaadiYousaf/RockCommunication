@@ -28,6 +28,8 @@ public class Lead : CallCenterEntity
     public string? JornayaLeadId { get; set; }
     public bool JornayaVerified { get; set; }
     public DateTime? JornayaVerifiedAt { get; set; }
+    /// <summary>Username of the app user who ran the Jornaya verification (audit trail).</summary>
+    public string? JornayaVerifiedBy { get; set; }
 
     public Guid? AssignedUserId { get; set; }
     public Guid? TeamId { get; set; }

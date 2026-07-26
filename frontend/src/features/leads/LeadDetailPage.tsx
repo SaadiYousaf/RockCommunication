@@ -250,7 +250,18 @@ export function LeadDetailPage() {
               {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </Select>
           )}
-          <Button variant="success" onClick={async () => { await verifyJornaya(id); refetchLead(); }} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
+          {lead.jornayaVerified ? (
+            <Button
+              variant="secondary"
+              disabled
+              leftIcon={<Icon name="success" size={16} />}
+              title={lead.jornayaVerifiedAt ? `Verified ${new Date(lead.jornayaVerifiedAt).toLocaleString()}` : undefined}
+            >
+              Verified{lead.jornayaVerifiedBy ? ` by ${lead.jornayaVerifiedBy}` : ""}
+            </Button>
+          ) : (
+            <Button variant="success" onClick={async () => { await verifyJornaya(id); refetchLead(); }} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
+          )}
           <div className="flex-1" />
           <Can permission={Perm.LeadsTransition}>
             <span className="inline-flex items-center gap-1 text-xs text-ink-500 mr-1 self-center">

@@ -23,22 +23,26 @@ export function ForgotPasswordPage() {
             <Icon name="check" size={24} className="text-success-700" />
           </div>
           <p className="text-sm text-ink-700">
-            If an account exists for <strong>{email}</strong>, a reset link is on its way.
-            The link expires in 30 minutes.
+            If an account exists for <strong className="break-all">{email}</strong>, a reset link is on its way.
+            The link expires in <span className="tabular-nums">30 minutes</span>.
           </p>
-          <Link to="/login" className="text-brand-600 hover:underline text-sm">Back to sign in</Link>
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <Icon name="chevronLeft" size={14} /> Back to sign in
+          </Link>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <Input
             type="email" required label="Email"
             placeholder="you@agency.com"
-            leftIcon={<Icon name="users" size={16} />}
+            leftIcon={<Icon name="mail" size={16} />}
             value={email} onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" loading={isLoading} fullWidth size="lg">Send reset link</Button>
+          <Button type="submit" loading={isLoading} fullWidth size="lg" leftIcon={<Icon name="send" size={16} />}>Send reset link</Button>
           <div className="text-center text-sm">
-            <Link to="/login" className="text-brand-600 hover:underline">Back to sign in</Link>
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+              <Icon name="chevronLeft" size={14} /> Back to sign in
+            </Link>
           </div>
         </form>
       )}
@@ -52,8 +56,8 @@ export function AuthFrame({ title, subtitle, children }: { title: string; subtit
       <div className="w-full max-w-md bg-white rounded-2xl shadow-soft p-8">
         <div className="flex flex-col items-center mb-6">
           <BrandLogo variant="mark" size={44} />
-          <h1 className="mt-4 text-xl font-semibold text-ink-900">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-ink-500 text-center">{subtitle}</p>}
+          <h1 className="mt-4 text-xl font-semibold text-ink-900 text-center text-balance">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm text-ink-500 text-center text-balance">{subtitle}</p>}
         </div>
         {children}
       </div>

@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useResetPasswordMutation } from "../../shared/api/baseApi";
-import { Button, Input, useToast } from "../../shared/ui";
+import { Button, Icon, Input, useToast } from "../../shared/ui";
 import { AuthFrame } from "./ForgotPasswordPage";
 
 export function ResetPasswordPage() {
@@ -22,9 +22,14 @@ export function ResetPasswordPage() {
   if (!email || !token) {
     return (
       <AuthFrame title="Invalid reset link" subtitle="This link is missing required information.">
-        <Link to="/forgot-password" className="text-brand-600 hover:underline text-sm block text-center">
-          Request a new link
-        </Link>
+        <div className="space-y-4 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-danger-100 flex items-center justify-center">
+            <Icon name="alert" size={24} className="text-danger-700" />
+          </div>
+          <Link to="/forgot-password" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <Icon name="refresh" size={14} /> Request a new link
+          </Link>
+        </div>
       </AuthFrame>
     );
   }
@@ -49,9 +54,11 @@ export function ResetPasswordPage() {
         <Input
           type={show ? "text" : "password"} required label="New password"
           placeholder="At least 8 characters"
+          leftIcon={<Icon name="shield" size={16} />}
           value={pwd} onChange={(e) => setPwd(e.target.value)}
+          autoComplete="new-password"
           rightSlot={
-            <button type="button" onClick={() => setShow((s) => !s)} className="text-ink-400 hover:text-ink-600 text-xs px-2">
+            <button type="button" onClick={() => setShow((s) => !s)} className="text-ink-400 hover:text-ink-600 text-xs px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
               {show ? "Hide" : "Show"}
             </button>
           }
@@ -59,12 +66,21 @@ export function ResetPasswordPage() {
         <Input
           type={show ? "text" : "password"} required label="Confirm password"
           placeholder="Repeat password"
+          leftIcon={<Icon name="shield" size={16} />}
           value={confirm} onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
         />
-        {error && <div className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded p-2">{error}</div>}
+        {error && (
+          <div className="flex items-start gap-2 text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-lg p-2.5">
+            <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-danger-500" />
+            <span>{error}</span>
+          </div>
+        )}
         <Button type="submit" loading={isLoading} fullWidth size="lg">Reset password</Button>
         <div className="text-center text-sm">
-          <Link to="/login" className="text-brand-600 hover:underline">Back to sign in</Link>
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <Icon name="chevronLeft" size={14} /> Back to sign in
+          </Link>
         </div>
       </form>
     </AuthFrame>

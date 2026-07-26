@@ -72,11 +72,11 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
 
   return (
     <TR>
-      <TD className="font-medium text-ink-900">{lead.firstName} {lead.lastName}</TD>
-      <TD className="font-mono text-xs">{lead.phoneNumber}</TD>
-      <TD className="text-sm text-ink-600">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>
-      <TD className="text-sm">{lead.ageYears ?? "—"}</TD>
-      <TD className="text-xs text-ink-500">{new Date(lead.createdAt).toLocaleString()}</TD>
+      <TD className="font-medium text-ink-900 whitespace-nowrap">{lead.firstName} {lead.lastName}</TD>
+      <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{lead.phoneNumber}</TD>
+      <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>
+      <TD className="text-sm tabular-nums">{lead.ageYears ?? "—"}</TD>
+      <TD className="text-xs text-ink-500 whitespace-nowrap tabular-nums">{new Date(lead.createdAt).toLocaleString()}</TD>
       <TD>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" leftIcon={<Icon name="edit" size={14} />} onClick={onEdit}>Open</Button>
@@ -84,8 +84,8 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
             <option value="">Select…</option>
             {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </Select>
-          <Button size="sm" loading={isLoading} onClick={apply}>Save</Button>
-          {lead.verifierStatus !== "None" && <Badge tone="neutral" variant="soft">{lead.verifierStatus}</Badge>}
+          <Button size="sm" loading={isLoading} leftIcon={<Icon name="save" size={14} />} onClick={apply}>Save</Button>
+          {lead.verifierStatus !== "None" && <Badge tone="neutral" variant="soft" className="whitespace-nowrap">{lead.verifierStatus}</Badge>}
         </div>
       </TD>
     </TR>
@@ -146,14 +146,14 @@ function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => voi
             <option value="">Select…</option>
             {MARITAL.map((m) => <option key={m} value={m}>{m}</option>)}
           </Select>
-          <Input label="Phone number" required secure value={f.phoneNumber} onChange={set("phoneNumber")} />
+          <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} value={f.phoneNumber} onChange={set("phoneNumber")} />
           <Input label="Street address" secure containerClassName="sm:col-span-2" value={f.streetAddress} onChange={set("streetAddress")} />
           <Input label="City" secure value={f.city} onChange={set("city")} />
           <Input label="State" secure value={f.state} onChange={set("state")} />
           <Input label="Zipcode" secure inputMode="numeric" value={f.zipcode} onChange={set("zipcode")} />
-          <Input label="Birth date" type="date" value={f.birthDate} onChange={set("birthDate")} />
-          <Input label="Age (years)" type="number" min={1} max={129} value={f.ageYears} onChange={set("ageYears")} />
-          <Input label="Email" type="email" secure value={f.email} onChange={set("email")} />
+          <Input label="Birth date" type="date" leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
+          <Input label="Age (years)" type="number" min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
+          <Input label="Email" type="email" secure leftIcon={<Icon name="mail" size={14} />} value={f.email} onChange={set("email")} />
           <Input label="Jornaya LeadiD" containerClassName="sm:col-span-2" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

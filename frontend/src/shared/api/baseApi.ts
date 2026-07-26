@@ -1087,6 +1087,7 @@ export interface LeadDetail {
   dateOfBirth: string | null; age: number | null;
   stage: string; disposition: string;
   source: string | null; jornayaLeadId: string | null; jornayaVerified: boolean;
+  jornayaVerifiedBy: string | null; jornayaVerifiedAt: string | null;
   assignedUserId: string | null; assignedUserName: string | null;
   teamId: string | null; campaignId: string | null; leadSourceId: string | null; verticalId: string | null;
   requiredSkillCode: string | null; consentCaptured: boolean;

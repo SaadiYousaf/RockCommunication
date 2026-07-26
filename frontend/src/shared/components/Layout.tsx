@@ -209,7 +209,7 @@ function LayoutInner() {
         <header className="sticky top-0 z-30 h-16 bg-white/75 backdrop-saturate-160 border-b hairline flex items-center gap-3 sm:gap-4 px-4 sm:px-6">
           <button
             onClick={() => setMobileNavOpen(true)}
-            className="lg:hidden -ml-1 p-2 rounded-lg text-ink-600 hover:bg-ink-100/70 hover:text-ink-900 transition-colors"
+            className="lg:hidden -ml-1 p-2 rounded-lg text-ink-600 hover:bg-ink-100/70 hover:text-ink-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             aria-label="Open navigation menu"
           >
             <Icon name="menu" size={20} />
@@ -225,18 +225,18 @@ function LayoutInner() {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex items-center gap-3 pr-2 pl-1 py-1 rounded-xl hover:bg-ink-100/60 transition-colors"
+              className="flex items-center gap-3 pr-2 pl-1 py-1 rounded-xl hover:bg-ink-100/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
               <Avatar name={userName} size={32} />
-              <div className="text-left hidden sm:block">
-                <div className="text-sm font-medium text-ink-900 leading-tight">{userName}</div>
-                <div className="text-[11px] text-ink-500 leading-tight">{primaryRole}</div>
+              <div className="text-left hidden sm:block min-w-0">
+                <div className="text-sm font-medium text-ink-900 leading-tight truncate">{userName}</div>
+                <div className="text-[11px] text-ink-500 leading-tight truncate">{primaryRole}</div>
               </div>
             </button>
             {menuOpen && (
               <div className="absolute right-0 mt-2 w-64 surface-elevated overflow-hidden animate-scale-in">
                 <div className="px-4 py-3 border-b hairline bg-gradient-to-b from-brand-soft to-white">
-                  <div className="text-sm font-semibold text-ink-900">{userName}</div>
+                  <div className="text-sm font-semibold text-ink-900 truncate">{userName}</div>
                   <div className="text-xs text-ink-500 truncate">{auth.user?.email}</div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {auth.user?.roles.map((r) => (
@@ -247,13 +247,13 @@ function LayoutInner() {
                 <nav className="py-1.5 text-sm">
                   <button
                     onClick={() => { setMenuOpen(false); navigate("/2fa"); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
                   >
                     <Icon name="shield" size={16} /> Security & 2FA
                   </button>
                   <button
                     onClick={() => { setMenuOpen(false); navigate("/dashboard"); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
                   >
                     <Icon name="cog" size={16} /> Preferences
                   </button>
@@ -261,7 +261,7 @@ function LayoutInner() {
                 <div className="border-t hairline p-1.5">
                   <button
                     onClick={() => { dispatch(clearAuth()); navigate("/login"); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-rose-600 hover:bg-rose-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                   >
                     <Icon name="logout" size={16} /> Sign out
                   </button>
@@ -333,7 +333,7 @@ function SidebarContent({
         {mobile && (
           <button
             onClick={onClose}
-            className="ml-auto -mr-1 p-2 rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900 transition-colors"
+            className="ml-auto -mr-1 p-2 rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             aria-label="Close navigation menu"
           >
             <Icon name="x" size={18} />
@@ -363,6 +363,7 @@ function SidebarContent({
                     cn(
                       "group relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium",
                       "transition-all duration-150",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                       isActive
                         ? "text-brand-700 bg-brand-50 ring-1 ring-brand-100 shadow-[0_1px_2px_0_rgba(60,114,105,0.06)]"
                         : "text-ink-600 hover:bg-ink-100/80 hover:text-ink-900",
@@ -409,14 +410,14 @@ function SidebarContent({
             <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-emerald-700">
               Production
             </span>
-            <span className="ml-auto text-[10px] text-ink-500 font-mono">v1.0</span>
+            <span className="ml-auto text-[10px] text-ink-500 font-mono tabular-nums">v1.0</span>
           </div>
         )}
         {/* Collapse toggle is desktop-only; the mobile drawer closes via backdrop / X. */}
         {!mobile && (
           <button
             onClick={onToggleCollapse}
-            className="w-full flex items-center justify-center gap-2 text-xs text-ink-500 hover:text-ink-900 py-2 rounded-lg hover:bg-ink-100/70 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-xs text-ink-500 hover:text-ink-900 py-2 rounded-lg hover:bg-ink-100/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             title={collapsed ? "Expand" : "Collapse"}
           >
             <Icon name={collapsed ? "arrowRight" : "menu"} size={16} />

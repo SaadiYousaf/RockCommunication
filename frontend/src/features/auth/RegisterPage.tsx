@@ -162,7 +162,7 @@ export function RegisterPage() {
         description="Create an account, assign starting roles, and grant module access through Role Management."
         breadcrumbs={[{ label: "Admin" }, { label: "Register user" }]}
         actions={
-          <Button variant="outline" onClick={fillDemo}>
+          <Button variant="outline" onClick={fillDemo} leftIcon={<Icon name="sparkles" size={16} />}>
             Fill demo data
           </Button>
         }
@@ -210,7 +210,7 @@ export function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPwd((s) => !s)}
-                        className="text-xs text-ink-500 hover:text-ink-800 px-2"
+                        className="text-xs text-ink-500 hover:text-ink-800 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                       >{showPwd ? "Hide" : "Show"}</button>
                     }
                     autoComplete="new-password"
@@ -242,7 +242,7 @@ export function RegisterPage() {
 
               <Button
                 type="button" variant="ghost" size="sm"
-                leftIcon={<Icon name="shield" size={14} />}
+                leftIcon={<Icon name="sparkles" size={14} />}
                 onClick={() => {
                   const pw = generateStrongPassword();
                   setPassword(pw); setConfirm(pw); setShowPwd(true);
@@ -260,7 +260,7 @@ export function RegisterPage() {
               action={
                 selectedRoles.length > 0 && (
                   <Badge tone="brand" variant="soft">
-                    {selectedRoles.length} selected
+                    <span className="tabular-nums">{selectedRoles.length}</span> selected
                   </Badge>
                 )
               }
@@ -286,7 +286,7 @@ export function RegisterPage() {
                             type="button"
                             onClick={() => toggleRole(roleName)}
                             className={cn(
-                              "flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors",
+                              "flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
                               active
                                 ? "border-brand-500 bg-brand-50 ring-1 ring-brand-200"
                                 : "border-ink-200 hover:border-ink-300 hover:bg-ink-50",
@@ -324,9 +324,9 @@ export function RegisterPage() {
             <Card className="border-rose-300 bg-rose-50/40">
               <CardBody className="flex items-start gap-3">
                 <div className="h-9 w-9 rounded-lg bg-rose-100 text-rose-600 grid place-items-center shrink-0">
-                  <Icon name="x" size={16} />
+                  <Icon name="warning" size={16} />
                 </div>
-                <div className="text-sm text-rose-800">{error}</div>
+                <div className="text-sm text-rose-800 min-w-0">{error}</div>
               </CardBody>
             </Card>
           )}

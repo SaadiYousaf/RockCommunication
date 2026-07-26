@@ -61,28 +61,30 @@ export function ValidateQueuePage() {
                 {filtered.map((s) => (
                   <TR key={s.saleId}>
                     <TD>
-                      <div className="font-medium text-ink-900">{s.leadName}</div>
-                      <div className="font-mono text-xs text-ink-500">{s.leadPhone}</div>
+                      <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
+                      <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{s.leadPhone}</div>
                     </TD>
-                    <TD className="text-sm text-ink-600">{s.agencyName || "—"}</TD>
-                    <TD className="text-sm">{s.carrier}</TD>
-                    <TD className="text-sm">{money(s.monthlyPremium)}</TD>
-                    <TD className="text-sm text-ink-600">{s.closerName ?? "—"}</TD>
-                    <TD className="text-sm text-ink-600">{s.licenseAgentName ?? "—"}</TD>
+                    <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
+                    <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
+                    <TD className="text-sm tabular-nums whitespace-nowrap">{money(s.monthlyPremium)}</TD>
+                    <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.closerName ?? "—"}</TD>
+                    <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.licenseAgentName ?? "—"}</TD>
                     <TD>
                       <Badge tone={TONE[s.status]} variant="soft">{LABEL[s.status]}</Badge>
                       {(s.status === "Decline" || s.status === "ErrorInApplicationInformation") && s.declineReason && (
                         <div className="text-xs text-ink-500 mt-0.5 max-w-[16rem] truncate" title={s.declineReason}>{s.declineReason}</div>
                       )}
                     </TD>
-                    <TD className="text-sm text-ink-500">{new Date(s.soldAt).toLocaleDateString()}</TD>
+                    <TD className="text-sm text-ink-500 whitespace-nowrap tabular-nums">{new Date(s.soldAt).toLocaleDateString()}</TD>
                     <TD className="text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" leftIcon={<Icon name="eye" size={14} />} onClick={() => setViewing(s)}>
-                        Open
-                      </Button>
-                      <Button size="sm" variant="outline" leftIcon={<Icon name="check" size={14} />} onClick={() => setActive(s)}>
-                        Update
-                      </Button>
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        <Button size="sm" variant="ghost" leftIcon={<Icon name="eye" size={14} />} onClick={() => setViewing(s)}>
+                          Open
+                        </Button>
+                        <Button size="sm" variant="outline" leftIcon={<Icon name="edit" size={14} />} onClick={() => setActive(s)}>
+                          Update
+                        </Button>
+                      </div>
                     </TD>
                   </TR>
                 ))}

@@ -91,7 +91,7 @@ export function LoginPage() {
           {/* Hero logo + tagline */}
           <div className="flex flex-col items-start max-w-md">
             <BrandLogo variant="full" className="w-72 mb-8 drop-shadow-[0_8px_32px_rgba(31,126,255,0.35)]" />
-            <h1 className="text-3xl font-semibold leading-tight">
+            <h1 className="text-3xl font-semibold leading-tight text-balance">
               Built on a rock-solid foundation for insurance teams.
             </h1>
             <p className="text-white/75 mt-3">
@@ -103,8 +103,8 @@ export function LoginPage() {
                 { v: "SOC 2", l: "Compliant" },
                 { v: "24/7",  l: "Support" },
               ].map((s) => (
-                <div key={s.l} className="bg-white/5 ring-1 ring-white/10 rounded-xl p-3 backdrop-blur">
-                  <div className="text-lg font-semibold">{s.v}</div>
+                <div key={s.l} className="bg-white/5 ring-1 ring-white/10 rounded-xl p-3 backdrop-blur transition-colors hover:bg-white/10">
+                  <div className="text-lg font-semibold tabular-nums">{s.v}</div>
                   <div className="text-[11px] uppercase tracking-wider text-white/70">{s.l}</div>
                 </div>
               ))}
@@ -128,7 +128,7 @@ export function LoginPage() {
 
           {!twoFactorToken && (
             <>
-              <h2 className="text-2xl font-semibold text-ink-900">Sign in to your workspace</h2>
+              <h2 className="text-2xl font-semibold text-ink-900 text-balance">Sign in to your workspace</h2>
               <p className="text-sm text-ink-500 mt-1.5 mb-8">
                 Welcome back. Enter your credentials to continue.
               </p>
@@ -153,7 +153,7 @@ export function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPwd((s) => !s)}
-                      className="text-xs text-ink-500 hover:text-ink-800 px-2"
+                      className="text-xs text-ink-500 hover:text-ink-800 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                     >{showPwd ? "Hide" : "Show"}</button>
                   }
                   error={error ?? undefined}
@@ -161,11 +161,11 @@ export function LoginPage() {
                 />
 
                 <div className="flex items-center justify-between text-xs">
-                  <label className="inline-flex items-center gap-2 text-ink-600">
+                  <label className="inline-flex items-center gap-2 text-ink-600 cursor-pointer select-none">
                     <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
                     Remember me
                   </label>
-                  <a className="text-brand-600 hover:text-brand-700 font-medium" href="/forgot-password">Forgot password?</a>
+                  <a className="text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" href="/forgot-password">Forgot password?</a>
                 </div>
 
                 <Button type="submit" loading={loggingIn} fullWidth size="lg">
@@ -180,7 +180,7 @@ export function LoginPage() {
               <div className="h-12 w-12 rounded-xl bg-brand-50 text-brand-600 grid place-items-center mb-4">
                 <Icon name="shield" size={22} />
               </div>
-              <h2 className="text-2xl font-semibold text-ink-900">Two-factor authentication</h2>
+              <h2 className="text-2xl font-semibold text-ink-900 text-balance">Two-factor authentication</h2>
               <p className="text-sm text-ink-500 mt-1.5 mb-8">
                 Enter the 6-digit code from your authenticator app.
               </p>
@@ -193,7 +193,7 @@ export function LoginPage() {
                   placeholder="000000"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  className="tracking-[0.5em] text-center text-lg font-semibold"
+                  className="tracking-[0.5em] text-center text-lg font-semibold tabular-nums"
                   error={error ?? undefined}
                   required autoFocus
                 />

@@ -30,8 +30,11 @@ export function ConfirmEmailPage() {
 
   if (state === "loading") {
     return (
-      <AuthFrame title="Confirming your email…">
-        <div className="flex justify-center"><Spinner size={28} /></div>
+      <AuthFrame title="Confirming your email…" subtitle="This only takes a moment.">
+        <div className="flex flex-col items-center justify-center gap-3 py-2 text-sm text-ink-500">
+          <Spinner size={28} />
+          <span>Verifying your confirmation link…</span>
+        </div>
       </AuthFrame>
     );
   }
@@ -43,7 +46,9 @@ export function ConfirmEmailPage() {
           <div className="mx-auto h-12 w-12 rounded-full bg-success-100 flex items-center justify-center">
             <Icon name="check" size={24} className="text-success-700" />
           </div>
-          <Link to="/login" className="text-brand-600 hover:underline text-sm">Sign in to your account</Link>
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            Sign in to your account <Icon name="arrowRight" size={14} />
+          </Link>
         </div>
       </AuthFrame>
     );
@@ -75,20 +80,25 @@ function ResendForm({ reason }: { reason: string }) {
             <Icon name="check" size={24} className="text-success-700" />
           </div>
           <p className="text-sm text-ink-700">
-            If an account exists for <strong>{email}</strong>, a confirmation link has been sent.
+            If an account exists for <strong className="break-all">{email}</strong>, a confirmation link has been sent.
           </p>
-          <Link to="/login" className="text-brand-600 hover:underline text-sm">Back to sign in</Link>
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <Icon name="chevronLeft" size={14} /> Back to sign in
+          </Link>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <Input
             type="email" required label="Email"
             placeholder="you@agency.com"
+            leftIcon={<Icon name="mail" size={16} />}
             value={email} onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" loading={isLoading} fullWidth>Resend confirmation</Button>
+          <Button type="submit" loading={isLoading} fullWidth size="lg" leftIcon={<Icon name="send" size={16} />}>Resend confirmation</Button>
           <div className="text-center text-sm">
-            <Link to="/login" className="text-brand-600 hover:underline">Back to sign in</Link>
+            <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+              <Icon name="chevronLeft" size={14} /> Back to sign in
+            </Link>
           </div>
         </form>
       )}

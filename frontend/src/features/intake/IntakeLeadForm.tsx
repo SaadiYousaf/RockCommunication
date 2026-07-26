@@ -49,15 +49,15 @@ export function IntakeLeadForm({
         <option value="" disabled>Select…</option>
         {MARITAL.map((m) => <option key={m} value={m}>{m}</option>)}
       </Select>
-      <Input label="Created date" type="date" required value={f.createdDate} onChange={set("createdDate")} />
+      <Input label="Created date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.createdDate} onChange={set("createdDate")} />
       <Input label="Street address" required secure containerClassName="sm:col-span-2" value={f.streetAddress} onChange={set("streetAddress")} />
       <Input label="City" required secure value={f.city} onChange={set("city")} />
       <Input label="State" required secure value={f.state} onChange={set("state")} />
       <Input label="Zipcode" required secure inputMode="numeric" value={f.zipcode} onChange={set("zipcode")} />
       <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} value={f.phoneNumber} onChange={set("phoneNumber")} />
-      <Input label="Birth date" type="date" required value={f.birthDate} onChange={set("birthDate")} />
-      <Input label="Age (years)" type="number" required min={1} max={129} value={f.ageYears} onChange={set("ageYears")} />
-      <Input label="Email" type="email" required secure containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
+      <Input label="Birth date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
+      <Input label="Age (years)" type="number" required min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
+      <Input label="Email" type="email" required secure leftIcon={<Icon name="mail" size={14} />} containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
       <Input label="Jornaya LeadiD" containerClassName="sm:col-span-2" placeholder="Optional token" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
       <Textarea
         label="Notes" containerClassName="sm:col-span-2" rows={3}

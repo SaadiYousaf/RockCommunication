@@ -39,6 +39,8 @@ public class VerifyJornayaHandler : IRequestHandler<VerifyJornayaCommand, LeadDt
         var result = await _jornaya.VerifyAsync(lead.Id.ToString(), lead.JornayaLeadId, ct);
         lead.JornayaVerified = result.Verified;
         lead.JornayaVerifiedAt = result.VerifiedAt;
+        // Record who ran the verification so the UI can show "Verified by …" and lock the button.
+        lead.JornayaVerifiedBy = result.Verified ? _user.UserName : null;
 
         // Jornaya verification is a scoring input (+20). Recompute and persist the denormalized
         // Score now so the stored value the leads list / queue read stays in sync with the live

@@ -47,7 +47,8 @@ export function CloseQueuePage() {
           action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description={q ? "No matches in this queue." : "Verified leads will appear here. Use “Add lead” to start one yourself."} />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description={q ? "No matches in this queue." : "Verified leads will appear here. Use “Add lead” to start one yourself."}
+              action={!q ? <Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setOpen(true)}>Add lead</Button> : undefined} />
           ) : (
             <Table>
               <THead>
@@ -63,12 +64,12 @@ export function CloseQueuePage() {
               <TBody>
                 {filtered.map((l) => (
                   <TR key={l.id}>
-                    <TD className="font-medium text-ink-900">{l.firstName} {l.lastName}</TD>
-                    <TD className="font-mono text-xs">{l.phoneNumber}</TD>
-                    <TD className="text-sm text-ink-600">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
-                    <TD className="text-sm">{l.ageYears ?? "—"}</TD>
+                    <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
+                    <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{l.phoneNumber}</TD>
+                    <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
+                    <TD className="text-sm tabular-nums">{l.ageYears ?? "—"}</TD>
                     <TD>{l.hasApplication ? <Badge tone="info" variant="soft">Started</Badge> : <Badge tone="neutral" variant="soft">New</Badge>}</TD>
-                    <TD className="text-right">
+                    <TD className="text-right whitespace-nowrap">
                       <Link to={`/close-queue/${l.id}`}>
                         <Button size="sm" leftIcon={<Icon name="briefcase" size={14} />}>Open</Button>
                       </Link>

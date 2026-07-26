@@ -76,7 +76,7 @@ export function ChangePasswordPage() {
             </div>
           </div>
 
-          <h1 className="text-xl font-semibold text-ink-900">
+          <h1 className="text-xl font-semibold text-ink-900 text-balance">
             {isForced ? "Set your password" : "Change your password"}
           </h1>
           <p className="text-sm text-ink-500 mt-1.5">
@@ -116,7 +116,7 @@ export function ChangePasswordPage() {
               required
             />
 
-            <label className="inline-flex items-center gap-2 text-xs text-ink-600">
+            <label className="inline-flex items-center gap-2 text-xs text-ink-600 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={showPwd}
@@ -126,7 +126,12 @@ export function ChangePasswordPage() {
               Show passwords
             </label>
 
-            {error && <div className="text-sm text-rose-600">{error}</div>}
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-rose-500" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <Button type="submit" loading={isLoading} fullWidth size="lg">
               {isForced ? "Set new password & continue" : "Update password"}
