@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useAddDncMutation, useListDncQuery, useRemoveDncMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -96,8 +96,22 @@ export function DncPage() {
             <TR>
               <TH>Phone</TH>
               <TH>Reason</TH>
-              <TH>Source</TH>
-              <TH>Expires</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">
+                  Source
+                  <InfoHint title="Source" side="top">
+                    Where this entry came from — e.g. added manually or imported from an external suppression list.
+                  </InfoHint>
+                </span>
+              </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">
+                  Expires
+                  <InfoHint title="Expires" side="top">
+                    When this block lifts and the number becomes callable again; permanent entries never expire.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH className="text-right">Actions</TH>
             </TR>
           </THead>

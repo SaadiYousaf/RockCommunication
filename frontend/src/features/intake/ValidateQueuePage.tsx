@@ -45,7 +45,14 @@ export function ValidateQueuePage() {
               <THead>
                 <TR>
                   <TH>Customer</TH><TH>Agency</TH><TH>Carrier</TH><TH>Premium</TH><TH>Closer</TH>
-                  <TH>Agent</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">
+                      Agent
+                      <InfoHint title="License Agent" side="bottom">
+                        The licensed agent of record assigned to the approved policy — the agent who earns the approval commission.
+                      </InfoHint>
+                    </span>
+                  </TH>
                   <TH>
                     <span className="inline-flex items-center gap-1">
                       Status

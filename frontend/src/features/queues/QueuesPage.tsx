@@ -7,7 +7,7 @@ import {
   useUpsertQueueMutation, useUpsertVoicemailMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -54,7 +54,7 @@ function QueueSection() {
   return (
     <Card>
       <CardHeader
-        title={<span className="flex items-center gap-2"><Icon name="phone" size={18} /> Inbound queues (ACD)</span>}
+        title={<span className="flex items-center gap-2"><Icon name="phone" size={18} /><span className="inline-flex items-center gap-1">Inbound queues (ACD)<InfoHint title="ACD — Automatic Call Distribution" side="right">Inbound calls are routed automatically to the longest-idle available agent who holds the queue's required skill.</InfoHint></span></span>}
         subtitle="When a configured number rings, the routing engine picks the longest-idle agent matching the required skill."
         action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New queue</Button>}
       />
@@ -76,7 +76,10 @@ function QueueSection() {
           <Table className="border-0 shadow-none rounded-none">
             <THead>
               <TR>
-                <TH>Name</TH><TH>Phone</TH><TH>Skill</TH><TH>Strategy</TH><TH>Max wait</TH><TH>Status</TH>
+                <TH>Name</TH><TH>Phone</TH><TH>Skill</TH>
+                <TH><span className="inline-flex items-center gap-1">Strategy<InfoHint title="Routing strategy" side="bottom">How the queue picks which available agent gets the next call (e.g. longest-idle = the agent who has waited longest since their last call).</InfoHint></span></TH>
+                <TH><span className="inline-flex items-center gap-1">Max wait<InfoHint title="Max wait" side="bottom">The longest a caller waits in this queue before overflow handling takes over.</InfoHint></span></TH>
+                <TH>Status</TH>
               </TR>
             </THead>
             <TBody>

@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
 } from "../../shared/ui";
 
@@ -202,7 +202,7 @@ export function AuditLogPage() {
                 <TR>
                   <TH>When</TH>
                   <TH>Entity</TH>
-                  <TH>Action</TH>
+                  <TH><span className="inline-flex items-center gap-1">Action<InfoHint title="Action" side="bottom">The type of change recorded — a "Transition" means a lead or sale moved between pipeline stages.</InfoHint></span></TH>
                   <TH>User</TH>
                   <TH>IP</TH>
                   <TH></TH>

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLeaderboardQuery, useWallboardQuery } from "../../shared/api/baseApi";
-import { Spinner, type IconName, Icon } from "../../shared/ui";
+import { Spinner, type IconName, Icon, InfoHint } from "../../shared/ui";
 
 function ClockNow() {
   const [now, setNow] = useState(new Date());
@@ -97,14 +97,14 @@ export function WallboardPage() {
             {/* Hero KPI strip */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
               <HeroTile
-                label="Answer Rate"
+                label={<span className="inline-flex items-center gap-1">Answer Rate<InfoHint title="Answer Rate" side="bottom">Share of today's calls that were answered rather than abandoned.</InfoHint></span>}
                 value={`${answerRate}%`}
                 sublabel={`${w.callsAnsweredToday} answered · ${w.callsAbandonedToday} abandoned`}
                 tone="emerald"
                 progress={answerRate}
               />
               <HeroTile
-                label="Agent Utilization"
+                label={<span className="inline-flex items-center gap-1">Agent Utilization<InfoHint title="Agent Utilization" side="bottom">Share of clocked-in agents who are currently on a call.</InfoHint></span>}
                 value={`${utilization}%`}
                 sublabel={`${w.agentsOnCall} of ${w.agentsClockedIn} agents on call`}
                 tone="brand"
@@ -154,7 +154,7 @@ export function WallboardPage() {
                     <div className="col-span-1">#</div>
                     <div className="col-span-5">Agent</div>
                     <div className="col-span-2 text-right">Sales</div>
-                    <div className="col-span-4 text-right">Premium</div>
+                    <div className="col-span-4 text-right"><span className="inline-flex items-center gap-1">Premium<InfoHint title="Premium" side="left">The total insurance premium (the customer's policy cost) each agent sold today.</InfoHint></span></div>
                   </div>
                   <div className="divide-y divide-white/5">
                     {leaders?.map((u, i: number) => {
@@ -259,7 +259,7 @@ function BigTile({
 function HeroTile({
   label, value, sublabel, tone, progress,
 }: {
-  label: string; value: string; sublabel: string; tone: "brand" | "emerald" | "amber"; progress?: number;
+  label: ReactNode; value: string; sublabel: string; tone: "brand" | "emerald" | "amber"; progress?: number;
 }) {
   const a = accentClasses[tone];
   return (

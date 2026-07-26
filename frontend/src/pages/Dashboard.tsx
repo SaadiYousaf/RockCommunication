@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import type { RootState } from "../app/store";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Skeleton,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton,
   type IconName,
 } from "../shared/ui";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery } from "../shared/api/baseApi";
@@ -310,7 +310,9 @@ function KpiStrip({ data, loading }: { data?: DashboardSummary; loading: boolean
         delta={salesDelta.delta} trend={salesDelta.trend} icon="briefcase" tone="success" sparkline={sparkSales}
       />
       <KpiTile
-        to="/kpis" label="Conversion" value={`${data.conversionRate}%`}
+        to="/kpis"
+        label={<span className="inline-flex items-center gap-1">Conversion<InfoHint title="Conversion" side="bottom">The share of your leads that turned into sales.</InfoHint></span>}
+        value={`${data.conversionRate}%`}
         delta={data.conversionRate >= 15 ? "Healthy" : "Needs focus"}
         trend={data.conversionRate >= 15 ? "up" : "down"} icon="chart" tone="accent"
         sparkline={[14, 13, 16, 15, 17, 16, data.conversionRate]}
@@ -345,7 +347,7 @@ const kpiToneMap: Record<"brand" | "success" | "accent" | "warning",
 function KpiTile({
   to, label, value, delta, trend, icon, tone, sparkline,
 }: {
-  to: string; label: string; value: string; delta: string;
+  to: string; label: ReactNode; value: string; delta: string;
   trend: "up" | "down" | "flat"; icon: IconName;
   tone: "brand" | "success" | "accent" | "warning";
   sparkline?: number[];
@@ -411,7 +413,7 @@ function PipelineCard({ data, loading }: { data?: DashboardSummary; loading: boo
   return (
     <Card className="xl:col-span-2 overflow-hidden">
       <CardHeader
-        title="Pipeline overview"
+        title={<span className="inline-flex items-center gap-1">Pipeline overview<InfoHint title="Pipeline stages" side="bottom">Where each active lead sits in the sales flow: New, Fronted, Verified, Closed, Validated, Funded, then Followup, Winback or Lost.</InfoHint></span>}
         subtitle="Stage distribution across all active leads"
         action={
           <Link to="/leads">

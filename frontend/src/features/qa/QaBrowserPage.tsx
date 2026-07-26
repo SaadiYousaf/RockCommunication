@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useListQaReviewsQuery, useQaScorecardsQuery, useUserDirectoryQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 
@@ -65,9 +65,9 @@ export function QaBrowserPage() {
                 <TR>
                   <TH>Agent</TH>
                   <TH>Reviews</TH>
-                  <TH>Avg %</TH>
-                  <TH>Avg score</TH>
-                  <TH>Performance</TH>
+                  <TH><span className="inline-flex items-center gap-1">Avg %<InfoHint title="Avg %" side="top">The agent's average call-quality score as a percentage of the maximum across their reviews in this period.</InfoHint></span></TH>
+                  <TH><span className="inline-flex items-center gap-1">Avg score<InfoHint title="Avg score" side="top">The agent's average raw points scored across their reviews in this period.</InfoHint></span></TH>
+                  <TH><span className="inline-flex items-center gap-1">Performance<InfoHint title="Performance" side="left">Colour band for the average score: green at or above 85%, amber at or above 70%, red below.</InfoHint></span></TH>
                 </TR>
               </THead>
               <TBody>

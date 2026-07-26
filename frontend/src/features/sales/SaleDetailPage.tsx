@@ -119,7 +119,17 @@ export function SaleDetailPage() {
 
         {/* Policy & approval */}
         <Card>
-          <CardHeader title="Policy & approval" subtitle="Sold terms and validator-approved outcome" bordered />
+          <CardHeader
+            title="Policy & approval"
+            subtitle="Sold terms and validator-approved outcome"
+            bordered
+            action={
+              <InfoHint title="Carrier-approved terms" side="left">
+                What the carrier actually approved after submission — the plan, coverage, and premium
+                can differ from what was originally sold.
+              </InfoHint>
+            }
+          />
           <CardBody className="space-y-1">
             <Field label="Carrier" value={sale.carrier} />
             <Field label="Policy #" value={sale.policyNumber ?? "—"} mono />

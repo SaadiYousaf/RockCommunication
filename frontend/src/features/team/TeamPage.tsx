@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { OrgPersonDto, OrgTeamDto, OrgTreeDto } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, PageHeader,
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
@@ -193,7 +193,7 @@ function LeadershipLayer({ leaders }: { leaders: OrgPersonDto[] }) {
   if (leaders.length === 0) return null;
   return (
     <div>
-      <LayerLabel>Leadership</LayerLabel>
+      <LayerLabel><span className="inline-flex items-center gap-1">Leadership<InfoHint title="Leadership" side="bottom">Agency-wide managers (QA, Project, and Program leads) who sit above the individual teams.</InfoHint></span></LayerLabel>
       <div className="flex flex-wrap justify-center gap-3">
         {leaders.map((p) => (
           <PersonCard key={p.id} person={p} role={primaryLeadershipRole(p)} tone="accent" />

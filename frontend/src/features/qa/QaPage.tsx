@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useCreateRubricMutation, useRubricsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -72,7 +72,7 @@ export function QaPage() {
                   action={
                     <div className="text-right">
                       <div className="text-2xl font-semibold tracking-tight text-ink-900 tabular-nums">{total}</div>
-                      <div className="text-xs text-ink-500 uppercase tracking-wider whitespace-nowrap">max points</div>
+                      <div className="text-xs text-ink-500 uppercase tracking-wider whitespace-nowrap"><span className="inline-flex items-center gap-1">max points<InfoHint title="Max points" side="left">The total points possible in this rubric, adding up every scoring item's maximum.</InfoHint></span></div>
                     </div>
                   }
                 />

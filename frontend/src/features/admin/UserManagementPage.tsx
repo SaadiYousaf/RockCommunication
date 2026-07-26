@@ -7,7 +7,7 @@ import {
   useResendInvitationMutation,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
@@ -148,7 +148,7 @@ export function UserManagementPage() {
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
               <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
-              <TH>Call center</TH>
+              <TH><span className="inline-flex items-center gap-1">Call center<InfoHint title="Call center" side="top">Pin a user to one call center to limit their pipeline to just that center; leave it agency-level to see the whole agency.</InfoHint></span></TH>
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>
           </THead>

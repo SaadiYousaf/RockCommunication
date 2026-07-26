@@ -15,7 +15,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
@@ -360,8 +360,20 @@ export function LeadsPage() {
               </TH>
               <TH>Lead</TH>
               <TH>Phone</TH>
-              <TH>Stage</TH>
-              <TH>Disposition</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Stage
+                  <InfoHint title="Pipeline stage" side="bottom">
+                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                  </InfoHint>
+                </span>
+              </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Disposition
+                  <InfoHint title="Disposition" side="bottom">
+                    The outcome recorded after the most recent call attempt (e.g. Interested, Voicemail, No answer, DNC) — it doesn't change the pipeline stage.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH>Created</TH>
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>

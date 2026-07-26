@@ -4,7 +4,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 
@@ -140,9 +140,23 @@ export function SupervisorPage() {
               <TH>Agent</TH>
               <TH>Status</TH>
               <TH>Reason</TH>
-              <TH>Duration</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">
+                  Duration
+                  <InfoHint title="Duration" side="top">
+                    How long the agent has been in their current status.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH>Call</TH>
-              <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
+              <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
+                <span className="inline-flex items-center gap-1">
+                  Actions
+                  <InfoHint title="Coaching" side="left">
+                    Listen (silent monitor), Whisper (heard only by the agent), or Barge (join the live call so the customer hears you too).
+                  </InfoHint>
+                </span>
+              </TH>
             </TR>
           </THead>
           <TBody>

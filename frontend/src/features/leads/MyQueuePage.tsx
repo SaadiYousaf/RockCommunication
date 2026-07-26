@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
@@ -155,7 +155,13 @@ export function MyQueuePage() {
             <TR>
               <TH>Lead</TH>
               <TH>Phone</TH>
-              <TH>Stage</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Stage
+                  <InfoHint title="Pipeline stage" side="bottom">
+                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                  </InfoHint>
+                </span>
+              </TH>
               <TH className="text-right">Quick actions</TH>
             </TR>
           </THead>

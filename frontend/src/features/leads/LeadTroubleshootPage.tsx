@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useLeadDiagnosticsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, cn, type IconName,
 } from "../../shared/ui";
 import type { LeadDiagnostics } from "../../shared/api/types";
@@ -370,7 +370,16 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
       {/* Compliance + Jornaya + Assignment */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader title="Compliance" subtitle="DNC / TCPA / consent" />
+          <CardHeader
+            title={
+              <span className="inline-flex items-center gap-1">Compliance
+                <InfoHint title="Compliance" side="bottom">
+                  Whether this lead can legally be dialed right now: DNC (do-not-call) status, the TCPA-permitted local calling window, and whether consent to contact is on file.
+                </InfoHint>
+              </span>
+            }
+            subtitle="DNC / TCPA / consent"
+          />
           <CardBody className="pt-0 space-y-2">
             <Row label="On DNC" value={
               data.compliance.onDnc
@@ -394,7 +403,15 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
         </Card>
 
         <Card>
-          <CardHeader title="Jornaya / LeadiD" />
+          <CardHeader
+            title={
+              <span className="inline-flex items-center gap-1">Jornaya / LeadiD
+                <InfoHint title="Jornaya / LeadiD" side="bottom">
+                  A consent token that independently proves the prospect agreed to be contacted; it must be verified before a sale.
+                </InfoHint>
+              </span>
+            }
+          />
           <CardBody className="pt-0 space-y-2">
             <Row label="Verified" value={
               data.jornaya.verified
@@ -432,7 +449,13 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader
-            title="Cadence enrollments"
+            title={
+              <span className="inline-flex items-center gap-1">Cadence enrollments
+                <InfoHint title="Cadence enrollments" side="bottom">
+                  A cadence is an automated follow-up sequence that schedules the lead's next touches (calls/SMS) over time.
+                </InfoHint>
+              </span>
+            }
             subtitle={`${data.cadence.activeEnrollments} active`}
           />
           <CardBody className="pt-0">

@@ -10,7 +10,7 @@ import {
 import type { CallCenterDto } from "../../shared/api/types";
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -207,10 +207,10 @@ export function AgencyDetailPage() {
                     <TH numeric>#</TH>
                     <TH>Name</TH><TH>Phone</TH>
                     <TH>Carrier appr.</TH><TH>Plan appr.</TH>
-                    <TH numeric>Coverage appr.</TH><TH numeric>Premium appr.</TH>
-                    <TH numeric>Commission</TH>
+                    <TH numeric><span className="inline-flex items-center gap-1">Coverage appr.<InfoHint title="Coverage approved" side="top">The policy coverage amount (face amount / death benefit) the carrier approved.</InfoHint></span></TH><TH numeric><span className="inline-flex items-center gap-1">Premium appr.<InfoHint title="Premium approved" side="top">The monthly premium the carrier approved — may differ from the premium originally sold.</InfoHint></span></TH>
+                    <TH numeric><span className="inline-flex items-center gap-1">Commission<InfoHint title="Commission earned" side="top">The commission earned on this sale under the applicable commission rules.</InfoHint></span></TH>
                     <TH>Call centre</TH><TH>License agent</TH>
-                    <TH>Status</TH>
+                    <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Sale status" side="left">The sale's stage — e.g. Validated (submitted and approved by the carrier) or Funded (first payment draft cleared).</InfoHint></span></TH>
                   </TR>
                 </THead>
                 <TBody>

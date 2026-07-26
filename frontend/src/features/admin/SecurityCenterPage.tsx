@@ -1,6 +1,6 @@
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Badge, Card, CardBody, CardHeader, Icon, PageHeader, Table, TBody, TD, TH, THead, TR,
+  Badge, Card, CardBody, CardHeader, Icon, InfoHint, PageHeader, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
 import type { IconName } from "../../shared/ui/Icon";
@@ -110,7 +110,7 @@ export function SecurityCenterPage() {
             <div className="overflow-x-auto">
               <Table>
                 <THead>
-                  <TR><TH>Role</TH><TH>Data it can access</TH><TH>Key capabilities</TH><TH>2FA</TH></TR>
+                  <TR><TH>Role</TH><TH>Data it can access</TH><TH>Key capabilities</TH><TH><span className="inline-flex items-center gap-1">2FA<InfoHint title="Two-factor authentication" side="left">Whether this role must complete a second verification step (2FA) at login.</InfoHint></span></TH></TR>
                 </THead>
                 <TBody>
                   {t.roles.map((r) => (

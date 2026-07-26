@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useGetClosingApplicationQuery, useSubmitClosingApplicationMutation } from "../../shared/api/baseApi";
 import type { CloserStatusValue } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader, Select, Skeleton, Textarea, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 
 
@@ -124,7 +124,14 @@ export function ClosingApplicationPage() {
       </Card>
       <form onSubmit={onSubmit} className="space-y-4 max-w-4xl">
         <Card>
-          <CardHeader title="Closer status"
+          <CardHeader title={
+              <span className="inline-flex items-center gap-1">
+                Closer status
+                <InfoHint title="Closer status" side="right">
+                  The closer's outcome for this lead — 'Complete and Sold' validates banking via Lyons and records the sale, sending it to the submission queue.
+                </InfoHint>
+              </span>
+            }
             action={<Badge tone="warning" variant="soft" dot>Typing only</Badge>} />
           <CardBody>
             <Select label="Status (select at least one)" required value={status} onChange={(e) => setStatus(e.target.value as CloserStatusValue)} containerClassName="max-w-sm">
@@ -179,7 +186,14 @@ export function ClosingApplicationPage() {
           <Input label="Weight" required={sold} secure value={f.weight} onChange={set("weight")} />
         </Section>
 
-        <Section title="Banking (validated by Lyons)">
+        <Section title={
+          <span className="inline-flex items-center gap-1">
+            Banking (validated by Lyons)
+            <InfoHint title="Lyons banking validation" side="right">
+              Lyons is the bank-account validation service that must clear the account before a sale is created; code 198 means the account is usable but flagged, needing a reason or a verification recording to submit.
+            </InfoHint>
+          </span>
+        }>
           <Select label="Account type" required={sold} value={f.accountType} onChange={set("accountType")}>
             <option value="checking">Checking</option>
             <option value="savings">Savings</option>
@@ -211,7 +225,7 @@ function Field({ label, value, className }: { label: string; value?: string | nu
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <Card>
       <CardHeader title={title} />

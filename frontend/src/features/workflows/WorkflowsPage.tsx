@@ -5,7 +5,7 @@ import {
   useWorkflowActionTypesQuery, useWorkflowEventTypesQuery, useWorkflowExecutionsQuery,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, useToast, cn,
   type IconName,
 } from "../../shared/ui";
@@ -193,7 +193,7 @@ export function WorkflowsPage() {
                 <THead>
                   <TR>
                     <TH>When</TH>
-                    <TH>Event</TH>
+                    <TH><span className="inline-flex items-center gap-1">Event<InfoHint title="Triggering event" side="bottom">The pipeline event that fired this rule (e.g. sale.validated = approved by the carrier, sale.funded = first payment cleared).</InfoHint></span></TH>
                     <TH>Status</TH>
                     <TH>Error</TH>
                   </TR>

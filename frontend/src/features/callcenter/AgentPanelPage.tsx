@@ -5,7 +5,7 @@ import {
   useMyRecentCallsQuery, useMySessionQuery, useSetAgentStatusMutation, useWrapUpCallMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, type IconName,
 } from "../../shared/ui";
 import type { WrapUpCode } from "../../shared/api/types";
@@ -292,7 +292,14 @@ export function AgentPanelPage() {
                   <TH>Lead</TH>
                   <TH>Direction</TH>
                   <TH>Status</TH>
-                  <TH>Wrap-up</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">
+                      Wrap-up
+                      <InfoHint title="Wrap-up" side="top">
+                        The disposition code recording the call's outcome, set by the agent after hanging up.
+                      </InfoHint>
+                    </span>
+                  </TH>
                   <TH className="text-right">Recording</TH>
                 </TR>
               </THead>

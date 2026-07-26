@@ -6,7 +6,7 @@ import {
   useImportLeadsCsvMutation, useLeadListsQuery, useListImportBatchesQuery, useUpsertLeadListMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -233,7 +233,13 @@ export function LeadListsPage() {
                     <TH numeric>Total</TH>
                     <TH numeric>Imported</TH>
                     <TH numeric>Duplicates</TH>
-                    <TH numeric>DNC scrubbed</TH>
+                    <TH numeric>
+                      <span className="inline-flex items-center gap-1">DNC scrubbed
+                        <InfoHint title="DNC scrubbed" side="left">
+                          Rows dropped during import because the phone number is on a do-not-call (DNC) list and can't be legally contacted.
+                        </InfoHint>
+                      </span>
+                    </TH>
                     <TH numeric>Errors</TH>
                   </TR>
                 </THead>

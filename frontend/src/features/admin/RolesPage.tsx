@@ -7,7 +7,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { AppModuleDto, RoleDto } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Stat, useToast, cn,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
@@ -300,7 +300,7 @@ export function RolesPage() {
                         : <Badge tone="accent" variant="soft">Custom role</Badge>}
                     </div>
                     <div className="text-sm text-ink-500 mt-1 tabular-nums">
-                      {selected.modules.length} module{selected.modules.length === 1 ? "" : "s"} · {stats.modules > 0 ? Math.round((selected.modules.length / stats.modules) * 100) : 0}% coverage
+                      {selected.modules.length} module{selected.modules.length === 1 ? "" : "s"} · {stats.modules > 0 ? Math.round((selected.modules.length / stats.modules) * 100) : 0}% <span className="inline-flex items-center gap-1">coverage<InfoHint title="Module coverage" side="top">The share of all available modules this role can access.</InfoHint></span>
                     </div>
                   </div>
 

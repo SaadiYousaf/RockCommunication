@@ -6,7 +6,7 @@ import {
   useUpsertCampaignMutation, useUpsertLeadSourceMutation, useUpsertSkillMutation, useUpsertWrapUpCodeMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -172,7 +172,7 @@ function LeadSourcesSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Name</TH><TH numeric>$ / Lead</TH><TH>Campaign</TH></TR></THead>
+            <THead><TR><TH>Code</TH><TH>Name</TH><TH numeric><span className="inline-flex items-center gap-1">$ / Lead<InfoHint title="Cost per lead" side="top">What you pay this source for each lead it delivers.</InfoHint></span></TH><TH>Campaign</TH></TR></THead>
             <TBody>
               {list.map((s) => {
                 const camp = campaigns?.find((c) => c.id === s.campaignId);
@@ -313,7 +313,7 @@ function WrapUpCodesSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Label</TH><TH>Flags</TH></TR></THead>
+            <THead><TR><TH>Code</TH><TH>Label</TH><TH><span className="inline-flex items-center gap-1">Flags<InfoHint title="Flags" side="left">Sale counts the call as a sale, Contact as a live contact reached, and Retry queues the lead to be dialed again.</InfoHint></span></TH></TR></THead>
             <TBody>
               {list.map((w) => (
                 <TR key={w.id}>

@@ -438,7 +438,15 @@ function SalesList() {
                 <TH>Closer</TH>
                 <TH>Carrier</TH>
                 <TH>Premium</TH>
-                <TH>Status</TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">
+                    Status
+                    <InfoHint title="Sale status" side="top">
+                      A sale's lifecycle: pending (recorded) → validated (submitted and approved by the
+                      carrier) → funded (first premium draft cleared).
+                    </InfoHint>
+                  </span>
+                </TH>
                 <TH>Policy #</TH>
               </TR>
             </THead>

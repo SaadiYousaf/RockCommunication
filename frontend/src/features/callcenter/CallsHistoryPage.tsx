@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useListCallsQuery, useListUsersQuery, type CallsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 
@@ -119,8 +119,22 @@ export function CallsHistoryPage() {
                 <TH>Agent</TH>
                 <TH>Direction</TH>
                 <TH>Status</TH>
-                <TH>Talk</TH>
-                <TH>Wrap-up</TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">
+                    Talk
+                    <InfoHint title="Talk time" side="top">
+                      The connected talk duration of the call, not counting ring or voicemail time.
+                    </InfoHint>
+                  </span>
+                </TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">
+                    Wrap-up
+                    <InfoHint title="Wrap-up" side="top">
+                      The disposition code recording the call's outcome, set by the agent after the call.
+                    </InfoHint>
+                  </span>
+                </TH>
                 <TH></TH>
               </TR>
             </THead>

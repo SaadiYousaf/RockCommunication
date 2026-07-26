@@ -4,7 +4,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useListCampaignsQuery, useListScriptsQuery, useUpsertScriptMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
@@ -109,7 +109,7 @@ export function ScriptsPage() {
                       {s.stage && <Badge tone={stageTone[s.stage] ?? "neutral"} variant="soft" dot>{s.stage}</Badge>}
                       {s.role && <Badge tone="info" variant="soft">{s.role}</Badge>}
                       {camp && <Badge tone="brand" variant="soft">{camp.name}</Badge>}
-                      {!s.stage && !s.role && !camp && <span className="text-xs text-ink-400">Universal</span>}
+                      {!s.stage && !s.role && !camp && <span className="inline-flex items-center gap-1 text-xs text-ink-400">Universal<InfoHint title="Universal script" side="top">Not tied to any stage, role, or campaign — agents can use it on every call.</InfoHint></span>}
                     </div>
                   }
                   action={

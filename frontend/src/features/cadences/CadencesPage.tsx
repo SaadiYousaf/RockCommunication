@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useCadenceEnrollmentsQuery, useListCadencesQuery, useUpsertCadenceMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
 } from "../../shared/ui";
 import type { Cadence, CadenceStep } from "../../shared/api/types";
@@ -150,7 +150,7 @@ export function CadencesPage() {
                   <TH>Lead</TH>
                   <TH>Cadence</TH>
                   <TH>Step</TH>
-                  <TH>Status</TH>
+                  <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Enrollment status" side="bottom">Where this lead is in the cadence run — Stopped means the sequence ended early (e.g. they replied and "stop if contacted" fired).</InfoHint></span></TH>
                 </TR>
               </THead>
               <TBody>
@@ -253,7 +253,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
                     className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
                     checked={!!s.stopIfContacted}
                     onChange={(e) => setStep(i, { stopIfContacted: e.target.checked })} />
-                  stop if contacted
+                  <span className="inline-flex items-center gap-1">stop if contacted<InfoHint title="Stop if contacted" side="top">Ends the whole sequence for this lead as soon as they reply or are reached, so later steps don't fire.</InfoHint></span>
                 </label>
                 <Button type="button" variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50"
                   onClick={() => setCadence({ ...cadence, steps: cadence.steps.filter((_, j: number) => j !== i) })}>
