@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
-import { useDashboardQuery, useMetricCatalogQuery } from "../../shared/api/baseApi";
+import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import { useDashboardQuery, useMetricCatalogQuery, useAgencyOptionsQuery } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, Icon, Input, Modal, PageHeader,
-  Skeleton, useToast, cn,
+  Select, Skeleton, useToast, cn,
 } from "../../shared/ui";
 import { usePersistentState } from "../../shared/hooks/usePersistentState";
 
@@ -39,6 +41,14 @@ const DEFAULT_PRESETS: DashboardPreset[] = [
 export function KpiDashboardPage() {
   const toast = useToast();
   const { data: catalog } = useMetricCatalogQuery();
+
+  // SuperAdmin has no agency of their own, so KPIs need a target agency (like the Team page).
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
+  const { data: agencyOptions } = useAgencyOptionsQuery(undefined, { skip: !isSuperAdmin });
+  const [agencyId, setAgencyId] = useState("");
+  useEffect(() => {
+    if (isSuperAdmin && !agencyId && agencyOptions && agencyOptions.length) setAgencyId(agencyOptions[0].id);
+  }, [isSuperAdmin, agencyOptions, agencyId]);
 
   // Persisted user-defined presets (per-browser via localStorage).
   // Defaults only seed on first run; we never overwrite user customisations.
@@ -88,7 +98,11 @@ export function KpiDashboardPage() {
   }, []);
 
   const selected = Object.keys(picked).filter((k) => picked[k]);
-  const { data: values, isFetching } = useDashboardQuery({ from, to, metrics: selected.length > 0 ? selected : undefined });
+  const waitingForAgency = isSuperAdmin && !agencyId;
+  const { data: values, isFetching } = useDashboardQuery(
+    { from, to, metrics: selected.length > 0 ? selected : undefined, agencyId: isSuperAdmin ? agencyId : undefined },
+    { skip: waitingForAgency },
+  );
 
   const groups = useMemo(() => {
     return (values ?? []).reduce<Record<string, typeof values>>((acc, v) => {
@@ -152,6 +166,12 @@ export function KpiDashboardPage() {
         description="Save your favourite metric views and switch between them in one click."
         actions={
           <>
+            {isSuperAdmin && (
+              <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-48">
+                {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
+                {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </Select>
+            )}
             <Button
               variant="outline"
               leftIcon={<Icon name="filter" size={16} />}
@@ -177,14 +197,22 @@ export function KpiDashboardPage() {
 
       {/* Preset chips — persistent dashboard switcher */}
       <Card className="mb-4">
-        <CardBody className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-semibold text-ink-500 uppercase tracking-[0.12em] mr-1">
-            Saved
-          </span>
-          {presets.length === 0 ? (
-            <span className="text-sm text-ink-500">No saved dashboards yet — pick metrics and "Save as new".</span>
-          ) : (
-            presets.map((p) => {
+        {presets.length === 0 ? (
+          <CardBody className="flex items-center gap-3 py-3.5">
+            <div className="h-9 w-9 rounded-lg bg-ink-100 grid place-items-center text-ink-400 shrink-0">
+              <Icon name="bookmark" size={16} />
+            </div>
+            <div className="text-sm text-ink-600 leading-snug">
+              No saved dashboards yet. Choose the metrics you want below, then{" "}
+              <span className="font-medium text-ink-800">Save as new</span> to pin the view here for one-click access.
+            </div>
+          </CardBody>
+        ) : (
+          <CardBody className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-ink-500 uppercase tracking-[0.12em] mr-1">
+              Saved
+            </span>
+            {presets.map((p) => {
               const active = activePresetId === p.id;
               return (
                 <button
@@ -215,9 +243,9 @@ export function KpiDashboardPage() {
                   </span>
                 </button>
               );
-            })
-          )}
-        </CardBody>
+            })}
+          </CardBody>
+        )}
       </Card>
 
       <Card className="mb-6">
@@ -280,7 +308,21 @@ export function KpiDashboardPage() {
         </CardBody>
       </Card>
 
-      {isFetching && !values ? (
+      {waitingForAgency ? (
+        <Card><CardBody className="py-10">
+          <div className="text-center max-w-md mx-auto">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
+              <Icon name="building" size={24} />
+            </div>
+            <h3 className="text-base font-semibold text-ink-900 mb-1">Pick an agency</h3>
+            <p className="text-sm text-ink-500">
+              {!agencyOptions || agencyOptions.length === 0
+                ? "No agencies exist yet. Create one from the Agencies page to see its KPIs."
+                : "Choose an agency from the selector above to view its KPI dashboards."}
+            </p>
+          </div>
+        </CardBody></Card>
+      ) : isFetching && !values ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>

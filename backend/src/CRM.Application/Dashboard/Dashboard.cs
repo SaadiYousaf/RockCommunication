@@ -6,7 +6,9 @@ using MediatR;
 
 namespace CRM.Application.Dashboard;
 
-public record DashboardQuery(DateTime From, DateTime To, IReadOnlyList<string>? MetricKeys = null, Guid? UserId = null, Guid? TeamId = null)
+// AgencyId is honored ONLY for SuperAdmin (who has no agency of their own and must target one to
+// see KPIs); tenant users are always scoped to their own agency and the value is ignored.
+public record DashboardQuery(DateTime From, DateTime To, IReadOnlyList<string>? MetricKeys = null, Guid? UserId = null, Guid? TeamId = null, Guid? AgencyId = null)
     : IRequest<IReadOnlyList<MetricValue>>;
 
 public class DashboardHandler : IRequestHandler<DashboardQuery, IReadOnlyList<MetricValue>>
@@ -23,8 +25,20 @@ public class DashboardHandler : IRequestHandler<DashboardQuery, IReadOnlyList<Me
     public Task<IReadOnlyList<MetricValue>> Handle(DashboardQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        var filter = new MetricFilter(_user.AgencyId.Value, request.From, request.To, request.UserId, request.TeamId);
+        // SuperAdmin has no agency of their own, so they must target one explicitly to see its KPIs.
+        Guid agencyId;
+        if (_user.IsSuperAdmin)
+        {
+            if (request.AgencyId is not { } aid || aid == Guid.Empty)
+                throw new ForbiddenAccessException("Select an agency to view its KPIs.");
+            agencyId = aid;
+        }
+        else
+        {
+            if (_user.AgencyId is not { } uaid || uaid == Guid.Empty) throw new ForbiddenAccessException();
+            agencyId = uaid;
+        }
+        var filter = new MetricFilter(agencyId, request.From, request.To, request.UserId, request.TeamId);
         return _service.ComputeAsync(filter, request.MetricKeys, ct);
     }
 }

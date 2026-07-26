@@ -100,11 +100,12 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<MetricValue>>> Compute(
         [FromQuery] DateTime? from, [FromQuery] DateTime? to,
         [FromQuery] string[]? metrics, [FromQuery] Guid? userId, [FromQuery] Guid? teamId,
+        [FromQuery] Guid? agencyId = null,   // SuperAdmin only; ignored for tenant-scoped callers
         CancellationToken ct = default)
     {
         var f = from ?? DateTime.UtcNow.AddDays(-30);
         var t = to ?? DateTime.UtcNow.AddDays(1);
         var keys = metrics is { Length: > 0 } ? metrics : null;
-        return Ok(await _mediator.Send(new DashboardQuery(f, t, keys, userId, teamId), ct));
+        return Ok(await _mediator.Send(new DashboardQuery(f, t, keys, userId, teamId, agencyId), ct));
     }
 }

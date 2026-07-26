@@ -253,7 +253,7 @@ export const baseApi = createApi({
     metricCatalog: b.query<MetricCatalogItem[], void>({
       query: () => "/api/dashboard/metrics",
     }),
-    dashboard: b.query<MetricValue[], { from?: string; to?: string; metrics?: string[]; userId?: string } | void>({
+    dashboard: b.query<MetricValue[], { from?: string; to?: string; metrics?: string[]; userId?: string; agencyId?: string } | void>({
       query: (params) => ({ url: "/api/dashboard", params: params ?? undefined }),
       providesTags: ["Metrics"],
     }),

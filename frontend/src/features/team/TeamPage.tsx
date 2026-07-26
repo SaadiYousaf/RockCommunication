@@ -465,16 +465,25 @@ function PersonRow({ person, compact }: { person: OrgPersonDto; compact?: boolea
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium text-ink-900 truncate">{person.userName}</div>
         {!compact && <div className="text-[11px] text-ink-500 truncate">{person.email}</div>}
-      </div>
-      {person.roles.length > 0 && (
-        <div className="hidden sm:flex flex-wrap gap-1 justify-end">
-          {person.roles.slice(0, 2).map((r) => (
-            <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>
-          ))}
+        {/* Always surface every role the person holds (or flag that they have none). */}
+        <div className="flex flex-wrap gap-1 mt-1">
+          {person.roles.length > 0
+            ? person.roles.map((r) => (
+                <Badge key={r} tone={roleTone(r)} variant="soft" size="sm">{roleLabel(r)}</Badge>
+              ))
+            : <Badge tone="warning" variant="soft" size="sm">No role assigned</Badge>}
         </div>
-      )}
+      </div>
     </div>
   );
+}
+
+/** Tone a role badge by seniority so leadership stands out from agents at a glance. */
+function roleTone(r: string): "brand" | "info" | "success" | "neutral" {
+  if (r === "SuperAdmin" || r === "CEO" || r === "Admin") return "brand";
+  if (LEADERSHIP.includes(r) || r === "CallCenterAdmin" || r === "TeamLead") return "info";
+  if (r === "Closer" || r === "Validator" || r === "Fronter" || r === "Verifier") return "success";
+  return "neutral";
 }
 
 // ---- Visual chrome ----------------------------------------------------------
