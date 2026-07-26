@@ -41,6 +41,7 @@ export function AttendancePage() {
   const [from, setFrom] = useState(() => dateStr(-7));
   const [to, setTo] = useState(() => dateStr(1));
   const [range, setRange] = useState<number | null>(7);
+  const [sort, setSort] = useState("active");
   function applyRange(days: number) { setFrom(dateStr(-days)); setTo(dateStr(1)); setRange(days); }
 
   const waitingForAgency = isSuperAdmin && !agencyId;
@@ -48,6 +49,18 @@ export function AttendancePage() {
     { from: new Date(from).toISOString(), to: new Date(to).toISOString(), agencyId: isSuperAdmin ? agencyId : undefined },
     { skip: waitingForAgency },
   );
+
+  const sorted = useMemo(() => {
+    const rows = [...(data ?? [])];
+    switch (sort) {
+      case "name": return rows.sort((a, b) => a.userName.localeCompare(b.userName));
+      case "clocked": return rows.sort((a, b) => b.totalClockedMinutes - a.totalClockedMinutes);
+      case "break": return rows.sort((a, b) => b.totalBreakMinutes - a.totalBreakMinutes);
+      case "oncall": return rows.sort((a, b) => b.totalOnCallMinutes - a.totalOnCallMinutes);
+      // "active" — clocked-in first, then name (the server default)
+      default: return rows;
+    }
+  }, [data, sort]);
 
   const totals = useMemo(() => {
     const rows = data ?? [];
@@ -94,6 +107,13 @@ export function AttendancePage() {
           <div className="h-9 w-px bg-ink-200 hidden sm:block" />
           <Input label="From" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setRange(null); }} containerClassName="w-40" />
           <Input label="To" type="date" value={to} onChange={(e) => { setTo(e.target.value); setRange(null); }} containerClassName="w-40" />
+          <Select label="Sort by" value={sort} onChange={(e) => setSort(e.target.value)} containerClassName="w-44">
+            <option value="active">Active first</option>
+            <option value="name">Name (A–Z)</option>
+            <option value="clocked">Most clocked</option>
+            <option value="oncall">Most on-call</option>
+            <option value="break">Most break</option>
+          </Select>
           {isFetching && <span className="text-xs text-ink-500 pb-2">Updating…</span>}
         </CardBody>
       </Card>
@@ -110,7 +130,7 @@ export function AttendancePage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-2.5">
-          {data.map((r) => <PersonRow key={r.userId} row={r} />)}
+          {sorted.map((r) => <PersonRow key={r.userId} row={r} />)}
         </div>
       )}
     </>

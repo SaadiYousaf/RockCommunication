@@ -171,6 +171,9 @@ export function LeadDetailPage() {
     }
   }
 
+  // Colour the score by band so it reads at a glance without leaving the simple palette.
+  const scoreColor = lead.score >= 60 ? "text-emerald-700" : lead.score >= 30 ? "text-brand-700" : "text-amber-600";
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -210,7 +213,7 @@ export function LeadDetailPage() {
             </div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
+            <div className={`text-3xl font-bold tabular-nums ${scoreColor}`}>{lead.score}</div>
             <div className="text-xs text-ink-500 uppercase tracking-wider flex items-center gap-1">
               Lead score
               <InfoHint title="Lead score (0–100)" side="left">
@@ -262,9 +265,9 @@ export function LeadDetailPage() {
             </span>
             {(ALLOWED_TRANSITIONS[lead.stage as WorkflowStage] ?? []).map(s => (
               <button key={s} onClick={() => doTransition(s)}
-                className={`px-3 py-2 rounded text-xs border ${TERMINAL_STAGES.includes(s)
+                className={`px-3 py-2 rounded-lg text-xs border transition-colors ${TERMINAL_STAGES.includes(s)
                   ? "bg-white border-rose-300 text-rose-700 hover:bg-rose-50"
-                  : "bg-white border-ink-300 hover:bg-ink-50"}`}>
+                  : "bg-white border-ink-300 hover:bg-ink-50 hover:border-ink-400"}`}>
                 → {s}
               </button>
             ))}
@@ -318,7 +321,7 @@ export function LeadDetailPage() {
                 {DISPOSITIONS.map(d => (
                   <button key={d}
                     onClick={() => doDisposition(d)}
-                    className={`text-xs px-2.5 py-1 rounded ${d === lead.disposition ? "bg-brand-700 text-white" : "bg-ink-100 hover:bg-ink-200"}`}>
+                    className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${d === lead.disposition ? "bg-brand-700 text-white shadow-sm" : "bg-ink-100 hover:bg-ink-200 text-ink-700"}`}>
                     {d}
                   </button>
                 ))}
@@ -329,11 +332,11 @@ export function LeadDetailPage() {
           {/* Notes */}
           <div className="surface p-5">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-semibold">Notes</div>
-              {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
+              <div className="text-sm font-semibold inline-flex items-center gap-1.5"><Icon name="edit" size={14} className="text-ink-400" /> Notes</div>
+              {savedAt && <span className="text-xs text-emerald-700 inline-flex items-center gap-1"><Icon name="check" size={12} /> Saved {savedAt}</span>}
             </div>
             <textarea
-              className="w-full border border-ink-300 rounded px-3 py-2 text-sm font-mono"
+              className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition-shadow"
               rows={5} placeholder="Type call notes here…"
               value={notes} onChange={e => setNotes(e.target.value)}
               onBlur={saveNotes}
@@ -355,15 +358,16 @@ export function LeadDetailPage() {
           {/* Recent calls */}
           <div className="surface p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold">Recent calls ({lead.callCount})</div>
+              <div className="text-sm font-semibold inline-flex items-center gap-1.5"><Icon name="phone" size={14} className="text-ink-400" /> Recent calls <span className="text-ink-400 font-normal">({lead.callCount})</span></div>
             </div>
             {lead.recentCalls.length === 0 ? (
-              <div className="text-sm text-ink-500">No calls yet.</div>
+              <div className="flex items-center gap-2 text-sm text-ink-500"><Icon name="phone" size={14} className="text-ink-400" /> No calls yet.</div>
             ) : (
               <div className="space-y-2">
                 {lead.recentCalls.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 py-2 border-b last:border-0 border-ink-100">
-                    <div className={`w-2 h-2 rounded-full ${c.direction === "Inbound" ? "bg-emerald-500" : "bg-brand-500"}`} />
+                  <div key={c.id} className="flex items-center gap-3 py-2 border-b last:border-0 border-ink-100 rounded-md px-1 -mx-1 hover:bg-ink-50/60 transition-colors">
+                    <Icon name={c.direction === "Inbound" ? "phoneIn" : "phoneOut"} size={15}
+                      className={c.direction === "Inbound" ? "text-emerald-600" : "text-brand-600"} />
                     <div className="flex-1 text-sm">
                       <div className="font-medium">
                         {c.direction} · {c.status}
@@ -384,16 +388,19 @@ export function LeadDetailPage() {
 
           {/* Timeline */}
           <div className="surface p-5">
-            <div className="text-sm font-semibold mb-2">Activity timeline</div>
+            <div className="text-sm font-semibold mb-2 inline-flex items-center gap-1.5"><Icon name="activity" size={14} className="text-ink-400" /> Activity timeline</div>
             <ul className="space-y-1">
               {timeline?.entries.map((e, i) => (
-                <li key={i} className="text-xs border-l-2 border-ink-200 pl-3 py-1">
-                  <span className="bg-ink-100 px-1.5 py-0.5 rounded text-[10px] uppercase mr-2">{e.type}</span>
-                  <span className="text-ink-500">{new Date(e.at).toLocaleString()}</span>
-                  <span className="ml-2">{e.description}</span>
+                <li key={i} className="text-xs border-l-2 border-ink-200 pl-3 py-1 hover:border-brand-300 transition-colors">
+                  <span className="bg-ink-100 px-1.5 py-0.5 rounded text-[10px] uppercase mr-2 tracking-wide">{e.type}</span>
+                  <span className="text-ink-500 tabular-nums">{new Date(e.at).toLocaleString()}</span>
+                  <span className="ml-2 text-ink-700">{e.description}</span>
                 </li>
               ))}
             </ul>
+            {(!timeline || timeline.entries.length === 0) && (
+              <div className="flex items-center gap-2 text-sm text-ink-500"><Icon name="activity" size={14} className="text-ink-400" /> No activity yet.</div>
+            )}
           </div>
         </div>
 
@@ -401,14 +408,14 @@ export function LeadDetailPage() {
         <div className="space-y-5">
           {/* AI insights */}
           <div className="surface p-5">
-            <div className="text-sm font-semibold mb-2 flex items-center gap-1">
-              AI insights
+            <div className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+              <Icon name="sparkles" size={14} className="text-ink-400" /> AI insights
               <InfoHint title="How the score is built" side="left">
                 Each line below is a scoring rule that added (+) or subtracted (–) points to reach the total. Green raises the score, red lowers it — factors include recency, engagement, data completeness and disposition.
               </InfoHint>
             </div>
             <div className="flex items-center gap-3 mb-3">
-              <div className="text-3xl font-bold text-brand-700">{lead.score}</div>
+              <div className={`text-3xl font-bold tabular-nums ${scoreColor}`}>{lead.score}</div>
               <div className="text-xs text-ink-600">Heuristic score</div>
             </div>
             <div className="space-y-1">
@@ -427,7 +434,7 @@ export function LeadDetailPage() {
           {/* Recommendations */}
           {recs && recs.items.length > 0 && (
             <div className="surface p-5">
-              <div className="text-sm font-semibold mb-2">Recommended next steps</div>
+              <div className="text-sm font-semibold mb-2 inline-flex items-center gap-1.5"><Icon name="target" size={14} className="text-ink-400" /> Recommended next steps</div>
               <ul className="space-y-2">
                 {recs.items.map((r, i) => (
                   <li key={i} className="text-sm flex items-start gap-2">
@@ -447,7 +454,7 @@ export function LeadDetailPage() {
           {/* Sale info */}
           {lead.sale && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-              <div className="text-sm font-semibold mb-2 text-emerald-900">Sale</div>
+              <div className="text-sm font-semibold mb-2 text-emerald-900 inline-flex items-center gap-1.5"><Icon name="briefcase" size={14} /> Sale</div>
               <div className="text-sm text-ink-700 space-y-1">
                 <div>Carrier: <strong>{lead.sale.carrier}</strong></div>
                 {lead.sale.policyNumber && <div>Policy: <span className="font-mono">{lead.sale.policyNumber}</span></div>}
@@ -465,7 +472,7 @@ export function LeadDetailPage() {
           {/* Open callbacks */}
           {lead.openCallbackCount > 0 && (
             <div className="surface p-5">
-              <div className="text-sm font-semibold mb-2">Open callbacks ({lead.openCallbackCount})</div>
+              <div className="text-sm font-semibold mb-2 inline-flex items-center gap-1.5"><Icon name="calendar" size={14} className="text-ink-400" /> Open callbacks <span className="text-ink-400 font-normal">({lead.openCallbackCount})</span></div>
               <ul className="space-y-2">
                 {lead.callbacks.filter(cb => !cb.completed).map(cb => (
                   <li key={cb.id} className="text-sm">
