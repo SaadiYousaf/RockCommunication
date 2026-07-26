@@ -108,10 +108,11 @@ export function SalesPage() {
           <CardBody>
             <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
+                id="record-sale-lead-id"
                 label="Lead ID" required
                 placeholder="UUID of the closed lead"
                 value={leadId} onChange={(e) => setLeadId(e.target.value)}
-                hint="Pick from the list on the right →"
+                hint="Pick from the list below, or paste a closed lead's ID"
               />
               <Select label="Carrier" value={carrier} onChange={(e) => setCarrier(e.target.value)}>
                 {carriers?.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -264,7 +265,16 @@ export function SalesPage() {
                       <TD><Badge tone="warning" variant="soft" dot>{String(l.stage)}</Badge></TD>
                       <TD>
                         <div className="flex justify-end">
-                          <Button variant="outline" size="sm" onClick={() => setLeadId(l.id)}>
+                          <Button variant="outline" size="sm" leftIcon={<Icon name="arrowRight" size={13} className="-rotate-90" />}
+                            onClick={() => {
+                              setLeadId(l.id);
+                              // The form is above this list, so give clear feedback: jump to it, focus
+                              // the Lead ID field, and toast — otherwise the fill looks like nothing happened.
+                              const el = document.getElementById("record-sale-lead-id");
+                              el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                              setTimeout(() => (el as HTMLInputElement | null)?.focus({ preventScroll: true }), 300);
+                              toast.success("Lead selected", `${name} — now fill in the sale above.`);
+                            }}>
                             Use this lead
                           </Button>
                         </div>
