@@ -88,9 +88,9 @@ public class CadenceHandler :
     {
         Guard.AgainstNull(request);
         EnsureManager();
-        var list = await _db.Cadences.Include(c => c.Steps)
-            .Where(c => c.AgencyId == _user.AgencyId)
-            .ToListAsync(ct);
+        var cq = _db.Cadences.Include(c => c.Steps).AsQueryable();
+        if (!_user.IsSuperAdmin) cq = cq.Where(c => c.AgencyId == _user.AgencyId);
+        var list = await cq.ToListAsync(ct);
         return list.Select(Map).ToList();
     }
 
@@ -155,7 +155,8 @@ public class CadenceHandler :
     {
         Guard.AgainstNull(request);
         EnsureManager();
-        var q = _db.CadenceEnrollments.Where(e => e.AgencyId == _user.AgencyId);
+        var q = _db.CadenceEnrollments.AsQueryable();
+        if (!_user.IsSuperAdmin) q = q.Where(e => e.AgencyId == _user.AgencyId);
         if (request.CadenceId is { } cid) q = q.Where(e => e.CadenceId == cid);
         if (!string.IsNullOrEmpty(request.Status)) q = q.Where(e => e.Status == request.Status);
         return await q.OrderByDescending(e => e.EnrolledAt).Take(request.Take)
@@ -166,6 +167,7 @@ public class CadenceHandler :
 
     private void EnsureManager()
     {
+        if (_user.IsSuperAdmin) return;   // platform operator — reads span all agencies
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
             throw new ForbiddenAccessException();

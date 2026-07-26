@@ -43,12 +43,15 @@ public class ListCallsHandler : IRequestHandler<ListCallsQuery, PagedCallsResult
     public async Task<PagedCallsResult> Handle(ListCallsQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        if (!_user.IsSuperAdmin && _user.AgencyId is null) throw new ForbiddenAccessException();
 
-        var q = _db.CallRecords.AsNoTracking().Where(c => c.AgencyId == _user.AgencyId);
+        // SuperAdmin (platform operator) sees calls across every agency; tenant users are pinned.
+        var q = _db.CallRecords.AsNoTracking().AsQueryable();
+        if (!_user.IsSuperAdmin) q = q.Where(c => c.AgencyId == _user.AgencyId);
 
-        // Non-managers see only their own calls
-        if (!_user.Roles.Contains("Admin") &&
+        // Non-managers see only their own calls (SuperAdmin and managers see the whole scope).
+        if (!_user.IsSuperAdmin &&
+            !_user.Roles.Contains("Admin") &&
             !_user.Roles.Contains("ProgramManager") &&
             !_user.Roles.Contains("TeamLead"))
         {

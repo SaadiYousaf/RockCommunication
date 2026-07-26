@@ -48,7 +48,9 @@ public class LeadListHandler :
     {
         Guard.AgainstNull(request);
         EnsureManager();
-        return await _db.LeadLists.Where(l => l.AgencyId == _user.AgencyId)
+        var q = _db.LeadLists.AsQueryable();
+        if (!_user.IsSuperAdmin) q = q.Where(l => l.AgencyId == _user.AgencyId);  // SuperAdmin sees all agencies
+        return await q
             .OrderBy(l => l.Name)
             .Select(l => new LeadListDto(l.Id, l.Name, l.CampaignId, l.LeadSourceId, l.IsActive, l.LeadCount))
             .ToListAsync(ct);
@@ -150,8 +152,9 @@ public class LeadListHandler :
     {
         Guard.AgainstNull(request);
         EnsureManager();
-        return await _db.LeadImportBatches
-            .Where(b => b.AgencyId == _user.AgencyId && b.LeadListId == request.LeadListId)
+        var q = _db.LeadImportBatches.Where(b => b.LeadListId == request.LeadListId);
+        if (!_user.IsSuperAdmin) q = q.Where(b => b.AgencyId == _user.AgencyId);
+        return await q
             .OrderByDescending(b => b.CreatedAt).Take(request.Take)
             .Select(b => Map(b))
             .ToListAsync(ct);
@@ -159,6 +162,7 @@ public class LeadListHandler :
 
     private void EnsureManager()
     {
+        if (_user.IsSuperAdmin) return;   // platform operator — reads span all agencies (see below)
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
         if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
             throw new ForbiddenAccessException();
