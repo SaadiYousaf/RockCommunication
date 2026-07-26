@@ -247,6 +247,14 @@ export interface LicenseAgent {
   email: string;
   isActive: boolean;
 }
+export interface QueueCounts {
+  myQueue: number;
+  callbacks: number;
+  verifierQueue: number;
+  closerQueue: number;
+  submissionQueue: number;
+}
+
 export interface AppNotification {
   id: string;
   title: string;

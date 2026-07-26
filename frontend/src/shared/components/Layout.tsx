@@ -4,6 +4,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, type RootState } from "../../app/store";
 import { Avatar, Badge, Icon, type IconName, Spinner, cn } from "../ui";
+import { useQueueCountsQuery } from "../api/baseApi";
+import type { QueueCounts } from "../api/types";
 import { CallDock } from "../../features/softphone/CallDock";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
 import { BrandLogo } from "./BrandLogo";
@@ -24,6 +26,8 @@ interface NavItem {
   /** When set, the item is shown only to these roles (plus Admin / SuperAdmin). */
   roles?: string[];
   badge?: string;
+  /** When set, shows a live "N waiting" count from /api/work-queues/counts. */
+  countKey?: keyof QueueCounts;
 }
 interface NavGroup { label: string; items: NavItem[] }
 
@@ -35,12 +39,12 @@ const groups: NavGroup[] = [
       { to: "/guide",     label: "Guide",       icon: "book" },
       { to: "/team",      label: "Team",        icon: "users",     module: "team" },
       { to: "/agent",     label: "Agent Panel", icon: "phone",     module: "agent" },
-      { to: "/queue",     label: "My Queue",    icon: "inbox",     module: "queue" },
+      { to: "/queue",     label: "My Queue",    icon: "inbox",     module: "queue", countKey: "myQueue" },
       { to: "/intake",       label: "Lead Intake",    icon: "plus",  roles: ["Fronter"] },
-      { to: "/verify-queue", label: "Verifier Queue", icon: "check", roles: ["Verifier"] },
-      { to: "/close-queue",  label: "Closer Queue",   icon: "briefcase", roles: ["Closer"] },
-      { to: "/validate-queue", label: "Submission Queue", icon: "shield", roles: ["Validator"] },
-      { to: "/callbacks", label: "Callbacks",   icon: "calendar",  module: "callbacks" },
+      { to: "/verify-queue", label: "Verifier Queue", icon: "check", roles: ["Verifier"], countKey: "verifierQueue" },
+      { to: "/close-queue",  label: "Closer Queue",   icon: "briefcase", roles: ["Closer"], countKey: "closerQueue" },
+      { to: "/validate-queue", label: "Submission Queue", icon: "shield", roles: ["Validator"], countKey: "submissionQueue" },
+      { to: "/callbacks", label: "Callbacks",   icon: "calendar",  module: "callbacks", countKey: "callbacks" },
       { to: "/chat",      label: "Chat",        icon: "chat",      module: "chat" },
     ],
   },
@@ -313,6 +317,11 @@ function SidebarContent({
   const agencyName = useSelector((s: RootState) => s.auth.user?.agencyName);
   const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
   const orgLabel = agencyName || (isSuperAdmin ? "Platform Admin" : "Insurance Agency");
+
+  // Live "N waiting" counts for the queue nav items (RTK dedupes across the two sidebar instances).
+  const token = useSelector((s: RootState) => s.auth.accessToken);
+  const onboarding = useSelector((s: RootState) => !!(s.auth.user?.mustChangePassword || s.auth.user?.twoFactorSetupRequired));
+  const { data: counts } = useQueueCountsQuery(undefined, { skip: !token || onboarding, pollingInterval: 30_000 });
   return (
     <>
       {/* Soft brand glow — bottom corner only, very subtle */}
@@ -387,10 +396,18 @@ function SidebarContent({
                         )}
                       />
                       {!collapsed && <span className="flex-1 truncate">{i.label}</span>}
-                      {!collapsed && i.badge && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm">
-                          {i.badge}
-                        </span>
+                      {!collapsed && (
+                        i.countKey && (counts?.[i.countKey] ?? 0) > 0
+                          ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm tabular-nums">
+                              {(counts![i.countKey] > 99) ? "99+" : counts![i.countKey]}
+                            </span>
+                          : i.badge
+                            ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm">{i.badge}</span>
+                            : null
+                      )}
+                      {/* Collapsed rail: a small dot when there's waiting work. */}
+                      {collapsed && i.countKey && (counts?.[i.countKey] ?? 0) > 0 && (
+                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white" aria-hidden />
                       )}
                     </>
                   )}

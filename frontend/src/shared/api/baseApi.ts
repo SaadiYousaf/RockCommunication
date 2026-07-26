@@ -7,7 +7,7 @@ import type {
   LoginResponse, Lead, UserSummary, TwoFactorSetup,
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
-  OversightAgency, OversightCallCenter, AttendanceRow, AppNotification,
+  OversightAgency, OversightCallCenter, AttendanceRow, AppNotification, QueueCounts,
   WorkflowStage, LeadDisposition, DashboardSummary,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
@@ -90,7 +90,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -349,6 +349,10 @@ export const baseApi = createApi({
     markAllNotificationsRead: b.mutation<void, void>({
       query: () => ({ url: "/api/notifications/read-all", method: "POST" }),
       invalidatesTags: ["Notifications"],
+    }),
+    queueCounts: b.query<QueueCounts, void>({
+      query: () => "/api/work-queues/counts",
+      providesTags: ["QueueCounts"],
     }),
     // SuperAdmin oversight — read-only, cross-agency. Drill-down: agencies → call centers → chats.
     chatOversightAgencies: b.query<OversightAgency[], void>({
@@ -1186,6 +1190,7 @@ export const {
   useChatUnreadQuery, useMarkRoomReadMutation,
   useNotificationsQuery, useNotificationsUnreadCountQuery,
   useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
+  useQueueCountsQuery,
   useListIpAllowlistQuery, useAddIpAllowlistMutation, useRemoveIpAllowlistMutation,
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
