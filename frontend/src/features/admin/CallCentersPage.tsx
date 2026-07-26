@@ -7,6 +7,7 @@ import {
   useAgencyOptionsQuery, useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
@@ -32,6 +33,10 @@ export function CallCentersPage() {
   const own = useListCallCentersQuery(undefined, { skip: isSuperAdmin });
   const scoped = useAgencyCallCentersQuery(agencyId, { skip: !isSuperAdmin || !agencyId });
   const list = isSuperAdmin ? scoped.data : own.data;
+  const { sorted, dirFor, toggle } = useTableSort(list, {
+    key: "name",
+    accessors: { status: (c) => (c.isActive ? 1 : 0) },
+  });
   const isLoading = isSuperAdmin ? (scoped.isLoading || !agencyId) : own.isLoading;
 
   const [createCc, { isLoading: creating }] = useCreateCallCenterMutation();
@@ -109,10 +114,16 @@ export function CallCentersPage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Code</TH><TH numeric>Leads</TH><TH>Status</TH><TH></TH></TR>
+                <TR>
+                  <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
+                  <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
+                  <TH numeric sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>Leads</TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
+                  <TH></TH>
+                </TR>
               </THead>
               <TBody>
-                {list.map((c) => (
+                {sorted.map((c) => (
                   <TR key={c.id}>
                     <TD className="font-medium text-ink-900">{c.name}</TD>
                     <TD className="font-mono text-xs text-ink-600">{c.code || "—"}</TD>

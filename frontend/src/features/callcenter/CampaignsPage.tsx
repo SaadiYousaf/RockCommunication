@@ -167,7 +167,8 @@ function LeadSourcesSection() {
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
           <div className="px-5 pb-5">
-            <EmptyState icon={<Icon name="target" size={20} />} title="No lead sources" description="Track how leads enter your pipeline." />
+            <EmptyState icon={<Icon name="target" size={20} />} title="No lead sources" description="Track how leads enter your pipeline."
+              action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>} />
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
@@ -240,7 +241,8 @@ function SkillsSection() {
         {isLoading ? (
           <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
-          <EmptyState icon={<Icon name="star" size={20} />} title="No skills" description="Add skills to enable skill-based routing." />
+          <EmptyState icon={<Icon name="star" size={20} />} title="No skills" description="Add skills to enable skill-based routing."
+            action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>} />
         ) : (
           <ul className="divide-y divide-ink-100">
             {list.map((s) => (
@@ -306,7 +308,8 @@ function WrapUpCodesSection() {
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
           <div className="px-5 pb-5">
-            <EmptyState icon={<Icon name="check" size={20} />} title="No wrap-up codes" description="Add codes for agents to use after calls." />
+            <EmptyState icon={<Icon name="check" size={20} />} title="No wrap-up codes" description="Add codes for agents to use after calls."
+              action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>} />
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">

@@ -368,7 +368,7 @@ export function KpiDashboardPage() {
                   className="surface p-5 hover:shadow-card-hover transition-shadow"
                 >
                   <div className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2">{v.label}</div>
-                  <div className="text-3xl font-semibold tracking-tight text-ink-900">
+                  <div className="text-3xl font-semibold tracking-tight text-ink-900 tabular-nums">
                     {v.value.toLocaleString()}
                     {v.unit && <span className="text-sm text-ink-500 ml-1.5 font-normal">{v.unit}</span>}
                   </div>
