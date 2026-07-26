@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -49,11 +50,11 @@ public class ListCallsHandler : IRequestHandler<ListCallsQuery, PagedCallsResult
         var q = _db.CallRecords.AsNoTracking().AsQueryable();
         if (!_user.IsSuperAdmin) q = q.Where(c => c.AgencyId == _user.AgencyId);
 
-        // Non-managers see only their own calls (SuperAdmin and managers see the whole scope).
-        if (!_user.IsSuperAdmin &&
-            !_user.Roles.Contains("Admin") &&
-            !_user.Roles.Contains("ProgramManager") &&
-            !_user.Roles.Contains("TeamLead"))
+        // Non-managers see only their own calls; oversight roles (Admin, CEO, Program/Project Manager,
+        // TechLead, QAManager, TeamLead, SuperAdmin) see the whole scope. Use the shared AccessScope
+        // policy so this can't drift from the leads/records visibility rule and omit a role (a CEO/QA
+        // reviewer opening Call History previously saw an empty log).
+        if (!_user.IsSuperAdmin && !AccessScope.SeesAllRecords(_user.Roles))
         {
             q = q.Where(c => c.AgentUserId == _user.UserId);
         }

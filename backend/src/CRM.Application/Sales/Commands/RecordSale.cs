@@ -129,12 +129,15 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
 
         var (isInternal, reason) = await _checker.CheckAsync(lead, _user.UserId.Value, ct);
 
-        // Allocate the next per-agency serial. SQLite serialises writes and the unique
-        // (AgencyId, SaleNumber) filtered index is the correctness backstop, so a plain
-        // read-increment on the tracked agency (persisted in the same SaveChanges) is safe.
-        var agency = await _db.Agencies.FirstOrDefaultAsync(a => a.Id == lead.AgencyId, ct)
-            ?? throw new NotFoundException(nameof(Agency), lead.AgencyId);
-        agency.LastSaleNumber += 1;
+        // Allocate the next per-agency serial ATOMICALLY. A plain read-then-increment races under
+        // concurrent closes in the same agency (both read N, both write N+1 → the second INSERT hits
+        // the unique (AgencyId, SaleNumber) index → the whole sale rolls back as a 500 and is lost).
+        // Increment in the database and read the fresh value so every close gets a distinct number.
+        var updated = await _db.Agencies.Where(a => a.Id == lead.AgencyId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.LastSaleNumber, a => a.LastSaleNumber + 1), ct);
+        if (updated == 0) throw new NotFoundException(nameof(Agency), lead.AgencyId);
+        var saleNumber = await _db.Agencies.AsNoTracking()
+            .Where(a => a.Id == lead.AgencyId).Select(a => a.LastSaleNumber).FirstAsync(ct);
 
         var accountDigits = new string((input.AccountNumber ?? "").Where(char.IsDigit).ToArray());
         var sale = new Sale
@@ -142,7 +145,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             AgencyId = lead.AgencyId,
             CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
-            SaleNumber = agency.LastSaleNumber,
+            SaleNumber = saleNumber,
             CloserUserId = _user.UserId.Value,
             Carrier = input.Carrier.ToUpperInvariant(),
             PolicyNumber = input.PolicyNumber,

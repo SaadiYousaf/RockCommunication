@@ -54,7 +54,8 @@ public class HttpZoomPhoneDialerProvider : IDialerProvider
         catch (Exception ex)
         {
             _logger.LogError(ex, "Zoom Phone dial failed agent={Agent} phone={Phone}", agentId, phoneNumber);
-            throw;
+            // Graceful: return a Failed result instead of 500-ing the agent's dial/transfer on an outage.
+            return new DialResult(Guid.NewGuid().ToString("N"), "Failed", DateTime.UtcNow);
         }
     }
 

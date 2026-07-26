@@ -1,4 +1,5 @@
 using CRM.Application.Common.Assignment;
+using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
@@ -80,7 +81,11 @@ public class AssignmentStrategyRegistry : IAssignmentStrategyRegistry
 
     public IAssignmentStrategy Get(string name) =>
         _byName.TryGetValue(name, out var s) ? s
-            : throw new InvalidOperationException($"Unknown assignment strategy '{name}'.");
+            // Client-supplied value — a bad one is a 400 (validation), not a 500. Include the valid set.
+            : throw new ValidationException(new Dictionary<string, string[]>
+            {
+                ["strategy"] = new[] { $"Unknown assignment strategy '{name}'. Valid options: {string.Join(", ", _byName.Keys)}." }
+            });
 
     public IReadOnlyList<string> AvailableStrategies => _byName.Keys.ToList();
 }

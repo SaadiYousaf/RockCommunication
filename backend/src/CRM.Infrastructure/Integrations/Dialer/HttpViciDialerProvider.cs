@@ -49,7 +49,9 @@ public class HttpViciDialerProvider : IDialerProvider
         catch (Exception ex)
         {
             _logger.LogError(ex, "Vici dial failed agent={Agent} phone={Phone}", agentId, phoneNumber);
-            throw;
+            // Graceful: a dialer/PBX outage returns a Failed result (mirrors the SMS providers and the
+            // already-guarded HangupAsync) instead of throwing and 500-ing the agent's dial/transfer.
+            return new DialResult(Guid.NewGuid().ToString("N"), "Failed", DateTime.UtcNow);
         }
     }
 

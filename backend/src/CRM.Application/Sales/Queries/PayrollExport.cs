@@ -26,8 +26,8 @@ public class ExportPayrollHandler : IRequestHandler<ExportPayrollQuery, IReadOnl
     {
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
-            throw new ForbiddenAccessException();
+        // Authorization is the controller's [HasPermission(PayrollProcess)] gate — don't re-gate on a
+        // hard-coded role list here (it wrongly 403'd a CEO, who holds PayrollProcess).
 
         var q = _db.CommissionEntries.Where(c => c.AgencyId == _user.AgencyId);
         if (request.RunId is { } r) q = q.Where(c => c.PayrollRunId == r);

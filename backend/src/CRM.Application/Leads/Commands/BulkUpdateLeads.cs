@@ -158,7 +158,10 @@ public class BulkLeadHandler :
     private void EnsureManager()
     {
         if (_user.AgencyId is null || _user.UserId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
+        // CEO (agency owner) is a manager too and holds the LeadsAssign/LeadsTransition permission the
+        // controller already checked — don't 403 them on a hard-coded list that omitted the role.
+        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("CEO")
+            && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
             throw new ForbiddenAccessException();
     }
 

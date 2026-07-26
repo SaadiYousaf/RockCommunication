@@ -36,7 +36,17 @@ public class VerifyJornayaHandler : IRequestHandler<VerifyJornayaCommand, LeadDt
             l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
 
-        var result = await _jornaya.VerifyAsync(lead.Id.ToString(), lead.JornayaLeadId, ct);
+        JornayaVerificationResult result;
+        try
+        {
+            result = await _jornaya.VerifyAsync(lead.Id.ToString(), lead.JornayaLeadId, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Jornaya transport/parse failure (timeout, outage). Surface a clean, retryable error and
+            // leave the lead's verification state untouched rather than 500 or recording a false negative.
+            throw new ConflictException("Jornaya verification is temporarily unavailable. Please try again in a moment.");
+        }
         lead.JornayaVerified = result.Verified;
         lead.JornayaVerifiedAt = result.VerifiedAt;
         // Record who ran the verification so the UI can show "Verified by …" and lock the button.

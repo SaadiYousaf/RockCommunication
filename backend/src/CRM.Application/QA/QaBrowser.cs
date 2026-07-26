@@ -28,13 +28,16 @@ public class ListQaReviewsHandler : IRequestHandler<ListQaReviewsQuery, IReadOnl
         if (request.From is { } f) q = q.Where(r => r.ReviewedAt >= f);
         if (request.To is { } t) q = q.Where(r => r.ReviewedAt < t);
 
-        return await q.OrderByDescending(r => r.ReviewedAt)
+        // SQLite stores decimal as TEXT and can't evaluate the % divide in SQL — pull the rows first,
+        // then compute the percentage in memory (same guard the AgentScorecard/dashboard/sales use).
+        var rows = await q.OrderByDescending(r => r.ReviewedAt)
             .Take(Math.Min(request.Take, 200))
-            .Select(r => new QaReviewSummaryDto(r.Id, r.LeadId, r.AgentUserId, r.ReviewerUserId,
-                r.RubricId, r.TotalScore, r.MaxScore,
-                r.MaxScore == 0 ? 0 : Math.Round(r.TotalScore / r.MaxScore * 100m, 2),
-                r.Notes, r.ReviewedAt))
+            .Select(r => new { r.Id, r.LeadId, r.AgentUserId, r.ReviewerUserId, r.RubricId, r.TotalScore, r.MaxScore, r.Notes, r.ReviewedAt })
             .ToListAsync(ct);
+        return rows.Select(r => new QaReviewSummaryDto(r.Id, r.LeadId, r.AgentUserId, r.ReviewerUserId,
+            r.RubricId, r.TotalScore, r.MaxScore,
+            r.MaxScore == 0 ? 0 : Math.Round(r.TotalScore / r.MaxScore * 100m, 2),
+            r.Notes, r.ReviewedAt)).ToList();
     }
 }
 

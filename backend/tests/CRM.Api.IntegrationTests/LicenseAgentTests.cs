@@ -207,6 +207,11 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
 
         var detail = await ceo.GetAsync($"/api/sales/{saleId}");
         Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+
+        // CEO holds PayrollProcess and is an oversight role — payroll export and the call-history
+        // log must not 403 them (both previously re-gated on a role list that omitted CEO).
+        Assert.Equal(HttpStatusCode.OK, (await ceo.GetAsync("/api/sales/payroll-export")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ceo.GetAsync("/api/cc/calls")).StatusCode);
     }
 
     [Fact]
