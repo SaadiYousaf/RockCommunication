@@ -225,40 +225,38 @@ export function LeadListsPage() {
                 description="Once you upload a CSV, the run summary will appear here."
               />
             ) : (
-              <div className="overflow-x-auto rounded-lg border hairline">
-                <table className="w-full text-sm">
-                  <thead className="bg-ink-50/60 text-ink-600 text-xs uppercase tracking-wide">
-                    <tr>
-                      <th className="text-left font-medium px-4 py-2.5">When</th>
-                      <th className="text-left font-medium px-4 py-2.5">File</th>
-                      <th className="text-left font-medium px-4 py-2.5">Total</th>
-                      <th className="text-left font-medium px-4 py-2.5">Imported</th>
-                      <th className="text-left font-medium px-4 py-2.5">Duplicates</th>
-                      <th className="text-left font-medium px-4 py-2.5">DNC scrubbed</th>
-                      <th className="text-left font-medium px-4 py-2.5">Errors</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ink-100">
-                    {batches.map((b) => (
-                      <tr key={b.id} className="hover:bg-ink-50/60">
-                        <td className="px-4 py-2.5 text-xs text-ink-600">
-                          {b.completedAt ? new Date(b.completedAt).toLocaleString() : <Badge tone="warning" variant="soft" dot>Running</Badge>}
-                        </td>
-                        <td className="px-4 py-2.5 font-mono text-xs text-ink-700">{b.fileName}</td>
-                        <td className="px-4 py-2.5 text-ink-700">{b.totalRows ?? 0}</td>
-                        <td className="px-4 py-2.5"><Badge tone="success" variant="soft">{b.imported ?? 0}</Badge></td>
-                        <td className="px-4 py-2.5"><Badge tone="warning" variant="soft">{b.duplicates ?? 0}</Badge></td>
-                        <td className="px-4 py-2.5"><Badge tone="danger" variant="soft">{b.dncScrubbed ?? 0}</Badge></td>
-                        <td className="px-4 py-2.5">
-                          {b.errors > 0
-                            ? <Badge tone="danger" variant="soft">{b.errors}</Badge>
-                            : <span className="text-ink-400">0</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>When</TH>
+                    <TH>File</TH>
+                    <TH numeric>Total</TH>
+                    <TH numeric>Imported</TH>
+                    <TH numeric>Duplicates</TH>
+                    <TH numeric>DNC scrubbed</TH>
+                    <TH numeric>Errors</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {batches.map((b) => (
+                    <TR key={b.id}>
+                      <TD className="text-xs text-ink-600 whitespace-nowrap">
+                        {b.completedAt ? new Date(b.completedAt).toLocaleString() : <Badge tone="warning" variant="soft" dot>Running</Badge>}
+                      </TD>
+                      <TD className="font-mono text-xs text-ink-700">{b.fileName}</TD>
+                      <TD numeric className="text-ink-700">{b.totalRows ?? 0}</TD>
+                      <TD numeric><Badge tone="success" variant="soft">{b.imported ?? 0}</Badge></TD>
+                      <TD numeric><Badge tone="warning" variant="soft">{b.duplicates ?? 0}</Badge></TD>
+                      <TD numeric><Badge tone="danger" variant="soft">{b.dncScrubbed ?? 0}</Badge></TD>
+                      <TD numeric>
+                        {b.errors > 0
+                          ? <Badge tone="danger" variant="soft">{b.errors}</Badge>
+                          : <span className="text-ink-400">0</span>}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             )}
           </CardBody>
         </Card>

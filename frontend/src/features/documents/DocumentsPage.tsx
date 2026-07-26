@@ -328,7 +328,9 @@ function NotesPanel({ documentId }: { documentId: string }) {
           ))}
         </ul>
       ) : (
-        <div className="text-xs text-ink-500 mb-3">No notes yet.</div>
+        <div className="flex items-center gap-2 text-xs text-ink-500 mb-3">
+          <Icon name="chat" size={14} className="text-ink-400" /> No notes yet — add the first one below.
+        </div>
       )}
       <form onSubmit={submit} className="flex gap-2">
         <Input

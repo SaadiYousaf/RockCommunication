@@ -159,9 +159,10 @@ function VoicemailSection() {
           <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-12" />)}</div>
         ) : !vms || vms.length === 0 ? (
           <EmptyState
-            icon={<Icon name="chat" size={20} />}
+            icon={<Icon name="mic" size={20} />}
             title="No voicemail assets"
             description="Upload a recording URL so agents can drop messages on no-answer."
+            action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New asset</Button>}
           />
         ) : (
           <ul className="divide-y divide-ink-100">

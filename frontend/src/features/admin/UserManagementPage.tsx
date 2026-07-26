@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser } from "../../shared/constants/roles";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 
 
@@ -59,6 +60,11 @@ export function UserManagementPage() {
       u.roles.some((r) => r.toLowerCase().includes(q))
     );
   }, [users, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    key: "userName",
+    accessors: { role: (u) => u.roles[0] ?? "" },
+  });
 
   const stats = useMemo(() => {
     const list = users ?? [];
@@ -134,15 +140,15 @@ export function UserManagementPage() {
         <Table>
           <THead>
             <TR>
-              <TH>User</TH>
-              <TH>Email</TH>
-              <TH>Roles</TH>
+              <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
+              <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
+              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
               <TH>Call center</TH>
               <TH className="text-right">Actions</TH>
             </TR>
           </THead>
           <TBody>
-            {filtered.map((u) => {
+            {sorted.map((u) => {
               // Backend now returns isActive on every UserSummary. We default to
               // `true` for older payloads so we don't accidentally grey out everyone.
               const active = u.isActive ?? true;

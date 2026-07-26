@@ -5,7 +5,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
-  Skeleton, useToast, cn, type IconName,
+  Skeleton, Stat, useToast, cn, type IconName,
 } from "../../shared/ui";
 import type { IntegrationInfo, IntegrationHealthResult } from "../../shared/api/types";
 
@@ -67,7 +67,7 @@ export function IntegrationsPage() {
         description="Centralized view of every external provider — Jornaya, Vici, SMS, Email, Carriers, Funding, BLA, Trello. Flip any from Stub → Live in appsettings.json."
         breadcrumbs={[{ label: "Admin" }, { label: "Integrations" }]}
         actions={
-          <Button variant="outline" leftIcon={<Icon name="filter" size={16} />} onClick={() => refetch()}>
+          <Button variant="outline" leftIcon={<Icon name="refresh" size={16} />} onClick={() => refetch()}>
             Refresh
           </Button>
         }
@@ -75,9 +75,9 @@ export function IntegrationsPage() {
 
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <SmallTile label="Configured" value={stats.total} icon="cog"   tone="bg-brand-50 text-brand-600" />
-          <SmallTile label="Live"       value={stats.live}  icon="check" tone="bg-emerald-50 text-emerald-600" />
-          <SmallTile label="On Stubs"   value={stats.stub}  icon="shield" tone="bg-amber-50 text-amber-600" />
+          <Stat label="Configured" value={stats.total} icon={<Icon name="cog" size={18} />}   tone="brand" />
+          <Stat label="Live"       value={stats.live}  icon={<Icon name="check" size={18} />} tone="success" />
+          <Stat label="On Stubs"   value={stats.stub}  icon={<Icon name="shield" size={18} />} tone="warning" />
         </div>
       )}
 
@@ -272,16 +272,3 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function SmallTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
-  return (
-    <div className="surface p-4 flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
-        <Icon name={icon} size={18} />
-      </div>
-      <div>
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide">{label}</div>
-        <div className="text-xl font-semibold text-ink-900">{value}</div>
-      </div>
-    </div>
-  );
-}
