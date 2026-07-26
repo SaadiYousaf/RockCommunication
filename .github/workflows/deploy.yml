@@ -16,7 +16,10 @@ on:
 
 concurrency:
   group: deploy-production    # never run two deploys at once
-  cancel-in-progress: false
+  # Cancel an in-progress/queued deploy when a newer one arrives. A deploy always wants the
+  # LATEST commit, and this prevents one stuck run (e.g. waiting-for-a-runner) from holding the
+  # lock and blocking every subsequent run forever. Was `false`, which caused exactly that.
+  cancel-in-progress: true
 
 env:
   BOX_REPO: /home/ubuntu/CRM  # repo root on the Lightsail box
