@@ -15,6 +15,88 @@ const severityTone: Record<string, { tone: "danger" | "warning" | "info"; icon: 
   info:    { tone: "info",    icon: "doc",    bg: "bg-brand-50",    ring: "ring-brand-200" },
 };
 
+type IssueDetail = {
+  what: string;
+  impact: string;
+  fix: string;
+  cta?: string;
+  to?: (leadId: string) => string;
+};
+
+/**
+ * Frontend knowledge base: expands each backend issue code into actionable guidance
+ * (the API only sends severity/code/message). Keyed by DiagnosticIssue.code —
+ * see LeadDiagnosticsQuery on the backend for the source list of codes.
+ */
+const ISSUE_DETAILS: Record<string, IssueDetail> = {
+  DNC: {
+    what: "This phone number is on a Do-Not-Call list (internal or national).",
+    impact: "The dialer blocks every outbound attempt and SMS is disallowed — contacting it risks a TCPA violation.",
+    fix: "If the number is wrong, correct it on the lead. Otherwise mark the lead Lost — it can't be legally dialed.",
+    cta: "Open lead", to: (id) => `/leads/${id}`,
+  },
+  NO_CONSENT: {
+    what: "No TCPA consent record is on file for this lead.",
+    impact: "You can't legally send SMS or place outbound calls until consent is captured.",
+    fix: "Capture consent on the lead (or confirm the Jornaya/LeadiD token that proves it) before any outreach.",
+    cta: "Open lead", to: (id) => `/leads/${id}`,
+  },
+  TCPA_WINDOW: {
+    what: "The current time is outside the TCPA-permitted calling window for this lead's state.",
+    impact: "Dialing now risks a TCPA violation, so the dialer holds outbound attempts.",
+    fix: "Wait until the local window (typically 8am–9pm local time) reopens, or schedule a callback inside it.",
+    cta: "Schedule a callback", to: (id) => `/leads/${id}`,
+  },
+  JORNAYA_PENDING: {
+    what: "This lead's Jornaya/LeadiD token hasn't been verified yet.",
+    impact: "Verification is a compliance gate — the lead can't move to Closed until it passes.",
+    fix: "Run Jornaya verification from the lead detail page.",
+    cta: "Open lead to verify", to: (id) => `/leads/${id}`,
+  },
+  UNASSIGNED: {
+    what: "The lead has advanced past the New stage but no agent owns it.",
+    impact: "Unowned leads fall through the cracks — no one actions follow-ups and routing rules skip it.",
+    fix: "Assign it to a Fronter (or the right role for its stage) from the lead or the Leads list.",
+    cta: "Open lead to assign", to: (id) => `/leads/${id}`,
+  },
+  UNWRAPPED: {
+    what: "One or more calls to this lead ended without a wrap-up (disposition) code.",
+    impact: "Agents can be blocked from dialing again until the prior call is wrapped, and reporting is incomplete.",
+    fix: "Open Call History and add a wrap-up code to the open call(s).",
+    cta: "Go to Call History", to: () => `/calls`,
+  },
+  NO_CADENCE: {
+    what: "This lead isn't enrolled in any automated cadence.",
+    impact: "Without a cadence, follow-ups rely on manual effort and the lead can go cold.",
+    fix: "Enroll it in a cadence (e.g. 'New lead — 7-touch') to automate touches.",
+    cta: "Go to Cadences", to: () => `/cadences`,
+  },
+  STALE: {
+    what: "The lead has sat in its current stage well beyond the expected age.",
+    impact: "Stale leads skew pipeline metrics and rarely convert without intervention.",
+    fix: "Move it forward, or send it to Followup/Lost so the pipeline stays accurate.",
+    cta: "Open lead to update stage", to: (id) => `/leads/${id}`,
+  },
+  WORKFLOW_FAILURE: {
+    what: "An automation (workflow rule) failed while processing one of this lead's events.",
+    impact: "A step that should have run automatically (assignment, notification, enrollment…) didn't — leaving the lead inconsistent.",
+    fix: "Check 'Recent executions' below for the error, fix the rule in Workflows, then re-trigger the event.",
+    cta: "Open Workflows", to: () => `/workflows`,
+  },
+};
+
+/** Maps a recommendation's action label to an icon + the place where it's actioned. */
+const REC_META: Record<string, { icon: IconName; to: (leadId: string) => string }> = {
+  "Mark Lost (DNC)":          { icon: "flag",      to: (id) => `/leads/${id}` },
+  "Assign to a Fronter":      { icon: "users",     to: (id) => `/leads/${id}` },
+  "Run Jornaya verification": { icon: "shield",    to: (id) => `/leads/${id}` },
+  "Wrap up open call":        { icon: "phone",     to: () => `/calls` },
+  "Enroll in cadence":        { icon: "filter",    to: () => `/cadences` },
+  "Validate the sale":        { icon: "check",     to: (id) => `/leads/${id}` },
+  "Submit for funding":       { icon: "briefcase", to: (id) => `/leads/${id}` },
+  "Dial the lead":            { icon: "phone",     to: (id) => `/leads/${id}` },
+};
+
 function timeAgo(iso: string | null) {
   if (!iso) return "never";
   const diff = Date.now() - new Date(iso).getTime();
@@ -103,16 +185,26 @@ export function LeadTroubleshootPage() {
           />
         </CardBody></Card>
       ) : (
-        <Diagnostic data={data} />
+        <Diagnostic data={data} leadId={id} />
       )}
     </>
   );
 }
 
-function Diagnostic({ data }: { data: LeadDiagnostics }) {
+function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string }) {
   const errors  = data.issues.filter((i) => i.severity === "error").length;
   const warnings = data.issues.filter((i) => i.severity === "warning").length;
   const okStatus = errors === 0 && warnings === 0;
+  // Which issue rows are expanded. Errors start open so blockers are visible at a glance.
+  const [openIssues, setOpenIssues] = useState<Set<number>>(
+    () => new Set(data.issues.map((iss, i) => (iss.severity === "error" ? i : -1)).filter((i) => i >= 0)),
+  );
+  const toggleIssue = (i: number) =>
+    setOpenIssues((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
 
   return (
     <div className="space-y-5">
@@ -169,27 +261,72 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
                 </div>
               </div>
             ) : (
+              <>
               <ul className="space-y-2">
                 {data.issues.map((issue, i) => {
                   const s = severityTone[issue.severity] ?? severityTone.info;
+                  const detail = ISSUE_DETAILS[issue.code];
+                  const open = openIssues.has(i);
                   return (
-                    <li key={i} className={cn("flex items-start gap-3 p-3.5 rounded-xl border hairline", s.bg, "ring-1 ring-inset", s.ring)}>
-                      <div className={`h-9 w-9 rounded-lg grid place-items-center shrink-0 bg-white ring-1 ring-inset ${s.ring}`}>
-                        <Badge tone={s.tone} variant="soft" className="!px-0 !bg-transparent">
-                          <Icon name={s.icon} size={16} />
-                        </Badge>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge tone={s.tone} variant="soft" dot>{issue.severity.toUpperCase()}</Badge>
-                          <code className="font-mono text-[11px] text-ink-700 bg-white/70 px-1.5 py-0.5 rounded">{issue.code}</code>
+                    <li key={i} className={cn("rounded-xl border hairline ring-1 ring-inset overflow-hidden", s.bg, s.ring)}>
+                      <button
+                        type="button"
+                        onClick={() => toggleIssue(i)}
+                        aria-expanded={open}
+                        className="w-full flex items-start gap-3 p-3.5 text-left hover:bg-white/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                      >
+                        <div className={`h-9 w-9 rounded-lg grid place-items-center shrink-0 bg-white ring-1 ring-inset ${s.ring}`}>
+                          <Badge tone={s.tone} variant="soft" className="!px-0 !bg-transparent">
+                            <Icon name={s.icon} size={16} />
+                          </Badge>
                         </div>
-                        <div className="text-sm text-ink-800 mt-1 leading-relaxed">{issue.message}</div>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge tone={s.tone} variant="soft" dot>{issue.severity.toUpperCase()}</Badge>
+                            <code className="font-mono text-[11px] text-ink-700 bg-white/70 px-1.5 py-0.5 rounded">{issue.code}</code>
+                          </div>
+                          <div className="text-sm text-ink-800 mt-1 leading-relaxed">{issue.message}</div>
+                        </div>
+                        <Icon
+                          name={open ? "chevronUp" : "chevronDown"}
+                          size={16}
+                          className="mt-1 shrink-0 text-ink-400"
+                          aria-hidden
+                        />
+                      </button>
+
+                      {open && (
+                        <div className="px-3.5 pb-3.5 animate-fade-in">
+                          <div className="rounded-lg bg-white/80 ring-1 ring-inset ring-white/70 shadow-xs p-3.5 space-y-3">
+                            {detail ? (
+                              <>
+                                <DetailBlock label="What it means" text={detail.what} />
+                                <DetailBlock label="Why it's blocking" text={detail.impact} />
+                                <DetailBlock label="How to fix it" text={detail.fix} />
+                                {detail.cta && detail.to && (
+                                  <Link to={detail.to(leadId)} className="inline-block pt-0.5">
+                                    <Button size="sm" leftIcon={<Icon name="arrowRight" size={14} />}>
+                                      {detail.cta}
+                                    </Button>
+                                  </Link>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-sm text-ink-600">
+                                No extra guidance is available for this check. Review the lead and the detail sections below.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
               </ul>
+              {data.issues.length > 0 && (
+                <p className="text-[11px] text-ink-400 mt-2.5 px-1">Tap any item for details and how to fix it.</p>
+              )}
+              </>
             )}
           </CardBody>
         </Card>
@@ -197,19 +334,35 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
         <Card>
           <CardHeader title="Next best action" subtitle="Suggested step" />
           <CardBody className="pt-0 space-y-3">
-            {data.recommendations.map((r, i) => (
-              <div key={i} className="rounded-xl border hairline p-4 hover:shadow-card transition-shadow">
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
-                    <Icon name="arrowRight" size={16} />
+            {data.recommendations.length === 0 ? (
+              <div className="text-sm text-ink-500 p-4 text-center">Nothing to action right now.</div>
+            ) : data.recommendations.map((r, i) => {
+              const meta = REC_META[r.action];
+              const to = meta ? meta.to(leadId) : `/leads/${leadId}`;
+              return (
+                <Link
+                  key={i}
+                  to={to}
+                  className="group block rounded-xl border hairline p-4 hover:border-brand-200 hover:bg-brand-50/40 hover:shadow-card transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0 group-hover:bg-brand-100 transition-colors">
+                      <Icon name={meta?.icon ?? "arrowRight"} size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-ink-900">{r.action}</div>
+                      <div className="text-xs text-ink-500 mt-1 leading-snug">{r.why}</div>
+                    </div>
+                    <Icon
+                      name="arrowRight"
+                      size={16}
+                      className="mt-1 shrink-0 text-ink-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all"
+                      aria-hidden
+                    />
                   </div>
-                  <div>
-                    <div className="font-semibold text-ink-900">{r.action}</div>
-                    <div className="text-xs text-ink-500 mt-1 leading-snug">{r.why}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                </Link>
+              );
+            })}
           </CardBody>
         </Card>
       </div>
@@ -440,6 +593,15 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
       </div>
     );
   }
+}
+
+function DetailBlock({ label, text }: { label: string; text: string }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-400">{label}</div>
+      <div className="text-sm text-ink-700 mt-0.5 leading-relaxed">{text}</div>
+    </div>
+  );
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {

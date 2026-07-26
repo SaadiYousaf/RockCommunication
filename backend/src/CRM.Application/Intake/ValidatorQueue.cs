@@ -1,6 +1,7 @@
 using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
@@ -92,14 +93,16 @@ public class ValidatorQueueHandler :
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
     private readonly ICommissionEngine _commission;
+    private readonly INotificationDispatcher _notify;
 
     public ValidatorQueueHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
-        ICommissionEngine commission)
+        ICommissionEngine commission, INotificationDispatcher notify)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _commission = Guard.AgainstNull(commission);
+        _notify = Guard.AgainstNull(notify);
     }
 
     public async Task<IReadOnlyList<ValidatorQueueItem>> Handle(ValidatorQueueQuery request, CancellationToken ct)
@@ -289,5 +292,20 @@ public class ValidatorQueueHandler :
             existing.Note = line.Note;
         }
         // else: already paid out — leave the historical entry untouched.
+
+        // Let the License Agent know a sale is now theirs (bell + live push + email). Best-effort:
+        // the SaveChangesAsync happens in the caller, so we only queue the notification write here —
+        // the InApp channel persists via the same context and is flushed with the caller's save.
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(
+                    sale.AgencyId, licenseAgentId,
+                    "A sale was assigned to you",
+                    $"Sale #{sale.SaleNumber} ({sale.Carrier}, {sale.MonthlyPremium:C}/mo) is now assigned to you for approval.",
+                    $"/sales/{sale.Id}"),
+                new[] { NotificationChannelType.InApp, NotificationChannelType.Email }, ct);
+        }
+        catch { /* advisory only — never fail the approval */ }
     }
 }

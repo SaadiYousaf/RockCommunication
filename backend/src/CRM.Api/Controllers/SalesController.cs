@@ -138,8 +138,12 @@ public class SalesController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<CommissionEntryDto>>> MyCommissions(
         [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] bool? paid, CancellationToken ct)
     {
-        var f = from ?? DateTime.UtcNow.AddDays(-30);
-        var t = to ?? DateTime.UtcNow.AddDays(1);
+        // The UI sends date-only bounds (e.g. to=2026-07-26 → midnight). The query filters
+        // EarnedAt < To, so a midnight "to" would drop everything earned on that day itself
+        // (a commission earned today at 03:28 is after today-00:00). Treat "to" as inclusive of
+        // its whole day by rolling to the start of the next day.
+        var f = (from ?? DateTime.UtcNow.AddDays(-30).Date).Date;
+        var t = (to ?? DateTime.UtcNow.Date).Date.AddDays(1);
         return Ok(await _mediator.Send(new MyCommissionsQuery(f, t, paid), ct));
     }
 

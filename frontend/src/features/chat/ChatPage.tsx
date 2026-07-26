@@ -580,11 +580,14 @@ export function ChatPage() {
         )}
       </main>
 
-      {/* New room modal */}
+      {/* New room modal — fed from the OPEN user directory (/api/users/directory), which every
+          authenticated user in the agency can read. The permission-gated /api/users list (`users`)
+          403s for non-privileged roles (License Agent, Fronter, …), which is what left the member
+          picker showing "No teammates match". */}
       <NewRoomModal
         open={showNewRoom}
         onClose={() => setShowNewRoom(false)}
-        users={(users ?? []).filter((u) => u.id !== auth.user?.id)}
+        users={(directory ?? []).filter((u) => u.id !== auth.user?.id)}
         loading={creatingRoom}
         onCreate={handleCreate}
       />
@@ -593,7 +596,7 @@ export function ChatPage() {
       <DirectMessageModal
         open={showDm}
         onClose={() => setShowDm(false)}
-        users={(users ?? []).filter((u) => u.id !== auth.user?.id)}
+        users={(directory ?? []).filter((u) => u.id !== auth.user?.id)}
         onPick={handleStartDm}
       />
     </div>
@@ -605,7 +608,7 @@ function DirectMessageModal({
 }: {
   open: boolean;
   onClose: () => void;
-  users: { id: string; userName: string; email: string }[];
+  users: { id: string; userName: string; email?: string }[];
   onPick: (userId: string) => void;
 }) {
   const [q, setQ] = useState("");

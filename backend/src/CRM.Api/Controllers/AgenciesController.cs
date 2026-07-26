@@ -5,7 +5,6 @@ using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Api.Controllers;
 
@@ -66,15 +65,19 @@ public class AgenciesController : ControllerBase
 
     // ─── Agency Panel + cross-agency Submission Agent support ───────────────────
 
-    /// <summary>Agency options for the approval popup's Agency picker (SuperAdmin or a central Submission Agent).</summary>
+    /// <summary>Agency options for the approval popup's Agency picker. Gated by the same permission
+    /// as validating a sale (SalesValidate) so anyone who can approve — Validator, agency Admin, CEO,
+    /// SuperAdmin — can render the picker; the handler still scopes a plain agency user to their own.</summary>
     [HttpGet("options")]
-    [Authorize(Roles = DomainRoles.SuperAdmin + "," + DomainRoles.Validator)]
+    [HasPermission(Permissions.SalesValidate)]
     public async Task<IActionResult> Options(CancellationToken ct)
         => Ok(await _mediator.Send(new ListAgencyOptionsQuery(), ct));
 
-    /// <summary>License Agents of an agency — for the panel roster and the approval popup's Agent picker.</summary>
+    /// <summary>License Agents of an agency — for the panel roster and the approval popup's Agent picker.
+    /// Gated by SalesValidate (matches the assign-license-agent write) so an agency Admin approving a
+    /// sale can load the list; the handler enforces the caller can only read their own agency's agents.</summary>
     [HttpGet("{id:guid}/license-agents")]
-    [Authorize(Roles = DomainRoles.SuperAdmin + "," + DomainRoles.Validator)]
+    [HasPermission(Permissions.SalesValidate)]
     public async Task<IActionResult> LicenseAgents(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new ListAgencyLicenseAgentsQuery(id), ct));
 

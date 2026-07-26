@@ -1,6 +1,7 @@
 using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using MediatR;
@@ -24,10 +25,11 @@ public class AssignSaleLicenseAgentHandler : IRequestHandler<AssignSaleLicenseAg
     private readonly IApplicationDbContext _db;
     private readonly IIdentityService _identity;
     private readonly ICommissionEngine _commission;
+    private readonly INotificationDispatcher _notify;
 
-    public AssignSaleLicenseAgentHandler(IApplicationDbContext db, IIdentityService identity, ICommissionEngine commission)
+    public AssignSaleLicenseAgentHandler(IApplicationDbContext db, IIdentityService identity, ICommissionEngine commission, INotificationDispatcher notify)
     {
-        _db = Guard.AgainstNull(db); _identity = Guard.AgainstNull(identity); _commission = Guard.AgainstNull(commission);
+        _db = Guard.AgainstNull(db); _identity = Guard.AgainstNull(identity); _commission = Guard.AgainstNull(commission); _notify = Guard.AgainstNull(notify);
     }
 
     public async Task<Unit> Handle(AssignSaleLicenseAgentCommand request, CancellationToken ct)
@@ -92,6 +94,26 @@ public class AssignSaleLicenseAgentHandler : IRequestHandler<AssignSaleLicenseAg
         }
 
         await _db.SaveChangesAsync(ct);
+        await NotifyAssignedAsync(sale, licenseAgentId, ct);
         return Unit.Value;
+    }
+
+    /// <summary>
+    /// Tell the License Agent a sale is now theirs — an in-app bell alert (live-pushed) plus an
+    /// email. Best-effort: a notification failure must never fail the assignment itself.
+    /// </summary>
+    private async Task NotifyAssignedAsync(Sale sale, Guid licenseAgentId, CancellationToken ct)
+    {
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(
+                    sale.AgencyId, licenseAgentId,
+                    "A sale was assigned to you",
+                    $"Sale #{sale.SaleNumber} ({sale.Carrier}, {sale.MonthlyPremium:C}/mo) is now assigned to you for approval.",
+                    $"/sales/{sale.Id}"),
+                new[] { NotificationChannelType.InApp, NotificationChannelType.Email }, ct);
+        }
+        catch { /* advisory only */ }
     }
 }

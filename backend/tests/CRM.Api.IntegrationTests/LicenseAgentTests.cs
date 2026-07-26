@@ -110,6 +110,71 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         Assert.True(s1 > 0 && s2 > 0 && s1 != s2, $"per-agency serials must be positive and distinct (got {s1}, {s2})");
     }
 
+    [Fact]
+    public async Task Agency_admin_can_list_license_agents_and_options_for_the_approval_popup()
+    {
+        // Regression: the approval popup's License-Agent + Agency pickers 403'd for a plain agency
+        // Admin (the endpoints were role-gated to SuperAdmin,Validator only), so the dropdown was
+        // always empty. They're now gated by SalesValidate, which an Admin holds.
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var agents = await admin.GetAsync($"/api/agencies/{agencyId}/license-agents");
+        Assert.Equal(HttpStatusCode.OK, agents.StatusCode);
+
+        var options = await admin.GetAsync("/api/agencies/options");
+        Assert.Equal(HttpStatusCode.OK, options.StatusCode);
+        // A plain agency admin sees only their own agency in the picker (can't reassign cross-tenant).
+        var opts = await options.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Contains(opts.EnumerateArray(), o => o.GetProperty("id").GetGuid() == agencyId);
+    }
+
+    [Fact]
+    public async Task License_agent_sees_their_assigned_sale_commission_and_dashboard()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        // A License Agent we can log in as (registered with a known password + the LicenseAgent role).
+        var laName = $"la{Guid.NewGuid():N}".Substring(0, 14);
+        var reg = await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{laName}@crm.local", userName = laName,
+            password = "Agent@1234!", agencyId, roles = new[] { "LicenseAgent" }
+        });
+        var licenseAgentId = reg.GetProperty("id").GetGuid();
+
+        // Record a sale and approve it, assigning this license agent.
+        var saleId = await RecordSaleAsync(admin, "5551230001");
+        await admin.PostJsonAsync($"/api/intake/validate/{saleId}/status", new
+        {
+            status = "Approved", carrierApproved = "AETNA", coverageApproved = 25000m,
+            premiumApproved = 250m, planApproved = "PlanA", licenseAgentUserId = licenseAgentId
+        });
+
+        var agent = await _factory.LoginAsync(laName, "Agent@1234!");
+
+        // 1) The assigned sale appears in the license agent's own Sales list (scoped by
+        //    LicenseAgentUserId, not CloserUserId — they are never the closer).
+        var sales = await agent.GetJsonAsync("/api/sales?take=100");
+        var items = sales.GetProperty("items").EnumerateArray().ToList();
+        Assert.Contains(items, i => i.GetProperty("id").GetGuid() == saleId);
+        Assert.True(sales.GetProperty("totalPremium").GetDecimal() > 0, "total premium must sum (SQLite decimal-SUM guard)");
+
+        // 2) The license-agent-approval commission appears in their Commissions (default date window
+        //    is inclusive of today — a commission earned today must not be dropped by an exclusive end).
+        var commissions = await agent.GetJsonAsync("/api/sales/commissions");
+        Assert.Contains(commissions.EnumerateArray(),
+            c => c.GetProperty("saleId").GetGuid() == saleId && c.GetProperty("amount").GetDecimal() > 0);
+
+        // 3) The dashboard summary loads (previously 500'd on the SQL-side decimal SUM for any tenant
+        //    that had sales).
+        var summary = await agent.GetAsync("/api/dashboard/summary");
+        Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+    }
+
     /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.</summary>
     private async Task<Guid> RecordSaleAsync(HttpClient admin, string phone)
     {

@@ -79,10 +79,12 @@ public class TotalPremiumMetric : MetricBase
 
     public override async Task<MetricValue> CalculateAsync(MetricFilter f, CancellationToken ct = default)
     {
-        var sum = await Db.Sales
+        // SQLite stores decimal as TEXT; a SQL-side SUM materialises back to decimal and throws.
+        // Pull the scoped premiums and sum in memory instead.
+        var sum = (await Db.Sales
             .Where(s => s.AgencyId == f.AgencyId && s.SoldAt >= f.From && s.SoldAt < f.To)
             .Where(s => f.UserId == null || s.CloserUserId == f.UserId)
-            .SumAsync(s => (decimal?)s.MonthlyPremium, ct) ?? 0m;
+            .Select(s => s.MonthlyPremium).ToListAsync(ct)).Sum();
         return Result(sum, "USD");
     }
 }

@@ -51,8 +51,13 @@ public class DashboardController : ControllerBase
         var activeLeads   = await _db.Leads.CountAsync(l => activeStages.Contains(l.Stage), ct);
         var openCallbacks = await _db.ScheduledCallbacks.CountAsync(c => !c.Completed, ct);
 
-        var salesThisWeek  = await _db.Sales.Where(s => s.SoldAt >= weekAgo).SumAsync(s => (decimal?)s.MonthlyPremium, ct) ?? 0m;
-        var salesPriorWeek = await _db.Sales.Where(s => s.SoldAt >= twoWksAgo && s.SoldAt < weekAgo).SumAsync(s => (decimal?)s.MonthlyPremium, ct) ?? 0m;
+        // SQLite stores `decimal` as TEXT, and a SQL-side SUM over that column throws — which was
+        // 500-ing the whole dashboard for any tenant that had sales. Pull the values and sum in
+        // memory (the row counts here are small; mirrors the same guard used in ListSales).
+        var salesThisWeek  = (await _db.Sales.Where(s => s.SoldAt >= weekAgo)
+            .Select(s => s.MonthlyPremium).ToListAsync(ct)).Sum();
+        var salesPriorWeek = (await _db.Sales.Where(s => s.SoldAt >= twoWksAgo && s.SoldAt < weekAgo)
+            .Select(s => s.MonthlyPremium).ToListAsync(ct)).Sum();
 
         var leadsLast7  = await _db.Leads.CountAsync(l => l.CreatedAt >= weekAgo, ct);
         var leadsPrior7 = await _db.Leads.CountAsync(l => l.CreatedAt >= twoWksAgo && l.CreatedAt < weekAgo, ct);

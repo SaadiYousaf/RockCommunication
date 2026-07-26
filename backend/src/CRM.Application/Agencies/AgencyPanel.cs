@@ -125,9 +125,20 @@ public class AgencyPanelHandler :
     public async Task<IReadOnlyList<AgencyOptionDto>> Handle(ListAgencyOptionsQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        // The Agency picker is used by SuperAdmin (panel/Team/Call Centers) and central
-        // Submission Agents (approval popup).
-        if (!IsSuperAdmin && !IsCentralValidator) throw new ForbiddenAccessException();
+        // The Agency picker is used by SuperAdmin (panel/Team/Call Centers), central Submission
+        // Agents (approval popup, any agency), and — since the popup is also available to agency
+        // Admins/Validators approving their own sales — a plain agency user. The latter can't
+        // reassign a sale across tenants, so return just their own agency (never throw here, or
+        // the approval popup's Agency picker 403s for a legitimate agency validator).
+        if (!IsSuperAdmin && !IsCentralValidator)
+        {
+            if (_user.AgencyId is not { } uaid || uaid == Guid.Empty)
+                return Array.Empty<AgencyOptionDto>();
+            return await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
+                .Where(a => a.Id == uaid && !a.IsDeleted)
+                .Select(a => new AgencyOptionDto(a.Id, a.Name, a.IsActive))
+                .ToListAsync(ct);
+        }
         var q = _db.Agencies.AsNoTracking().IgnoreQueryFilters().Where(a => !a.IsDeleted);
         // SuperAdmin manages every agency, including deactivated ones (so they can view
         // or re-activate them). A central Submission Agent may only assign sales to a

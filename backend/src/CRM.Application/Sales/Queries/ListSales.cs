@@ -74,14 +74,19 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
 
         var q = _db.Sales.AsNoTracking().Where(s => s.AgencyId == agencyId);
 
-        // Managers/validators/SuperAdmin see the whole agency; closers/jr-closers only their own.
+        // Managers/validators/SuperAdmin see the whole agency; everyone else is scoped to the
+        // sales that are "theirs". A License Agent is never the closer — their queue is the sales
+        // ASSIGNED to them at approval — so scope them by LicenseAgentUserId, not CloserUserId
+        // (otherwise their list is always empty even after a sale is assigned to them).
         if (!isSuperAdmin &&
             !_user.Roles.Contains("Admin") &&
             !_user.Roles.Contains("ProgramManager") &&
             !_user.Roles.Contains("TeamLead") &&
             !_user.Roles.Contains("Validator"))
         {
-            q = q.Where(s => s.CloserUserId == _user.UserId);
+            q = _user.Roles.Contains(CRM.Domain.Enums.Roles.LicenseAgent)
+                ? q.Where(s => s.LicenseAgentUserId == _user.UserId)
+                : q.Where(s => s.CloserUserId == _user.UserId);
         }
 
         if (request.CloserUserId is { } uid) q = q.Where(s => s.CloserUserId == uid);
@@ -100,7 +105,9 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         }
 
         var total = await q.CountAsync(ct);
-        var totalPremium = await q.SumAsync(s => (decimal?)s.MonthlyPremium, ct) ?? 0m;
+        // SQLite stores decimal as TEXT; a SQL-side SUM materialises back to decimal and throws.
+        // Sum in memory over the (already agency/role-scoped) rows instead — same guard as the dashboard.
+        var totalPremium = (await q.Select(s => s.MonthlyPremium).ToListAsync(ct)).Sum();
         var fundedCount = await q.CountAsync(s => s.FundedAt != null, ct);
         var validatedCount = await q.CountAsync(s => s.ValidatedAt != null && s.FundedAt == null, ct);
         var pendingCount = await q.CountAsync(s => s.ValidatedAt == null, ct);
