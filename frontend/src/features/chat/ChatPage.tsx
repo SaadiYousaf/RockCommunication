@@ -33,6 +33,19 @@ function dayLabel(iso: string) {
   return d.toLocaleDateString();
 }
 
+/** A direct room stores its name as "DM: <person>" — show just the person. Channels keep their name. */
+function roomLabel(name: string, isDirect: boolean) {
+  return isDirect ? name.replace(/^DM:\s*/i, "") : name;
+}
+
+/** True for a short message that's only emoji — rendered large without a bubble, like modern chat apps. */
+function isEmojiOnly(s: string): boolean {
+  const t = s.trim();
+  if (!t || t.length > 12) return false;
+  return /\p{Extended_Pictographic}/u.test(t)
+    && /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|️|‍|\s)+$/u.test(t);
+}
+
 export function ChatPage() {
   const auth = useSelector((s: RootState) => s.auth);
   const { data: rooms, isLoading: roomsLoading } = useChatRoomsQuery();
@@ -403,11 +416,13 @@ export function ChatPage() {
                         active ? "bg-white shadow-card border hairline" : "hover:bg-white/60",
                       )}
                     >
-                      <Avatar name={r.name} size={36} />
+                      {r.isDirect
+                        ? <Avatar name={roomLabel(r.name, true)} size={36} />
+                        : <span className="h-9 w-9 shrink-0 grid place-items-center rounded-full bg-brand-100 text-brand-700 text-sm font-semibold">#</span>}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={cn("text-sm truncate", active ? "font-semibold text-ink-900" : "font-medium text-ink-700")}>
-                            {r.isDirect ? r.name : `#${r.name}`}
+                          <span className={cn("text-sm truncate", active || unreadCount > 0 ? "font-semibold text-ink-900" : "font-medium text-ink-700")}>
+                            {r.isDirect ? roomLabel(r.name, true) : r.name}
                           </span>
                           {unreadCount > 0 && (
                             <Badge tone="brand" variant="solid" className="shrink-0 tabular-nums">{unreadCount}</Badge>
@@ -460,10 +475,12 @@ export function ChatPage() {
               >
                 <Icon name="chevronLeft" size={20} />
               </button>
-              <Avatar name={activeRoomData?.name ?? "?"} size={36} />
+              {activeRoomData?.isDirect
+                ? <Avatar name={roomLabel(activeRoomData?.name ?? "?", true)} size={36} />
+                : <span className="h-9 w-9 shrink-0 grid place-items-center rounded-full bg-brand-100 text-brand-700 text-base font-semibold">#</span>}
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-ink-900 truncate">
-                  {activeRoomData?.isDirect ? activeRoomData?.name : `#${activeRoomData?.name}`}
+                  {activeRoomData?.isDirect ? roomLabel(activeRoomData?.name ?? "", true) : activeRoomData?.name}
                 </div>
                 <div className="text-xs text-ink-500 flex items-center gap-1.5">
                   <span className="tabular-nums">{activeRoomData?.memberUserIds.length} members</span>
@@ -517,6 +534,7 @@ export function ChatPage() {
                         const prev = g.items[idx - 1];
                         const showHeader = !prev || prev.senderUserId !== m.senderUserId;
                         const senderName = isMe ? "You" : (userMap.get(m.senderUserId) ?? "User");
+                        const emojiOnly = !!m.body && !m.attachmentName && isEmojiOnly(m.body);
                         return (
                           <div key={m.id} className={cn("flex gap-2.5", isMe ? "justify-end" : "justify-start")}>
                             {!isMe && (
@@ -530,19 +548,23 @@ export function ChatPage() {
                                   {senderName} · {formatTime(m.sentAt)}
                                 </div>
                               )}
-                              <div className={cn(
-                                "rounded-2xl shadow-sm break-words overflow-hidden",
-                                isMe
-                                  ? "bg-gradient-to-br from-brand-500 to-brand-700 text-white rounded-br-md"
-                                  : "bg-white text-ink-800 border hairline rounded-bl-md",
-                              )}>
-                                {m.attachmentName && (
-                                  <Attachment message={m} accessToken={auth.accessToken} isMe={isMe} />
-                                )}
-                                {m.body && (
-                                  <div className="px-3.5 py-2 text-sm leading-relaxed">{m.body}</div>
-                                )}
-                              </div>
+                              {emojiOnly ? (
+                                <div className={cn("text-[2.75rem] leading-none select-none px-1 py-0.5", isMe && "text-right")}>{m.body}</div>
+                              ) : (
+                                <div className={cn(
+                                  "rounded-2xl shadow-sm break-words overflow-hidden",
+                                  isMe
+                                    ? "bg-gradient-to-br from-brand-500 to-brand-700 text-white rounded-br-md"
+                                    : "bg-white text-ink-800 ring-1 ring-ink-200/70 rounded-bl-md",
+                                )}>
+                                  {m.attachmentName && (
+                                    <Attachment message={m} accessToken={auth.accessToken} isMe={isMe} />
+                                  )}
+                                  {m.body && (
+                                    <div className="px-3.5 py-2 text-sm leading-relaxed">{m.body}</div>
+                                  )}
+                                </div>
+                              )}
                               {isMe && otherMembers.length > 0 && (
                                 <div className="mt-0.5 px-1 text-right">
                                   <ReadReceipt
