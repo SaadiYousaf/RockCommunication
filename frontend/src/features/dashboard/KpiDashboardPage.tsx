@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useDashboardQuery, useMetricCatalogQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, Icon, Input, Modal, PageHeader,
   Skeleton, useToast, cn,
 } from "../../shared/ui";
 import { usePersistentState } from "../../shared/hooks/usePersistentState";
@@ -53,6 +53,9 @@ export function KpiDashboardPage() {
 
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date(Date.now() + 86400 * 1000).toISOString().slice(0, 10));
+  // Which quick-range button is active (null once the user edits the dates by hand), so the
+  // toolbar shows the current selection instead of leaving every button looking unselected.
+  const [activeRange, setActiveRange] = useState<number | null>(30);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [showPicker, setShowPicker] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
@@ -106,6 +109,7 @@ export function KpiDashboardPage() {
   function applyRange(days: number) {
     setFrom(new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10));
     setTo(new Date(Date.now() + 86400 * 1000).toISOString().slice(0, 10));
+    setActiveRange(days);
   }
 
   function saveAsPreset() {
@@ -229,13 +233,18 @@ export function KpiDashboardPage() {
                 <button
                   key={p.label}
                   onClick={() => applyRange(p.days)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-ink-100 hover:bg-ink-200 text-ink-700 transition-colors"
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    activeRange === p.days
+                      ? "bg-brand-600 text-white shadow-sm"
+                      : "bg-ink-100 hover:bg-ink-200 text-ink-700",
+                  )}
                 >{p.label}</button>
               ))}
             </div>
             <div className="h-9 w-px bg-ink-200 hidden sm:block" />
-            <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} containerClassName="w-44" />
-            <Input label="To"   type="date" value={to}   onChange={(e) => setTo(e.target.value)}   containerClassName="w-44" />
+            <Input label="From" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setActiveRange(null); }} containerClassName="w-44" />
+            <Input label="To"   type="date" value={to}   onChange={(e) => { setTo(e.target.value); setActiveRange(null); }}   containerClassName="w-44" />
             {isFetching && <span className="text-xs text-ink-500 pb-2">Updating…</span>}
           </div>
 
@@ -276,12 +285,30 @@ export function KpiDashboardPage() {
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : !values || values.length === 0 ? (
-        <Card><CardBody>
-          <EmptyState
-            icon={<Icon name="chart" size={20} />}
-            title="No metrics in range"
-            description="Try expanding the date range or clearing your metric filter."
-          />
+        <Card><CardBody className="py-10">
+          <div className="text-center max-w-md mx-auto">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
+              <Icon name="chart" size={24} />
+            </div>
+            <h3 className="text-base font-semibold text-ink-900 mb-1">No data for this range</h3>
+            <p className="text-sm text-ink-500 mb-5">
+              {activeRange === 0
+                ? "There's no activity recorded today yet. Widen the range to see recent numbers."
+                : "Nothing was recorded in the selected dates. Try a wider range or show every metric."}
+            </p>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <Button variant="primary" size="sm" leftIcon={<Icon name="calendar" size={14} />}
+                onClick={() => applyRange(90)}>
+                Widen to 90 days
+              </Button>
+              {selected.length > 0 && (
+                <Button variant="outline" size="sm" leftIcon={<Icon name="filter" size={14} />}
+                  onClick={() => setPicked({})}>
+                  Show all metrics
+                </Button>
+              )}
+            </div>
+          </div>
         </CardBody></Card>
       ) : (
         Object.entries(groups).map(([group, list]) => (

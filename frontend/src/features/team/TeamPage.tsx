@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { OrgPersonDto, OrgTeamDto, OrgTreeDto } from "../../shared/api/types";
 import {
-  Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, Icon, PageHeader,
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
@@ -27,10 +27,11 @@ export function TeamPage() {
     if (isSuperAdmin && !agencyId && agencyOptions && agencyOptions.length) setAgencyId(agencyOptions[0].id);
   }, [isSuperAdmin, agencyOptions, agencyId]);
 
-  const { data, isLoading } = useOrgTreeQuery(
+  const { data, isLoading, isError, isFetching, refetch } = useOrgTreeQuery(
     isSuperAdmin ? { agencyId } : undefined,
     { skip: isSuperAdmin && !agencyId },
   );
+  const waitingForAgency = isSuperAdmin && !agencyId;
   const [setUserTeam, { isLoading: moving }] = useSetUserTeamMutation();
   const [setTeamLead] = useSetTeamLeadMutation();
   const toast = useToast();
@@ -98,12 +99,27 @@ export function TeamPage() {
         <Stat label="Unassigned" value={totals.unassigned} icon={<Icon name="flag" />} tone={totals.unassigned > 0 ? "warning" : "neutral"} hint={totals.unassigned === 0 ? "All placed" : "Needs a team"} />
       </div>
 
-      {isLoading ? (
-        <Card><CardBody><Skeleton className="h-40" /></CardBody></Card>
-      ) : !data ? (
-        <Card><CardBody><EmptyState title="Couldn't load org" description="Try refreshing the page." /></CardBody></Card>
-      ) : (
+      {waitingForAgency ? (
+        <Notice icon="building" title="Pick an agency"
+          body={!agencyOptions || agencyOptions.length === 0
+            ? "No agencies exist yet. Create one from the Agencies page to see its org chart."
+            : "Choose an agency from the selector above to view its organization chart."} />
+      ) : isLoading ? (
         <div className="space-y-6">
+          <div className="flex justify-center"><Skeleton className="h-28 w-72 rounded-2xl" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+          </div>
+        </div>
+      ) : isError || !data ? (
+        <Notice icon="warning" title="Couldn't load the team"
+          body="Something went wrong fetching the organization chart. It may be a temporary issue."
+          action={<Button variant="outline" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={() => refetch()}>Try again</Button>} />
+      ) : totals.members + totals.leaders === 0 ? (
+        <Notice icon="users" title="No people yet"
+          body="This agency has no team members. Invite people from User Management and assign them to teams." />
+      ) : (
+        <div className="space-y-6" aria-busy={isFetching}>
           <CeoLayer ceo={data.ceo} />
           {(data.ceo || data.leadership.length > 0) && data.teams.length > 0 && <TreeConnector />}
           <LeadershipLayer leaders={data.leadership} />
@@ -478,6 +494,25 @@ function TreeConnector() {
     <div className="flex justify-center">
       <div className="w-px h-8 bg-gradient-to-b from-ink-200 to-transparent" />
     </div>
+  );
+}
+
+/** Centered status card — used for the loading-agency, error and empty cases so the page
+ *  always says something clear instead of sitting on a blank/spinner. */
+function Notice({ icon, title, body, action }: {
+  icon: string; title: string; body: string; action?: React.ReactNode;
+}) {
+  return (
+    <Card><CardBody className="py-12">
+      <div className="text-center max-w-md mx-auto">
+        <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
+          <Icon name={icon} size={24} />
+        </div>
+        <h3 className="text-base font-semibold text-ink-900 mb-1">{title}</h3>
+        <p className="text-sm text-ink-500 mb-5">{body}</p>
+        {action}
+      </div>
+    </CardBody></Card>
   );
 }
 
