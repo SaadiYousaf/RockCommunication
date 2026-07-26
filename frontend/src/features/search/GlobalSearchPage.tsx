@@ -134,7 +134,7 @@ export function GlobalSearchPage() {
           />
           <div className="mt-3 flex items-center gap-2 text-xs text-ink-500">
             <Icon name="search" size={12} />
-            <span>
+            <span className="tabular-nums">
               {looksLikePhone && "Phone search"}
               {looksLikeEmail && "Email search"}
               {!looksLikePhone && !looksLikeEmail && "Name / role search"}
@@ -192,7 +192,10 @@ export function GlobalSearchPage() {
         <div className="space-y-6">
           {(tab === "all" || tab === "leads") && leadCount > 0 && (
             <Card>
-              <CardHeader title={`Leads · ${leadCount}`} subtitle="Click a row to open the lead, or dial directly." />
+              <CardHeader
+                title={<span className="inline-flex items-center gap-2"><Icon name="list" size={16} className="text-brand-600" /> Leads <span className="text-ink-400 font-normal tabular-nums">· {leadCount}</span></span>}
+                subtitle="Click a row to open the lead, or dial directly."
+              />
               <CardBody className="p-0">
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
@@ -216,14 +219,14 @@ export function GlobalSearchPage() {
                           <div className="flex items-center gap-2.5">
                             <Avatar name={`${l.firstName} ${l.lastName}`} size={28} />
                             <div className="min-w-0">
-                              <div className="text-sm font-medium text-ink-900">
+                              <div className="text-sm font-medium text-ink-900 truncate">
                                 {l.firstName} {l.lastName}
                               </div>
-                              <div className="text-[11px] text-ink-500 font-mono">{l.id.slice(0, 8)}</div>
+                              <div className="text-[11px] text-ink-500 font-mono tabular-nums">{l.id.slice(0, 8)}</div>
                             </div>
                           </div>
                         </TD>
-                        <TD className="font-mono text-sm">{formatPhone(l.phoneNumber)}</TD>
+                        <TD className="font-mono text-sm tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
                         <TD className="text-sm text-ink-700 truncate max-w-[220px]">{l.email ?? "—"}</TD>
                         <TD>
                           <Badge tone={stageTone[l.stage] ?? "neutral"} variant="soft">{l.stage}</Badge>
@@ -256,7 +259,10 @@ export function GlobalSearchPage() {
 
           {(tab === "all" || tab === "users") && userCount > 0 && (
             <Card>
-              <CardHeader title={`Users · ${userCount}`} subtitle="Members matching your query." />
+              <CardHeader
+                title={<span className="inline-flex items-center gap-2"><Icon name="users" size={16} className="text-brand-600" /> Users <span className="text-ink-400 font-normal tabular-nums">· {userCount}</span></span>}
+                subtitle="Members matching your query."
+              />
               <CardBody className="p-0">
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
@@ -274,8 +280,8 @@ export function GlobalSearchPage() {
                           <div className="flex items-center gap-2.5">
                             <Avatar name={u.userName} size={28} />
                             <div className="min-w-0">
-                              <div className="text-sm font-medium text-ink-900">{u.userName}</div>
-                              <div className="text-[11px] text-ink-500 font-mono">{u.id.slice(0, 8)}</div>
+                              <div className="text-sm font-medium text-ink-900 truncate">{u.userName}</div>
+                              <div className="text-[11px] text-ink-500 font-mono tabular-nums">{u.id.slice(0, 8)}</div>
                             </div>
                           </div>
                         </TD>
@@ -287,7 +293,7 @@ export function GlobalSearchPage() {
                             ))}
                           </div>
                         </TD>
-                        <TD className="text-sm text-ink-500">{u.modules?.length ?? 0}</TD>
+                        <TD className="text-sm text-ink-500 tabular-nums">{u.modules?.length ?? 0}</TD>
                       </TR>
                     ))}
                   </TBody>

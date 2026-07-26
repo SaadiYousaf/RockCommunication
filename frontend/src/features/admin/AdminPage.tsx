@@ -23,10 +23,10 @@ export function AdminPage() {
           <Tabs<typeof tab>
             value={tab} onChange={setTab}
             items={[
-              { value: "ip", label: "IP allowlist" },
-              { value: "verticals", label: "Verticals" },
-              { value: "horizontals", label: "Horizontals" },
-              { value: "commissions", label: "Commission rules" },
+              { value: "ip", label: "IP allowlist", icon: <Icon name="shield" size={14} /> },
+              { value: "verticals", label: "Verticals", icon: <Icon name="target" size={14} /> },
+              { value: "horizontals", label: "Horizontals", icon: <Icon name="layers" size={14} /> },
+              { value: "commissions", label: "Commission rules", icon: <Icon name="dollar" size={14} /> },
             ]}
           />
         </div>
@@ -49,7 +49,7 @@ function IpAllowlistSection() {
 
   return (
     <Card>
-      <CardHeader title="IP allowlist"
+      <CardHeader eyebrow="Security" bordered title="IP allowlist"
         subtitle="If empty, all IPs are allowed (loopback always permitted). Auth and Swagger paths bypass the check." />
       <CardBody>
         <form className="flex flex-wrap gap-2 mb-4" onSubmit={async (e) => {
@@ -74,10 +74,10 @@ function IpAllowlistSection() {
         ) : (
           <ul className="divide-y hairline">
             {list.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 py-2">
-                <Icon name="shield" size={14} className="text-ink-500" />
-                <code className="font-mono text-sm text-ink-800">{e.cidrOrIp}</code>
-                <span className="text-xs text-ink-500 flex-1 truncate">{e.note ?? "—"}</span>
+              <li key={e.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-ink-50/60 transition-colors">
+                <Icon name="shield" size={14} className="text-ink-500 shrink-0" />
+                <code className="font-mono text-sm text-ink-800 tabular-nums whitespace-nowrap">{e.cidrOrIp}</code>
+                <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{e.note ?? "—"}</span>
                 <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
                   leftIcon={<Icon name="x" size={14} />}
                   onClick={() => remove(e.id)}>Remove</Button>
@@ -100,7 +100,7 @@ function VerticalsSection() {
 
   return (
     <Card>
-      <CardHeader title="Verticals" subtitle="Tag leads, teams, and campaigns with the line of business." />
+      <CardHeader eyebrow="Taxonomy" bordered title="Verticals" subtitle="Tag leads, teams, and campaigns with the line of business." />
       <CardBody>
         <form className="flex flex-wrap gap-2 mb-4" onSubmit={async (e) => {
           e.preventDefault();
@@ -122,10 +122,10 @@ function VerticalsSection() {
         ) : (
           <ul className="divide-y hairline">
             {verticals.map((v) => (
-              <li key={v.id} className="flex items-center gap-3 py-2">
-                <Icon name="target" size={14} className="text-ink-500" />
-                <span className="font-medium text-ink-900">{v.name}</span>
-                <span className="text-xs text-ink-500 flex-1 truncate">{v.description ?? "—"}</span>
+              <li key={v.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-ink-50/60 transition-colors">
+                <Icon name="target" size={14} className="text-ink-500 shrink-0" />
+                <span className="font-medium text-ink-900 truncate">{v.name}</span>
+                <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{v.description ?? "—"}</span>
                 {v.isActive
                   ? <Badge tone="success" variant="soft">Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
@@ -152,7 +152,7 @@ function HorizontalsSection() {
 
   return (
     <Card>
-      <CardHeader title="Horizontals" subtitle="Cross-vertical dimensions (region, function, shared desk) for organising teams and campaigns." />
+      <CardHeader eyebrow="Taxonomy" bordered title="Horizontals" subtitle="Cross-vertical dimensions (region, function, shared desk) for organising teams and campaigns." />
       <CardBody>
         <form className="flex flex-wrap gap-2 mb-4" onSubmit={async (e) => {
           e.preventDefault();
@@ -174,10 +174,10 @@ function HorizontalsSection() {
         ) : (
           <ul className="divide-y hairline">
             {horizontals.map((v) => (
-              <li key={v.id} className="flex items-center gap-3 py-2">
-                <Icon name="target" size={14} className="text-ink-500" />
-                <span className="font-medium text-ink-900">{v.name}</span>
-                <span className="text-xs text-ink-500 flex-1 truncate">{v.description ?? "—"}</span>
+              <li key={v.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-ink-50/60 transition-colors">
+                <Icon name="layers" size={14} className="text-ink-500 shrink-0" />
+                <span className="font-medium text-ink-900 truncate">{v.name}</span>
+                <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{v.description ?? "—"}</span>
                 {v.isActive
                   ? <Badge tone="success" variant="soft">Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
@@ -201,16 +201,16 @@ function CommissionConfigSection() {
 
   return (
     <Card>
-      <CardHeader title="Commission rules" subtitle="Per-agency overrides for each rule. Empty = use system default." />
+      <CardHeader eyebrow="Payouts" bordered title="Commission rules" subtitle="Per-agency overrides for each rule. Empty = use system default." />
       <CardBody className="px-0 pt-0">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-ink-50/60 text-left">
             <tr>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold">Rule</th>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold">Amount</th>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold">Threshold</th>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold">Enabled</th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Rule</th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Amount</th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Threshold</th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Enabled</th>
               <th className="px-5 py-2"></th>
             </tr>
           </thead>
@@ -239,18 +239,19 @@ function RuleRow({ ruleName, initial, onSave }: {
   const toast = useToast();
 
   return (
-    <tr className="border-t hairline">
-      <td className="px-5 py-2 font-mono text-xs">{ruleName}</td>
+    <tr className="border-t hairline hover:bg-ink-50/40 transition-colors">
+      <td className="px-5 py-2 font-mono text-xs whitespace-nowrap">{ruleName}</td>
       <td className="px-5 py-2">
-        <input type="number" className="border border-ink-200 rounded px-2 py-1 w-24 text-sm"
+        <input type="number" className="border border-ink-200 rounded-lg px-2 py-1 w-24 text-sm tabular-nums transition-colors focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/30"
           value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="default" />
       </td>
       <td className="px-5 py-2">
-        <input type="number" className="border border-ink-200 rounded px-2 py-1 w-24 text-sm"
+        <input type="number" className="border border-ink-200 rounded-lg px-2 py-1 w-24 text-sm tabular-nums transition-colors focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/30"
           value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="—" />
       </td>
       <td className="px-5 py-2">
-        <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <input type="checkbox" className="h-4 w-4 rounded accent-brand-600 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+          checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
       </td>
       <td className="px-5 py-2">
         <Button size="sm"

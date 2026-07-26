@@ -157,7 +157,7 @@ export function AgentStatusBar() {
         <Tooltip content={`Clocked in at ${new Date(session.clockInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}>
           <div className="hidden sm:inline-flex items-center gap-1.5 text-xs text-ink-600">
             <Icon name="clock" size={12} className="text-ink-400" />
-            <span className="font-mono">{formatDuration(shiftMs)}</span>
+            <span className="font-mono tabular-nums whitespace-nowrap">{formatDuration(shiftMs)}</span>
           </div>
         </Tooltip>
 
@@ -196,10 +196,10 @@ export function AgentStatusBar() {
         {stats.pending > 0 && (
           <Link
             to="/agent"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap"
           >
             <Icon name="clock" size={12} />
-            {stats.pending} wrap-up{stats.pending === 1 ? "" : "s"} pending
+            <span className="tabular-nums">{stats.pending}</span> wrap-up{stats.pending === 1 ? "" : "s"} pending
           </Link>
         )}
 
@@ -207,13 +207,13 @@ export function AgentStatusBar() {
         <Tooltip content="Calls today">
           <div className="hidden sm:inline-flex items-center gap-1.5 text-xs text-ink-600">
             <Icon name="phone" size={12} className="text-ink-400" />
-            <span className="font-semibold text-ink-900">{stats.total}</span>
+            <span className="font-semibold text-ink-900 tabular-nums">{stats.total}</span>
           </div>
         </Tooltip>
         <Tooltip content="Sales today">
           <div className="hidden sm:inline-flex items-center gap-1.5 text-xs text-ink-600">
             <Icon name="briefcase" size={12} className="text-emerald-500" />
-            <span className="font-semibold text-ink-900">{stats.sales}</span>
+            <span className="font-semibold text-ink-900 tabular-nums">{stats.sales}</span>
           </div>
         </Tooltip>
 

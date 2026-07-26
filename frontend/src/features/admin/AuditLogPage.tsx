@@ -125,8 +125,9 @@ export function AuditLogPage() {
         title="Audit Log"
         description="Every change to entities in this CRM. Filter by entity, action, user, or date range."
         actions={
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data?.items.length}>
-            <Icon name="doc" size={14} className="mr-1.5" /> Export CSV
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data?.items.length}
+            leftIcon={<Icon name="download" size={14} />}>
+            Export CSV
           </Button>
         }
       />
@@ -175,8 +176,8 @@ export function AuditLogPage() {
             placeholder="To"
           />
           <div className="md:col-span-3 lg:col-span-6 flex items-center justify-between text-xs text-ink-500">
-            <div>{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
-            <Button variant="ghost" size="sm" onClick={reset}>Reset filters</Button>
+            <div className="tabular-nums">{pageInfo} {isFetching && <span className="ml-2 inline-flex items-center gap-1 text-ink-400"><Icon name="refresh" size={12} className="animate-spin" /> refreshing…</span>}</div>
+            <Button variant="ghost" size="sm" onClick={reset} leftIcon={<Icon name="refresh" size={14} />}>Reset filters</Button>
           </div>
         </CardBody>
       </Card>
@@ -224,8 +225,8 @@ export function AuditLogPage() {
                         <TD className="whitespace-nowrap">
                           <Tooltip content={new Date(e.occurredAt).toLocaleString()}>
                             <div>
-                              <div className="text-ink-900 text-sm">{relativeTime(e.occurredAt)}</div>
-                              <div className="text-xs text-ink-500">
+                              <div className="text-ink-900 text-sm tabular-nums">{relativeTime(e.occurredAt)}</div>
+                              <div className="text-xs text-ink-500 tabular-nums">
                                 {new Date(e.occurredAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </div>
                             </div>
@@ -256,7 +257,7 @@ export function AuditLogPage() {
                         <TD className="font-mono text-xs">
                           {ip ? (
                             <Tooltip content={ip.full}>
-                              <span className="text-ink-600">{ip.display}</span>
+                              <span className="text-ink-600 tabular-nums">{ip.display}</span>
                             </Tooltip>
                           ) : (
                             <span className="text-ink-400">—</span>
@@ -306,13 +307,15 @@ export function AuditLogPage() {
           </Card>
 
           <div className="flex items-center justify-between mt-4">
-            <div className="text-xs text-ink-500">{pageInfo}</div>
+            <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={skip === 0}
+                leftIcon={<Icon name="chevronLeft" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: Math.max(0, (f.skip ?? 0) - take) }))}>
                 Previous
               </Button>
               <Button variant="outline" size="sm" disabled={skip + take >= total}
+                rightIcon={<Icon name="chevronRight" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: (f.skip ?? 0) + take }))}>
                 Next
               </Button>

@@ -110,7 +110,8 @@ export function CallCentersPage() {
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
             <EmptyState icon={<Icon name="building" size={20} />} title="No call centers yet"
-              description="Create one, then assign agents to it from User Management." />
+              description="Create one, then assign agents to it from User Management."
+              action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNew(true)}>Add call center</Button>} />
           ) : (
             <Table>
               <THead>
@@ -125,9 +126,9 @@ export function CallCentersPage() {
               <TBody>
                 {sorted.map((c) => (
                   <TR key={c.id}>
-                    <TD className="font-medium text-ink-900">{c.name}</TD>
-                    <TD className="font-mono text-xs text-ink-600">{c.code || "—"}</TD>
-                    <TD numeric className="text-sm">{c.leadCount}</TD>
+                    <TD className="font-medium text-ink-900 truncate max-w-[16rem]">{c.name}</TD>
+                    <TD className="font-mono text-xs text-ink-600 whitespace-nowrap">{c.code || "—"}</TD>
+                    <TD numeric className="text-sm tabular-nums">{c.leadCount}</TD>
                     <TD>{c.isActive
                       ? <Badge tone="success" variant="soft">Active</Badge>
                       : <Badge tone="neutral" variant="soft">Inactive</Badge>}</TD>
@@ -167,8 +168,8 @@ export function CallCentersPage() {
           <form onSubmit={submitEdit} className="space-y-3">
             <Input label="Name" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
             <Input label="Code" value={editing.code ?? ""} onChange={(e) => setEditing({ ...editing, code: e.target.value })} />
-            <label className="flex items-center gap-2 text-sm text-ink-700">
-              <input type="checkbox" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
+            <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer select-none">
+              <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-2 focus:ring-brand-500/40" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
               Active
             </label>
             <div className="flex justify-end gap-2 pt-1">

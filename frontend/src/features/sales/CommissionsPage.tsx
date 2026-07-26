@@ -132,11 +132,11 @@ export function CommissionsPage() {
                   <div key={r.rule} className="flex items-center gap-3">
                     <div className="font-mono text-xs text-ink-700 w-44 truncate">{r.rule}</div>
                     <div className="flex-1 h-2 rounded-full bg-ink-100 overflow-hidden">
-                      <div className="h-full bg-brand-500" style={{ width: `${pct}%` }} />
+                      <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="text-xs text-ink-600 w-12 text-right">{r.count}×</div>
-                    <div className="text-sm font-semibold text-ink-900 w-20 text-right">${r.amount.toFixed(2)}</div>
-                    <div className="text-xs text-ink-500 w-10 text-right">{pct}%</div>
+                    <div className="text-xs text-ink-600 w-12 text-right tabular-nums">{r.count}×</div>
+                    <div className="text-sm font-semibold text-ink-900 w-20 text-right tabular-nums">${r.amount.toFixed(2)}</div>
+                    <div className="text-xs text-ink-500 w-10 text-right tabular-nums">{pct}%</div>
                   </div>
                 );
               })}
@@ -179,9 +179,9 @@ export function CommissionsPage() {
           <TBody>
             {commissions.map((c) => (
               <TR key={c.id}>
-                <TD className="text-ink-600">{new Date(c.earnedAt).toLocaleString()}</TD>
+                <TD className="text-ink-600 whitespace-nowrap tabular-nums">{new Date(c.earnedAt).toLocaleString()}</TD>
                 <TD className="font-mono text-xs text-ink-700">{c.ruleName}</TD>
-                <TD className="font-semibold text-ink-900">${c.amount.toFixed(2)}</TD>
+                <TD className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${c.amount.toFixed(2)}</TD>
                 <TD>
                   {c.paid
                     ? <Badge tone="success" variant="soft" dot>Paid</Badge>
@@ -201,7 +201,7 @@ export function CommissionsPage() {
             subtitle="Generate payroll for the selected period."
             action={
               <div className="flex gap-2">
-                <Button variant="ghost" leftIcon={<Icon name="doc" size={16} />} onClick={() => exportPayrollCsv()}>
+                <Button variant="ghost" leftIcon={<Icon name="download" size={16} />} onClick={() => exportPayrollCsv()}>
                   Export period CSV
                 </Button>
                 <Button onClick={makeRun} loading={creating} leftIcon={<Icon name="plus" size={16} />}>
@@ -214,7 +214,7 @@ export function CommissionsPage() {
             {!runs || runs.length === 0 ? (
               <div className="px-5 pb-5">
                 <EmptyState
-                  icon={<Icon name="briefcase" size={20} />}
+                  icon={<Icon name="card" size={20} />}
                   title="No payroll runs yet"
                   description="Run payroll to summarize and freeze commissions for a period."
                 />
@@ -233,15 +233,15 @@ export function CommissionsPage() {
                 <TBody>
                   {runs.map((r) => (
                     <TR key={r.id}>
-                      <TD className="text-ink-700">{r.periodStart.slice(0, 10)} → {r.periodEnd.slice(0, 10)}</TD>
-                      <TD className="font-semibold text-ink-900">${r.totalAmount.toFixed(2)}</TD>
+                      <TD className="text-ink-700 whitespace-nowrap tabular-nums">{r.periodStart.slice(0, 10)} → {r.periodEnd.slice(0, 10)}</TD>
+                      <TD className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${r.totalAmount.toFixed(2)}</TD>
                       <TD><Badge tone={r.status === "Processed" ? "success" : "neutral"} variant="soft">{r.status}</Badge></TD>
-                      <TD className="text-ink-500 text-xs">
+                      <TD className="text-ink-500 text-xs whitespace-nowrap tabular-nums">
                         {r.processedAt ? new Date(r.processedAt).toLocaleString() : "—"}
                       </TD>
                       <TD>
                         <div className="flex justify-end">
-                          <Button variant="ghost" size="sm" leftIcon={<Icon name="doc" size={14} />}
+                          <Button variant="ghost" size="sm" leftIcon={<Icon name="download" size={14} />}
                             onClick={() => exportPayrollCsv(r.id)}>CSV</Button>
                         </div>
                       </TD>
@@ -261,7 +261,7 @@ function Tile({ label, value, tone }: { label: string; value: string; tone: stri
   return (
     <div className={`rounded-lg px-4 py-2.5 ${tone}`}>
       <div className="text-[10px] uppercase tracking-wide font-semibold opacity-80">{label}</div>
-      <div className="text-lg font-semibold leading-tight">{value}</div>
+      <div className="text-lg font-semibold leading-tight tabular-nums">{value}</div>
     </div>
   );
 }

@@ -205,7 +205,7 @@ function Hero({
                 {greeting}
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-ink-900">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-ink-900 text-balance">
               Welcome back, {userName}
             </h1>
             <p className="text-ink-500 text-sm mt-1.5">
@@ -216,7 +216,7 @@ function Hero({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onRefresh}
-              className="inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-white hover:bg-ink-50 ring-1 ring-ink-200 text-sm font-medium text-ink-700 shadow-xs transition-colors"
+              className="inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-white hover:bg-ink-50 ring-1 ring-ink-200 text-sm font-medium text-ink-700 shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
               <Icon name="refresh" size={15} /> Refresh
             </button>
@@ -553,7 +553,7 @@ function FloorRow({
           {(value ?? 0).toLocaleString()}
         </div>
       </div>
-      <div className="text-xs text-ink-500 text-right max-w-[7rem]">{sub}</div>
+      <div className="text-xs text-ink-500 text-right max-w-[7rem] tabular-nums">{sub}</div>
     </div>
   );
 }
@@ -623,7 +623,7 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
                         <Icon name="arrowRight" size={11} className="text-ink-400" />
                         <span className="text-ink-700 font-medium">{a.toStage}</span>
                         <span className="text-ink-300">·</span>
-                        <span>{timeAgo(a.occurredAt)}</span>
+                        <span className="whitespace-nowrap tabular-nums">{timeAgo(a.occurredAt)}</span>
                         {a.userName && (
                           <>
                             <span className="text-ink-300">·</span>
@@ -694,7 +694,7 @@ function LeaderboardCard({ leaders, loading }: { leaders?: AgentLeaderboard[]; l
                   <Avatar name={u.userName} size={32} />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-ink-900 truncate text-sm">{u.userName}</div>
-                    <div className="text-[11px] text-ink-500">
+                    <div className="text-[11px] text-ink-500 tabular-nums">
                       {u.salesToday ?? 0} sales · {formatMoney(premium)}
                     </div>
                   </div>

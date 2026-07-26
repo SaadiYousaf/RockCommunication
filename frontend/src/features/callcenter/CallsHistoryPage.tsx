@@ -90,7 +90,7 @@ export function CallsHistoryPage() {
             <option value="talkTime-desc">Longest talk time</option>
           </Select>
           <div className="md:col-span-3 lg:col-span-6 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500 pt-1">
-            <div>{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
+            <div className="tabular-nums">{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
             <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={13} />}
               onClick={() => setFilters({ skip: 0, take: 50, sort: "initiatedAt-desc" })}>
               Reset filters
@@ -127,13 +127,13 @@ export function CallsHistoryPage() {
             <TBody>
               {data.items.map((c) => (
                 <TR key={c.id}>
-                  <TD className="text-ink-600 whitespace-nowrap text-xs">
+                  <TD className="text-ink-600 whitespace-nowrap text-xs tabular-nums">
                     {new Date(c.initiatedAt).toLocaleString()}
                   </TD>
                   <TD>
                     <Link to={`/leads/${c.leadId}`} className="block hover:underline">
-                      <div className="font-medium text-ink-900">{c.leadName}</div>
-                      <div className="text-xs text-ink-500">{c.leadPhone}</div>
+                      <div className="font-medium text-ink-900 truncate">{c.leadName}</div>
+                      <div className="text-xs text-ink-500 tabular-nums whitespace-nowrap">{c.leadPhone}</div>
                     </Link>
                   </TD>
                   <TD>
@@ -150,7 +150,7 @@ export function CallsHistoryPage() {
                     </Badge>
                   </TD>
                   <TD><Badge tone={statusTone[c.status] ?? "neutral"} variant="soft" dot>{c.status}</Badge></TD>
-                  <TD className="text-ink-600">{c.talkSeconds != null ? formatSec(c.talkSeconds) : "—"}</TD>
+                  <TD className="text-ink-600 tabular-nums whitespace-nowrap">{c.talkSeconds != null ? formatSec(c.talkSeconds) : "—"}</TD>
                   <TD className="text-ink-500 text-xs">{c.wrapUpCode ?? "—"}</TD>
                   <TD>
                     {c.recordingUrl && (
@@ -166,13 +166,15 @@ export function CallsHistoryPage() {
           </Table>
 
           <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-            <div className="text-xs text-ink-500">{pageInfo}</div>
+            <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={skip === 0}
+                leftIcon={<Icon name="chevronLeft" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: Math.max(0, (f.skip ?? 0) - take) }))}>
                 Previous
               </Button>
               <Button variant="outline" size="sm" disabled={skip + take >= total}
+                rightIcon={<Icon name="chevronRight" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: (f.skip ?? 0) + take }))}>
                 Next
               </Button>

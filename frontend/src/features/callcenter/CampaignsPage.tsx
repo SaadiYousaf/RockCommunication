@@ -96,8 +96,8 @@ function CampaignsSection() {
             <TBody>
               {list.map((c) => (
                 <TR key={c.id}>
-                  <TD className="font-mono text-xs text-ink-700">{c.code}</TD>
-                  <TD className="font-medium text-ink-900">{c.name}</TD>
+                  <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{c.code}</TD>
+                  <TD className="font-medium text-ink-900 max-w-[280px] truncate">{c.name}</TD>
                   <TD>
                     <Badge tone={c.isActive ? "success" : "neutral"} variant="soft" dot>
                       {c.isActive ? "Active" : "Inactive"}
@@ -172,15 +172,15 @@ function LeadSourcesSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Name</TH><TH>$ / Lead</TH><TH>Campaign</TH></TR></THead>
+            <THead><TR><TH>Code</TH><TH>Name</TH><TH numeric>$ / Lead</TH><TH>Campaign</TH></TR></THead>
             <TBody>
               {list.map((s) => {
                 const camp = campaigns?.find((c) => c.id === s.campaignId);
                 return (
                   <TR key={s.id}>
-                    <TD className="font-mono text-xs text-ink-700">{s.code}</TD>
-                    <TD className="font-medium text-ink-900">{s.name}</TD>
-                    <TD className="text-ink-700">${s.costPerLead.toFixed(2)}</TD>
+                    <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{s.code}</TD>
+                    <TD className="font-medium text-ink-900 max-w-[240px] truncate">{s.name}</TD>
+                    <TD className="text-ink-700 text-right tabular-nums whitespace-nowrap">${s.costPerLead.toFixed(2)}</TD>
                     <TD>{camp ? <Badge tone="info" variant="soft">{camp.name}</Badge> : <span className="text-ink-400">—</span>}</TD>
                   </TR>
                 );
@@ -246,9 +246,9 @@ function SkillsSection() {
         ) : (
           <ul className="divide-y divide-ink-100">
             {list.map((s) => (
-              <li key={s.id} className="py-2.5 flex items-center gap-3">
-                <Badge tone="info" variant="soft" className="font-mono">{s.code}</Badge>
-                <span className="flex-1 text-ink-800">{s.name}</span>
+              <li key={s.id} className="py-2.5 flex items-center gap-3 transition-colors hover:bg-ink-50/50">
+                <Badge tone="info" variant="soft" className="font-mono whitespace-nowrap">{s.code}</Badge>
+                <span className="flex-1 min-w-0 truncate text-ink-800">{s.name}</span>
                 {s.isActive
                   ? <Badge tone="success" variant="soft" dot>Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
@@ -317,8 +317,8 @@ function WrapUpCodesSection() {
             <TBody>
               {list.map((w) => (
                 <TR key={w.id}>
-                  <TD className="font-mono text-xs text-ink-700">{w.code}</TD>
-                  <TD className="font-medium text-ink-900">{w.label}</TD>
+                  <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{w.code}</TD>
+                  <TD className="font-medium text-ink-900 max-w-[280px] truncate">{w.label}</TD>
                   <TD>
                     <div className="flex flex-wrap gap-1">
                       {w.isSale &&    <Badge tone="success" variant="soft">Sale</Badge>}

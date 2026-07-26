@@ -19,7 +19,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Button, Card, CardBody, EmptyState, Icon, InfoHint, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
+import { Button, Card, CardBody, EmptyState, Icon, InfoHint, Select, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
@@ -184,7 +184,7 @@ export function LeadDetailPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-semibold">{lead.fullName}</h1>
+              <h1 className="text-2xl font-semibold text-balance">{lead.fullName}</h1>
               <StageBadge stage={lead.stage} />
               <DispositionBadge disposition={lead.disposition} />
               {lead.jornayaVerified && (
@@ -205,7 +205,7 @@ export function LeadDetailPage() {
               )}
             </div>
             <div className="text-sm text-ink-600 flex items-center gap-3 flex-wrap mt-2">
-              <span className="font-mono">{formatPhone(lead.phoneNumber)}</span>
+              <span className="font-mono tabular-nums">{formatPhone(lead.phoneNumber)}</span>
               {lead.email && <a href={`mailto:${lead.email}`} className="text-brand-700 hover:underline">{lead.email}</a>}
               {lead.state && <span>{[lead.city, lead.state, lead.postalCode].filter(Boolean).join(", ")}</span>}
               {lead.age && <span>{lead.age} y/o</span>}
@@ -231,9 +231,9 @@ export function LeadDetailPage() {
           <Button variant="secondary" onClick={() => setShowSms(s => !s)} leftIcon={<Icon name="chat" size={16} />}>SMS</Button>
           <Button variant="secondary" onClick={() => setShowCallback(s => !s)} leftIcon={<Icon name="calendar" size={16} />}>Schedule callback</Button>
           {voicemails && voicemails.length > 0 && (
-            <select
+            <Select
               aria-label="Drop voicemail"
-              className="border border-ink-200 rounded-lg px-3 py-2 text-sm bg-white hover:border-ink-300 cursor-pointer transition-colors"
+              className="h-10 w-auto text-sm"
               defaultValue=""
               onChange={async (e) => {
                 if (!e.target.value) return;
@@ -248,7 +248,7 @@ export function LeadDetailPage() {
               }}>
               <option value="">Drop voicemail…</option>
               {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
+            </Select>
           )}
           <Button variant="success" onClick={async () => { await verifyJornaya(id); refetchLead(); }} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
           <div className="flex-1" />
@@ -374,8 +374,8 @@ export function LeadDetailPage() {
                         {c.wrapUpCode && <span className="ml-2 text-xs bg-ink-100 px-1.5 py-0.5 rounded">{c.wrapUpCode}</span>}
                       </div>
                       <div className="text-xs text-ink-500">
-                        {new Date(c.initiatedAt).toLocaleString()}
-                        {c.answeredAt && c.endedAt && <> · {Math.round((new Date(c.endedAt).getTime() - new Date(c.answeredAt).getTime()) / 1000)}s</>}
+                        <span className="tabular-nums whitespace-nowrap">{new Date(c.initiatedAt).toLocaleString()}</span>
+                        {c.answeredAt && c.endedAt && <> · <span className="tabular-nums">{Math.round((new Date(c.endedAt).getTime() - new Date(c.answeredAt).getTime()) / 1000)}s</span></>}
                       </div>
                       {c.notes && <div className="text-xs text-ink-700 mt-0.5">{c.notes}</div>}
                     </div>
@@ -422,7 +422,7 @@ export function LeadDetailPage() {
               {lead.scoreBreakdown.map((b, i) => (
                 <div key={i} className="text-xs flex items-center justify-between">
                   <span className="text-ink-600">{b.note ?? b.rule}</span>
-                  <span className={`font-mono ${b.points >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                  <span className={`font-mono tabular-nums ${b.points >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                     {b.points >= 0 ? "+" : ""}{b.points}
                   </span>
                 </div>
@@ -438,7 +438,7 @@ export function LeadDetailPage() {
               <ul className="space-y-2">
                 {recs.items.map((r, i) => (
                   <li key={i} className="text-sm flex items-start gap-2">
-                    <span className="text-xs bg-emerald-100 text-emerald-800 rounded px-1.5 py-0.5 font-medium mt-0.5 shrink-0">
+                    <span className="text-xs bg-emerald-100 text-emerald-800 rounded px-1.5 py-0.5 font-medium mt-0.5 shrink-0 tabular-nums">
                       {Math.round(r.confidence * 100)}%
                     </span>
                     <div>
@@ -457,10 +457,10 @@ export function LeadDetailPage() {
               <div className="text-sm font-semibold mb-2 text-emerald-900 inline-flex items-center gap-1.5"><Icon name="briefcase" size={14} /> Sale</div>
               <div className="text-sm text-ink-700 space-y-1">
                 <div>Carrier: <strong>{lead.sale.carrier}</strong></div>
-                {lead.sale.policyNumber && <div>Policy: <span className="font-mono">{lead.sale.policyNumber}</span></div>}
-                <div>Premium: <strong>${lead.sale.monthlyPremium}/mo</strong> · ${lead.sale.annualPremium}/yr</div>
+                {lead.sale.policyNumber && <div>Policy: <span className="font-mono tabular-nums">{lead.sale.policyNumber}</span></div>}
+                <div>Premium: <strong className="tabular-nums">${lead.sale.monthlyPremium}/mo</strong> · <span className="tabular-nums">${lead.sale.annualPremium}/yr</span></div>
                 <div className="text-xs text-ink-500">
-                  Sold {new Date(lead.sale.soldAt).toLocaleDateString()}
+                  Sold <span className="tabular-nums whitespace-nowrap">{new Date(lead.sale.soldAt).toLocaleDateString()}</span>
                   {lead.sale.validatedAt && ` · validated`}
                   {lead.sale.fundedAt && ` · funded`}
                   {lead.sale.isInternalSale && <span className="text-amber-700"> · internal</span>}
@@ -476,7 +476,7 @@ export function LeadDetailPage() {
               <ul className="space-y-2">
                 {lead.callbacks.filter(cb => !cb.completed).map(cb => (
                   <li key={cb.id} className="text-sm">
-                    <div className="font-medium">{new Date(cb.scheduledFor).toLocaleString()}</div>
+                    <div className="font-medium tabular-nums whitespace-nowrap">{new Date(cb.scheduledFor).toLocaleString()}</div>
                     <div className="text-xs text-ink-600">
                       {cb.reason ?? "—"} · {cb.assignedUserName ?? "unassigned"}
                     </div>
@@ -578,7 +578,7 @@ function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: b
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-ink-100 last:border-0">
       <dt className="text-ink-500 shrink-0">{label}</dt>
-      <dd className={`text-ink-800 text-right break-all ${mono ? "font-mono text-[11px]" : ""}`}>{value}</dd>
+      <dd className={`text-ink-800 text-right break-all tabular-nums ${mono ? "font-mono text-[11px]" : ""}`}>{value}</dd>
     </div>
   );
 }

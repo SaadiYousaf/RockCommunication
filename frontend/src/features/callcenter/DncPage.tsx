@@ -106,14 +106,14 @@ export function DncPage() {
               const expired = e.expiresAt && new Date(e.expiresAt) <= new Date();
               return (
                 <TR key={e.id}>
-                  <TD className="font-mono text-ink-900">{e.phoneNormalized}</TD>
-                  <TD className="text-ink-600">{e.reason ?? <span className="text-ink-400">—</span>}</TD>
+                  <TD className="font-mono text-ink-900 tabular-nums whitespace-nowrap">{e.phoneNormalized}</TD>
+                  <TD className="text-ink-600 max-w-[280px] truncate">{e.reason ?? <span className="text-ink-400">—</span>}</TD>
                   <TD>
                     <Badge tone="neutral" variant="soft">{e.source ?? "manual"}</Badge>
                   </TD>
                   <TD>
                     {e.expiresAt
-                      ? <Badge tone={expired ? "neutral" : "warning"} variant="soft">
+                      ? <Badge tone={expired ? "neutral" : "warning"} variant="soft" className="tabular-nums whitespace-nowrap">
                           {new Date(e.expiresAt).toLocaleDateString()}
                         </Badge>
                       : <Badge tone="danger" variant="soft" dot>Permanent</Badge>}

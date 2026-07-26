@@ -98,7 +98,7 @@ export function AttendancePage() {
           <div className="flex gap-1.5">
             {[{ l: "Today", d: 0 }, { l: "7 days", d: 7 }, { l: "30 days", d: 30 }].map(p => (
               <button key={p.l} onClick={() => applyRange(p.d)}
-                className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1",
                   range === p.d ? "bg-brand-600 text-white shadow-sm" : "bg-ink-100 hover:bg-ink-200 text-ink-700")}>
                 {p.l}
               </button>
@@ -142,7 +142,7 @@ function PersonRow({ row }: { row: AttendanceRow }) {
   return (
     <Card>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50/30 transition-colors">
+        className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg hover:bg-brand-50/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset">
         <Avatar name={row.userName} size={36} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ function PersonRow({ row }: { row: AttendanceRow }) {
               {row.clockedIn ? row.currentStatus : "Offline"}
             </Badge>
           </div>
-          <div className="text-xs text-ink-500">
+          <div className="text-xs text-ink-500 tabular-nums truncate">
             {row.sessionCount} session{row.sessionCount === 1 ? "" : "s"} · first in {dt(row.firstClockIn)}
           </div>
         </div>
@@ -176,7 +176,7 @@ function PersonRow({ row }: { row: AttendanceRow }) {
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="text-right">
-      <div className={`font-semibold tabular-nums ${tone ?? "text-ink-900"}`}>{value}</div>
+      <div className={`font-semibold tabular-nums whitespace-nowrap ${tone ?? "text-ink-900"}`}>{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-ink-400">{label}</div>
     </div>
   );
@@ -186,11 +186,11 @@ function SessionBlock({ session }: { session: AttendanceSession }) {
   return (
     <div className="rounded-lg border hairline bg-white p-3">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <div className="text-sm font-medium text-ink-800 inline-flex items-center gap-1.5">
+        <div className="text-sm font-medium text-ink-800 inline-flex items-center gap-1.5 tabular-nums whitespace-nowrap">
           <Icon name="clock" size={13} className="text-ink-400" />
           {t(session.clockInAt)} → {session.clockOutAt ? t(session.clockOutAt) : <span className="text-success-700">active</span>}
         </div>
-        <div className="text-xs text-ink-500">
+        <div className="text-xs text-ink-500 tabular-nums">
           {hm(session.clockedMinutes)} clocked · {hm(session.availableMinutes)} avail · {hm(session.onCallMinutes)} call · {hm(session.breakMinutes)} break
         </div>
       </div>
@@ -198,7 +198,7 @@ function SessionBlock({ session }: { session: AttendanceSession }) {
         {session.segments.map((seg, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
             <Badge tone={statusTone[seg.status] ?? "neutral"} variant="soft" size="sm">{seg.status}</Badge>
-            <span className="text-ink-500">{t(seg.fromAt)} – {seg.untilAt ? t(seg.untilAt) : "now"}</span>
+            <span className="text-ink-500 tabular-nums whitespace-nowrap">{t(seg.fromAt)} – {seg.untilAt ? t(seg.untilAt) : "now"}</span>
             <span className="text-ink-400 tabular-nums">{hm(seg.minutes)}</span>
             {seg.reason && <span className="text-ink-500 italic truncate">· {seg.reason}</span>}
           </div>

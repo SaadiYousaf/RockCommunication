@@ -32,7 +32,8 @@ export function SubmissionAgentsPage() {
         <CardBody>
           {isLoading ? <Skeleton className="h-32" /> : !agents || agents.length === 0 ? (
             <EmptyState icon={<Icon name="userPlus" size={20} />} title="No submission agents"
-              description="Add one with the button above — they can approve sales for every agency." />
+              description="Add one with the button above — they can approve sales for every agency."
+              action={<Button size="sm" leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>} />
           ) : (
             <Table>
               <THead>
@@ -41,9 +42,14 @@ export function SubmissionAgentsPage() {
               <TBody>
                 {agents.map((a) => (
                   <TR key={a.id}>
-                    <TD className="font-medium text-ink-900">{a.name}</TD>
-                    <TD className="text-sm text-ink-600">{a.email}</TD>
-                    <TD><Badge tone={a.isActive ? "success" : "neutral"} variant="soft">{a.isActive ? "Active" : "Inactive"}</Badge></TD>
+                    <TD className="font-medium text-ink-900 truncate max-w-[16rem]">{a.name}</TD>
+                    <TD className="text-sm text-ink-600">
+                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <Icon name="mail" size={13} className="text-ink-400 shrink-0" />
+                        <span className="truncate">{a.email}</span>
+                      </span>
+                    </TD>
+                    <TD className="whitespace-nowrap"><Badge tone={a.isActive ? "success" : "neutral"} variant="soft">{a.isActive ? "Active" : "Inactive"}</Badge></TD>
                   </TR>
                 ))}
               </TBody>

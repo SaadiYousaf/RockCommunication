@@ -81,9 +81,9 @@ export function KnowledgeBasePage() {
                         <div className={cn("font-medium truncate", active ? "text-brand-700" : "text-ink-900")}>
                           {a.title}
                         </div>
-                        <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-2">
+                        <div className="text-xs text-ink-500 mt-0.5 flex flex-wrap items-center gap-2">
                           {a.category && <Badge tone="neutral" variant="soft">{a.category}</Badge>}
-                          <span>{a.viewCount ?? 0} views</span>
+                          <span className="tabular-nums whitespace-nowrap">{a.viewCount ?? 0} views</span>
                           {!a.isPublished && <Badge tone="warning" variant="soft">Draft</Badge>}
                         </div>
                       </button>
@@ -102,18 +102,18 @@ export function KnowledgeBasePage() {
               <div className="p-6 border-b hairline">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h2 className="text-2xl font-semibold tracking-tight text-ink-900">{article.title}</h2>
+                    <h2 className="text-2xl font-semibold tracking-tight text-ink-900 text-balance">{article.title}</h2>
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-ink-500">
                       {article.category && <Badge tone="brand" variant="soft">{article.category}</Badge>}
                       {article.tags && article.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
                         <Badge key={tag} tone="neutral" variant="outline">#{tag}</Badge>
                       ))}
                       {!article.isPublished && <Badge tone="warning" variant="soft">Draft</Badge>}
-                      <span>· {article.viewCount ?? 0} views</span>
+                      <span className="tabular-nums whitespace-nowrap">· {article.viewCount ?? 0} views</span>
                     </div>
                   </div>
                   <Can permission={Perm.KnowledgeWrite}>
-                    <Button variant="outline" size="sm" leftIcon={<Icon name="cog" size={14} />}
+                    <Button variant="outline" size="sm" leftIcon={<Icon name="edit" size={14} />}
                       onClick={() => setEditing(article)}>Edit</Button>
                   </Can>
                 </div>

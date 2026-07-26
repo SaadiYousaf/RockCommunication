@@ -71,20 +71,20 @@ export function QaPage() {
                   subtitle={r.description}
                   action={
                     <div className="text-right">
-                      <div className="text-2xl font-semibold tracking-tight text-ink-900">{total}</div>
-                      <div className="text-xs text-ink-500 uppercase tracking-wider">max points</div>
+                      <div className="text-2xl font-semibold tracking-tight text-ink-900 tabular-nums">{total}</div>
+                      <div className="text-xs text-ink-500 uppercase tracking-wider whitespace-nowrap">max points</div>
                     </div>
                   }
                 />
                 <CardBody className="pt-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {r.items.map((it, idx) => (
-                      <div key={it.id} className="flex items-center gap-3 p-3 rounded-lg border hairline">
-                        <div className="h-7 w-7 rounded-md bg-brand-50 text-brand-600 grid place-items-center text-xs font-semibold">
+                      <div key={it.id} className="flex items-center gap-3 p-3 rounded-lg border hairline transition-colors hover:bg-ink-50">
+                        <div className="h-7 w-7 rounded-md bg-brand-50 text-brand-600 grid place-items-center text-xs font-semibold tabular-nums shrink-0">
                           {idx + 1}
                         </div>
                         <div className="flex-1 min-w-0 text-sm text-ink-800 truncate">{it.label}</div>
-                        <div className="text-xs font-mono text-ink-500">/ {it.maxScore}</div>
+                        <div className="text-xs font-mono text-ink-500 tabular-nums whitespace-nowrap shrink-0">/ {it.maxScore}</div>
                       </div>
                     ))}
                   </div>

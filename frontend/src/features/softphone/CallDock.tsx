@@ -77,10 +77,11 @@ export function CallDock() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-semibold truncate">{call.leadName}</div>
-          <div className="text-xs opacity-90 font-mono">{call.phone}</div>
+          <div className="text-xs opacity-90 font-mono tabular-nums truncate">{call.phone}</div>
         </div>
-        <button className="text-xs opacity-70 hover:opacity-100" onClick={() => navigate(`/leads/${call.leadId}`)}>
+        <button className="inline-flex items-center gap-1 text-xs opacity-70 hover:opacity-100 transition-opacity whitespace-nowrap" onClick={() => navigate(`/leads/${call.leadId}`)}>
           Open lead
+          <Icon name="arrowRight" size={12} />
         </button>
       </div>
 
@@ -92,7 +93,7 @@ export function CallDock() {
             {call.isHeld && " · on hold"}
             {call.isMuted && " · muted"}
           </span>
-          <span className="text-sm font-mono">{formatTime(elapsed)}</span>
+          <span className="text-sm font-mono tabular-nums whitespace-nowrap">{formatTime(elapsed)}</span>
         </div>
 
         {call.status === "ringing" && isInbound && (
@@ -126,7 +127,7 @@ export function CallDock() {
           <div className="grid grid-cols-3 gap-1 mb-2">
             {["1","2","3","4","5","6","7","8","9","*","0","#"].map(d => (
               <button key={d}
-                className="bg-ink-800 hover:bg-ink-700 rounded-lg py-2 font-mono"
+                className="bg-ink-800 hover:bg-ink-700 rounded-lg py-2 font-mono tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                 onClick={() => dtmf({ id: call.id, digits: d })}>{d}</button>
             ))}
           </div>
@@ -143,7 +144,7 @@ export function CallDock() {
             toast.error("SMS not sent", "Try again.");
           }
         }}>
-          <input className="flex-1 bg-ink-800 border border-ink-700 rounded-lg px-2 py-1 text-sm"
+          <input className="flex-1 min-w-0 bg-ink-800 border border-ink-700 rounded-lg px-2 py-1 text-sm placeholder-ink-400 transition-colors focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/40"
             placeholder="Quick SMS to lead..." value={smsBody} onChange={(e) => setSmsBody(e.target.value)} />
           <Button type="submit" variant="secondary" size="sm" leftIcon={<Icon name="send" size={14} />}>
             Send
@@ -167,7 +168,7 @@ function DockBtn({ children, onClick, active }: { children: ReactNode; onClick: 
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition ${active ? "bg-amber-500 text-ink-900" : "bg-ink-800 hover:bg-ink-700"}`}>
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50 ${active ? "bg-amber-500 text-ink-900" : "bg-ink-800 hover:bg-ink-700"}`}>
       {children}
     </button>
   );

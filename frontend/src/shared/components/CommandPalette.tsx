@@ -59,7 +59,7 @@ const ALL_ITEMS: PaletteItem[] = [
   { id: "dnc",        label: "DNC List", to: "/dnc", group: "Operations", icon: "flag", module: "dnc", keywords: ["do not call", "compliance"] },
   { id: "campaigns",  label: "Campaigns", to: "/campaigns", group: "Operations", icon: "target", module: "campaigns" },
   { id: "scripts",    label: "Scripts", to: "/scripts", group: "Operations", icon: "doc", module: "scripts" },
-  { id: "workflows",  label: "Workflows", to: "/workflows", group: "Operations", icon: "filter", module: "workflows" },
+  { id: "workflows",  label: "Workflows", to: "/workflows", group: "Operations", icon: "workflow", module: "workflows" },
 
   // Administration
   { id: "users-mgmt",   label: "User Management", to: "/admin/users", group: "Administration", icon: "users", module: "users.manage" },
@@ -354,9 +354,12 @@ function Palette({ onClose }: { onClose: () => void }) {
         {/* results */}
         <div ref={listRef} className="max-h-[55vh] overflow-y-auto py-2">
           {items.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-ink-500">
-              <Icon name="search" size={18} className="mx-auto mb-2 text-ink-400" />
-              No matches for "{q}"
+            <div className="px-6 py-10 text-center">
+              <div className="mx-auto mb-3 h-11 w-11 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
+                <Icon name="search" size={18} />
+              </div>
+              <div className="text-sm font-medium text-ink-700 break-words">No matches for "{q}"</div>
+              <div className="text-xs text-ink-500 mt-1">Try a page name, a person, or a command.</div>
             </div>
           ) : (
             groups.map(([group, list], gi) => {

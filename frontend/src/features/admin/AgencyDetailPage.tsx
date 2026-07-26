@@ -126,7 +126,7 @@ export function AgencyDetailPage() {
                     <TR key={c.id}>
                       <TD className="font-medium text-ink-900">{c.name}</TD>
                       <TD className="font-mono text-xs text-ink-500">{c.code ?? "—"}</TD>
-                      <TD numeric className="text-sm text-ink-600">{c.leadCount}</TD>
+                      <TD numeric className="text-sm text-ink-600 tabular-nums">{c.leadCount}</TD>
                       <TD><Badge tone={c.isActive ? "success" : "neutral"} variant="soft">{c.isActive ? "Active" : "Disabled"}</Badge></TD>
                       <TD className="text-right">
                         <Button variant="ghost" size="sm" leftIcon={<Icon name="edit" size={14} />} onClick={() => setEditCc(c)}>Edit</Button>
@@ -160,11 +160,11 @@ export function AgencyDetailPage() {
                   {people.map((u) => (
                     <TR key={u.id}>
                       <TD>
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <Avatar name={u.userName} size={30} />
-                          <div className="leading-tight">
-                            <div className="font-medium text-ink-900">{u.userName}</div>
-                            <div className="text-xs text-ink-500">{u.email}</div>
+                          <div className="leading-tight min-w-0">
+                            <div className="font-medium text-ink-900 truncate">{u.userName}</div>
+                            <div className="text-xs text-ink-500 truncate">{u.email}</div>
                           </div>
                         </div>
                       </TD>
@@ -216,14 +216,14 @@ export function AgencyDetailPage() {
                 <TBody>
                   {items.map((s) => (
                     <TR key={s.id}>
-                      <TD numeric className="font-mono text-xs text-ink-500">{s.saleNumber}</TD>
-                      <TD className="font-medium text-ink-900">{s.leadName}</TD>
-                      <TD className="font-mono text-xs text-ink-500">{s.leadPhone}</TD>
+                      <TD numeric className="font-mono text-xs text-ink-500 tabular-nums">{s.saleNumber}</TD>
+                      <TD className="font-medium text-ink-900"><span className="block truncate max-w-[12rem]">{s.leadName}</span></TD>
+                      <TD className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</TD>
                       <TD className="text-sm">{s.carrierApproved ?? "—"}</TD>
                       <TD className="text-sm">{s.planApproved ?? "—"}</TD>
-                      <TD numeric className="text-sm">{money(s.coverageApproved)}</TD>
-                      <TD numeric className="text-sm">{money(s.premiumApproved)}</TD>
-                      <TD numeric className="text-sm">{money(s.commissionEarned)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{money(s.coverageApproved)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{money(s.premiumApproved)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{money(s.commissionEarned)}</TD>
                       <TD className="text-sm text-ink-600">{s.callCenterName ?? "—"}</TD>
                       <TD className="text-sm text-ink-600">{s.licenseAgentName ?? "—"}</TD>
                       <TD><Badge tone={s.status === "Funded" ? "success" : s.status === "Validated" ? "info" : "neutral"} variant="soft">{s.status}</Badge></TD>
@@ -236,7 +236,7 @@ export function AgencyDetailPage() {
 
           {total > PAGE && (
             <div className="flex items-center justify-between pt-3 text-sm text-ink-500">
-              <span>{skip + 1}–{Math.min(skip + PAGE, total)} of {total}</span>
+              <span className="tabular-nums whitespace-nowrap">{skip + 1}–{Math.min(skip + PAGE, total)} of {total}</span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - PAGE))}>Prev</Button>
                 <Button variant="outline" size="sm" disabled={skip + PAGE >= total} onClick={() => setSkip(skip + PAGE)}>Next</Button>

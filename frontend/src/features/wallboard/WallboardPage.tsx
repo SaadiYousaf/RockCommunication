@@ -170,10 +170,10 @@ export function WallboardPage() {
                             style={{ width: `${pct}%` }}
                           />
                           <div className="col-span-1 relative"><Medal rank={i + 1} /></div>
-                          <div className="col-span-5 relative">
-                            <div className="font-semibold text-white text-base">{u.userName}</div>
+                          <div className="col-span-5 relative min-w-0">
+                            <div className="font-semibold text-white text-base truncate">{u.userName}</div>
                             {u.callsToday > 0 && (
-                              <div className="text-xs text-white/40">{u.callsToday} calls</div>
+                              <div className="text-xs text-white/40 tabular-nums">{u.callsToday} calls</div>
                             )}
                           </div>
                           <div className="col-span-2 text-right relative">
@@ -208,7 +208,7 @@ function SectionHeading({ label, right }: { label: string; right?: string }) {
     <div className="flex items-center gap-3 mb-4">
       <h2 className="text-[11px] font-bold tracking-[0.3em] uppercase text-white/50">{label}</h2>
       <div className="flex-1 h-px bg-gradient-to-r from-white/15 to-transparent" />
-      {right && <span className="text-[11px] text-white/40 uppercase tracking-wider">{right}</span>}
+      {right && <span className="text-[11px] text-white/40 uppercase tracking-wider tabular-nums whitespace-nowrap">{right}</span>}
     </div>
   );
 }
@@ -249,7 +249,7 @@ function BigTile({
               style={{ width: `${Math.min(100, pct)}%` }}
             />
           </div>
-          <div className="text-[10px] text-white/40 mt-1.5 font-mono">{pct}% of clocked-in</div>
+          <div className="text-[10px] text-white/40 mt-1.5 font-mono tabular-nums">{pct}% of clocked-in</div>
         </div>
       )}
     </div>
@@ -270,7 +270,7 @@ function HeroTile({
         <div className={`text-6xl font-bold tracking-tight font-mono bg-gradient-to-br ${a.text} bg-clip-text text-transparent tabular-nums leading-none`}>
           {value}
         </div>
-        <div className="text-xs text-white/50 mt-3">{sublabel}</div>
+        <div className="text-xs text-white/50 mt-3 tabular-nums">{sublabel}</div>
         {progress != null && (
           <div className="mt-4 h-1.5 rounded-full bg-white/5 overflow-hidden">
             <div

@@ -86,7 +86,7 @@ function QueueSection() {
                   <TD className="font-mono text-ink-700 text-xs">{q.phoneNumber || <span className="text-ink-400">—</span>}</TD>
                   <TD>{q.requiredSkillCode ? <Badge tone="info" variant="soft">{q.requiredSkillCode}</Badge> : <span className="text-ink-400">—</span>}</TD>
                   <TD className="text-ink-700">{q.strategy}</TD>
-                  <TD className="text-ink-700">{q.maxWaitSeconds}s</TD>
+                  <TD className="text-ink-700 tabular-nums whitespace-nowrap">{q.maxWaitSeconds}s</TD>
                   <TD>
                     <Badge tone={q.isActive ? "success" : "neutral"} variant="soft" dot>
                       {q.isActive ? "Active" : "Inactive"}
@@ -167,13 +167,13 @@ function VoicemailSection() {
         ) : (
           <ul className="divide-y divide-ink-100">
             {vms.map((v) => (
-              <li key={v.id} className="py-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center">
+              <li key={v.id} className="py-3 px-2 -mx-2 rounded-lg flex items-center gap-3 hover:bg-ink-50/50 transition-colors">
+                <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
                   <Icon name="chat" size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-ink-900">{v.name}</div>
-                  <div className="text-xs text-ink-500">{v.durationSeconds}s</div>
+                  <div className="font-medium text-ink-900 truncate">{v.name}</div>
+                  <div className="text-xs text-ink-500 tabular-nums">{v.durationSeconds}s</div>
                 </div>
                 <audio controls src={v.url} className="h-9 max-w-xs" />
               </li>
@@ -277,8 +277,8 @@ function PublicEndpointsSection() {
             <TBody>
               {endpoints.map((e) => (
                 <TR key={e.id}>
-                  <TD className="font-mono text-xs text-ink-800">/api/public/leads/{e.slug}</TD>
-                  <TD className="font-semibold text-ink-900">{e.leadCount}</TD>
+                  <TD className="font-mono text-xs text-ink-800 whitespace-nowrap">/api/public/leads/{e.slug}</TD>
+                  <TD className="font-semibold text-ink-900 tabular-nums">{e.leadCount}</TD>
                   <TD>
                     <Badge tone={e.isActive ? "success" : "neutral"} variant="soft" dot>
                       {e.isActive ? "Active" : "Inactive"}

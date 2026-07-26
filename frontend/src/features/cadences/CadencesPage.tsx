@@ -111,7 +111,7 @@ export function CadencesPage() {
                         <Badge tone={kindTone[s.stepKind] ?? "neutral"} variant="soft">
                           {s.order}. {s.stepKind}
                         </Badge>
-                        <span className="text-xs text-ink-500 font-mono">{formatDelay(s.delayMinutes)}</span>
+                        <span className="text-xs text-ink-500 font-mono tabular-nums whitespace-nowrap">{formatDelay(s.delayMinutes)}</span>
                       </div>
                       {idx < c.steps.length - 1 && (
                         <Icon name="arrowRight" size={14} className="text-ink-300" />
@@ -127,7 +127,10 @@ export function CadencesPage() {
 
       {/* Recent enrollments */}
       <Card>
-        <CardHeader title="Recent enrollments" subtitle="Leads currently moving through cadences" />
+        <CardHeader
+          title={<span className="flex items-center gap-2"><Icon name="activity" size={18} /> Recent enrollments</span>}
+          subtitle="Leads currently moving through cadences"
+        />
         <CardBody className="pt-0 px-0">
           {enrLoading ? (
             <div className="px-5 pb-5 space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -153,9 +156,9 @@ export function CadencesPage() {
               <TBody>
                 {enrollments.map((e) => (
                   <TR key={e.id}>
-                    <TD className="text-ink-600 text-xs">{new Date(e.enrolledAt).toLocaleString()}</TD>
-                    <TD className="font-mono text-xs text-ink-700">{e.leadId.slice(0, 8)}…</TD>
-                    <TD className="font-mono text-xs text-ink-700">{e.cadenceId.slice(0, 8)}…</TD>
+                    <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.enrolledAt).toLocaleString()}</TD>
+                    <TD className="font-mono text-xs text-ink-700 tabular-nums">{e.leadId.slice(0, 8)}…</TD>
+                    <TD className="font-mono text-xs text-ink-700 tabular-nums">{e.cadenceId.slice(0, 8)}…</TD>
                     <TD>
                       <Badge tone="brand" variant="soft">Step {e.currentStepOrder}</Badge>
                     </TD>
@@ -242,6 +245,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
                 <Input type="number" min={0} value={s.delayMinutes}
                   onChange={(e) => setStep(i, { delayMinutes: parseInt(e.target.value) || 0 })}
                   containerClassName="w-32"
+                  className="tabular-nums"
                   hint="delay (min)" />
                 <div className="flex-1" />
                 <label className="inline-flex items-center gap-1.5 text-xs text-ink-600 whitespace-nowrap">

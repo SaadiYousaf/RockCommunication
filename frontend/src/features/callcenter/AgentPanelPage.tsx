@@ -185,8 +185,8 @@ export function AgentPanelPage() {
               </div>
               <div className="text-sm space-y-1.5 lg:text-right">
                 <div className="text-white/70 text-xs">Clocked in</div>
-                <div className="font-medium">{new Date(session.clockInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                <div className="text-white/60 text-[11px]">{new Date(session.clockInAt).toLocaleDateString()}</div>
+                <div className="font-medium tabular-nums">{new Date(session.clockInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                <div className="text-white/60 text-[11px] tabular-nums">{new Date(session.clockInAt).toLocaleDateString()}</div>
               </div>
             </div>
           </div>
@@ -267,7 +267,10 @@ export function AgentPanelPage() {
 
       {/* Recent calls */}
       <Card>
-        <CardHeader title="Recent calls" subtitle="Your last 20 calls" />
+        <CardHeader
+          title={<span className="flex items-center gap-2"><Icon name="phoneCall" size={16} className="text-ink-400" /> Recent calls</span>}
+          subtitle="Your last 20 calls"
+        />
         <CardBody className="pt-0 px-0">
           {callsLoading ? (
             <div className="px-5 pb-5 space-y-2">
@@ -296,7 +299,7 @@ export function AgentPanelPage() {
               <TBody>
                 {recentCalls.map((c) => (
                   <TR key={c.id}>
-                    <TD className="text-ink-600">{new Date(c.initiatedAt).toLocaleString()}</TD>
+                    <TD className="text-ink-600 whitespace-nowrap tabular-nums text-xs">{new Date(c.initiatedAt).toLocaleString()}</TD>
                     <TD>
                       {c.leadName ? (
                         <div className="leading-tight">
@@ -368,20 +371,20 @@ function HeroStat({ label, value, icon }: { label: string; value: string; icon: 
       <div className="flex items-center gap-2 text-white/70 text-[10px] uppercase tracking-wider">
         <Icon name={icon} size={12} /> {label}
       </div>
-      <div className="text-xl font-semibold mt-1 font-mono">{value}</div>
+      <div className="text-xl font-semibold mt-1 font-mono tabular-nums">{value}</div>
     </div>
   );
 }
 
 function SmallStat({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
   return (
-    <div className="surface p-4 flex items-center gap-3">
+    <div className="surface p-4 flex items-center gap-3 transition-shadow hover:shadow-card-hover">
       <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
         <Icon name={icon} size={18} />
       </div>
-      <div>
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide">{label}</div>
-        <div className="text-xl font-semibold text-ink-900">{value}</div>
+      <div className="min-w-0">
+        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
+        <div className="text-xl font-semibold text-ink-900 tabular-nums">{value}</div>
       </div>
     </div>
   );

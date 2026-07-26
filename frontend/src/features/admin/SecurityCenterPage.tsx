@@ -86,10 +86,10 @@ export function SecurityCenterPage() {
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {ISOLATION.map((b) => (
-              <div key={b.title} className="rounded-lg border border-ink-200 bg-ink-50/40 p-4">
+              <div key={b.title} className="rounded-lg border border-ink-200 bg-ink-50/40 p-4 transition-colors hover:border-brand-300 hover:bg-ink-50/70">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-brand-600"><Icon name={b.icon} size={16} /></span>
-                  <span className="font-semibold text-sm text-ink-900">{b.title}</span>
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0"><Icon name={b.icon} size={16} /></span>
+                  <span className="font-semibold text-sm text-ink-900 text-balance">{b.title}</span>
                 </div>
                 <p className="text-xs text-ink-600 leading-relaxed">{b.body}</p>
               </div>
@@ -104,7 +104,7 @@ export function SecurityCenterPage() {
             title={`${t.tier} level`}
             subtitle={t.blurb}
             bordered
-            action={<Badge tone={t.tone} variant="soft">{t.roles.length} role{t.roles.length === 1 ? "" : "s"}</Badge>}
+            action={<Badge tone={t.tone} variant="soft"><span className="tabular-nums">{t.roles.length}</span> role{t.roles.length === 1 ? "" : "s"}</Badge>}
           />
           <CardBody>
             <div className="overflow-x-auto">
@@ -115,11 +115,11 @@ export function SecurityCenterPage() {
                 <TBody>
                   {t.roles.map((r) => (
                     <TR key={r.role}>
-                      <TD><Badge tone={t.tone} variant="soft">{roleLabel(r.role)}</Badge></TD>
+                      <TD className="whitespace-nowrap"><Badge tone={t.tone} variant="soft">{roleLabel(r.role)}</Badge></TD>
                       <TD className="text-sm text-ink-700">{r.scope}</TD>
                       <TD className="text-sm text-ink-600">{r.can}</TD>
-                      <TD>{r.twoFactor
-                        ? <Badge tone="success" variant="soft">Required</Badge>
+                      <TD className="whitespace-nowrap">{r.twoFactor
+                        ? <Badge tone="success" variant="soft"><Icon name="lock" size={11} className="-ml-0.5" /> Required</Badge>
                         : <span className="text-xs text-ink-400">Optional</span>}</TD>
                     </TR>
                   ))}

@@ -59,7 +59,10 @@ export function DocumentsPage() {
 
       {canManage && (
         <Card className="mb-5">
-          <CardHeader title="Upload a document" subtitle="Word (.doc/.docx) or spreadsheets (.xls/.xlsx/.csv). Max 30 MB." />
+          <CardHeader
+            title={<span className="inline-flex items-center gap-2"><Icon name="upload" size={16} className="text-ink-400" />Upload a document</span>}
+            subtitle="Word (.doc/.docx) or spreadsheets (.xls/.xlsx/.csv). Max 30 MB."
+          />
           <CardBody>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -76,7 +79,7 @@ export function DocumentsPage() {
                     type="file"
                     accept=".doc,.docx,.rtf,.odt,.xls,.xlsx,.csv,.ods"
                     onChange={(e) => setPending(e.target.files?.[0] ?? null)}
-                    className="block w-full text-sm text-ink-700 file:mr-3 file:rounded-md file:border-0 file:bg-ink-900 file:px-3 file:py-2 file:text-white file:text-xs hover:file:bg-ink-800"
+                    className="block w-full text-sm text-ink-700 rounded-md file:mr-3 file:rounded-md file:border-0 file:bg-ink-900 file:px-3 file:py-2 file:text-white file:text-xs file:transition-colors hover:file:bg-ink-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
                   />
                 </div>
               </div>
@@ -92,7 +95,10 @@ export function DocumentsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5">
         {/* List */}
         <Card>
-          <CardHeader title="Library" subtitle={`${docs?.length ?? 0} document(s)`} />
+          <CardHeader
+            title={<span className="inline-flex items-center gap-2"><Icon name="book" size={16} className="text-ink-400" />Library</span>}
+            subtitle={<span className="tabular-nums">{docs?.length ?? 0} document(s)</span>}
+          />
           <CardBody className="pt-0">
             {isLoading ? (
               <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
@@ -112,11 +118,11 @@ export function DocumentsPage() {
                       <span className={`h-9 w-9 rounded-lg grid place-items-center shrink-0 ${
                         d.kind === "spreadsheet" ? "bg-emerald-50 text-emerald-600" : "bg-brand-50 text-brand-600"
                       }`}>
-                        <Icon name="doc" size={16} />
+                        <Icon name={d.kind === "spreadsheet" ? "spreadsheet" : "doc"} size={16} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-ink-900 truncate">{d.name}</span>
-                        <span className="block text-[11px] text-ink-500">
+                        <span className="block text-[11px] text-ink-500 truncate tabular-nums">
                           {d.kind} · {fmtSize(d.size)} · {new Date(d.createdAt).toLocaleDateString()}
                         </span>
                       </span>
@@ -138,7 +144,7 @@ export function DocumentsPage() {
                               toast.success("Deleted", d.name);
                             } catch { toast.error("Delete failed", ""); }
                           }}
-                          className="text-ink-400 hover:text-rose-600 p-1 rounded"
+                          className="text-ink-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md transition-colors shrink-0"
                         >
                           <Icon name="x" size={14} />
                         </span>
@@ -321,9 +327,9 @@ function NotesPanel({ documentId }: { documentId: string }) {
       ) : notes && notes.length > 0 ? (
         <ul className="space-y-2 mb-3 max-h-48 overflow-auto">
           {notes.map((n) => (
-            <li key={n.id} className="text-sm bg-ink-50 rounded-lg px-3 py-2">
+            <li key={n.id} className="text-sm bg-ink-50 rounded-lg px-3 py-2 transition-colors hover:bg-ink-100/70">
               <div className="text-ink-800 whitespace-pre-wrap">{n.body}</div>
-              <div className="text-[11px] text-ink-500 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+              <div className="text-[11px] text-ink-500 mt-1 tabular-nums whitespace-nowrap">{new Date(n.createdAt).toLocaleString()}</div>
             </li>
           ))}
         </ul>

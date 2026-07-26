@@ -355,7 +355,8 @@ export function LeadsPage() {
           <THead>
             <TR>
               <TH className="w-8">
-                <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} />
+                <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll}
+                  className="h-4 w-4 rounded border-ink-300 text-brand-600 cursor-pointer accent-brand-600 focus:ring-2 focus:ring-brand-400" />
               </TH>
               <TH>Lead</TH>
               <TH>Phone</TH>
@@ -372,7 +373,8 @@ export function LeadsPage() {
               return (
                 <TR key={l.id} className={selected.has(l.id) ? "bg-brand-50/50" : ""}>
                   <TD>
-                    <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleOne(l.id)} />
+                    <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleOne(l.id)}
+                      className="h-4 w-4 rounded border-ink-300 text-brand-600 cursor-pointer accent-brand-600 focus:ring-2 focus:ring-brand-400" />
                   </TD>
                   <TD>
                     <div className="flex items-center gap-3">
@@ -385,10 +387,10 @@ export function LeadsPage() {
                       </div>
                     </div>
                   </TD>
-                  <TD className="font-mono text-xs text-ink-700">{formatPhone(l.phoneNumber)}</TD>
+                  <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
                   <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
                   <TD className="text-ink-600 text-xs">{dispOf(l.disposition)}</TD>
-                  <TD className="text-ink-500 text-xs">{new Date(l.createdAt).toLocaleDateString()}</TD>
+                  <TD className="text-ink-500 text-xs tabular-nums whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</TD>
                   <TD>
                     <div className="flex items-center justify-end gap-1.5">
                       <Button variant="outline" size="sm" leftIcon={<Icon name="phoneCall" size={13} />}

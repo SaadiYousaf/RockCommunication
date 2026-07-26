@@ -104,6 +104,11 @@ export function UserManagementPage() {
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[260px]">
             <Input
+              type="search"
+              // Stop the browser password manager from treating this as a username field and
+              // auto-filling a saved account (e.g. "superadmin") when the reset-password modal opens.
+              autoComplete="off"
+              name="user-search"
               leftIcon={<Icon name="search" size={16} />}
               placeholder="Search by name, email, or role…"
               value={search}
@@ -111,7 +116,7 @@ export function UserManagementPage() {
             />
           </div>
           {users && (
-            <Badge tone="neutral" variant="soft">
+            <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">
               {filtered.length} of {users.length}
             </Badge>
           )}
@@ -153,7 +158,7 @@ export function UserManagementPage() {
               // `true` for older payloads so we don't accidentally grey out everyone.
               const active = u.isActive ?? true;
               return (
-              <TR key={u.id} className={active ? "" : "bg-rose-50/30"}>
+              <TR key={u.id} className={active ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30"}>
                 <TD>
                   <div className="flex items-center gap-3">
                     <Avatar name={u.userName} size={36} className={active ? "" : "opacity-50 grayscale"} />
@@ -176,7 +181,7 @@ export function UserManagementPage() {
                     </div>
                   </div>
                 </TD>
-                <TD className="text-ink-600">{u.email}</TD>
+                <TD className="text-ink-600"><span className="block truncate max-w-[15rem]">{u.email}</span></TD>
                 <TD>
                   <div className="flex flex-wrap gap-1">
                     {u.roles.length === 0
@@ -305,6 +310,10 @@ export function UserManagementPage() {
       >
         <Input
           type="password"
+          // "new-password" tells the browser this is a password-creation field, so it won't try to
+          // autofill a saved credential (and won't pair it with a "username" field like the search box).
+          autoComplete="new-password"
+          name="admin-new-password"
           label="New password"
           hint="Minimum 8 characters with uppercase, lowercase, digit, and symbol."
           value={newPwd}
@@ -367,10 +376,10 @@ function RolePicker({
               key={r} type="button"
               onClick={() => toggle(r)}
               className={
-                "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all " +
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 " +
                 (active
                   ? "border-brand-500 bg-brand-50 text-brand-700"
-                  : "border-ink-200 hover:border-ink-300 text-ink-700")
+                  : "border-ink-200 hover:border-ink-300 hover:bg-ink-50/60 text-ink-700")
               }
             >
               <span className={"h-4 w-4 rounded border grid place-items-center " +

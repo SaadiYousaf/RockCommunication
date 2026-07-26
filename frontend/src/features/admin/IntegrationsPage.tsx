@@ -85,7 +85,17 @@ export function IntegrationsPage() {
         <div className="space-y-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}</div>
       ) : !items || items.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="cog" size={20} />} title="No integrations" description="Nothing configured." />
+          <EmptyState
+            icon={<Icon name="cog" size={20} />}
+            title="No integrations configured"
+            description="No external providers are registered yet. Configure them in appsettings.json, then restart the API."
+            tone="neutral"
+            action={
+              <Button variant="outline" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={() => refetch()}>
+                Refresh
+              </Button>
+            }
+          />
         </CardBody></Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -245,7 +255,7 @@ function IntegrationCard({
                 <span className="h-2 w-2 rounded-full bg-current" />
                 <span className="font-medium">{result.healthy ? "Healthy" : "Unhealthy"}</span>
                 <span className="text-ink-500 truncate">· {result.message}</span>
-                <span className="text-ink-400 font-mono">· {result.elapsedMs}ms</span>
+                <span className="text-ink-400 font-mono tabular-nums whitespace-nowrap">· {result.elapsedMs}ms</span>
               </div>
             )}
           </div>

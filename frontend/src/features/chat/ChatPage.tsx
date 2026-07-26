@@ -410,10 +410,10 @@ export function ChatPage() {
                             {r.isDirect ? r.name : `#${r.name}`}
                           </span>
                           {unreadCount > 0 && (
-                            <Badge tone="brand" variant="solid" className="shrink-0">{unreadCount}</Badge>
+                            <Badge tone="brand" variant="solid" className="shrink-0 tabular-nums">{unreadCount}</Badge>
                           )}
                         </div>
-                        <div className="text-xs text-ink-500 truncate">
+                        <div className="text-xs text-ink-500 truncate tabular-nums">
                           {r.memberUserIds.length} member{r.memberUserIds.length === 1 ? "" : "s"}
                         </div>
                       </div>
@@ -466,7 +466,7 @@ export function ChatPage() {
                   {activeRoomData?.isDirect ? activeRoomData?.name : `#${activeRoomData?.name}`}
                 </div>
                 <div className="text-xs text-ink-500 flex items-center gap-1.5">
-                  <span>{activeRoomData?.memberUserIds.length} members</span>
+                  <span className="tabular-nums">{activeRoomData?.memberUserIds.length} members</span>
                   {otherMembers.length > 0 && (
                     <>
                       <span>·</span>
@@ -526,7 +526,7 @@ export function ChatPage() {
                             )}
                             <div className={cn("max-w-[68%] flex flex-col", isMe && "items-end")}>
                               {showHeader && (
-                                <div className={cn("text-[11px] text-ink-500 mb-1 px-1", isMe && "text-right")}>
+                                <div className={cn("text-[11px] text-ink-500 mb-1 px-1 tabular-nums", isMe && "text-right")}>
                                   {senderName} · {formatTime(m.sentAt)}
                                 </div>
                               )}
@@ -630,7 +630,7 @@ function DirectMessageModal({
           <button
             key={u.id}
             onClick={() => onPick(u.id)}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-ink-50 text-left"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-ink-50 text-left transition-colors"
           >
             <Avatar name={u.userName} size={32} />
             <span className="min-w-0">
@@ -755,7 +755,7 @@ function Attachment({
         <div className={cn("text-sm font-medium truncate", isMe ? "text-white" : "text-ink-800")}>
           {message.attachmentName}
         </div>
-        <div className={cn("text-[11px]", isMe ? "text-white/70" : "text-ink-500")}>
+        <div className={cn("text-[11px] tabular-nums", isMe ? "text-white/70" : "text-ink-500")}>
           {formatBytes(message.attachmentSize ?? 0)}
         </div>
       </div>
@@ -833,7 +833,7 @@ function Composer({
             {EMOJIS.map((e) => (
               <button
                 key={e} type="button"
-                className="h-8 w-8 grid place-items-center text-lg hover:bg-ink-100 rounded"
+                className="h-8 w-8 grid place-items-center text-lg hover:bg-ink-100 rounded-lg transition-colors"
                 onClick={() => { insertEmoji(e); }}
               >{e}</button>
             ))}

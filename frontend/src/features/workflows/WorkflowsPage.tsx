@@ -175,7 +175,10 @@ export function WorkflowsPage() {
 
       {tab === "executions" && (
         <Card>
-          <CardHeader title="Recent executions" subtitle="Every time a rule fired and its outcome." bordered />
+          <CardHeader
+            title={<span className="inline-flex items-center gap-2"><Icon name="activity" size={16} className="text-brand-600" /> Recent executions</span>}
+            subtitle="Every time a rule fired and its outcome." bordered
+          />
           <CardBody className="pt-0 px-0">
             {!executions || executions.length === 0 ? (
               <div className="px-5 py-10">
@@ -198,7 +201,7 @@ export function WorkflowsPage() {
                 <TBody>
                   {executions.map((e) => (
                     <TR key={e.id}>
-                      <TD className="text-ink-600 text-xs whitespace-nowrap">{new Date(e.startedAt).toLocaleString()}</TD>
+                      <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.startedAt).toLocaleString()}</TD>
                       <TD><Badge tone={eventTone[e.eventType] ?? "neutral"} variant="soft" dot>{e.eventType}</Badge></TD>
                       <TD>
                         <Badge
@@ -297,7 +300,7 @@ function RuleCard({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-semibold text-ink-900 text-base">{rule.name}</span>
             <Badge tone={tone} variant="soft" dot>{rule.eventType}</Badge>
-            <Badge tone="neutral" variant="soft" size="sm">priority {rule.priority}</Badge>
+            <Badge tone="neutral" variant="soft" size="sm" className="tabular-nums">priority {rule.priority}</Badge>
             {!rule.isActive && <Badge tone="danger" variant="soft" size="sm">Disabled</Badge>}
           </div>
           {rule.description && (

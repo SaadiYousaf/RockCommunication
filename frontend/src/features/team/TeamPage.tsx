@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { OrgPersonDto, OrgTeamDto, OrgTreeDto } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, Icon, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader,
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
@@ -86,7 +86,7 @@ export function TeamPage() {
       />
 
       {!canEdit && (
-        <div className="mb-4 rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-xs text-ink-600 flex items-center gap-2">
+        <div className="mb-4 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2 text-xs text-ink-600 flex items-center gap-2">
           <Icon name="lock" size={14} />
           Read-only — you don't have <code className="px-1 py-0.5 bg-white rounded border border-ink-200">team.write</code>. Ask your CEO to grant it via Role management.
         </div>
@@ -298,7 +298,7 @@ function TeamCard({
         <div>
           <div className="section-title mb-2 flex items-center justify-between">
             <span>Members</span>
-            <span className="text-[10px] font-normal normal-case text-ink-400">{team.members.length}</span>
+            <span className="text-[10px] font-normal normal-case text-ink-400 tabular-nums">{team.members.length}</span>
           </div>
           {team.members.length === 0 ? (
             <div className="flex items-center gap-2 text-xs text-ink-500 py-1">
@@ -351,7 +351,7 @@ function MovePicker({
         e.currentTarget.value = "";
       }}
       disabled={disabled}
-      className="text-xs h-7 px-2 rounded-md border border-ink-200 bg-white text-ink-600 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer"
+      className="text-xs h-7 px-2 rounded-md border border-ink-200 bg-white text-ink-600 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer transition-colors"
       title="Move to another team"
     >
       <option value="">Move…</option>
@@ -377,7 +377,7 @@ function UnassignedList({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
       {people.map((p) => (
-        <div key={p.id} className="flex items-center gap-3 rounded-lg border hairline px-3 py-2 bg-white">
+        <div key={p.id} className="flex items-center gap-3 rounded-lg border hairline px-3 py-2 bg-white hover:bg-ink-50/60 transition-colors">
           <div className="flex-1 min-w-0">
             <PersonRow person={p} />
           </div>
@@ -391,7 +391,7 @@ function UnassignedList({
               e.currentTarget.value = "";
             }}
             disabled={disabled || teams.length === 0}
-            className="text-xs h-8 px-2 rounded-md border border-brand-200 bg-brand-50 text-brand-700 font-medium hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer disabled:opacity-50"
+            className="text-xs h-8 px-2 rounded-md border border-brand-200 bg-brand-50 text-brand-700 font-medium hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer disabled:opacity-50 transition-colors"
           >
             <option value="">Assign to team…</option>
             {teams.map((t) => (
@@ -514,15 +514,14 @@ function Notice({ icon, title, body, action }: {
   icon: string; title: string; body: string; action?: React.ReactNode;
 }) {
   return (
-    <Card><CardBody className="py-12">
-      <div className="text-center max-w-md mx-auto">
-        <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
-          <Icon name={icon} size={24} />
-        </div>
-        <h3 className="text-base font-semibold text-ink-900 mb-1">{title}</h3>
-        <p className="text-sm text-ink-500 mb-5">{body}</p>
-        {action}
-      </div>
+    <Card><CardBody>
+      <EmptyState
+        icon={<Icon name={icon} size={24} />}
+        tone={icon === "warning" ? "warning" : "neutral"}
+        title={title}
+        description={body}
+        action={action}
+      />
     </CardBody></Card>
   );
 }

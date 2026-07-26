@@ -192,7 +192,7 @@ export function AgenciesPage() {
           bordered
           action={
             agencies && agencies.length > 0 ? (
-              <Badge tone="neutral" variant="soft">
+              <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">
                 {agencies.length} {agencies.length === 1 ? "agency" : "agencies"}
               </Badge>
             ) : undefined
@@ -214,7 +214,7 @@ export function AgenciesPage() {
           ) : (
             <ul className="divide-y hairline">
               {agencies.map((a) => (
-                <li key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3">
+                <li key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3 transition-colors hover:bg-ink-50/50">
                   <div
                     className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${
                       a.isActive
@@ -238,20 +238,20 @@ export function AgenciesPage() {
                         <Badge tone="neutral" variant="soft">Inactive</Badge>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-ink-500">
-                      <span className="inline-flex items-center gap-1">
+                    <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-ink-500">
+                      <span className="inline-flex items-center gap-1 tabular-nums whitespace-nowrap">
                         <Icon name="users" size={12} />
                         {a.userCount} {a.userCount === 1 ? "user" : "users"}
                       </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Icon name="shield" size={12} />
+                      <span className="inline-flex items-center gap-1 min-w-0">
+                        <Icon name="shield" size={12} className="shrink-0" />
                         {a.ceoUserName ? (
-                          <>CEO: <span className="text-ink-700">{a.ceoUserName}</span></>
+                          <>CEO: <span className="text-ink-700 truncate">{a.ceoUserName}</span></>
                         ) : (
                           <span className="text-amber-600">CEO unassigned</span>
                         )}
                       </span>
-                      <span className="inline-flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 tabular-nums whitespace-nowrap">
                         <Icon name="clock" size={12} />
                         Created {new Date(a.createdAt).toLocaleDateString()}
                       </span>
@@ -300,12 +300,12 @@ export function AgenciesPage() {
         <div className="space-y-3">
           <Input label="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
           <Input label="Short code" value={editCode} onChange={(e) => setEditCode(e.target.value.toUpperCase())} />
-          <label className="flex items-center gap-2 text-sm text-ink-700">
+          <label className="flex items-center gap-2 text-sm text-ink-700 select-none">
             <input
               type="checkbox"
               checked={editActive}
               onChange={(e) => setEditActive(e.target.checked)}
-              className="h-4 w-4 rounded border-ink-300"
+              className="h-4 w-4 rounded border-ink-300 accent-brand-600"
             />
             Active
           </label>
@@ -479,7 +479,7 @@ function AssignCeoModal({
             <button
               type="button"
               onClick={() => setMode("pick")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
                 mode === "pick" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
               }`}
             >
@@ -489,7 +489,7 @@ function AssignCeoModal({
             <button
               type="button"
               onClick={() => setMode("register")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
                 mode === "register" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
               }`}
             >

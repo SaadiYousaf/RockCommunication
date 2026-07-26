@@ -221,7 +221,7 @@ export function KpiDashboardPage() {
                   type="button"
                   onClick={() => applyPreset(p)}
                   className={cn(
-                    "group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                    "group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                     active
                       ? "bg-brand-50 border-brand-300 text-brand-700 ring-2 ring-brand-500/20"
                       : "bg-white border-ink-200 text-ink-700 hover:border-ink-300",
@@ -238,7 +238,7 @@ export function KpiDashboardPage() {
                     aria-label={`Delete ${p.name}`}
                     onClick={(e) => { e.stopPropagation(); setConfirmDelete(p); }}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setConfirmDelete(p); } }}
-                    className="opacity-0 group-hover:opacity-60 hover:opacity-100 hover:text-rose-600 transition-opacity ml-0.5 -mr-1"
+                    className="opacity-0 group-hover:opacity-60 hover:opacity-100 hover:text-rose-600 transition-opacity ml-0.5 -mr-1 rounded focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                   >
                     <Icon name="x" size={12} />
                   </span>
@@ -263,7 +263,7 @@ export function KpiDashboardPage() {
                   key={p.label}
                   onClick={() => applyRange(p.days)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                     activeRange === p.days
                       ? "bg-brand-600 text-white shadow-sm"
                       : "bg-ink-100 hover:bg-ink-200 text-ink-700",
@@ -288,7 +288,7 @@ export function KpiDashboardPage() {
                       key={m.key} type="button"
                       onClick={() => setPicked((p) => ({ ...p, [m.key]: !p[m.key] }))}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                         active ? "bg-brand-50 border-brand-300 text-brand-700"
                                : "bg-white border-ink-200 text-ink-700 hover:border-ink-300",
                       )}
@@ -300,7 +300,7 @@ export function KpiDashboardPage() {
               </div>
               {selected.length > 0 && (
                 <button
-                  className="text-xs text-ink-500 hover:text-ink-700 mt-3"
+                  className="text-xs text-ink-500 hover:text-ink-700 mt-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 transition-colors"
                   onClick={() => setPicked({})}
                 >Clear selection</button>
               )}
@@ -315,7 +315,7 @@ export function KpiDashboardPage() {
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
               <Icon name="building" size={24} />
             </div>
-            <h3 className="text-base font-semibold text-ink-900 mb-1">Pick an agency</h3>
+            <h3 className="text-base font-semibold text-ink-900 mb-1 text-balance">Pick an agency</h3>
             <p className="text-sm text-ink-500">
               {!agencyOptions || agencyOptions.length === 0
                 ? "No agencies exist yet. Create one from the Agencies page to see its KPIs."
@@ -333,8 +333,8 @@ export function KpiDashboardPage() {
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
               <Icon name="chart" size={24} />
             </div>
-            <h3 className="text-base font-semibold text-ink-900 mb-1">No data for this range</h3>
-            <p className="text-sm text-ink-500 mb-5">
+            <h3 className="text-base font-semibold text-ink-900 mb-1 text-balance">No data for this range</h3>
+            <p className="text-sm text-ink-500 mb-5 text-balance">
               {activeRange === 0
                 ? "There's no activity recorded today yet. Widen the range to see recent numbers."
                 : "Nothing was recorded in the selected dates. Try a wider range or show every metric."}

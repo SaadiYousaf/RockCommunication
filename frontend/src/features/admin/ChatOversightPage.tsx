@@ -4,7 +4,7 @@ import {
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, Icon, Input, PageHeader, Skeleton, cn,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader, Skeleton, cn,
 } from "../../shared/ui";
 
 const AGENCY_WIDE = "00000000-0000-0000-0000-000000000000";
@@ -64,7 +64,7 @@ function Crumb({ label, active, onClick }: { label: string; active?: boolean; on
   return (
     <button
       type="button" onClick={onClick} disabled={active}
-      className={cn("px-2 py-1 rounded-md font-medium transition-colors",
+      className={cn("px-2 py-1 rounded-md font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
         active ? "text-ink-900" : "text-brand-600 hover:bg-brand-50")}
     >{label}</button>
   );
@@ -76,35 +76,33 @@ function StatCard({ icon, title, subtitle, count, onClick }: {
   return (
     <button
       type="button" onClick={onClick}
-      className="surface p-4 text-left hover:shadow-card-hover hover:border-brand-200 transition-all flex items-center gap-3"
+      className="surface p-4 text-left hover:shadow-card-hover hover:border-brand-200 transition-all flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
     >
       <div className="h-11 w-11 rounded-xl bg-brand-50 text-brand-600 grid place-items-center shrink-0">
         <Icon name={icon} size={20} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="font-semibold text-ink-900 truncate">{title}</div>
-        <div className="text-xs text-ink-500">{subtitle}</div>
+        <div className="text-xs text-ink-500 tabular-nums truncate">{subtitle}</div>
       </div>
-      <Badge tone={count > 0 ? "brand" : "neutral"} variant="soft">{count}</Badge>
+      <Badge tone={count > 0 ? "brand" : "neutral"} variant="soft" className="tabular-nums">{count}</Badge>
       <Icon name="chevronRight" size={16} className="text-ink-300 shrink-0" />
     </button>
   );
 }
 
-function Empty({ title, body }: { title: string; body: string }) {
+function Empty({ title, body, icon = "chat" }: { title: string; body: string; icon?: string }) {
   return (
-    <Card><div className="py-12 text-center">
-      <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-ink-100 grid place-items-center text-ink-400"><Icon name="chat" size={22} /></div>
-      <div className="font-semibold text-ink-900">{title}</div>
-      <div className="text-sm text-ink-500 mt-1">{body}</div>
-    </div></Card>
+    <Card><CardBody>
+      <EmptyState icon={<Icon name={icon} size={20} />} title={title} description={body} tone="neutral" />
+    </CardBody></Card>
   );
 }
 
 function AgencyGrid({ onPick }: { onPick: (a: { id: string; name: string }) => void }) {
   const { data, isLoading } = useChatOversightAgenciesQuery();
   if (isLoading) return <Grid>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>;
-  if (!data || data.length === 0) return <Empty title="No agencies" body="No agencies exist yet." />;
+  if (!data || data.length === 0) return <Empty icon="building" title="No agencies" body="No agencies exist yet." />;
   return (
     <Grid>
       {data.map((a) => (
@@ -132,7 +130,7 @@ function CallCenterGrid({ agency, onPick, onAllChats }: {
       {isLoading ? (
         <Grid>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>
       ) : !data || data.length === 0 ? (
-        <Empty title="No call centers with chats" body={`No conversations grouped by call center in ${agency.name}. Use "View all chats" above.`} />
+        <Empty icon="headset" title="No call centers with chats" body={`No conversations grouped by call center in ${agency.name}. Use "View all chats" above.`} />
       ) : (
         <Grid>
           {data.map((c) => (
@@ -179,13 +177,13 @@ function RoomBrowser({ agencyId, callCenter }: {
           ) : filtered.map((r) => (
             <button
               key={r.id} onClick={() => setRoomId(r.id)}
-              className={cn("w-full text-left px-3 py-2.5 border-b hairline hover:bg-brand-50/40 transition-colors", roomId === r.id && "bg-brand-50/60")}
+              className={cn("w-full text-left px-3 py-2.5 border-b hairline hover:bg-brand-50/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400", roomId === r.id && "bg-brand-50/60")}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium text-ink-900 truncate">{roomTitle(r)}</span>
-                <span className="text-[11px] text-ink-400 shrink-0">{r.lastMessageAt ? new Date(r.lastMessageAt).toLocaleDateString() : "—"}</span>
+                <span className="text-[11px] text-ink-400 shrink-0 tabular-nums whitespace-nowrap">{r.lastMessageAt ? new Date(r.lastMessageAt).toLocaleDateString() : "—"}</span>
               </div>
-              <div className="text-xs text-ink-500 mt-0.5">{r.messageCount} msg · {r.members.length} people</div>
+              <div className="text-xs text-ink-500 mt-0.5 tabular-nums">{r.messageCount} msg · {r.members.length} people</div>
             </button>
           ))}
         </div>
@@ -216,8 +214,8 @@ function RoomBrowser({ agencyId, callCenter }: {
                   <Avatar name={m.sender} size={30} />
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-medium text-ink-900 text-sm">{m.sender}</span>
-                      <span className="text-[11px] text-ink-400">{new Date(m.sentAt).toLocaleString()}</span>
+                      <span className="font-medium text-ink-900 text-sm truncate">{m.sender}</span>
+                      <span className="text-[11px] text-ink-400 tabular-nums whitespace-nowrap shrink-0">{new Date(m.sentAt).toLocaleString()}</span>
                     </div>
                     <div className="text-sm text-ink-700 whitespace-pre-wrap break-words">{m.body}</div>
                     {m.attachmentName && (

@@ -130,15 +130,15 @@ export function LeadListsPage() {
               return (
                 <TR key={l.id} className={cn(isActive && "bg-brand-50/40")}>
                   <TD>
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
                         <Icon name="inbox" size={16} />
                       </div>
-                      <div className="font-medium text-ink-900">{l.name}</div>
+                      <div className="font-medium text-ink-900 truncate">{l.name}</div>
                       {isActive && <Badge tone="brand" variant="soft">Selected</Badge>}
                     </div>
                   </TD>
-                  <TD className="font-semibold text-ink-900">{l.leadCount?.toLocaleString() ?? 0}</TD>
+                  <TD className="font-semibold text-ink-900 tabular-nums">{l.leadCount?.toLocaleString() ?? 0}</TD>
                   <TD>
                     {l.isActive
                       ? <Badge tone="success" variant="soft" dot>Active</Badge>
@@ -208,7 +208,7 @@ export function LeadListsPage() {
                 loading={importing}
                 disabled={!filename}
                 size="lg"
-                leftIcon={<Icon name="arrowRight" size={16} />}
+                leftIcon={<Icon name="upload" size={16} />}
               >
                 Import {filename ? `"${filename.length > 20 ? filename.slice(0, 20) + "…" : filename}"` : ""}
               </Button>
@@ -240,10 +240,10 @@ export function LeadListsPage() {
                 <TBody>
                   {batches.map((b) => (
                     <TR key={b.id}>
-                      <TD className="text-xs text-ink-600 whitespace-nowrap">
+                      <TD className="text-xs text-ink-600 whitespace-nowrap tabular-nums">
                         {b.completedAt ? new Date(b.completedAt).toLocaleString() : <Badge tone="warning" variant="soft" dot>Running</Badge>}
                       </TD>
-                      <TD className="font-mono text-xs text-ink-700">{b.fileName}</TD>
+                      <TD className="font-mono text-xs text-ink-700 max-w-[220px] truncate">{b.fileName}</TD>
                       <TD numeric className="text-ink-700">{b.totalRows ?? 0}</TD>
                       <TD numeric><Badge tone="success" variant="soft">{b.imported ?? 0}</Badge></TD>
                       <TD numeric><Badge tone="warning" variant="soft">{b.duplicates ?? 0}</Badge></TD>
@@ -284,13 +284,13 @@ export function LeadListsPage() {
 
 function SmallTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
   return (
-    <div className="surface p-4 flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
+    <div className="surface p-4 flex items-center gap-3 hover:shadow-card-hover transition-shadow">
+      <div className={`h-10 w-10 rounded-lg grid place-items-center shrink-0 ${tone}`}>
         <Icon name={icon} size={18} />
       </div>
-      <div>
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide">{label}</div>
-        <div className="text-xl font-semibold text-ink-900">{value.toLocaleString()}</div>
+      <div className="min-w-0">
+        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
+        <div className="text-xl font-semibold text-ink-900 tabular-nums">{value.toLocaleString()}</div>
       </div>
     </div>
   );

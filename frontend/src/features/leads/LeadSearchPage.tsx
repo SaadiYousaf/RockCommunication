@@ -9,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader,
-  EmptyState, Icon, Input, PageHeader, Skeleton, Stat, Tabs,
+  EmptyState, Icon, Input, PageHeader, Select, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
@@ -131,15 +131,16 @@ export function LeadSearchPage() {
 
               <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
                 <span className="text-ink-500">Filter by:</span>
-                <select
-                  className="border border-ink-200 rounded px-2 py-1 text-xs bg-white"
+                <Select
+                  className="h-8 w-36 text-xs py-0"
                   value={filters.stage}
                   onChange={(e) => setFilters({ ...filters, stage: e.target.value })}
+                  aria-label="Filter by stage"
                 >
                   {STAGES.map((s) => <option key={s} value={s}>{s || "Any stage"}</option>)}
-                </select>
+                </Select>
                 <input
-                  className="border border-ink-200 rounded px-2 py-1 text-xs bg-white w-24"
+                  className="border border-ink-200 rounded-lg px-2 py-1 text-xs bg-white w-24 tabular-nums uppercase focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition-shadow"
                   placeholder="State (e.g. TX)"
                   maxLength={2}
                   value={filters.state}
@@ -150,7 +151,7 @@ export function LeadSearchPage() {
                     Clear
                   </Button>
                 )}
-                <span className="ml-auto text-ink-500">
+                <span className="ml-auto text-ink-500 tabular-nums">
                   {searching ? "Searching…" : hasQuery ? `${filtered.length} match${filtered.length === 1 ? "" : "es"}` : "Type to search"}
                 </span>
               </div>
@@ -208,8 +209,8 @@ export function LeadSearchPage() {
                             </span>
                           </Link>
                         </TD>
-                        <TD className="font-mono text-xs text-ink-700">{formatPhone(l.phoneNumber)}</TD>
-                        <TD className="text-ink-600 text-sm">{l.email ?? <span className="text-ink-400">—</span>}</TD>
+                        <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
+                        <TD className="text-ink-600 text-sm"><span className="block max-w-[16rem] truncate">{l.email ?? <span className="text-ink-400">—</span>}</span></TD>
                         <TD className="text-ink-600">{l.state ?? <span className="text-ink-400">—</span>}</TD>
                         <TD>
                           <Badge tone={stageTone[String(l.stage)] ?? "neutral"} variant="soft" dot>
@@ -217,7 +218,7 @@ export function LeadSearchPage() {
                           </Badge>
                         </TD>
                         <TD className="text-xs text-ink-600">{String(l.disposition)}</TD>
-                        <TD className="text-xs text-ink-500">
+                        <TD className="text-xs text-ink-500 tabular-nums whitespace-nowrap">
                           {new Date(l.createdAt).toLocaleDateString()}
                         </TD>
                         <TD>
@@ -250,7 +251,7 @@ export function LeadSearchPage() {
               title="Duplicate phone numbers"
               subtitle="Two or more leads share the same phone. Reach out once, then archive the rest."
               action={
-                <Button variant="ghost" size="sm" leftIcon={<Icon name="filter" size={14} />}
+                <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={14} />}
                   onClick={() => refetchDups()}>
                   Refresh
                 </Button>
@@ -292,7 +293,7 @@ function DuplicateGroup({
       <div className="flex items-center justify-between bg-ink-50/60 px-4 py-2 border-b hairline">
         <div className="flex items-center gap-2">
           <Icon name="phone" size={14} className="text-ink-500" />
-          <code className="font-mono text-sm text-ink-800">{formatPhone(phone)}</code>
+          <code className="font-mono text-sm text-ink-800 tabular-nums">{formatPhone(phone)}</code>
           <Badge tone="warning" variant="soft">{group.leads.length} duplicates</Badge>
         </div>
       </div>
@@ -305,7 +306,7 @@ function DuplicateGroup({
                 {l.firstName} {l.lastName}
               </Link>
               <div className="text-xs text-ink-500">
-                Created {new Date(l.createdAt).toLocaleDateString()}
+                Created <span className="tabular-nums whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</span>
                 {l.email && <> · {l.email}</>}
                 {l.state && <> · {l.state}</>}
                 {idx === 0 && <Badge tone="success" variant="soft" className="ml-2">Primary</Badge>}

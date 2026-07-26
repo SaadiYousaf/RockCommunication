@@ -99,8 +99,8 @@ export function ScriptsPage() {
                 <CardHeader
                   title={
                     <span className="flex items-center gap-2 flex-wrap">
-                      {s.name}
-                      <Badge tone="neutral" variant="soft">v{s.version}</Badge>
+                      <span className="truncate">{s.name}</span>
+                      <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">v{s.version}</Badge>
                       {!s.isActive && <Badge tone="danger" variant="soft">Disabled</Badge>}
                     </span>
                   }

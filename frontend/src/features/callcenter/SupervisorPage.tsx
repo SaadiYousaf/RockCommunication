@@ -112,7 +112,7 @@ export function SupervisorPage() {
                 key={f}
                 onClick={() => setStatusFilter(f)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1",
                   statusFilter === f ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200",
                 )}
               >{f === "all" ? "All" : f}</button>
@@ -153,7 +153,7 @@ export function SupervisorPage() {
                     <Avatar name={a.userName ?? "?"} size={36} />
                     <div className="min-w-0">
                       <div className="font-medium text-ink-900">{a.userName}</div>
-                      <div className="text-xs text-ink-500">since {new Date(a.sinceAt).toLocaleTimeString()}</div>
+                      <div className="text-xs text-ink-500 whitespace-nowrap tabular-nums">since {new Date(a.sinceAt).toLocaleTimeString()}</div>
                     </div>
                   </div>
                 </TD>
@@ -163,7 +163,7 @@ export function SupervisorPage() {
                   </Badge>
                 </TD>
                 <TD className="text-ink-600 max-w-[200px] truncate">{a.reason ?? <span className="text-ink-400">—</span>}</TD>
-                <TD className="font-mono text-ink-700">{formatDuration(a.duration)}</TD>
+                <TD className="font-mono text-ink-700 tabular-nums whitespace-nowrap">{formatDuration(a.duration)}</TD>
                 <TD>
                   {a.currentCallStatus
                     ? <Badge tone="info" variant="soft" dot>{a.currentCallStatus}</Badge>
@@ -199,13 +199,13 @@ export function SupervisorPage() {
 
 function SupTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
   return (
-    <div className="surface p-4 flex items-center gap-3">
+    <div className="surface p-4 flex items-center gap-3 transition-shadow hover:shadow-card-hover">
       <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
         <Icon name={icon} size={18} />
       </div>
-      <div>
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide">{label}</div>
-        <div className="text-xl font-semibold text-ink-900">{value}</div>
+      <div className="min-w-0">
+        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
+        <div className="text-xl font-semibold text-ink-900 tabular-nums">{value}</div>
       </div>
     </div>
   );

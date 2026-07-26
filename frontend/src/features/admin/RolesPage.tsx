@@ -204,7 +204,7 @@ export function RolesPage() {
                       key={r.id}
                       onClick={() => setSelectedRoleId(r.id)}
                       className={cn(
-                        "w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all",
+                        "w-full text-left flex items-center gap-3 p-3 rounded-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                         active
                           ? "bg-brand-50 ring-1 ring-brand-200 shadow-[0_1px_3px_0_rgba(60,114,105,0.06)]"
                           : "hover:bg-ink-50/80 ring-1 ring-transparent",
@@ -299,7 +299,7 @@ export function RolesPage() {
                         ? <Badge tone="neutral" variant="soft"><Icon name="lock" size={11} className="mr-1" />System role</Badge>
                         : <Badge tone="accent" variant="soft">Custom role</Badge>}
                     </div>
-                    <div className="text-sm text-ink-500 mt-1">
+                    <div className="text-sm text-ink-500 mt-1 tabular-nums">
                       {selected.modules.length} module{selected.modules.length === 1 ? "" : "s"} · {stats.modules > 0 ? Math.round((selected.modules.length / stats.modules) * 100) : 0}% coverage
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export function RolesPage() {
                               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-700">
                                 {group}
                               </div>
-                              <Badge tone={onCount === items.length ? "brand" : onCount === 0 ? "neutral" : "info"} variant="soft" size="sm">
+                              <Badge tone={onCount === items.length ? "brand" : onCount === 0 ? "neutral" : "info"} variant="soft" size="sm" className="tabular-nums">
                                 {onCount}/{items.length}
                               </Badge>
                             </div>
@@ -610,7 +610,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
                   <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-accent-50/40 to-white border-b hairline">
                     <div className="flex items-center gap-2">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-700">{group}</div>
-                      <Badge tone={onCount === items.length ? "accent" : onCount === 0 ? "neutral" : "info"} variant="soft" size="sm">
+                      <Badge tone={onCount === items.length ? "accent" : onCount === 0 ? "neutral" : "info"} variant="soft" size="sm" className="tabular-nums">
                         {onCount}/{items.length}
                       </Badge>
                     </div>

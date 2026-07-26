@@ -35,16 +35,19 @@ export function QaBrowserPage() {
           <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} containerClassName="w-44" />
           <Input label="To"   type="date" value={to}   onChange={(e) => setTo(e.target.value)}   containerClassName="w-44" />
           <div className="ml-auto flex gap-3 text-xs text-ink-500">
-            <span>{scorecards?.length ?? 0} agents</span>
+            <span className="tabular-nums whitespace-nowrap">{scorecards?.length ?? 0} agents</span>
             <span>·</span>
-            <span>{reviews?.length ?? 0} reviews</span>
+            <span className="tabular-nums whitespace-nowrap">{reviews?.length ?? 0} reviews</span>
           </div>
         </CardBody>
       </Card>
 
       {/* Agent scorecards */}
       <Card className="mb-6">
-        <CardHeader title="Agent scorecards" subtitle="Performance summary in selected period" />
+        <CardHeader
+          title={<span className="inline-flex items-center gap-2"><Icon name="users" size={16} className="text-ink-400" />Agent scorecards</span>}
+          subtitle="Performance summary in selected period"
+        />
         <CardBody className="pt-0 px-0">
           {cardsLoading ? (
             <div className="px-5 pb-5 space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
@@ -71,16 +74,16 @@ export function QaBrowserPage() {
                 {scorecards.map((s) => (
                   <TR key={s.agentUserId}>
                     <TD>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <Avatar name={nameOf(s.agentUserId)} size={32} />
-                        <div className="text-xs text-ink-700">{nameOf(s.agentUserId)}</div>
+                        <div className="text-xs text-ink-700 truncate">{nameOf(s.agentUserId)}</div>
                       </div>
                     </TD>
-                    <TD className="font-semibold text-ink-900">{s.reviewCount}</TD>
+                    <TD className="font-semibold text-ink-900 tabular-nums">{s.reviewCount}</TD>
                     <TD>
-                      <Badge tone={scoreTone(s.avgPercentage)} variant="soft">{s.avgPercentage}%</Badge>
+                      <Badge tone={scoreTone(s.avgPercentage)} variant="soft" className="tabular-nums">{s.avgPercentage}%</Badge>
                     </TD>
-                    <TD className="text-ink-700">{s.avgScore}</TD>
+                    <TD className="text-ink-700 tabular-nums">{s.avgScore}</TD>
                     <TD>
                       <div className="h-2 w-32 bg-ink-100 rounded-full overflow-hidden">
                         <div
@@ -102,7 +105,10 @@ export function QaBrowserPage() {
 
       {/* Individual reviews */}
       <Card>
-        <CardHeader title="Reviews" subtitle="Every QA review submitted in this range" />
+        <CardHeader
+          title={<span className="inline-flex items-center gap-2"><Icon name="star" size={16} className="text-ink-400" />Reviews</span>}
+          subtitle="Every QA review submitted in this range"
+        />
         <CardBody className="pt-0 px-0">
           {reviewsLoading ? (
             <div className="px-5 pb-5 space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
@@ -129,12 +135,12 @@ export function QaBrowserPage() {
               <TBody>
                 {reviews.map((r) => (
                   <TR key={r.id}>
-                    <TD className="text-ink-600 text-xs whitespace-nowrap">{new Date(r.reviewedAt).toLocaleString()}</TD>
-                    <TD className="text-xs text-ink-700">{nameOf(r.agentUserId)}</TD>
-                    <TD className="text-xs text-ink-500">{nameOf(r.reviewerUserId)}</TD>
-                    <TD className="text-ink-800">{r.totalScore} <span className="text-ink-400">/ {r.maxScore}</span></TD>
+                    <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(r.reviewedAt).toLocaleString()}</TD>
+                    <TD className="text-xs text-ink-700 truncate">{nameOf(r.agentUserId)}</TD>
+                    <TD className="text-xs text-ink-500 truncate">{nameOf(r.reviewerUserId)}</TD>
+                    <TD className="text-ink-800 tabular-nums whitespace-nowrap">{r.totalScore} <span className="text-ink-400">/ {r.maxScore}</span></TD>
                     <TD>
-                      <Badge tone={scoreTone(r.percentage)} variant="soft">{r.percentage}%</Badge>
+                      <Badge tone={scoreTone(r.percentage)} variant="soft" className="tabular-nums">{r.percentage}%</Badge>
                     </TD>
                     <TD className="text-ink-600 text-sm max-w-xs truncate">{r.notes ?? <span className="text-ink-400">—</span>}</TD>
                   </TR>

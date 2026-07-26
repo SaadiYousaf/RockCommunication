@@ -88,8 +88,8 @@ export function SalesPage() {
         value={tab}
         onChange={setTab}
         items={[
-          { value: "record", label: "Record & validate" },
-          { value: "list", label: "All sales" },
+          { value: "record", label: "Record & validate", icon: <Icon name="edit" size={14} /> },
+          { value: "list", label: "All sales", icon: <Icon name="list" size={14} /> },
         ]}
       />
 
@@ -104,7 +104,7 @@ export function SalesPage() {
         {/* Record sale */}
         <Can permission={Perm.SalesRecord}>
         <Card className="xl:col-span-2">
-          <CardHeader title="Record a sale" subtitle="Capture a new closed deal." />
+          <CardHeader title="Record a sale" subtitle="Capture a new closed deal." bordered />
           <CardBody>
             <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
@@ -193,7 +193,7 @@ export function SalesPage() {
 
         {/* Validate / Fund */}
         <Card>
-          <CardHeader title="Validate & fund" subtitle="Move sales through QA and funding." />
+          <CardHeader title="Validate & fund" subtitle="Move sales through QA and funding." bordered />
           <CardBody>
             <Can permission={Perm.SalesValidate}>
               <SaleActionForm
@@ -221,6 +221,7 @@ export function SalesPage() {
         <CardHeader
           title="Recent closed leads"
           subtitle="Eligible for sale recording"
+          bordered
         />
         <CardBody className="pt-0 px-0">
           {isLoading ? (
@@ -251,15 +252,15 @@ export function SalesPage() {
                   return (
                     <TR key={l.id}>
                       <TD>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <Avatar name={name} size={32} />
-                          <div>
-                            <div className="font-medium text-ink-900">{name}</div>
-                            <div className="text-xs text-ink-500 font-mono">{l.id.slice(0, 8)}…</div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-ink-900 truncate">{name}</div>
+                            <div className="text-xs text-ink-500 font-mono tabular-nums">{l.id.slice(0, 8)}…</div>
                           </div>
                         </div>
                       </TD>
-                      <TD className="text-ink-600">{l.phoneNumber}</TD>
+                      <TD className="text-ink-600 tabular-nums whitespace-nowrap">{l.phoneNumber}</TD>
                       <TD><Badge tone="warning" variant="soft" dot>{String(l.stage)}</Badge></TD>
                       <TD>
                         <div className="flex justify-end">
@@ -379,7 +380,7 @@ function SalesList() {
             <option value="carrier-asc">Carrier A–Z</option>
           </Select>
           <div className="md:col-span-3 lg:col-span-6 flex items-center justify-between text-xs text-ink-500 pt-1">
-            <div>{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
+            <div className="tabular-nums">{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
             <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={13} />}
               onClick={() => setFilters({ skip: 0, take: 50, sort: "soldAt-desc" })}>
               Reset filters
@@ -415,28 +416,28 @@ function SalesList() {
             <TBody>
               {data.items.map((s) => (
                 <TR key={s.id} className="cursor-pointer" onClick={() => navigate(`/sales/${s.id}`)}>
-                  <TD className="text-ink-600 whitespace-nowrap text-xs">
+                  <TD className="text-ink-600 whitespace-nowrap text-xs tabular-nums">
                     {new Date(s.soldAt).toLocaleString()}
                   </TD>
                   <TD>
                     {/* Clicking the name jumps to the LEAD; clicking anywhere else opens the SALE. */}
-                    <Link to={`/leads/${s.leadId}`} onClick={(e) => e.stopPropagation()} className="block hover:underline">
-                      <div className="font-medium text-ink-900">{s.leadName}</div>
-                      <div className="text-xs text-ink-500">{s.leadPhone}</div>
+                    <Link to={`/leads/${s.leadId}`} onClick={(e) => e.stopPropagation()} className="block min-w-0 hover:underline">
+                      <div className="font-medium text-ink-900 truncate">{s.leadName}</div>
+                      <div className="text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</div>
                     </Link>
                   </TD>
                   <TD>
                     {s.closerName ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Avatar name={s.closerName} size={24} />
-                        <span className="text-ink-700 text-sm">{s.closerName}</span>
+                        <span className="text-ink-700 text-sm truncate">{s.closerName}</span>
                       </div>
                     ) : <span className="text-ink-400">—</span>}
                   </TD>
                   <TD className="text-ink-700">{s.carrier}</TD>
-                  <TD className="text-ink-900 font-medium">
+                  <TD className="text-ink-900 font-medium tabular-nums whitespace-nowrap">
                     ${s.monthlyPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
-                    <div className="text-xs text-ink-500">${s.annualPremium.toLocaleString(undefined, { maximumFractionDigits: 0 })}/yr</div>
+                    <div className="text-xs text-ink-500 tabular-nums">${s.annualPremium.toLocaleString(undefined, { maximumFractionDigits: 0 })}/yr</div>
                   </TD>
                   <TD>
                     <span className="inline-flex items-center gap-1">
@@ -451,14 +452,14 @@ function SalesList() {
                       )}
                     </span>
                   </TD>
-                  <TD className="text-ink-500 font-mono text-xs">{s.policyNumber ?? "—"}</TD>
+                  <TD className="text-ink-500 font-mono text-xs tabular-nums whitespace-nowrap">{s.policyNumber ?? "—"}</TD>
                 </TR>
               ))}
             </TBody>
           </Table>
 
           <div className="flex items-center justify-between mt-4">
-            <div className="text-xs text-ink-500">{pageInfo}</div>
+            <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>
             <div className="flex gap-1.5">
               <Button variant="outline" size="sm" disabled={skip === 0}
                 leftIcon={<Icon name="chevronLeft" size={13} />}

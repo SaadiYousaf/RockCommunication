@@ -78,7 +78,7 @@ export function LeadTroubleshootPage() {
                 Open lead
               </Button>
             </Link>
-            <Button variant="outline" leftIcon={<Icon name="filter" size={16} />} onClick={() => refetch()}>
+            <Button variant="outline" leftIcon={<Icon name="refresh" size={16} />} onClick={() => refetch()}>
               Refresh
             </Button>
           </>
@@ -137,7 +137,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
                 </div>
                 <div className="text-2xl font-semibold tracking-tight truncate">{data.lead.name}</div>
                 <div className="text-xs text-white/70 mt-1 flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{data.lead.phone}</span>
+                  <span className="font-mono tabular-nums">{data.lead.phone}</span>
                   {data.lead.email && <><span className="text-white/40">·</span><span>{data.lead.email}</span></>}
                   {data.lead.state && <><span className="text-white/40">·</span><span>{data.lead.state}</span></>}
                 </div>
@@ -249,7 +249,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
                 : <Badge tone="warning" variant="soft" dot>Pending</Badge>
             } />
             {data.jornaya.verifiedAt && (
-              <Row label="Verified at" value={<span className="text-xs text-ink-600">{new Date(data.jornaya.verifiedAt).toLocaleString()}</span>} />
+              <Row label="Verified at" value={<span className="text-xs text-ink-600 tabular-nums whitespace-nowrap">{new Date(data.jornaya.verifiedAt).toLocaleString()}</span>} />
             )}
             {data.jornaya.leadId && (
               <Row label="LeadID" value={<code className="font-mono text-[11px] text-ink-700">{data.jornaya.leadId}</code>} />
@@ -285,7 +285,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
           <CardBody className="pt-0">
             {data.cadence.enrollments.length === 0 ? (
               <EmptyState
-                icon={<Icon name="filter" size={18} />}
+                icon={<Icon name="workflow" size={18} />}
                 title="No enrollments"
                 description="This lead isn't currently in any automated cadence."
               />
@@ -294,11 +294,11 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
                 {data.cadence.enrollments.map((e) => (
                   <li key={e.enrollmentId} className="flex items-center gap-3 p-3 rounded-lg border hairline">
                     <div className="h-9 w-9 rounded-lg bg-accent-50 text-accent-600 grid place-items-center">
-                      <Icon name="filter" size={16} />
+                      <Icon name="workflow" size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-ink-900 truncate">{e.cadenceName}</div>
-                      <div className="text-xs text-ink-500">
+                      <div className="text-xs text-ink-500 tabular-nums">
                         Step {e.currentStep} / {e.totalSteps} · next run {timeAgo(e.nextRunAt)}
                       </div>
                     </div>
@@ -337,7 +337,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-ink-900 truncate">
                         {c.agentName ?? "Unknown agent"}
-                        <span className="ml-2 text-xs text-ink-500">{timeAgo(c.initiatedAt)}</span>
+                        <span className="ml-2 text-xs text-ink-500 tabular-nums whitespace-nowrap">{timeAgo(c.initiatedAt)}</span>
                       </div>
                       <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                         <Badge tone={c.direction === "Inbound" ? "info" : "brand"} variant="soft">{c.direction}</Badge>
@@ -362,7 +362,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
           {data.workflows.activeRules.length === 0 ? (
             <div className="px-5 pb-5">
               <EmptyState
-                icon={<Icon name="filter" size={18} />}
+                icon={<Icon name="workflow" size={18} />}
                 title="No matching rules"
                 description="No workflow rules are configured for the events this lead would emit."
               />
@@ -403,7 +403,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
               <TBody>
                 {data.workflows.recentExecutions.map((e, i) => (
                   <TR key={i}>
-                    <TD className="text-xs text-ink-600">{new Date(e.startedAt).toLocaleString()}</TD>
+                    <TD className="text-xs text-ink-600 tabular-nums whitespace-nowrap">{new Date(e.startedAt).toLocaleString()}</TD>
                     <TD>
                       <code className="font-mono text-[11px] bg-ink-100 px-1.5 py-0.5 rounded text-ink-800">{e.eventType}</code>
                     </TD>
@@ -432,7 +432,7 @@ function Diagnostic({ data }: { data: LeadDiagnostics }) {
     return (
       <div className="rounded-xl bg-white/10 ring-1 ring-white/15 backdrop-blur p-3 text-center">
         <div className="text-[10px] uppercase tracking-[0.16em] text-white/70">{label}</div>
-        <div className="text-lg font-semibold mt-1">
+        <div className="text-lg font-semibold mt-1 tabular-nums">
           {label === "Stage"
             ? <Badge tone={stageTone[value] ?? "neutral"} variant="solid" dot>{value}</Badge>
             : value}
