@@ -197,7 +197,11 @@ public class CallControlHandler :
             .Where(c => c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId && c.EndedAt == null)
             .OrderByDescending(c => c.InitiatedAt).FirstOrDefaultAsync(ct);
         if (call is null) return null;
-        var lead = await _db.Leads.AsNoTracking().FirstAsync(l => l.Id == call.LeadId, ct);
+        // Data-integrity guard: a call can reference a lead that no longer exists (e.g. a dialer
+        // webhook with a bogus/soft-deleted leadId). Degrade gracefully to "no active call" rather
+        // than 500 the agent's whole panel.
+        var lead = await _db.Leads.AsNoTracking().FirstOrDefaultAsync(l => l.Id == call.LeadId, ct);
+        if (lead is null) return null;
         return ToDto(call, lead, _state.GetOrAdd(call.Id, _ => new()));
     }
 
@@ -207,7 +211,8 @@ public class CallControlHandler :
         var call = await _db.CallRecords.FirstOrDefaultAsync(
             c => c.Id == callId && c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId, ct)
             ?? throw new NotFoundException(nameof(CallRecord), callId);
-        var lead = await _db.Leads.AsNoTracking().FirstAsync(l => l.Id == call.LeadId, ct);
+        var lead = await _db.Leads.AsNoTracking().FirstOrDefaultAsync(l => l.Id == call.LeadId, ct)
+            ?? throw new NotFoundException(nameof(Lead), call.LeadId);
         return (call, lead);
     }
 

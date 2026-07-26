@@ -287,6 +287,11 @@ public class ValidatorQueueHandler :
         }
         else if (!existing.Paid)
         {
+            // A prior unassign SOFT-deletes this line (the audit interceptor turns Remove into
+            // IsDeleted=true), and the lookup above uses IgnoreQueryFilters so it finds that row.
+            // Re-assigning must REVIVE it — otherwise the new agent's commission stays IsDeleted=true,
+            // invisible to lists/MyCommissions/payroll, and is never paid.
+            existing.IsDeleted = false;
             existing.AgentUserId = licenseAgentId;
             existing.Amount = line.Amount;
             existing.Note = line.Note;

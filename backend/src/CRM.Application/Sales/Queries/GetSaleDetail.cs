@@ -58,12 +58,14 @@ public class GetSaleDetailHandler : IRequestHandler<GetSaleDetailQuery, SaleDeta
         var sale = await _db.Sales.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Sale), request.Id);
 
-        // Closer-level roles only see their own sales — mirror the ListSales visibility rule so a
-        // closer can't open a peer's deal by guessing the id. Report NotFound (don't confirm it exists).
-        var isPrivileged = _user.Roles.Contains("SuperAdmin") || _user.Roles.Contains("Admin")
-            || _user.Roles.Contains("ProgramManager") || _user.Roles.Contains("TeamLead")
-            || _user.Roles.Contains("Validator");
-        if (!isPrivileged && sale.CloserUserId != _user.UserId)
+        // Mirror the ListSales visibility rule EXACTLY (shared helper) so list and detail never drift:
+        // managers/validators see any sale in the agency; a closer sees their own; and a License Agent
+        // sees the sale ASSIGNED to them (they're never the closer). Report NotFound otherwise so an id
+        // can't be probed for existence.
+        var canView = SalesVisibility.CanSeeWholeAgency(_user.Roles)
+            || sale.CloserUserId == _user.UserId
+            || (SalesVisibility.IsLicenseAgent(_user.Roles) && sale.LicenseAgentUserId == _user.UserId);
+        if (!canView)
             throw new NotFoundException(nameof(Sale), request.Id);
 
         var lead = await _db.Leads.AsNoTracking().FirstOrDefaultAsync(l => l.Id == sale.LeadId, ct);

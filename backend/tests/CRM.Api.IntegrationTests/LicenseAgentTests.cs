@@ -173,6 +173,85 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         //    that had sales).
         var summary = await agent.GetAsync("/api/dashboard/summary");
         Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+
+        // 4) The license agent can OPEN the assigned sale's detail — not just see it in the list.
+        //    (GetSaleDetail previously scoped to the closer only and 404'd the assigned license agent.)
+        var detail = await agent.GetAsync($"/api/sales/{saleId}");
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+    }
+
+    [Fact]
+    public async Task CEO_sees_agency_sales_in_list_and_can_open_detail()
+    {
+        // Regression: ListSales / GetSaleDetail hard-coded a privileged-role set that omitted CEO
+        // (the agency owner, who holds SalesRead), so a CEO saw an EMPTY sales list and 404'd on
+        // every sale detail.
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var ceoName = $"ceo{Guid.NewGuid():N}".Substring(0, 14);
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{ceoName}@crm.local", userName = ceoName,
+            password = "Ceo@12345!", agencyId, roles = new[] { "CEO" }
+        });
+
+        var closer = await NewCloserAsync(admin, agencyId);
+        var saleId = await RecordSaleAsync(admin, "5554440001", closer);
+
+        var ceo = await _factory.LoginAsync(ceoName, "Ceo@12345!");
+        var sales = await ceo.GetJsonAsync("/api/sales?take=100");
+        Assert.Contains(sales.GetProperty("items").EnumerateArray(),
+            i => i.GetProperty("id").GetGuid() == saleId);
+
+        var detail = await ceo.GetAsync($"/api/sales/{saleId}");
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+    }
+
+    [Fact]
+    public async Task License_agent_commission_survives_unassign_then_reassign()
+    {
+        // Regression: unassigning a license agent SOFT-deletes the commission line; re-assigning found
+        // that soft-deleted row (IgnoreQueryFilters) and updated it WITHOUT clearing IsDeleted, so the
+        // new agent's commission stayed invisible and was never paid. The line must be revived.
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var sa = await SuperAdmin(_factory);
+        var agentA = (await sa.PostJsonAsync($"/api/agencies/{agencyId}/license-agents",
+            new { name = "Agent A", email = $"a-{Guid.NewGuid():N}@crm.local" })).GetProperty("id").GetGuid();
+
+        var bName = $"lab{Guid.NewGuid():N}".Substring(0, 14);
+        var agentB = (await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{bName}@crm.local", userName = bName,
+            password = "Agent@1234!", agencyId, roles = new[] { "LicenseAgent" }
+        })).GetProperty("id").GetGuid();
+
+        var closer = await NewCloserAsync(admin, agencyId);
+        var saleId = await RecordSaleAsync(admin, "5556660001", closer);
+        await admin.PostJsonAsync($"/api/intake/validate/{saleId}/status", new
+        {
+            status = "Approved", carrierApproved = "AETNA", coverageApproved = 25000m,
+            premiumApproved = 250m, planApproved = "PlanA", licenseAgentUserId = agentA
+        });
+
+        // Unassign (soft-deletes the line), then re-assign to B (must revive it).
+        await admin.PutAsJsonAsync($"/api/sales/{saleId}/license-agent", new { licenseAgentUserId = (Guid?)null });
+        await admin.PutAsJsonAsync($"/api/sales/{saleId}/license-agent", new { licenseAgentUserId = agentB });
+
+        // B's commission is live: it shows on the sale (commissionEarned > 0, assigned to B) …
+        var sales = await admin.GetJsonAsync("/api/sales?take=100");
+        var sale = sales.GetProperty("items").EnumerateArray().First(i => i.GetProperty("id").GetGuid() == saleId);
+        Assert.Equal(agentB, sale.GetProperty("licenseAgentUserId").GetGuid());
+        Assert.True(sale.GetProperty("commissionEarned").GetDecimal() > 0, "revived commission must be visible & payable");
+
+        // … and in B's own Commissions.
+        var bClient = await _factory.LoginAsync(bName, "Agent@1234!");
+        var commissions = await bClient.GetJsonAsync("/api/sales/commissions");
+        Assert.Contains(commissions.EnumerateArray(), c => c.GetProperty("saleId").GetGuid() == saleId);
     }
 
     [Fact]
@@ -191,8 +270,10 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, leaderboard.StatusCode);
     }
 
-    /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.</summary>
-    private async Task<Guid> RecordSaleAsync(HttpClient admin, string phone)
+    /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.
+    /// Pass <paramref name="saleRecorder"/> to record the sale as a dedicated closer so the per-closer
+    /// "5 sales/hour ⇒ internal" anti-fraud heuristic doesn't trip from tests sharing this class's DB.</summary>
+    private async Task<Guid> RecordSaleAsync(HttpClient admin, string phone, HttpClient? saleRecorder = null)
     {
         var lead = await admin.PostJsonAsync("/api/leads", new
         {
@@ -201,11 +282,23 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         var leadId = lead.GetProperty("id").GetGuid();
         await admin.PostJsonAsync($"/api/leads/{leadId}/transition", new { toStage = "Fronted", disposition = "Interested" });
         await admin.PostJsonAsync($"/api/leads/{leadId}/transition", new { toStage = "Verified", disposition = "Interested" });
-        var sale = await admin.PostJsonAsync("/api/sales", new
+        var sale = await (saleRecorder ?? admin).PostJsonAsync("/api/sales", new
         {
             leadId, carrier = "AETNA", policyNumber = "POL-LA", monthlyPremium = 250m,
             routingNumber = "011000015", accountNumber = "1234567800", accountType = "checking"
         });
         return sale.GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Registers + logs in a fresh Closer so a test's sale doesn't add to admin's per-closer velocity.</summary>
+    private async Task<HttpClient> NewCloserAsync(HttpClient admin, Guid agencyId)
+    {
+        var name = $"cl{Guid.NewGuid():N}".Substring(0, 14);
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{name}@crm.local", userName = name, password = "Closer@1234!",
+            agencyId, roles = new[] { "Closer" }
+        });
+        return await _factory.LoginAsync(name, "Closer@1234!");
     }
 }

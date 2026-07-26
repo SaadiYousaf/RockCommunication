@@ -86,6 +86,10 @@ public class AssignSaleLicenseAgentHandler : IRequestHandler<AssignSaleLicenseAg
             }
             else if (!existing.Paid)
             {
+                // Revive a soft-deleted line (a prior unassign RemoveRange soft-deletes it, and the
+                // lookup above bypasses the filter). Without this the re-assigned agent's commission
+                // stays IsDeleted=true and is never shown or paid.
+                existing.IsDeleted = false;
                 existing.AgentUserId = licenseAgentId;
                 existing.Amount = line.Amount;
                 existing.Note = line.Note;

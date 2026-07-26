@@ -100,9 +100,20 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
 
         // 2) Banking gate — the banking code is derived from a Lyons validation of the
         //    bank account, never entered by the closer.
-        var lyons = await _lyons.ValidateAsync(
-            new LyonsValidationRequest(input.RoutingNumber, input.AccountNumber, input.AccountType,
-                $"{lead.FirstName} {lead.LastName}".Trim()), ct);
+        LyonsValidationResult lyons;
+        try
+        {
+            lyons = await _lyons.ValidateAsync(
+                new LyonsValidationRequest(input.RoutingNumber, input.AccountNumber, input.AccountType,
+                    $"{lead.FirstName} {lead.LastName}".Trim()), ct);
+        }
+        catch (Exception ex) when (ex is not ConflictException)
+        {
+            // A graceful "Blocked" is a normal RESULT (handled below); this catch is for TRANSPORT/parse
+            // failures — Lyons timeout, DNS, outage, or a 200 with a non-JSON error page. Surface a clean,
+            // retryable 409 instead of a raw 500 (nothing is persisted yet, so retrying is safe).
+            throw new ConflictException("Bank validation is temporarily unavailable. Please try again in a moment.");
+        }
 
         if (lyons.Status == BankValidationStatus.Blocked || !BankingPolicy.IsSubmittable(lyons.BankingCode))
             throw new ConflictException(

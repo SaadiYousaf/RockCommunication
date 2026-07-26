@@ -79,13 +79,9 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         // sales that are "theirs". A License Agent is never the closer — their queue is the sales
         // ASSIGNED to them at approval — so scope them by LicenseAgentUserId, not CloserUserId
         // (otherwise their list is always empty even after a sale is assigned to them).
-        if (!isSuperAdmin &&
-            !_user.Roles.Contains("Admin") &&
-            !_user.Roles.Contains("ProgramManager") &&
-            !_user.Roles.Contains("TeamLead") &&
-            !_user.Roles.Contains("Validator"))
+        if (!SalesVisibility.CanSeeWholeAgency(_user.Roles))
         {
-            q = _user.Roles.Contains(DomainRoles.LicenseAgent)
+            q = SalesVisibility.IsLicenseAgent(_user.Roles)
                 ? q.Where(s => s.LicenseAgentUserId == _user.UserId)
                 : q.Where(s => s.CloserUserId == _user.UserId);
         }
