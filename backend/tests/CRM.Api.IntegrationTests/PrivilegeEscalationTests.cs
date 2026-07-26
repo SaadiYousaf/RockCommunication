@@ -56,4 +56,39 @@ public class PrivilegeEscalationTests : IClassFixture<CrmWebAppFactory>
         });
         Assert.Equal(HttpStatusCode.Forbidden, mintAdmin.StatusCode);
     }
+
+    [Fact]
+    public async Task Rank_gate_blocks_resetting_a_higher_rank_password_but_allows_lower()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+        var adminId = me.GetProperty("id").GetGuid();   // Admin = rank 80
+
+        // A ProgramManager (rank 60) with users.manage.
+        var pmName = $"pmr{Guid.NewGuid():N}".Substring(0, 12);
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{pmName}@crm.local", userName = pmName,
+            password = "Pm@12345!", agencyId, roles = new[] { "ProgramManager" }
+        });
+        var pm = await _factory.LoginAsync(pmName, "Pm@12345!");
+
+        // A lower-rank agent (Closer = rank 10).
+        var tgtName = $"tgr{Guid.NewGuid():N}".Substring(0, 12);
+        var tgt = await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{tgtName}@crm.local", userName = tgtName,
+            password = "Tgt@1234!", agencyId, roles = new[] { "Closer" }
+        });
+        var tgtId = tgt.GetProperty("id").GetGuid();
+
+        // PM may NOT reset the Admin's (higher rank) password.
+        var higher = await pm.PutAsJsonAsync($"/api/admin/users/{adminId}/password", new { newPassword = "New@12345!" });
+        Assert.Equal(HttpStatusCode.Forbidden, higher.StatusCode);
+
+        // ...but MAY reset a lower-rank agent's password.
+        var lower = await pm.PutAsJsonAsync($"/api/admin/users/{tgtId}/password", new { newPassword = "New@12345!" });
+        Assert.True(lower.IsSuccessStatusCode, $"expected success resetting a lower-rank user, got {(int)lower.StatusCode}");
+    }
 }

@@ -11,12 +11,15 @@ import {
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
-import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones } from "../../shared/constants/roles";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser } from "../../shared/constants/roles";
 
 
 
 
 export function UserManagementPage() {
+  const me = useSelector((s: RootState) => s.auth.user);
   const { data: users, isLoading } = useListUsersQuery();
   const { data: callCenters } = useListCallCentersQuery();
   const [updateRoles] = useUpdateUserRolesMutation();
@@ -25,6 +28,11 @@ export function UserManagementPage() {
   const [setUserCc] = useSetUserCallCenterMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
+
+  // Can the signed-in user manage this row (reset password / edit roles)? Mirrors the backend
+  // rank rule so we disable — rather than 403 — actions on peers or higher-ranked accounts.
+  const canManage = (u: { id: string; roles: string[] }) =>
+    !!me && canManageUser({ id: me.id, roles: me.roles }, u);
 
   async function assignCallCenter(userId: string, value: string) {
     try {
@@ -188,11 +196,15 @@ export function UserManagementPage() {
                   {/* Icon-only actions with tooltips so the row fits without horizontal scroll. */}
                   <div className="flex items-center justify-end gap-1">
                     <Button
-                      variant="outline" size="sm" title="Edit roles" aria-label="Edit roles"
+                      variant="outline" size="sm" disabled={!canManage(u)}
+                      title={canManage(u) ? "Edit roles" : "You can only manage users below your role level"}
+                      aria-label="Edit roles"
                       onClick={() => setEditing({ id: u.id, userName: u.userName, roles: u.roles })}
                     ><Icon name="userCog" size={15} /></Button>
                     <Button
-                      variant="ghost" size="sm" title="Reset password" aria-label="Reset password"
+                      variant="ghost" size="sm" disabled={!canManage(u)}
+                      title={canManage(u) ? "Reset password" : "You can only manage users below your role level"}
+                      aria-label="Reset password"
                       onClick={() => { setResetting({ id: u.id, userName: u.userName }); setNewPwd(""); }}
                     ><Icon name="key" size={15} /></Button>
                     {active && !u.invitationAcceptedAt && (

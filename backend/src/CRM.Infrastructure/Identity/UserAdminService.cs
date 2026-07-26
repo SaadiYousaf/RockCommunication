@@ -60,6 +60,18 @@ public class UserAdminService : IUserAdminService
         // so the global query filter does NOT cover this — the check must live here.
         if (_current.CallCenterId is { } callerCallCenter && target.CallCenterId != callerCallCenter)
             throw new ForbiddenAccessException("You can only manage users in your own call center.");
+
+        // Rank: within their scope a caller may only manage accounts strictly BELOW their own rank
+        // (or their own account). So an Admin/CEO can reset a junior's password but not a peer
+        // Admin/CEO; a Call Center Admin / ProgramManager can manage their agents but not each other.
+        // SuperAdmin already returned above and is unrestricted.
+        if (target.Id != _current.UserId)
+        {
+            var callerRank = Roles.RankOf(_current.Roles ?? Array.Empty<string>());
+            var targetRank = Roles.RankOf(await _users.GetRolesAsync(target));
+            if (targetRank >= callerRank)
+                throw new ForbiddenAccessException("You can only manage users below your own role level.");
+        }
     }
 
     public async Task EnsureCanManageAsync(Guid userId, CancellationToken ct = default)

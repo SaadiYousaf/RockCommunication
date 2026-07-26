@@ -91,6 +91,26 @@ public static class Roles
         roles.Any(r => RequireTwoFactor.Contains(r, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
+    /// Authority tier for a single role — higher outranks lower. Used to enforce "manage only
+    /// below your own rank" for sensitive user operations (e.g. an admin resetting a password may
+    /// act on juniors but not a peer admin or the CEO). A user's rank is the MAX across their roles.
+    /// </summary>
+    public static int RankOfRole(string role) => role switch
+    {
+        SuperAdmin => 100,
+        CEO => 80,
+        Admin => 80,
+        ProgramManager => 60,
+        CallCenterAdmin => 60,
+        TeamLead => 40,
+        _ => 10,            // agents (Fronter/Closer/Validator/…) and everyone else
+    };
+
+    /// <summary>The caller's effective authority tier — the highest rank among all their roles.</summary>
+    public static int RankOf(IEnumerable<string> roles) =>
+        roles.Select(RankOfRole).DefaultIfEmpty(0).Max();
+
+    /// <summary>
     /// A "central" (SMH-level) Submission Agent: holds the <see cref="Validator"/> role but is
     /// bound to no agency (empty/none). These validate and approve sales across ALL agencies and
     /// read cross-tenant PII, so 2FA is mandatory for them (unlike agency-scoped validators).
