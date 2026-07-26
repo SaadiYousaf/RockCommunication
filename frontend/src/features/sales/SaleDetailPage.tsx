@@ -1,11 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
-import { useSaleDetailQuery } from "../../shared/api/baseApi";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import {
+  useSaleDetailQuery, useAgencyLicenseAgentsQuery, useAssignSaleLicenseAgentMutation,
+  type SaleDetail,
+} from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint,
-  PageHeader, Skeleton, Stat,
+  PageHeader, Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
+import { usePermission, Perm } from "../../shared/auth/permissions";
+import { getErrorDetail } from "../../shared/api/apiError";
 
 const statusTone: Record<string, BadgeTone> = {
   Funded: "success", Validated: "info", Pending: "warning",
@@ -105,7 +112,7 @@ export function SaleDetailPage() {
           <CardBody className="space-y-2.5">
             <Person role="Closer" name={sale.closerName} />
             <Person role="Validator" name={sale.validatorName} />
-            <Person role="License agent" name={sale.licenseAgentName} />
+            <LicenseAgentRow sale={sale} />
             <Field label="Call center" value={sale.callCenterName ?? "—"} />
           </CardBody>
         </Card>
@@ -227,6 +234,51 @@ function Person({ role, name }: { role: string; name: string | null }) {
           <span className="text-sm text-ink-900 truncate">{name}</span>
         </span>
       ) : <span className="text-sm text-ink-400">— unassigned</span>}
+    </div>
+  );
+}
+
+/** License agent as an editable dropdown for anyone who can validate sales; a read-only name otherwise. */
+function LicenseAgentRow({ sale }: { sale: SaleDetail }) {
+  const toast = useToast();
+  const canAssign = usePermission(Perm.SalesValidate);
+  const canAddAgents = useSelector((s: RootState) =>
+    (s.auth.user?.roles ?? []).some((r) => ["SuperAdmin", "Admin", "CEO"].includes(r)));
+  const { data: agents, isLoading } = useAgencyLicenseAgentsQuery(sale.agencyId, { skip: !canAssign || !sale.agencyId });
+  const [assign, { isLoading: saving }] = useAssignSaleLicenseAgentMutation();
+
+  async function pick(userId: string) {
+    try {
+      await assign({ id: sale.id, licenseAgentUserId: userId || null }).unwrap();
+      toast.success(userId ? "License agent assigned" : "License agent cleared");
+    } catch (e) {
+      toast.error("Couldn't update license agent", getErrorDetail(e) ?? "Try again.");
+    }
+  }
+
+  if (!canAssign) return <Person role="License agent" name={sale.licenseAgentName} />;
+
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-xs uppercase tracking-wide text-ink-500 shrink-0">License agent</span>
+      <div className="min-w-0 flex-1 max-w-[15rem]">
+        {isLoading ? (
+          <Skeleton className="h-9" />
+        ) : agents && agents.length > 0 ? (
+          <Select value={sale.licenseAgentUserId ?? ""} disabled={saving}
+            onChange={(e) => pick(e.target.value)} className="text-sm">
+            <option value="">— unassigned —</option>
+            {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </Select>
+        ) : (
+          <div className="text-xs text-ink-500 text-right">
+            No license agents in this agency.{" "}
+            {canAddAgents
+              ? <Link to={`/admin/agencies/${sale.agencyId}`} className="text-brand-700 hover:underline font-medium">Add one</Link>
+              : "Ask an admin to add one."}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

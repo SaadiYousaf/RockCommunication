@@ -972,6 +972,12 @@ export const baseApi = createApi({
       query: (id) => `/api/sales/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Sales", id }],
     }),
+    assignSaleLicenseAgent: b.mutation<void, { id: string; licenseAgentUserId: string | null }>({
+      query: ({ id, licenseAgentUserId }) => ({
+        url: `/api/sales/${id}/license-agent`, method: "PUT", body: { licenseAgentUserId },
+      }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Sales", id: arg.id }, "Sales", "Commissions"],
+    }),
 
     // ===== Calls list =====
     listCalls: b.query<PagedCallsResult, CallsQuery | void>({
@@ -1036,7 +1042,7 @@ export interface SaleCommissionLine {
   ruleName: string; amount: number; paid: boolean; createdAt: string;
 }
 export interface SaleDetail {
-  id: string; saleNumber: number; status: string;
+  id: string; saleNumber: number; status: string; agencyId: string;
   leadId: string; leadName: string; leadPhone: string; leadEmail: string | null; leadState: string | null;
   closerUserId: string; closerName: string | null;
   validatorUserId: string | null; validatorName: string | null;
@@ -1209,7 +1215,7 @@ export const {
   useSetTwoFactorMethodMutation, useSendEmailOtpMutation,
   useBulkAssignLeadsMutation, useBulkSetStageMutation, useBulkEnrollCadenceMutation,
   useListAuditQuery, useAuditFiltersQuery,
-  useListSalesQuery, useSaleDetailQuery, useListCallsQuery,
+  useListSalesQuery, useSaleDetailQuery, useAssignSaleLicenseAgentMutation, useListCallsQuery,
   useForgotPasswordMutation, useResetPasswordMutation,
   useConfirmEmailMutation, useResendEmailConfirmationMutation,
   useMyPermissionsQuery, useListPermissionsQuery,

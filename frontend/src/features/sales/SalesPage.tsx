@@ -2,6 +2,8 @@ import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import {
   useCarriersQuery, useListLeadsQuery, useRecordSaleMutation,
   useValidateSaleMutation, useFundSaleMutation, useUploadSaleRecordingMutation,
@@ -28,6 +30,14 @@ export function SalesPage() {
   const [fundSale, { isLoading: funding }] = useFundSaleMutation();
   const [uploadRecording, { isLoading: uploadingRec }] = useUploadSaleRecordingMutation();
   const toast = useToast();
+
+  // Sales to pick from for the Validate / Fund actions (instead of pasting a Sale ID).
+  // SuperAdmin listing needs an explicit agency, so skip for them — the field falls back to input.
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
+  const { data: pendingSales } = useListSalesQuery({ status: "pending", take: 200 }, { skip: isSuperAdmin });
+  const { data: validatedSales } = useListSalesQuery({ status: "validated", take: 200 }, { skip: isSuperAdmin });
+  const saleOpt = (s: { id: string; saleNumber: number; leadName: string; monthlyPremium: number }) =>
+    ({ id: s.id, label: `#${s.saleNumber} · ${s.leadName} · $${s.monthlyPremium.toFixed(0)}/mo` });
 
   const [leadId, setLeadId] = useState("");
   const [carrier, setCarrier] = useState("AETNA");
@@ -93,7 +103,10 @@ export function SalesPage() {
         ]}
       />
 
-      {tab === "list" ? <SalesList /> : <RecordView />}
+      {/* RecordView is called inline (not <RecordView/>) on purpose: it's a nested render helper,
+          so rendering it as a component would give it a new identity every keystroke and remount it,
+          stealing focus from the inputs. Inlining keeps its fields in this component's tree. */}
+      {tab === "list" ? <SalesList /> : RecordView()}
     </>
   );
 
@@ -107,13 +120,17 @@ export function SalesPage() {
           <CardHeader title="Record a sale" subtitle="Capture a new closed deal." bordered />
           <CardBody>
             <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
+              <Select
                 id="record-sale-lead-id"
-                label="Lead ID" required
-                placeholder="UUID of the closed lead"
+                label="Lead" required
                 value={leadId} onChange={(e) => setLeadId(e.target.value)}
-                hint="Pick from the list below, or paste a closed lead's ID"
-              />
+                hint="Pick a recently closed lead"
+              >
+                <option value="">Select a closed lead…</option>
+                {(closedLeads ?? []).map((l) => (
+                  <option key={l.id} value={l.id}>{l.firstName} {l.lastName} · {l.phoneNumber}</option>
+                ))}
+              </Select>
               <Select label="Carrier" value={carrier} onChange={(e) => setCarrier(e.target.value)}>
                 {carriers?.map((c) => <option key={c} value={c}>{c}</option>)}
               </Select>
@@ -199,6 +216,7 @@ export function SalesPage() {
             <Can permission={Perm.SalesValidate}>
               <SaleActionForm
                 label="Validate" placeholder="Sale ID to validate" tone="success"
+                options={(pendingSales?.items ?? []).map(saleOpt)}
                 actions={[
                   { label: "Approve", variant: "success", onClick: (id) => doValidate(id, true) },
                   { label: "Reject",  variant: "danger",  onClick: (id) => doValidate(id, false) },
@@ -210,6 +228,7 @@ export function SalesPage() {
             <Can permission={Perm.SalesFund}>
               <SaleActionForm
                 label="Fund" placeholder="Sale ID to fund" tone="info"
+                options={(validatedSales?.items ?? []).map(saleOpt)}
                 actions={[{ label: "Fund", variant: "primary", onClick: (id) => doFund(id) }]}
                 loading={funding}
               />
@@ -490,18 +509,27 @@ function SalesList() {
 }
 
 function SaleActionForm({
-  label, placeholder, actions, loading,
+  label, placeholder, actions, loading, options,
 }: {
   label: string;
   placeholder: string;
   tone: "success" | "info";
   actions: { label: string; variant: ButtonVariant; onClick: (id: string) => void }[];
   loading: boolean;
+  /** When provided, pick the sale from a dropdown instead of pasting an ID. */
+  options?: { id: string; label: string }[];
 }) {
   const [id, setId] = useState("");
   return (
     <div>
-      <Input label={label} placeholder={placeholder} value={id} onChange={(e) => setId(e.target.value)} />
+      {options && options.length > 0 ? (
+        <Select label={label} value={id} onChange={(e) => setId(e.target.value)}>
+          <option value="">Select a sale…</option>
+          {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </Select>
+      ) : (
+        <Input label={label} placeholder={placeholder} value={id} onChange={(e) => setId(e.target.value)} />
+      )}
       <div className="flex gap-2 mt-2 justify-end">
         {actions.map((a) => (
           <Button

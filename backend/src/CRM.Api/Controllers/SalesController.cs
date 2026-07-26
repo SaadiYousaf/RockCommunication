@@ -74,6 +74,18 @@ public class SalesController : ControllerBase
     public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new CRM.Application.Sales.Queries.GetSaleDetailQuery(id), ct));
 
+    public record AssignLicenseAgentBody(Guid? LicenseAgentUserId);
+
+    /// <summary>Assign (or clear, when null) the License Agent on a recorded sale.</summary>
+    [HttpPut("{id:guid}/license-agent")]
+    [HasPermission(Permissions.SalesValidate)]
+    public async Task<IActionResult> AssignLicenseAgent(Guid id, [FromBody] AssignLicenseAgentBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(new CRM.Application.Sales.Commands.AssignSaleLicenseAgentCommand(id, body.LicenseAgentUserId), ct);
+        return NoContent();
+    }
+
     public record ValidateBody(bool Approve, string? Notes);
 
     [HttpPost("{id:guid}/validate")]

@@ -11,7 +11,7 @@ public record SaleCommissionLineDto(Guid Id, Guid AgentUserId, string? AgentName
     string RuleName, decimal Amount, bool Paid, DateTime CreatedAt);
 
 public record SaleDetailDto(
-    Guid Id, int SaleNumber, string Status,
+    Guid Id, int SaleNumber, string Status, Guid AgencyId,
     // Lead
     Guid LeadId, string LeadName, string LeadPhone, string? LeadEmail, string? LeadState,
     // People
@@ -92,7 +92,7 @@ public class GetSaleDetailHandler : IRequestHandler<GetSaleDetailQuery, SaleDeta
             : "Pending";
 
         return new SaleDetailDto(
-            sale.Id, sale.SaleNumber, status,
+            sale.Id, sale.SaleNumber, status, sale.AgencyId,
             sale.LeadId,
             lead is null ? "(lead removed)" : $"{lead.FirstName} {lead.LastName}".Trim(),
             lead?.PhoneNumber ?? "", lead?.Email, lead?.State,
