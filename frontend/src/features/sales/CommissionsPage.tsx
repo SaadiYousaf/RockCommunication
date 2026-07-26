@@ -52,13 +52,20 @@ export function CommissionsPage() {
     const params = new URLSearchParams();
     if (runId) params.set("runId", runId);
     else { params.set("from", from); params.set("to", to); }
-    let token: string | null = null;
-    try { token = JSON.parse(localStorage.getItem("auth") ?? "null")?.accessToken ?? null; } catch { /* malformed */ }
+    // Use the CURRENT tab's token from redux — not localStorage, which is shared across tabs and
+    // may hold a different logged-in account, causing a 403 "Export failed" on a valid session.
+    const token = auth.accessToken;
     if (!token) { toast.error("Not authenticated"); return; }
     fetch(`${API_URL}/api/sales/payroll-export?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => { if (!r.ok) throw new Error("Export failed"); return r.blob(); })
+      .then(async (r) => {
+        if (!r.ok) {
+          if (r.status === 403) throw new Error("You don't have permission to export payroll (need Payroll access).");
+          throw new Error(`Export failed (${r.status}).`);
+        }
+        return r.blob();
+      })
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
