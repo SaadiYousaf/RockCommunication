@@ -283,6 +283,35 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     [Fact]
+    public async Task Verifying_a_lead_notifies_closers()
+    {
+        // Reproduces the reported bug: a verifier marks a lead Verified (→ Closer queue) and the
+        // closer should get a notification.
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var name = $"cl{Guid.NewGuid():N}".Substring(0, 14);
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{name}@crm.local", userName = name, password = "Closer@1234!",
+            agencyId, roles = new[] { "Closer" }
+        });
+
+        var lead = await admin.PostJsonAsync("/api/leads", new
+        {
+            firstName = "Smh", lastName = "Achievers", phoneNumber = "5558880001", email = "smh8880001@crm.local"
+        });
+        var leadId = lead.GetProperty("id").GetGuid();
+        await admin.PostJsonAsync($"/api/leads/{leadId}/transition", new { toStage = "Fronted", disposition = "Interested" });
+        await admin.PostJsonAsync($"/api/intake/verify/{leadId}/status", new { status = "Verified", notes = "ok" });
+
+        var closer = await _factory.LoginAsync(name, "Closer@1234!");
+        var unread = await closer.GetJsonAsync("/api/notifications/unread-count");
+        Assert.True(unread.GetProperty("count").GetInt32() >= 1, "the closer should be notified when a lead is verified into their queue");
+    }
+
+    [Fact]
     public async Task Assigning_a_lead_notifies_the_assignee()
     {
         // Regression/feature: the single-assign path never told the assignee. Now it fires a durable

@@ -39,9 +39,11 @@ public class IntakeNotifier : IIntakeNotifier
             var targets = users.Where(u =>
                 (u.IsActive) &&
                 u.Roles.Contains(role) &&
-                // Agency-level users (no call center) see every queue; call-center agents
-                // only get notified for leads in their own call center.
-                (u.CallCenterId is null || u.CallCenterId == lead.CallCenterId));
+                // A lead with NO specific call center (Guid.Empty) is agency-wide, so notify EVERY
+                // user of the role — otherwise, if the closers are pinned to a call center, the alert
+                // is silently dropped and nobody is told. Agency-level users (null) always see all;
+                // call-center agents otherwise get only their own call center's leads.
+                (lead.CallCenterId == Guid.Empty || u.CallCenterId is null || u.CallCenterId == lead.CallCenterId));
 
             foreach (var u in targets)
                 await _dispatcher.DispatchAsync(

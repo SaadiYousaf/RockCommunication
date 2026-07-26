@@ -52,7 +52,9 @@ public class IntakeQueueHandler :
 
         return await _db.Leads
             .Where(l => l.AgencyId == _user.AgencyId && l.Stage == stage)
-            .OrderBy(l => l.CreatedAt)
+            // Newest first — consistent with the Submission queue, and a just-arrived lead is at the
+            // top. The "Waiting" chip still flags the stale ones so they aren't forgotten.
+            .OrderByDescending(l => l.CreatedAt)
             .Take(Math.Min(take, 200))
             .Select(l => new IntakeQueueItem(
                 l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State, l.City,

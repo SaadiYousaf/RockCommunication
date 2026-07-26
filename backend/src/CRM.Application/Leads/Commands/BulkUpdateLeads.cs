@@ -5,6 +5,7 @@ using CRM.Application.Intake;
 using CRM.Domain.Common;
 using CRM.Domain.Constants;
 using CRM.Domain.Enums;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -101,6 +102,7 @@ public class BulkLeadHandler :
 
         var updated = 0;
         var errors = new List<string>();
+        var moved = new List<Domain.Entities.Lead>();
         foreach (var lead in leads)
         {
             if (!LeadStagePolicy.CanTransition(lead.Stage, request.ToStage))
@@ -122,8 +124,26 @@ public class BulkLeadHandler :
             lead.Disposition = request.Disposition;
             lead.UpdatedAt = DateTime.UtcNow;
             updated++;
+            moved.Add(lead);
         }
         await _db.SaveChangesAsync(ct);
+
+        // Notify the receiving role's queue about the batch — once per distinct call center so the
+        // right agents are alerted (mirrors the single-transition handlers, which already notify).
+        if (LeadStagePolicy.QueueOwnerRole(request.ToStage) is { } ownerRole && moved.Count > 0)
+        {
+            var route = ownerRole == DomainRoles.Verifier ? AppConstants.QueueRoutes.VerifyQueue
+                      : ownerRole == DomainRoles.Closer ? AppConstants.QueueRoutes.CloseQueue
+                      : AppConstants.QueueRoutes.ValidateQueue;
+            foreach (var group in moved.GroupBy(l => l.CallCenterId))
+            {
+                var n = group.Count();
+                await _notifier.NotifyQueueAsync(group.First(), ownerRole,
+                    $"{n} new lead{(n == 1 ? "" : "s")} in your queue",
+                    $"{n} lead{(n == 1 ? "" : "s")} moved to {request.ToStage}.", route, ct);
+            }
+        }
+
         return new BulkLeadActionResult(updated, request.LeadIds.Count - updated, errors);
     }
 
