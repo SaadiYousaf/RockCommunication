@@ -1,7 +1,9 @@
 using CRM.Application.Common.Exceptions;
 using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Intake;
 using CRM.Domain.Common;
+using CRM.Domain.Constants;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -27,11 +29,13 @@ public class ScheduleCallbackHandler : IRequestHandler<ScheduleCallbackCommand, 
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIntakeNotifier _notifier;
 
-    public ScheduleCallbackHandler(IApplicationDbContext db, ICurrentUser user)
+    public ScheduleCallbackHandler(IApplicationDbContext db, ICurrentUser user, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<CallbackDto> Handle(ScheduleCallbackCommand request, CancellationToken ct)
@@ -54,6 +58,15 @@ public class ScheduleCallbackHandler : IRequestHandler<ScheduleCallbackCommand, 
         };
         _db.ScheduledCallbacks.Add(cb);
         await _db.SaveChangesAsync(ct);
+
+        // If the callback is assigned to someone OTHER than the person scheduling it, tell them now
+        // (they otherwise only find out via the 15-minutes-before reminder job).
+        if (cb.AssignedUserId != _user.UserId.Value)
+            await _notifier.NotifyUserAsync(lead.AgencyId, cb.AssignedUserId,
+                "Callback assigned to you",
+                $"Call back {lead.FirstName} {lead.LastName} on {input.ScheduledFor.ToLocalTime():g}.",
+                AppConstants.QueueRoutes.Callbacks, ct);
+
         return new CallbackDto(cb.Id, cb.LeadId, cb.AssignedUserId, cb.ScheduledFor, cb.Reason, cb.Completed);
     }
 }

@@ -1,8 +1,10 @@
 using CRM.Application.Common.Assignment;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Intake;
 using CRM.Application.Leads.Dtos;
 using CRM.Domain.Common;
+using CRM.Domain.Constants;
 using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
@@ -28,13 +30,15 @@ public class AssignLeadHandler : IRequestHandler<AssignLeadCommand, LeadDto>
     private readonly IAssignmentService _assignment;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
+    private readonly IIntakeNotifier _notifier;
 
-    public AssignLeadHandler(IApplicationDbContext db, IAssignmentService assignment, ICurrentUser user, IIdentityService identity)
+    public AssignLeadHandler(IApplicationDbContext db, IAssignmentService assignment, ICurrentUser user, IIdentityService identity, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _assignment = Guard.AgainstNull(assignment);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<LeadDto> Handle(AssignLeadCommand request, CancellationToken ct)
@@ -60,6 +64,13 @@ public class AssignLeadHandler : IRequestHandler<AssignLeadCommand, LeadDto>
             await _assignment.AssignAsync(lead, request.TargetRole, request.Strategy, ct);
         }
         await _db.SaveChangesAsync(ct);
+
+        // Tell the assignee a lead just landed in their queue (skip if they assigned it to themselves).
+        if (lead.AssignedUserId is { } assignee && assignee != _user.UserId)
+            await _notifier.NotifyUserAsync(lead.AgencyId, assignee,
+                "New lead assigned to you",
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber} is now in your queue.",
+                AppConstants.QueueRoutes.MyQueue, ct);
 
         return new LeadDto(lead.Id, lead.FirstName, lead.LastName, lead.PhoneNumber,
             lead.Email, lead.State, lead.Stage, lead.Disposition,

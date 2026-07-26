@@ -25,6 +25,8 @@ public static class AppConstants
         public const string VerifyQueue = "/verify-queue";
         public const string CloseQueue = "/close-queue";
         public const string ValidateQueue = "/validate-queue";
+        public const string MyQueue = "/queue";
+        public const string Callbacks = "/callbacks";
     }
 
     /// <summary>Direction values persisted on <c>CallRecord.Direction</c>.</summary>

@@ -1,7 +1,9 @@
 using CRM.Application.Common.Assignment;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Intake;
 using CRM.Domain.Common;
+using CRM.Domain.Constants;
 using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -52,9 +54,10 @@ public class BulkLeadHandler :
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
+    private readonly IIntakeNotifier _notifier;
 
-    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
-    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity); }
+    public BulkLeadHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IIntakeNotifier notifier)
+    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity); _notifier = Guard.AgainstNull(notifier); }
 
     public async Task<BulkLeadActionResult> Handle(BulkAssignLeadsCommand request, CancellationToken ct)
     {
@@ -77,6 +80,14 @@ public class BulkLeadHandler :
             updated++;
         }
         await _db.SaveChangesAsync(ct);
+
+        // One summary notification to the assignee (not one per lead), unless they assigned to self.
+        if (updated > 0 && request.AssigneeUserId != _user.UserId && _user.AgencyId is { } aid)
+            await _notifier.NotifyUserAsync(aid, request.AssigneeUserId,
+                $"{updated} lead{(updated == 1 ? "" : "s")} assigned to you",
+                $"{updated} lead{(updated == 1 ? "" : "s")} {(updated == 1 ? "was" : "were")} just added to your queue.",
+                AppConstants.QueueRoutes.MyQueue, ct);
+
         return new BulkLeadActionResult(updated, request.LeadIds.Count - updated, Array.Empty<string>());
     }
 

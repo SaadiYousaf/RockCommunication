@@ -282,6 +282,34 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, leaderboard.StatusCode);
     }
 
+    [Fact]
+    public async Task Assigning_a_lead_notifies_the_assignee()
+    {
+        // Regression/feature: the single-assign path never told the assignee. Now it fires a durable
+        // in-app notification the assignee sees in their inbox.
+        var admin = await _factory.LoginAdminAsync();
+        var me = await admin.GetJsonAsync("/api/auth/me");
+        var agencyId = me.GetProperty("agencyId").GetGuid();
+
+        var name = $"cl{Guid.NewGuid():N}".Substring(0, 14);
+        var closerId = (await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{name}@crm.local", userName = name, password = "Closer@1234!",
+            agencyId, roles = new[] { "Closer" }
+        })).GetProperty("id").GetGuid();
+
+        var lead = await admin.PostJsonAsync("/api/leads", new
+        {
+            firstName = "Assign", lastName = "Me", phoneNumber = "5557770009", email = "assignme9@crm.local"
+        });
+        var leadId = lead.GetProperty("id").GetGuid();
+        await admin.PostJsonAsync($"/api/leads/{leadId}/assign", new { targetRole = "Closer", userId = closerId });
+
+        var closer = await _factory.LoginAsync(name, "Closer@1234!");
+        var unread = await closer.GetJsonAsync("/api/notifications/unread-count");
+        Assert.True(unread.GetProperty("count").GetInt32() >= 1, "the assignee should get a durable notification");
+    }
+
     /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.
     /// Pass <paramref name="saleRecorder"/> to record the sale as a dedicated closer so the per-closer
     /// "5 sales/hour ⇒ internal" anti-fraud heuristic doesn't trip from tests sharing this class's DB.</summary>

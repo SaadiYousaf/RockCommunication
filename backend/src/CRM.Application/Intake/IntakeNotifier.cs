@@ -12,7 +12,11 @@ namespace CRM.Application.Intake;
 /// </summary>
 public interface IIntakeNotifier
 {
+    /// <summary>Notify every user of a role who owns the lead's queue (call-center aware).</summary>
     Task NotifyQueueAsync(Lead lead, string role, string title, string body, string? url, CancellationToken ct = default);
+
+    /// <summary>Notify ONE specific user — e.g. the assignee of a lead or callback. Best-effort.</summary>
+    Task NotifyUserAsync(Guid agencyId, Guid userId, string title, string body, string? url, CancellationToken ct = default);
 }
 
 public class IntakeNotifier : IIntakeNotifier
@@ -47,6 +51,21 @@ public class IntakeNotifier : IIntakeNotifier
         catch
         {
             // Swallow — notifications are advisory and must not fail the stage transition.
+        }
+    }
+
+    public async Task NotifyUserAsync(Guid agencyId, Guid userId, string title, string body, string? url, CancellationToken ct = default)
+    {
+        if (userId == Guid.Empty) return;
+        try
+        {
+            await _dispatcher.DispatchAsync(
+                new NotificationPayload(agencyId, userId, title, body, url),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch
+        {
+            // Advisory only — never fail the assignment because a notification couldn't be sent.
         }
     }
 }

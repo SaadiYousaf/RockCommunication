@@ -27,4 +27,18 @@ public static class LeadStagePolicy
 
     public static bool CanTransition(WorkflowStage from, WorkflowStage to) =>
         Allowed.TryGetValue(from, out var next) && next.Contains(to);
+
+    /// <summary>
+    /// The role whose WORK QUEUE owns a lead once it reaches this stage (i.e. who should be
+    /// notified that new work landed), or null when the stage isn't a queued hand-off. A lead
+    /// arriving at Fronted needs verifying, Verified needs closing, Closed needs submitting.
+    /// </summary>
+    public static string? QueueOwnerRole(WorkflowStage stage) => stage switch
+    {
+        WorkflowStage.Fronted  => Roles.Verifier,
+        WorkflowStage.Verified => Roles.Closer,
+        WorkflowStage.JrClosed => Roles.Closer,
+        WorkflowStage.Closed   => Roles.Validator,
+        _ => null,
+    };
 }

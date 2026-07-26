@@ -1,9 +1,12 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Intake;
 using CRM.Application.Leads.Dtos;
 using CRM.Domain.Common;
+using CRM.Domain.Constants;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -25,11 +28,13 @@ public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, Lead
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIntakeNotifier _notifier;
 
-    public TransitionLeadHandler(IApplicationDbContext db, ICurrentUser user)
+    public TransitionLeadHandler(IApplicationDbContext db, ICurrentUser user, IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
+        _notifier = Guard.AgainstNull(notifier);
     }
 
     public async Task<LeadDto> Handle(TransitionLeadCommand request, CancellationToken ct)
@@ -63,6 +68,17 @@ public class TransitionLeadHandler : IRequestHandler<TransitionLeadCommand, Lead
         lead.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+
+        // Moving a lead into a stage hands it to another role's work queue — notify that role
+        // (the specific intake handlers do this on their own paths; this covers the generic one).
+        if (LeadStagePolicy.QueueOwnerRole(to) is { } ownerRole)
+        {
+            var route = ownerRole == DomainRoles.Verifier ? AppConstants.QueueRoutes.VerifyQueue
+                      : ownerRole == DomainRoles.Closer ? AppConstants.QueueRoutes.CloseQueue
+                      : AppConstants.QueueRoutes.ValidateQueue;
+            await _notifier.NotifyQueueAsync(lead, ownerRole, "New lead in your queue",
+                $"{lead.FirstName} {lead.LastName} — {lead.PhoneNumber}", route, ct);
+        }
 
         return new LeadDto(lead.Id, lead.FirstName, lead.LastName, lead.PhoneNumber,
             lead.Email, lead.State, lead.Stage, lead.Disposition,
