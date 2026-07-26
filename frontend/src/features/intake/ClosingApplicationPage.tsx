@@ -139,9 +139,18 @@ export function ClosingApplicationPage() {
 
         <Section title="Health & applicant">
           <Textarea label="Health conditions" secure containerClassName="sm:col-span-2" value={f.healthConditions} onChange={set("healthConditions")} />
-          <Input label="Gender" required={sold} secure value={f.gender} onChange={set("gender")} />
+          <Select label="Gender" required={sold} value={f.gender} onChange={set("gender")}>
+            <option value="">Select…</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </Select>
           <Input label="Age" type="number" required={sold} min={1} max={129} value={f.age} onChange={set("age")} />
-          <Input label="Smoker status" required={sold} secure value={f.smokerStatus} onChange={set("smokerStatus")} placeholder="Smoker / Non-smoker" />
+          <Select label="Smoker status" required={sold} value={f.smokerStatus} onChange={set("smokerStatus")}>
+            <option value="">Select…</option>
+            <option value="Non-smoker">Non-smoker</option>
+            <option value="Smoker">Smoker</option>
+          </Select>
           <Input label="Name" required={sold} secure value={f.name} onChange={set("name")} />
           <Input label="DOB" type="date" required={sold} value={f.dateOfBirth} onChange={set("dateOfBirth")} />
           <Input label="Address" required={sold} secure containerClassName="sm:col-span-2" value={f.address} onChange={set("address")} />
