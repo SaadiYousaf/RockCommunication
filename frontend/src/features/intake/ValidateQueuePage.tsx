@@ -54,7 +54,10 @@ export function ValidateQueuePage() {
                       </InfoHint>
                     </span>
                   </TH>
-                  <TH>Sold</TH><TH></TH>
+                  <TH>Sold</TH>
+                  {/* Pinned to the right edge so the actions stay visible however wide the table
+                      gets — otherwise "Update" scrolls off-screen on narrower viewports. */}
+                  <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                 </TR>
               </THead>
               <TBody>
@@ -76,12 +79,12 @@ export function ValidateQueuePage() {
                       )}
                     </TD>
                     <TD className="text-sm text-ink-500 whitespace-nowrap tabular-nums">{new Date(s.soldAt).toLocaleDateString()}</TD>
-                    <TD className="text-right whitespace-nowrap">
+                    <TD className="text-right whitespace-nowrap sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                       <div className="inline-flex items-center justify-end gap-1.5">
                         <Button size="sm" variant="ghost" leftIcon={<Icon name="eye" size={14} />} onClick={() => setViewing(s)}>
                           Open
                         </Button>
-                        <Button size="sm" variant="outline" leftIcon={<Icon name="edit" size={14} />} onClick={() => setActive(s)}>
+                        <Button size="sm" variant="primary" leftIcon={<Icon name="edit" size={14} />} onClick={() => setActive(s)}>
                           Update
                         </Button>
                       </div>

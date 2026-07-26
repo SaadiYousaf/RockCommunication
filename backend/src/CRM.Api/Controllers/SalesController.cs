@@ -117,7 +117,10 @@ public class SalesController : ControllerBase
         [FromQuery] Guid? runId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct = default)
     {
         Guard.AgainstNull(mediator);
-        var rows = await mediator.Send(new CRM.Application.Sales.Queries.ExportPayrollQuery(runId, from, to), ct);
+        // Same inclusive-end rule as MyCommissions: a date-only "to" (midnight) would drop everything
+        // earned on that day, silently under-reporting the payroll export. Roll to next-day start.
+        var toInclusive = to is { } tv ? tv.Date.AddDays(1) : to;
+        var rows = await mediator.Send(new CRM.Application.Sales.Queries.ExportPayrollQuery(runId, from, toInclusive), ct);
         var csv = BuildCsv(rows);
         return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"payroll-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
     }

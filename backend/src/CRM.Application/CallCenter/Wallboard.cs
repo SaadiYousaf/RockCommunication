@@ -58,11 +58,14 @@ public class WallboardHandler : IRequestHandler<GetWallboardQuery, WallboardSnap
         var longestWait = waitingNow.Count == 0 ? 0
             : (int)(DateTime.UtcNow - waitingNow.Min()).TotalSeconds;
 
-        var topRaw = await _db.Sales.AsNoTracking()
+        // SQLite can't SUM the TEXT-stored decimal — group + sum in memory (today's rows are few).
+        var topRaw = (await _db.Sales.AsNoTracking()
             .Where(s => s.AgencyId == aid && s.SoldAt >= todayUtc)
+            .Select(s => new { s.CloserUserId, s.MonthlyPremium })
+            .ToListAsync(ct))
             .GroupBy(s => s.CloserUserId)
-            .Select(g => new { UserId = g.Key, Sales = g.Count(), Premium = g.Sum(x => (decimal?)x.MonthlyPremium) })
-            .OrderByDescending(x => x.Sales).Take(5).ToListAsync(ct);
+            .Select(g => new { UserId = g.Key, Sales = g.Count(), Premium = g.Sum(x => x.MonthlyPremium) })
+            .OrderByDescending(x => x.Sales).Take(5).ToList();
         var byId = await _identity.ListUserNamesAsync(aid, ct);
         var top = topRaw.Select(t => new TopAgentDto(t.UserId,
             byId.TryGetValue(t.UserId, out var u) ? u : t.UserId.ToString(),
@@ -105,11 +108,14 @@ public class LeaderboardHandler : IRequestHandler<GetLeaderboardQuery, IReadOnly
             .GroupBy(c => c.AgentUserId)
             .Select(g => new { UserId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
 
-        var sales = await _db.Sales.AsNoTracking()
+        // SQLite can't SUM the TEXT-stored decimal — group + sum in memory.
+        var sales = (await _db.Sales.AsNoTracking()
             .Where(s => s.AgencyId == aid && s.SoldAt >= since)
+            .Select(s => new { s.CloserUserId, s.MonthlyPremium })
+            .ToListAsync(ct))
             .GroupBy(s => s.CloserUserId)
-            .Select(g => new { UserId = g.Key, Count = g.Count(), Premium = g.Sum(x => (decimal?)x.MonthlyPremium) ?? 0 })
-            .ToDictionaryAsync(x => x.UserId, x => x, ct);
+            .Select(g => new { UserId = g.Key, Count = g.Count(), Premium = g.Sum(x => x.MonthlyPremium) })
+            .ToDictionary(x => x.UserId, x => x);
 
         var transitions = await _db.LeadActivities.AsNoTracking()
             .Where(a => a.AgencyId == aid && a.OccurredAt >= since)

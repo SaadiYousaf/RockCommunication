@@ -175,6 +175,22 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
     }
 
+    [Fact]
+    public async Task Wallboard_and_leaderboard_load_with_sales_present()
+    {
+        // Regression: the wallboard "top agents" + leaderboard did a SQL-side SUM over the
+        // TEXT-stored decimal premium, which 500'd both supervisory widgets once any sale existed
+        // in the window. Record a sale today, then confirm both endpoints return 200.
+        var admin = await _factory.LoginAdminAsync();
+        await RecordSaleAsync(admin, "5559990001");
+
+        var wallboard = await admin.GetAsync("/api/cc/wallboard");
+        Assert.Equal(HttpStatusCode.OK, wallboard.StatusCode);
+
+        var leaderboard = await admin.GetAsync("/api/cc/leaderboard?period=today");
+        Assert.Equal(HttpStatusCode.OK, leaderboard.StatusCode);
+    }
+
     /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.</summary>
     private async Task<Guid> RecordSaleAsync(HttpClient admin, string phone)
     {

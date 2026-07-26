@@ -53,8 +53,11 @@ public class AgentScorecardHandler : IRequestHandler<AgentScorecardQuery, IReadO
     {
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        var rows = await _db.QaReviews
+        // SQLite can't AVG the TEXT-stored decimal scores — group + average in memory.
+        var rows = (await _db.QaReviews
             .Where(r => r.AgencyId == _user.AgencyId && r.ReviewedAt >= request.From && r.ReviewedAt < request.To)
+            .Select(r => new { r.AgentUserId, r.MaxScore, r.TotalScore })
+            .ToListAsync(ct))
             .GroupBy(r => r.AgentUserId)
             .Select(g => new
             {
@@ -62,7 +65,7 @@ public class AgentScorecardHandler : IRequestHandler<AgentScorecardQuery, IReadO
                 Count = g.Count(),
                 AvgPct = g.Average(r => r.MaxScore == 0 ? 0 : r.TotalScore / r.MaxScore * 100m),
                 AvgScore = g.Average(r => r.TotalScore)
-            }).ToListAsync(ct);
+            }).ToList();
         return rows.Select(r => new AgentScorecardDto(r.AgentUserId, r.Count,
             Math.Round(r.AvgPct, 2), Math.Round(r.AvgScore, 2))).ToList();
     }
