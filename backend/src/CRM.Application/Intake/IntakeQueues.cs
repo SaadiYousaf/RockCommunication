@@ -21,7 +21,9 @@ public record IntakeQueueItem(
     WorkflowStage Stage,
     VerifierStatus VerifierStatus,
     bool HasApplication,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    // Lead priority score — lets a worker triage the hottest lead, not just the oldest.
+    decimal Score);
 
 /// <summary>Leads awaiting verification (fronted). Shown in the Verifier queue.</summary>
 public record VerifierQueueQuery(int Take = 100) : IRequest<IReadOnlyList<IntakeQueueItem>>;
@@ -55,7 +57,7 @@ public class IntakeQueueHandler :
             .Select(l => new IntakeQueueItem(
                 l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State, l.City,
                 l.MaritalStatus, l.AgeYears, l.Stage, l.VerifierStatus,
-                _db.LeadApplications.Any(a => a.LeadId == l.Id), l.CreatedAt))
+                _db.LeadApplications.Any(a => a.LeadId == l.Id), l.CreatedAt, l.Score))
             .ToListAsync(ct);
     }
 }

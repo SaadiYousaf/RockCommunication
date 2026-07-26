@@ -8,6 +8,7 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
+import { timeAgoShort, waitTone } from "../../shared/lib/time";
 
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
@@ -52,7 +53,18 @@ export function CloseQueuePage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>
+                <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">Waiting
+                      <InfoHint title="Waiting time" side="bottom">How long this verified lead has waited for a closer — red means it's going stale. Work the oldest first.</InfoHint>
+                    </span>
+                  </TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">Priority
+                      <InfoHint title="Lead priority score" side="bottom">The lead's likelihood-to-convert score — higher is hotter.</InfoHint>
+                    </span>
+                  </TH>
+                  <TH>
                   <span className="inline-flex items-center gap-1">
                     Application
                     <InfoHint title="Closer statuses" side="bottom">
@@ -68,6 +80,12 @@ export function CloseQueuePage() {
                     <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{l.phoneNumber}</TD>
                     <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
                     <TD className="text-sm tabular-nums">{l.ageYears ?? "—"}</TD>
+                    <TD className="whitespace-nowrap">
+                      <span title={new Date(l.createdAt).toLocaleString()}>
+                        <Badge tone={waitTone(l.createdAt)} variant="soft">{timeAgoShort(l.createdAt)}</Badge>
+                      </span>
+                    </TD>
+                    <TD className="text-sm tabular-nums font-medium text-ink-800">{Math.round(l.score)}</TD>
                     <TD>{l.hasApplication ? <Badge tone="info" variant="soft">Started</Badge> : <Badge tone="neutral" variant="soft">New</Badge>}</TD>
                     <TD className="text-right whitespace-nowrap">
                       <Link to={`/close-queue/${l.id}`}>

@@ -10,6 +10,7 @@ import {
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
+import { timeAgoShort, waitTone } from "../../shared/lib/time";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   New: ["Fronted", "Lost"],
@@ -162,6 +163,11 @@ export function MyQueuePage() {
                   </InfoHint>
                 </span>
               </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Waiting
+                  <InfoHint title="Time in your queue" side="bottom">How long this lead has been waiting for your next action — red is going stale.</InfoHint>
+                </span>
+              </TH>
               <TH className="text-right">Quick actions</TH>
             </TR>
           </THead>
@@ -185,6 +191,11 @@ export function MyQueuePage() {
                   </TD>
                   <TD className="font-mono text-xs text-ink-700">{formatPhone(l.phoneNumber)}</TD>
                   <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
+                  <TD className="whitespace-nowrap">
+                    <span title={new Date(l.createdAt).toLocaleString()}>
+                      <Badge tone={waitTone(l.createdAt)} variant="soft">{timeAgoShort(l.createdAt)}</Badge>
+                    </span>
+                  </TD>
                   <TD>
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       <Button size="sm" leftIcon={<Icon name="phoneCall" size={13} />}

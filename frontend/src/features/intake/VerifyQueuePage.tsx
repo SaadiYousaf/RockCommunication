@@ -6,6 +6,7 @@ import {
   useGetVerifyLeadQuery, useUpdateVerifyLeadMutation,
 } from "../../shared/api/baseApi";
 import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/types";
+import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Select,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
@@ -32,7 +33,17 @@ export function VerifyQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH><TH>Received</TH>
+                  <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">Waiting
+                      <InfoHint title="Waiting time" side="bottom">How long this lead has sat in the queue — red means it's going stale. Work the oldest first.</InfoHint>
+                    </span>
+                  </TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">Priority
+                      <InfoHint title="Lead priority score" side="bottom">The lead's likelihood-to-convert score — higher is hotter.</InfoHint>
+                    </span>
+                  </TH>
                   <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                     <span className="inline-flex items-center gap-1">
                       Verifier status
@@ -76,7 +87,12 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
       <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{lead.phoneNumber}</TD>
       <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>
       <TD className="text-sm tabular-nums">{lead.ageYears ?? "—"}</TD>
-      <TD className="text-xs text-ink-500 whitespace-nowrap tabular-nums">{new Date(lead.createdAt).toLocaleString()}</TD>
+      <TD className="whitespace-nowrap">
+        <span title={new Date(lead.createdAt).toLocaleString()}>
+          <Badge tone={waitTone(lead.createdAt)} variant="soft">{timeAgoShort(lead.createdAt)}</Badge>
+        </span>
+      </TD>
+      <TD className="text-sm tabular-nums font-medium text-ink-800">{Math.round(lead.score)}</TD>
       <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" leftIcon={<Icon name="edit" size={14} />} onClick={onEdit}>Open</Button>

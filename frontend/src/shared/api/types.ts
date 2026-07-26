@@ -279,6 +279,7 @@ export interface IntakeQueueItem {
   verifierStatus: VerifierStatusValue;
   hasApplication: boolean;
   createdAt: string;
+  score: number;
 }
 
 export interface ClosingApplicationInput {
