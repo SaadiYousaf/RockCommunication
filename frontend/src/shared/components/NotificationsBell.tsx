@@ -304,10 +304,10 @@ export function NotificationsBell() {
               <Icon name="refresh" size={12} /> Refresh
             </button>
             <button
-              onClick={() => { setOpen(false); navigate("/chat"); }}
+              onClick={() => { setOpen(false); navigate("/notifications"); }}
               className="text-xs font-semibold text-brand-700 hover:text-brand-800 px-2 py-1 rounded transition-colors inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
-              Open chat <Icon name="arrowRight" size={12} />
+              View all <Icon name="arrowRight" size={12} />
             </button>
           </div>
         </div>

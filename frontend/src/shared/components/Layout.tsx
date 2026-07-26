@@ -44,6 +44,7 @@ const groups: NavGroup[] = [
       { to: "/verify-queue", label: "Verifier Queue", icon: "check", roles: ["Verifier"], countKey: "verifierQueue" },
       { to: "/close-queue",  label: "Closer Queue",   icon: "briefcase", roles: ["Closer"], countKey: "closerQueue" },
       { to: "/validate-queue", label: "Submission Queue", icon: "shield", roles: ["Validator"], countKey: "submissionQueue" },
+      { to: "/my-sales", label: "My Sales", icon: "briefcase", roles: ["LicenseAgent"] },
       { to: "/callbacks", label: "Callbacks",   icon: "calendar",  module: "callbacks", countKey: "callbacks" },
       { to: "/chat",      label: "Chat",        icon: "chat",      module: "chat" },
     ],

@@ -89,6 +89,8 @@ const DocumentsPage = lazyWithReload(() => import("../features/documents/Documen
 const QueuesPage = lazyWithReload(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
 const IntegrationsPage = lazyWithReload(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
 const GuidePage = lazyWithReload(() => import("../features/guide/GuidePage").then(m => ({ default: m.GuidePage })));
+const NotificationsPage = lazyWithReload(() => import("../features/notifications/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
+const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 
@@ -143,6 +145,7 @@ const router = createBrowserRouter([
           // Always available to any authenticated user
           { path: "/dashboard", element: <Dashboard /> },
           { path: "/guide",     element: <GuidePage /> },
+          { path: "/notifications", element: <NotificationsPage /> },
           { path: "/search",    element: <GlobalSearchPage /> },
           { path: "/2fa",       element: <TwoFactorEnrollPage /> },
           { path: "/team",      element: <TeamPage /> },
@@ -176,6 +179,10 @@ const router = createBrowserRouter([
           {
             element: <ProtectedRoute roles={["Validator"]} />,
             children: [{ path: "/validate-queue", element: <ValidateQueuePage /> }],
+          },
+          {
+            element: <ProtectedRoute roles={["LicenseAgent"]} />,
+            children: [{ path: "/my-sales", element: <LicenseAgentQueuePage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Callbacks]} />,
