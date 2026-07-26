@@ -3,6 +3,7 @@ using CRM.Domain.Common;
 using CRM.Infrastructure.Workflow;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CRM.Infrastructure.BackgroundJobs;
 
@@ -42,9 +43,21 @@ public class InProcessJobScheduler : IBackgroundJobScheduler
     {
         _ = Task.Run(async () =>
         {
+            // New scope from the ROOT provider (this scheduler is a singleton), so we get a fresh
+            // DbContext — never a captured request-scoped one used after its scope disposed.
             using var scope = _sp.CreateScope();
-            var engine = scope.ServiceProvider.GetRequiredService<IWorkflowEngine>();
-            await engine.ExecuteRuleAsync(ruleId, payloadJson, CancellationToken.None);
+            try
+            {
+                var engine = scope.ServiceProvider.GetRequiredService<IWorkflowEngine>();
+                await engine.ExecuteRuleAsync(ruleId, payloadJson, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                // Fire-and-forget: an escaped exception would be an UNOBSERVED task exception
+                // (invisible). Log it instead of letting it vanish.
+                scope.ServiceProvider.GetService<ILogger<InProcessJobScheduler>>()?
+                    .LogError(ex, "Background workflow rule {RuleId} failed", ruleId);
+            }
         });
     }
 

@@ -80,22 +80,29 @@ internal static class DummyDataSeeder
             if (existing is not null) createdUsers.Add(existing);
         }
 
+        // Resolve every user's roles ONCE, asynchronously, up front — so we never block on
+        // IsInRoleAsync(...).GetAwaiter().GetResult() inside a synchronous LINQ predicate
+        // (sync-over-async ties up a thread-pool thread for every membership check).
+        var rolesByUser = new Dictionary<Guid, IList<string>>();
+        foreach (var u in createdUsers)
+            rolesByUser[u.Id] = await users.GetRolesAsync(u);
+        bool InRole(ApplicationUser u, string role) => rolesByUser[u.Id].Contains(role);
+
         // Set team leads
         foreach (var team in teams)
         {
             if (team.TeamLeadUserId is null)
             {
-                var lead = createdUsers.FirstOrDefault(u => u.TeamId == team.Id &&
-                    users.IsInRoleAsync(u, Roles.TeamLead).GetAwaiter().GetResult());
+                var lead = createdUsers.FirstOrDefault(u => u.TeamId == team.Id && InRole(u, Roles.TeamLead));
                 if (lead is not null) team.TeamLeadUserId = lead.Id;
             }
         }
         await db.SaveChangesAsync();
 
-        var fronters = createdUsers.Where(u => users.IsInRoleAsync(u, Roles.Fronter).GetAwaiter().GetResult()).ToList();
-        var closers  = createdUsers.Where(u => users.IsInRoleAsync(u, Roles.Closer).GetAwaiter().GetResult()).ToList();
-        var jrClosers = createdUsers.Where(u => users.IsInRoleAsync(u, Roles.JrCloser).GetAwaiter().GetResult()).ToList();
-        var validators = createdUsers.Where(u => users.IsInRoleAsync(u, Roles.Validator).GetAwaiter().GetResult()).ToList();
+        var fronters = createdUsers.Where(u => InRole(u, Roles.Fronter)).ToList();
+        var closers  = createdUsers.Where(u => InRole(u, Roles.Closer)).ToList();
+        var jrClosers = createdUsers.Where(u => InRole(u, Roles.JrCloser)).ToList();
+        var validators = createdUsers.Where(u => InRole(u, Roles.Validator)).ToList();
 
         // ---- Verticals ----
         if (!await db.Verticals.AnyAsync(v => v.AgencyId == agency.Id))

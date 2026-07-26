@@ -119,7 +119,7 @@ public class CoachCallHandler : IRequestHandler<CoachCallCommand, Unit>
     private readonly IDialerProvider _dialer;
     public CoachCallHandler(ICurrentUser user, IDialerProvider dialer) { _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer); }
 
-    public Task<Unit> Handle(CoachCallCommand request, CancellationToken ct)
+    public async Task<Unit> Handle(CoachCallCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
@@ -127,9 +127,18 @@ public class CoachCallHandler : IRequestHandler<CoachCallCommand, Unit>
             throw new ForbiddenAccessException();
 
         // Vici and most dialers expose a function for monitor/whisper/barge — wired to provider for future expansion.
-        // Currently delegates to the configured dialer with a synthetic phone "coach:<mode>:<targetUser>"
-        return _dialer.DialAsync(_user.UserId.Value,
-            $"coach:{request.Mode.ToLowerInvariant()}:{request.TargetUserId}", request.TargetUserId, ct)
-            .ContinueWith(_ => Unit.Value);
+        // Currently delegates to the configured dialer with a synthetic phone "coach:<mode>:<targetUser>".
+        // Proper await (not .ContinueWith, which ran on TaskScheduler.Current and silently swallowed a
+        // faulted dial). A dialer failure surfaces as a clean, retryable 409 — never a false "success".
+        try
+        {
+            await _dialer.DialAsync(_user.UserId.Value,
+                $"coach:{request.Mode.ToLowerInvariant()}:{request.TargetUserId}", request.TargetUserId, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            throw new ConflictException("Couldn't start the coach session — the dialer is unavailable. Please try again.");
+        }
+        return Unit.Value;
     }
 }
