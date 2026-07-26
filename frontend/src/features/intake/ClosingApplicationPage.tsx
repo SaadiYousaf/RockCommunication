@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useGetClosingApplicationQuery, useSubmitClosingApplicationMutation } from "../../shared/api/baseApi";
 import type { CloserStatusValue } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Icon, Input, PageHeader, Select, Skeleton, Textarea, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 
 
@@ -81,8 +81,21 @@ export function ClosingApplicationPage() {
     }
   }
 
-  if (isLoading) return <Skeleton className="h-96" />;
-  if (!data) return <PageHeader title="Lead not found" />;
+  if (isLoading) return (
+    <>
+      <PageHeader title="Closing application" />
+      <div className="max-w-4xl space-y-4"><Skeleton className="h-40" /><Skeleton className="h-64" /></div>
+    </>
+  );
+  if (!data) return (
+    <>
+      <PageHeader title="Closing application" />
+      <Card><CardBody>
+        <EmptyState icon={<Icon name="briefcase" size={20} />} title="Lead not found"
+          description="It may have been removed, or you may not have access to it." />
+      </CardBody></Card>
+    </>
+  );
 
   const sold = status === "CompleteAndSold";
 

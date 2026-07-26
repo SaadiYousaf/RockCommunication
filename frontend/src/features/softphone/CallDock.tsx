@@ -126,7 +126,7 @@ export function CallDock() {
           <div className="grid grid-cols-3 gap-1 mb-2">
             {["1","2","3","4","5","6","7","8","9","*","0","#"].map(d => (
               <button key={d}
-                className="bg-ink-800 hover:bg-ink-700 rounded py-2 font-mono"
+                className="bg-ink-800 hover:bg-ink-700 rounded-lg py-2 font-mono"
                 onClick={() => dtmf({ id: call.id, digits: d })}>{d}</button>
             ))}
           </div>
@@ -143,7 +143,7 @@ export function CallDock() {
             toast.error("SMS not sent", "Try again.");
           }
         }}>
-          <input className="flex-1 bg-ink-800 border border-ink-700 rounded px-2 py-1 text-sm"
+          <input className="flex-1 bg-ink-800 border border-ink-700 rounded-lg px-2 py-1 text-sm"
             placeholder="Quick SMS to lead..." value={smsBody} onChange={(e) => setSmsBody(e.target.value)} />
           <Button type="submit" variant="secondary" size="sm" leftIcon={<Icon name="send" size={14} />}>
             Send
@@ -167,7 +167,7 @@ function DockBtn({ children, onClick, active }: { children: ReactNode; onClick: 
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded py-2 text-sm transition ${active ? "bg-amber-500 text-ink-900" : "bg-ink-800 hover:bg-ink-700"}`}>
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition ${active ? "bg-amber-500 text-ink-900" : "bg-ink-800 hover:bg-ink-700"}`}>
       {children}
     </button>
   );

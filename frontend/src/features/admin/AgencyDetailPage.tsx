@@ -77,17 +77,19 @@ export function AgencyDetailPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <Stat label="Sales" value={total} />
-        <Stat label="Premium (page)" value={money(sales?.totalPremium)} />
-        <Stat label="Funded" value={sales?.fundedCount ?? 0} />
-        <Stat label="License agents" value={agents?.length ?? 0} />
+        <Stat label="Sales" value={total} icon={<Icon name="chart" size={18} />} tone="brand" />
+        <Stat label="Premium (page)" value={money(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success" />
+        <Stat label="Funded" value={sales?.fundedCount ?? 0} icon={<Icon name="check" size={18} />} tone="success" />
+        <Stat label="License agents" value={agents?.length ?? 0} icon={<Icon name="userCheck" size={18} />} tone="accent" />
       </div>
 
       {/* License-agent roster */}
       <Card className="mb-4">
         <CardHeader title="License agents" subtitle={agents ? `${agents.length} agent(s)` : undefined} />
         <CardBody>
-          {!agents || agents.length === 0 ? (
+          {!agents ? (
+            <Skeleton className="h-24" />
+          ) : agents.length === 0 ? (
             <EmptyState icon={<Icon name="userPlus" size={18} />} title="No license agents yet"
               description="Add one with the button above — they'll be emailed an invitation." />
           ) : (

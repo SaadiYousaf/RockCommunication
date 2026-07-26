@@ -84,7 +84,7 @@ export function SupervisorPage() {
         title="Supervisor"
         description="Live floor view — monitor, coach, and intervene with agents in real time."
         actions={
-          <Button variant="outline" leftIcon={<Icon name="filter" size={16} />} onClick={() => refetch()}>
+          <Button variant="outline" leftIcon={<Icon name="refresh" size={16} />} onClick={() => refetch()}>
             Refresh
           </Button>
         }

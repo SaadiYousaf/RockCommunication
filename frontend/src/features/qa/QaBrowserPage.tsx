@@ -129,7 +129,7 @@ export function QaBrowserPage() {
               <TBody>
                 {reviews.map((r) => (
                   <TR key={r.id}>
-                    <TD className="text-ink-600 text-xs">{new Date(r.reviewedAt).toLocaleString()}</TD>
+                    <TD className="text-ink-600 text-xs whitespace-nowrap">{new Date(r.reviewedAt).toLocaleString()}</TD>
                     <TD className="text-xs text-ink-700">{nameOf(r.agentUserId)}</TD>
                     <TD className="text-xs text-ink-500">{nameOf(r.reviewerUserId)}</TD>
                     <TD className="text-ink-800">{r.totalScore} <span className="text-ink-400">/ {r.maxScore}</span></TD>

@@ -109,14 +109,14 @@ export function CallCentersPage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Code</TH><TH>Leads</TH><TH>Status</TH><TH></TH></TR>
+                <TR><TH>Name</TH><TH>Code</TH><TH numeric>Leads</TH><TH>Status</TH><TH></TH></TR>
               </THead>
               <TBody>
                 {list.map((c) => (
                   <TR key={c.id}>
                     <TD className="font-medium text-ink-900">{c.name}</TD>
                     <TD className="font-mono text-xs text-ink-600">{c.code || "—"}</TD>
-                    <TD className="text-sm">{c.leadCount}</TD>
+                    <TD numeric className="text-sm">{c.leadCount}</TD>
                     <TD>{c.isActive
                       ? <Badge tone="success" variant="soft">Active</Badge>
                       : <Badge tone="neutral" variant="soft">Inactive</Badge>}</TD>

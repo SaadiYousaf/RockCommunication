@@ -70,7 +70,7 @@ export function DocumentsPage() {
                   onChange={(e) => setName(e.target.value)}
                 />
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-ink-600">File</label>
+                  <label className="text-[12px] font-medium text-ink-700 leading-none">File</label>
                   <input
                     ref={fileRef}
                     type="file"

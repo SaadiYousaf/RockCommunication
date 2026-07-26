@@ -233,7 +233,7 @@ function Hero({
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-24 rounded-xl bg-white/60 ring-1 ring-ink-200/70" />
+              <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
           </div>
         ) : (
@@ -336,7 +336,7 @@ function synthesizeTrend(prior: number, current: number): number[] {
 
 const kpiToneMap: Record<"brand" | "success" | "accent" | "warning",
   { iconBg: string; iconText: string; spark: string; ring: string }> = {
-  brand:   { iconBg: "bg-brand-50",   iconText: "text-brand-600",   spark: "#6366f1", ring: "ring-brand-100" },
+  brand:   { iconBg: "bg-brand-50",   iconText: "text-brand-600",   spark: "#3c7269", ring: "ring-brand-100" },
   success: { iconBg: "bg-emerald-50", iconText: "text-emerald-600", spark: "#10b981", ring: "ring-emerald-100" },
   accent:  { iconBg: "bg-accent-50",  iconText: "text-accent-600",  spark: "#b28535", ring: "ring-accent-100" },
   warning: { iconBg: "bg-amber-50",   iconText: "text-amber-600",   spark: "#f59e0b", ring: "ring-amber-100" },

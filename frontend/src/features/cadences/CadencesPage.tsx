@@ -71,7 +71,7 @@ export function CadencesPage() {
       ) : !cadences || cadences.length === 0 ? (
         <Card className="mb-8"><CardBody>
           <EmptyState
-            icon={<Icon name="filter" size={20} />}
+            icon={<Icon name="workflow" size={20} />}
             title="No cadences yet"
             description="Build a multi-touch sequence to consistently engage leads over time."
             action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}

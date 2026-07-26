@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   useAiRecommendationsQuery,
   useCheckComplianceMutation,
@@ -19,7 +19,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Button, Icon, InfoHint, useSecureEntry, useToast } from "../../shared/ui";
+import { Button, Card, CardBody, EmptyState, Icon, InfoHint, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
@@ -32,7 +32,8 @@ const PIPELINE: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed
 
 export function LeadDetailPage() {
   const { id = "" } = useParams();
-  const { data: lead, refetch: refetchLead } = useLeadDetailQuery(id);
+  const navigate = useNavigate();
+  const { data: lead, refetch: refetchLead, isLoading: leadLoading, isError: leadError } = useLeadDetailQuery(id);
   const { data: timeline } = useLeadTimelineQuery(id);
   const { data: scripts } = useListScriptsQuery({ stage: lead?.stage });
   const { data: recs } = useAiRecommendationsQuery(id);
@@ -65,8 +66,29 @@ export function LeadDetailPage() {
     if (lead?.notes !== undefined) setNotes(lead.notes ?? "");
   }, [lead?.id]);
 
-  if (!lead) {
-    return <div className="text-ink-500">Loading lead…</div>;
+  if (leadLoading) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-40" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
+  if (leadError || !lead) {
+    // e.g. a non-existent id (lead IDs are GUIDs) or one outside your access — not an endless spinner.
+    return (
+      <Card><CardBody>
+        <EmptyState
+          icon={<Icon name="search" size={20} />}
+          title="Lead not found"
+          description="This lead doesn't exist or you don't have access to it. Check the link, or head back to Leads."
+          action={<Button variant="outline" onClick={() => navigate("/leads")} leftIcon={<Icon name="arrowRight" size={14} className="rotate-180" />}>Back to Leads</Button>}
+        />
+      </CardBody></Card>
+    );
   }
 
   async function safeDial() {

@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
 } from "../../shared/ui";
 
 type Tone = "brand" | "info" | "success" | "warning" | "danger" | "neutral";
@@ -133,9 +133,9 @@ export function AuditLogPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="Total entries" value={total} icon={<Icon name="doc" size={16} />} />
-        <Stat label="Entity types" value={filterOpts?.entityNames.length ?? 0} />
-        <Stat label="Actions" value={filterOpts?.actions.length ?? 0} />
-        <Stat label="Active users" value={filterOpts?.users.length ?? 0} />
+        <Stat label="Entity types" value={filterOpts?.entityNames.length ?? 0} icon={<Icon name="layers" size={16} />} />
+        <Stat label="Actions" value={filterOpts?.actions.length ?? 0} icon={<Icon name="activity" size={16} />} />
+        <Stat label="Active users" value={filterOpts?.users.length ?? 0} icon={<Icon name="userCheck" size={16} />} />
       </div>
 
       <Card className="mb-4">
@@ -148,22 +148,20 @@ export function AuditLogPage() {
               onChange={(e) => update("search", e.target.value || undefined)}
             />
           </div>
-          <select
-            className="border border-ink-200 rounded px-3 py-2 text-sm bg-white"
+          <Select
             value={filters.entityName ?? ""}
             onChange={(e) => update("entityName", e.target.value || undefined)}
           >
             <option value="">All entities</option>
             {filterOpts?.entityNames.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-          <select
-            className="border border-ink-200 rounded px-3 py-2 text-sm bg-white"
+          </Select>
+          <Select
             value={filters.action ?? ""}
             onChange={(e) => update("action", e.target.value || undefined)}
           >
             <option value="">All actions</option>
             {filterOpts?.actions.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
+          </Select>
           <Input
             type="date"
             value={filters.after?.slice(0, 10) ?? ""}

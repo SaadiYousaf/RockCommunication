@@ -328,7 +328,7 @@ export function AgentPanelPage() {
                           href={c.recordingUrl} target="_blank" rel="noreferrer"
                           className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium"
                         >
-                          <Icon name="phone" size={14} /> Listen
+                          <Icon name="play" size={14} /> Listen
                         </a>
                       ) : <span className="text-ink-400">—</span>}
                     </TD>

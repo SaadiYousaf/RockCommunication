@@ -481,7 +481,7 @@ export function ChatPage() {
                 </div>
               </div>
               <Button variant="ghost" size="icon" aria-label="Refresh" onClick={() => refetch()}>
-                <Icon name="filter" size={18} />
+                <Icon name="refresh" size={18} />
               </Button>
             </div>
 

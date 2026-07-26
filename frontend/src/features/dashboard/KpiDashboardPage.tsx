@@ -162,6 +162,7 @@ export function KpiDashboardPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Analytics"
         title="KPI Dashboards"
         description="Save your favourite metric views and switch between them in one click."
         actions={

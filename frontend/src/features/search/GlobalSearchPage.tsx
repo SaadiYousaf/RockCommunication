@@ -154,7 +154,7 @@ export function GlobalSearchPage() {
         value={tab}
         onChange={(v) => setTab(v as Tab)}
         items={[
-          { value: "all",   label: <span className="inline-flex items-center gap-1.5">All <Badge tone="neutral" variant="soft">{hasQuery ? totalCount : 0}</Badge></span> },
+          { value: "all",   label: <span className="inline-flex items-center gap-1.5"><Icon name="layers" size={14} /> All <Badge tone="neutral" variant="soft">{hasQuery ? totalCount : 0}</Badge></span> },
           { value: "leads", label: <span className="inline-flex items-center gap-1.5"><Icon name="list" size={14} /> Leads <Badge tone="brand" variant="soft">{hasQuery ? leadCount : 0}</Badge></span> },
           { value: "users", label: <span className="inline-flex items-center gap-1.5"><Icon name="users" size={14} /> Users <Badge tone="info" variant="soft">{hasQuery ? userCount : 0}</Badge></span> },
         ]}
@@ -194,7 +194,7 @@ export function GlobalSearchPage() {
             <Card>
               <CardHeader title={`Leads · ${leadCount}`} subtitle="Click a row to open the lead, or dial directly." />
               <CardBody className="p-0">
-                <Table>
+                <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
                       <TH>Name</TH>
@@ -258,7 +258,7 @@ export function GlobalSearchPage() {
             <Card>
               <CardHeader title={`Users · ${userCount}`} subtitle="Members matching your query." />
               <CardBody className="p-0">
-                <Table>
+                <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
                       <TH>User</TH>

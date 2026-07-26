@@ -421,7 +421,7 @@ function RuleEditor({
         <div className="space-y-2">
           {rule.actions.map((a, i) => (
             <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start bg-ink-50/60 border hairline rounded-xl p-3">
-              <div className="col-span-1">
+              <div className="col-span-2">
                 <Input type="number" value={a.order}
                   onChange={(e) => setAction(i, { order: parseInt(e.target.value) || 1 })} />
               </div>
@@ -430,7 +430,7 @@ function RuleEditor({
                   {actionTypes.map((at) => <option key={at} value={at}>{at}</option>)}
                 </Select>
               </div>
-              <div className="col-span-7">
+              <div className="col-span-6">
                 <Textarea rows={2} placeholder='{"role":"Fronter","strategy":"round-robin"}'
                   value={a.parametersJson ?? ""}
                   onChange={(e) => setAction(i, { parametersJson: e.target.value })} />

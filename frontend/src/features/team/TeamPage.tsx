@@ -301,7 +301,9 @@ function TeamCard({
             <span className="text-[10px] font-normal normal-case text-ink-400">{team.members.length}</span>
           </div>
           {team.members.length === 0 ? (
-            <div className="text-xs text-ink-500 italic">No members on this team yet.</div>
+            <div className="flex items-center gap-2 text-xs text-ink-500 py-1">
+              <Icon name="users" size={14} className="text-ink-400" /> No members on this team yet.
+            </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               {team.members.map((m) => (

@@ -156,7 +156,7 @@ export function CallsHistoryPage() {
                     {c.recordingUrl && (
                       <a href={c.recordingUrl} target="_blank" rel="noreferrer"
                         className="text-brand-600 hover:underline text-xs inline-flex items-center gap-1">
-                        ▶ Play
+                        <Icon name="play" size={12} /> Play
                       </a>
                     )}
                   </TD>

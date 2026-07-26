@@ -90,9 +90,9 @@ export function LeadSearchPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="Search hits" value={hasQuery ? filtered.length : "—"} icon={<Icon name="search" size={16} />} />
-        <Stat label="Active filters" value={Object.values(debounced).filter(Boolean).length} />
-        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} />
-        <Stat label="Total dup leads" value={totalDupLeads} />
+        <Stat label="Active filters" value={Object.values(debounced).filter(Boolean).length} icon={<Icon name="filter" size={16} />} />
+        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} icon={<Icon name="copy" size={16} />} />
+        <Stat label="Total dup leads" value={totalDupLeads} icon={<Icon name="users" size={16} />} />
       </div>
 
       <Tabs<typeof tab>
