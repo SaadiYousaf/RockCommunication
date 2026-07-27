@@ -197,8 +197,12 @@ function LayoutInner() {
       {/* Mobile off-canvas drawer — always expanded, slides in from the left */}
       <aside
         className={cn(
+          // NOTE: no `relative` here — it would override `fixed` (Tailwind emits .relative
+          // after .fixed), pulling the drawer back into flow so it steals ~320px of the row
+          // and squishes the page into a narrow column on mobile. `fixed` already makes this
+          // a containing block for the decorative absolute children below.
           "lg:hidden fixed inset-y-0 left-0 z-50 w-[min(84vw,20rem)] flex flex-col text-ink-700",
-          "bg-gradient-to-b from-white via-white to-brand-50/60 relative overflow-hidden shadow-float",
+          "bg-gradient-to-b from-white via-white to-brand-50/60 overflow-hidden shadow-float",
           "border-r border-ink-200/70 transition-transform duration-300 ease-out-quint",
           mobileNavOpen ? "translate-x-0" : "-translate-x-full",
         )}
