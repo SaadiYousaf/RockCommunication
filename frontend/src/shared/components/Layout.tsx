@@ -162,7 +162,10 @@ function LayoutInner() {
   const primaryRole = roleLabel(auth.user?.roles[0] ?? "Member");
 
   return (
-    <div className="min-h-screen flex">
+    // overflow-x-clip is a mobile safety net: no stray-wide descendant can ever
+    // push the whole page sideways. `clip` (not `hidden`) keeps sticky headers /
+    // the fixed drawer working since it doesn't create a scroll container.
+    <div className="min-h-screen flex overflow-x-clip">
       {/* Desktop sidebar — hidden below lg, where the drawer takes over */}
       <aside
         className={cn(
