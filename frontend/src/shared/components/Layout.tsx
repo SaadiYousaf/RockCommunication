@@ -172,7 +172,9 @@ function LayoutInner() {
           "hidden lg:flex sticky top-0 h-screen flex-shrink-0 flex-col text-ink-700",
           // Light sidebar — white with a soft sky tint at the bottom, paired with a
           // hairline divider on the right. Matches the rest of the light theme.
-          "bg-gradient-to-b from-white via-white to-brand-50/60 relative overflow-hidden",
+          // (No `relative` — `sticky` already positions it + is a containing block for the
+          // decorative absolute children; keeping both invites the drawer's fixed/relative trap.)
+          "bg-gradient-to-b from-white via-white to-brand-50/60 overflow-hidden",
           "border-r border-ink-200/70",
           "transition-[width] duration-200",
           collapsed ? "w-[72px]" : "w-64 xl:w-72 2xl:w-80",
