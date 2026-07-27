@@ -9,6 +9,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 /**
  * SuperAdmin management of central (cross-agency) Submission Agents. These are SMH-level
@@ -28,6 +29,11 @@ export function SubmissionAgentsPage() {
   const [setActive] = useSetUserActiveMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
+
+  const { sorted, dirFor, toggle } = useTableSort(agents, {
+    key: "name",
+    accessors: { status: (a) => (a.isActive ? "Active" : "Inactive") },
+  });
 
   async function reactivate(a: SubmissionAgent) {
     try {
@@ -79,10 +85,10 @@ export function SubmissionAgentsPage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Email</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
+                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH><TH className="text-right">Actions</TH></TR>
               </THead>
               <TBody>
-                {agents.map((a) => (
+                {sorted.map((a) => (
                   <TR key={a.id} className={a.isActive ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30"}>
                     <TD className={"font-medium truncate max-w-[16rem] " + (a.isActive ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")}>{a.name}</TD>
                     <TD className="text-sm text-ink-600">

@@ -16,7 +16,7 @@ import {
 import type { WorkflowStage } from "../../shared/api/types";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -246,11 +246,10 @@ export function LeadsPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[260px]">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search by name, phone, or email..."
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
+              placeholder="Search by name, phone, or email…"
             />
           </div>
           <Select value={sort} onChange={(e) => setSort(e.target.value)} className="h-10 w-56">

@@ -7,6 +7,7 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const money = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -26,6 +27,9 @@ export function LicenseAgentQueuePage() {
   const { data, isLoading } = useListSalesQuery({ take: 200, sort: "soldAt-desc" });
   const items = data?.items ?? [];
   const totalCommission = items.reduce((sum, s) => sum + (s.commissionEarned ?? 0), 0);
+  const { sorted, dirFor, toggle } = useTableSort(items, {
+    accessors: { status: (s) => statusOf(s).label },
+  });
 
   return (
     <>
@@ -49,18 +53,18 @@ export function LicenseAgentQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>#</TH><TH>Customer</TH><TH>Carrier</TH><TH>Premium</TH>
-                  <TH>
+                  <TH sortDir={dirFor("saleNumber")} onClick={() => toggle("saleNumber")}>#</TH><TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                     <span className="inline-flex items-center gap-1">Status
                       <InfoHint title="Sale status" side="bottom">Pending (awaiting approval), Approved (validated by the carrier), or Funded (first draft cleared — commission payable).</InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("commissionEarned")} onClick={() => toggle("commissionEarned")}>
                     <span className="inline-flex items-center gap-1">Commission
                       <InfoHint title="Your commission" side="bottom">The approval commission you earn on this sale.</InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>
                     <span className="inline-flex items-center gap-1">Sold
                       <InfoHint title="When it was sold" side="bottom">How long ago the sale was recorded.</InfoHint>
                     </span>
@@ -69,7 +73,7 @@ export function LicenseAgentQueuePage() {
                 </TR>
               </THead>
               <TBody>
-                {items.map((s) => {
+                {sorted.map((s) => {
                   const st = statusOf(s);
                   return (
                     <TR key={s.id}>

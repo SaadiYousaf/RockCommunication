@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useCreatePayrollRunMutation, useMyCommissionsQuery, usePayrollRunsQuery } from "../../shared/api/baseApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
@@ -42,6 +43,10 @@ export function CommissionsPage() {
       .map(([rule, x]) => ({ rule, count: x.count, amount: x.amount }))
       .sort((a, b) => b.amount - a.amount);
   }, [commissions]);
+
+  const { sorted, dirFor, toggle } = useTableSort(commissions, {
+    accessors: { status: (c) => (c.paid ? "Paid" : "Unpaid") },
+  });
 
   function setRange(days: number) {
     setFrom(todayStr(-days));
@@ -162,10 +167,10 @@ export function CommissionsPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Earned</TH>
-              <TH>Rule</TH>
-              <TH>Amount</TH>
-              <TH>
+              <TH sortDir={dirFor("earnedAt")} onClick={() => toggle("earnedAt")}>Earned</TH>
+              <TH sortDir={dirFor("ruleName")} onClick={() => toggle("ruleName")}>Rule</TH>
+              <TH sortDir={dirFor("amount")} onClick={() => toggle("amount")}>Amount</TH>
+              <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                 <span className="inline-flex items-center gap-1">
                   Status
                   <InfoHint title="Paid vs Unpaid" side="top">
@@ -174,11 +179,11 @@ export function CommissionsPage() {
                   </InfoHint>
                 </span>
               </TH>
-              <TH>Note</TH>
+              <TH sortDir={dirFor("note")} onClick={() => toggle("note")}>Note</TH>
             </TR>
           </THead>
           <TBody>
-            {commissions.map((c) => (
+            {sorted.map((c) => (
               <TR key={c.id}>
                 <TD className="text-ink-600 whitespace-nowrap tabular-nums">{new Date(c.earnedAt).toLocaleString()}</TD>
                 <TD className="font-mono text-xs text-ink-700">{c.ruleName}</TD>

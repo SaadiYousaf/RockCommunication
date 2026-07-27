@@ -6,10 +6,11 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, useToast, cn,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, useToast, cn,
   type IconName,
 } from "../../shared/ui";
 import type { WorkflowRule } from "../../shared/api/types";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type Rule = {
   id: string | null;
@@ -81,6 +82,10 @@ export function WorkflowsPage() {
     };
   }, [rules, executions]);
 
+  const { sorted: sortedExecutions, dirFor: executionDir, toggle: sortExecution } = useTableSort(executions, {
+    accessors: { when: (e) => Date.parse(e.startedAt) },
+  });
+
   function openNew() {
     setEditing({
       id: null, name: "", eventType: eventTypes?.[0] ?? "lead.created",
@@ -140,10 +145,9 @@ export function WorkflowsPage() {
         </div>
         {tab === "rules" && (
           <CardBody className="border-t hairline">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
+            <SearchInput
+              value={search} onChange={setSearch}
               placeholder="Search by name, event, description…"
-              value={search} onChange={(e) => setSearch(e.target.value)}
             />
           </CardBody>
         )}
@@ -192,14 +196,14 @@ export function WorkflowsPage() {
               <Table className="border-0 shadow-none rounded-none">
                 <THead>
                   <TR>
-                    <TH>When</TH>
-                    <TH><span className="inline-flex items-center gap-1">Event<InfoHint title="Triggering event" side="bottom">The pipeline event that fired this rule (e.g. sale.validated = approved by the carrier, sale.funded = first payment cleared).</InfoHint></span></TH>
-                    <TH>Status</TH>
-                    <TH>Error</TH>
+                    <TH sortDir={executionDir("when")} onClick={() => sortExecution("when")}>When</TH>
+                    <TH sortDir={executionDir("eventType")} onClick={() => sortExecution("eventType")}><span className="inline-flex items-center gap-1">Event<InfoHint title="Triggering event" side="bottom">The pipeline event that fired this rule (e.g. sale.validated = approved by the carrier, sale.funded = first payment cleared).</InfoHint></span></TH>
+                    <TH sortDir={executionDir("status")} onClick={() => sortExecution("status")}>Status</TH>
+                    <TH sortDir={executionDir("error")} onClick={() => sortExecution("error")}>Error</TH>
                   </TR>
                 </THead>
                 <TBody>
-                  {executions.map((e) => (
+                  {sortedExecutions.map((e) => (
                     <TR key={e.id}>
                       <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.startedAt).toLocaleString()}</TD>
                       <TD><Badge tone={eventTone[e.eventType] ?? "neutral"} variant="soft" dot>{e.eventType}</Badge></TD>

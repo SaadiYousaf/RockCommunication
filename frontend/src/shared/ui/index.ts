@@ -1,6 +1,7 @@
 export { cn } from "./cn";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button";
 export { Input, Textarea, Select } from "./Input";
+export { SearchInput } from "./SearchInput";
 export { useSecureEntry, TYPING_ONLY_ROLES } from "./secureEntry";
 export { Card, CardHeader, CardBody, CardFooter } from "./Card";
 export { Badge, type BadgeTone } from "./Badge";

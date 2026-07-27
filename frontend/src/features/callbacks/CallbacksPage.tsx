@@ -6,6 +6,7 @@ import {
   Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type Bucket = "overdue" | "today" | "upcoming" | "completed" | "all";
 
@@ -61,6 +62,10 @@ export function CallbacksPage() {
   }, [callbacks, tab]);
 
   const stats = { overdue: buckets.overdue, upcoming: buckets.today + buckets.upcoming, done: buckets.completed };
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: { status: (c) => (c.completed ? "Completed" : "Pending") },
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -147,15 +152,15 @@ export function CallbacksPage() {
         <Table>
           <THead>
             <TR>
-              <TH>When</TH>
-              <TH>Lead</TH>
-              <TH>Reason</TH>
-              <TH>Status</TH>
+              <TH sortDir={dirFor("scheduledFor")} onClick={() => toggle("scheduledFor")}>When</TH>
+              <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Lead</TH>
+              <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
+              <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
               <TH className="text-right">Actions</TH>
             </TR>
           </THead>
           <TBody>
-            {filtered.map((c) => {
+            {sorted.map((c) => {
               const w = formatWhen(c.scheduledFor);
               return (
                 <TR key={c.id}>

@@ -1,6 +1,7 @@
 import { roleLabel } from "../../shared/constants/roles";
 import { useMemo, useState } from "react";
 import { useListUsersQuery } from "../../shared/api/baseApi";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
   Avatar, Badge, Card, CardBody, EmptyState, Icon, Input, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
@@ -35,6 +36,11 @@ export function UsersPage() {
         u.roles.some((r) => r.toLowerCase().includes(q));
     });
   }, [users, search, filterRole]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    key: "userName",
+    accessors: { role: (u) => u.roles[0] ?? "" },
+  });
 
   const stats = useMemo(() => {
     const items = users ?? [];
@@ -122,13 +128,13 @@ export function UsersPage() {
         <Table>
           <THead>
             <TR>
-              <TH>User</TH>
-              <TH>Email</TH>
-              <TH>Roles</TH>
+              <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
+              <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
+              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
             </TR>
           </THead>
           <TBody>
-            {filtered.map((u) => (
+            {sorted.map((u) => (
               <TR key={u.id}>
                 <TD>
                   <div className="flex items-center gap-3">

@@ -6,11 +6,12 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   New: ["Fronted", "Lost"],
@@ -75,6 +76,13 @@ export function MyQueuePage() {
     });
   }, [leads, filter, search]);
 
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: {
+      name: (l) => `${l.firstName} ${l.lastName}`.trim(),
+      stage: (l) => stageOf(l.stage),
+    },
+  });
+
   async function dialFromRow(id: string, name: string) {
     try {
       await dial({ leadId: id }).unwrap();
@@ -119,10 +127,9 @@ export function MyQueuePage() {
 
       <Card className="mb-4">
         <CardBody>
-          <Input
-            leftIcon={<Icon name="search" size={16} />}
-            placeholder="Search my queue by name, phone, or email..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder="Search my queue by name, phone, or email…"
           />
         </CardBody>
         <div className="px-5 -mt-2 pb-1 overflow-x-auto">
@@ -154,16 +161,16 @@ export function MyQueuePage() {
         <Table>
           <THead>
             <TR>
-              <TH>Lead</TH>
-              <TH>Phone</TH>
-              <TH>
+              <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Lead</TH>
+              <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
+              <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>
                 <span className="inline-flex items-center gap-1">Stage
                   <InfoHint title="Pipeline stage" side="bottom">
                     The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
                   </InfoHint>
                 </span>
               </TH>
-              <TH>
+              <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>
                 <span className="inline-flex items-center gap-1">Waiting
                   <InfoHint title="Time in your queue" side="bottom">How long this lead has been waiting for your next action — red is going stale.</InfoHint>
                 </span>
@@ -172,7 +179,7 @@ export function MyQueuePage() {
             </TR>
           </THead>
           <TBody>
-            {filtered.map((l) => {
+            {sorted.map((l) => {
               const stage = stageOf(l.stage);
               const name = `${l.firstName} ${l.lastName}`.trim();
               const next = NEXT_STAGES[stage];

@@ -7,7 +7,7 @@ import {
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import {
   VALIDATOR_STATUSES as STATUSES,
@@ -15,6 +15,7 @@ import {
   VALIDATOR_STATUS_LABEL as LABEL,
   VALIDATOR_STATUS_TONE as TONE,
 } from "../../shared/constants/intake";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const money = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
@@ -27,6 +28,9 @@ export function ValidateQueuePage() {
   const [q, setQ] = useState("");
   const filtered = (queue ?? []).filter((s) =>
     !q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: { status: (s) => LABEL[s.status] },
+  });
 
   return (
     <>
@@ -36,7 +40,7 @@ export function ValidateQueuePage() {
       />
       <Card>
         <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} sale(s)</span> : undefined}
-          action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
+          action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title="No sales to submit" description={q ? "No matches in this queue." : "Sales appear here as soon as a closer completes one."} />
@@ -44,8 +48,8 @@ export function ValidateQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>Customer</TH><TH>Agency</TH><TH>Carrier</TH><TH>Premium</TH><TH>Closer</TH>
-                  <TH>
+                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
+                  <TH sortDir={dirFor("licenseAgentName")} onClick={() => toggle("licenseAgentName")}>
                     <span className="inline-flex items-center gap-1">
                       Agent
                       <InfoHint title="License Agent" side="bottom">
@@ -53,7 +57,7 @@ export function ValidateQueuePage() {
                       </InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                     <span className="inline-flex items-center gap-1">
                       Status
                       <InfoHint title="Submission statuses" side="bottom">
@@ -61,14 +65,14 @@ export function ValidateQueuePage() {
                       </InfoHint>
                     </span>
                   </TH>
-                  <TH>Sold</TH>
+                  <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>Sold</TH>
                   {/* Pinned to the right edge so the actions stay visible however wide the table
                       gets — otherwise "Update" scrolls off-screen on narrower viewports. */}
                   <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                 </TR>
               </THead>
               <TBody>
-                {filtered.map((s) => (
+                {sorted.map((s) => (
                   <TR key={s.saleId}>
                     <TD>
                       <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>

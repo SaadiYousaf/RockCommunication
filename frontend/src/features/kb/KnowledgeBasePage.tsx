@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGetKbArticleQuery, useSearchKbQuery, useUpsertKbArticleMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Textarea, useToast, cn,
+  SearchInput, Skeleton, Textarea, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 
@@ -44,10 +44,9 @@ export function KnowledgeBasePage() {
         {/* List */}
         <aside className="col-span-12 lg:col-span-4 surface flex flex-col overflow-hidden">
           <div className="p-4 border-b hairline">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search articles..."
-              value={q} onChange={(e) => setQ(e.target.value)}
+            <SearchInput
+              value={q} onChange={setQ}
+              placeholder="Search articles…"
             />
           </div>
           <div className="flex-1 overflow-y-auto">

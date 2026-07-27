@@ -9,6 +9,7 @@ import {
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, type IconName,
 } from "../../shared/ui";
 import type { WrapUpCode } from "../../shared/api/types";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type AgentStatus = "Available" | "OnCall" | "Break" | "Lunch" | "Training" | "Meeting" | "Offline";
 
@@ -65,6 +66,8 @@ export function AgentPanelPage() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [session]);
+
+  const { sorted: sortedCalls, dirFor, toggle } = useTableSort(recentCalls);
 
   const unwrapped = recentCalls?.find((c) => c.endedAt && !c.wrapUpCode);
   const currentStatus: AgentStatus = (session?.currentStatus as AgentStatus) ?? "Offline";
@@ -288,11 +291,11 @@ export function AgentPanelPage() {
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
-                  <TH>Started</TH>
-                  <TH>Lead</TH>
-                  <TH>Direction</TH>
-                  <TH>Status</TH>
-                  <TH>
+                  <TH sortDir={dirFor("initiatedAt")} onClick={() => toggle("initiatedAt")}>Started</TH>
+                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Lead</TH>
+                  <TH sortDir={dirFor("direction")} onClick={() => toggle("direction")}>Direction</TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
+                  <TH sortDir={dirFor("wrapUpCode")} onClick={() => toggle("wrapUpCode")}>
                     <span className="inline-flex items-center gap-1">
                       Wrap-up
                       <InfoHint title="Wrap-up" side="top">
@@ -304,7 +307,7 @@ export function AgentPanelPage() {
                 </TR>
               </THead>
               <TBody>
-                {recentCalls.map((c) => (
+                {sortedCalls.map((c) => (
                   <TR key={c.id}>
                     <TD className="text-ink-600 whitespace-nowrap tabular-nums text-xs">{new Date(c.initiatedAt).toLocaleString()}</TD>
                     <TD>

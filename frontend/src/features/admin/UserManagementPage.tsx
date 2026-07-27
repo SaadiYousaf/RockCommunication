@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -103,16 +103,10 @@ export function UserManagementPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[260px]">
-            <Input
-              type="search"
-              // Stop the browser password manager from treating this as a username field and
-              // auto-filling a saved account (e.g. "superadmin") when the reset-password modal opens.
-              autoComplete="off"
-              name="user-search"
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search by name, email, or role…"
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
+              placeholder="Search by name, email, or role…"
             />
           </div>
           {users && (
@@ -158,7 +152,7 @@ export function UserManagementPage() {
               // `true` for older payloads so we don't accidentally grey out everyone.
               const active = u.isActive ?? true;
               return (
-              <TR key={u.id} className={active ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30"}>
+              <TR key={u.id} className={active ? "" : "bg-rose-50/30"}>
                 <TD>
                   <div className="flex items-center gap-3">
                     <Avatar name={u.userName} size={36} className={active ? "" : "opacity-50 grayscale"} />

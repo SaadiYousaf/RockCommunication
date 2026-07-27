@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
 } from "../../shared/ui";
 
 type Tone = "brand" | "info" | "success" | "warning" | "danger" | "neutral";
@@ -142,11 +142,10 @@ export function AuditLogPage() {
       <Card className="mb-4">
         <CardBody className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="lg:col-span-2">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search entity, user, changes, IP..."
+            <SearchInput
               value={filters.search ?? ""}
-              onChange={(e) => update("search", e.target.value || undefined)}
+              onChange={(v) => update("search", v || undefined)}
+              placeholder="Search entity, user, changes, IP…"
             />
           </div>
           <Select
@@ -219,7 +218,7 @@ export function AuditLogPage() {
                   return (
                     <Fragment key={e.id}>
                       <TR
-                        className={hasChanges ? "cursor-pointer hover:bg-ink-50/60" : ""}
+                        className={hasChanges ? "cursor-pointer" : ""}
                         onClick={hasChanges ? () => setExpanded(isOpen ? null : e.id) : undefined}
                       >
                         <TD className="whitespace-nowrap">

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useListCampaignsQuery, useListScriptsQuery, useUpsertScriptMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Textarea, useToast,
+  SearchInput, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -71,10 +71,9 @@ export function ScriptsPage() {
 
       <Card className="mb-4">
         <CardBody>
-          <Input
-            leftIcon={<Icon name="search" size={16} />}
-            placeholder="Search scripts by name, content, stage, or role..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
+          <SearchInput
+            placeholder="Search scripts by name, content, stage, or role…"
+            value={search} onChange={setSearch}
           />
         </CardBody>
       </Card>

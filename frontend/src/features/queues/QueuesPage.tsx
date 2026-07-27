@@ -10,6 +10,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 export function QueuesPage() {
   return (
@@ -35,6 +36,7 @@ function QueueSection() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [skill, setSkill] = useState("");
+  const { sorted, dirFor, toggle } = useTableSort(queues);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,14 +78,16 @@ function QueueSection() {
           <Table className="border-0 shadow-none rounded-none">
             <THead>
               <TR>
-                <TH>Name</TH><TH>Phone</TH><TH>Skill</TH>
-                <TH><span className="inline-flex items-center gap-1">Strategy<InfoHint title="Routing strategy" side="bottom">How the queue picks which available agent gets the next call (e.g. longest-idle = the agent who has waited longest since their last call).</InfoHint></span></TH>
-                <TH><span className="inline-flex items-center gap-1">Max wait<InfoHint title="Max wait" side="bottom">The longest a caller waits in this queue before overflow handling takes over.</InfoHint></span></TH>
-                <TH>Status</TH>
+                <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
+                <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
+                <TH sortDir={dirFor("requiredSkillCode")} onClick={() => toggle("requiredSkillCode")}>Skill</TH>
+                <TH sortDir={dirFor("strategy")} onClick={() => toggle("strategy")}><span className="inline-flex items-center gap-1">Strategy<InfoHint title="Routing strategy" side="bottom">How the queue picks which available agent gets the next call (e.g. longest-idle = the agent who has waited longest since their last call).</InfoHint></span></TH>
+                <TH sortDir={dirFor("maxWaitSeconds")} onClick={() => toggle("maxWaitSeconds")}><span className="inline-flex items-center gap-1">Max wait<InfoHint title="Max wait" side="bottom">The longest a caller waits in this queue before overflow handling takes over.</InfoHint></span></TH>
+                <TH sortDir={dirFor("isActive")} onClick={() => toggle("isActive")}>Status</TH>
               </TR>
             </THead>
             <TBody>
-              {queues.map((q) => (
+              {sorted.map((q) => (
                 <TR key={q.id}>
                   <TD className="font-medium text-ink-900">{q.name}</TD>
                   <TD className="font-mono text-ink-700 text-xs">{q.phoneNumber || <span className="text-ink-400">—</span>}</TD>
@@ -212,6 +216,7 @@ function PublicEndpointsSection() {
   const [open, setOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const { sorted, dirFor, toggle } = useTableSort(endpoints);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -274,11 +279,13 @@ function PublicEndpointsSection() {
           <Table className="border-0 shadow-none rounded-none">
             <THead>
               <TR>
-                <TH>Slug</TH><TH>Leads captured</TH><TH>Status</TH>
+                <TH sortDir={dirFor("slug")} onClick={() => toggle("slug")}>Slug</TH>
+                <TH sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>Leads captured</TH>
+                <TH sortDir={dirFor("isActive")} onClick={() => toggle("isActive")}>Status</TH>
               </TR>
             </THead>
             <TBody>
-              {endpoints.map((e) => (
+              {sorted.map((e) => (
                 <TR key={e.id}>
                   <TD className="font-mono text-xs text-ink-800 whitespace-nowrap">/api/public/leads/{e.slug}</TD>
                   <TD className="font-semibold text-ink-900 tabular-nums">{e.leadCount}</TD>

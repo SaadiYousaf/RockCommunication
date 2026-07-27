@@ -4,7 +4,7 @@ import {
   BarChart3, ShieldCheck, Target, Flag, Calendar, ListChecks, Plus, LogOut, Check, X,
   ArrowRight, Menu, Inbox, Star, Building2, FileText, Filter, Clock, UserPlus,
   // Polish / actions
-  ChevronRight, ChevronLeft, ChevronDown, ChevronUp, MoreHorizontal, MoreVertical,
+  ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ChevronsUpDown, MoreHorizontal, MoreVertical,
   Pencil, Trash2, Copy, Download, Upload, ExternalLink, Eye, EyeOff, Lock, Unlock,
   RefreshCw, Loader2, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
   Mail, Send, Paperclip, Archive, Pin, Tag, Bookmark, Sparkles, Zap, TrendingUp,
@@ -63,6 +63,7 @@ const icons = {
   chevronLeft:  ChevronLeft,
   chevronDown:  ChevronDown,
   chevronUp:    ChevronUp,
+  chevronsUpDown: ChevronsUpDown,
   moreH:        MoreHorizontal,
   moreV:        MoreVertical,
   edit:         Pencil,

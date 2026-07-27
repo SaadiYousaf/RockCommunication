@@ -7,9 +7,10 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 export function LeadListsPage() {
   const { data: lists, isLoading } = useLeadListsQuery();
@@ -31,6 +32,13 @@ export function LeadListsPage() {
     const q = search.trim().toLowerCase();
     return q ? lists.filter((l) => l.name.toLowerCase().includes(q)) : lists;
   }, [lists, search]);
+
+  const { sorted, dirFor, toggle: sortBy } = useTableSort(filtered, {
+    accessors: {
+      leadCount: (l) => l.leadCount ?? 0,
+      status: (l) => (l.isActive ? "Active" : "Inactive"),
+    },
+  });
 
   const activeList = lists?.find((l) => l.id === activeListId);
 
@@ -95,10 +103,9 @@ export function LeadListsPage() {
 
       <Card className="mb-4">
         <CardBody>
-          <Input
-            leftIcon={<Icon name="search" size={16} />}
-            placeholder="Search lists by name..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder="Search lists by name…"
           />
         </CardBody>
       </Card>
@@ -118,14 +125,14 @@ export function LeadListsPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Name</TH>
-              <TH>Leads</TH>
-              <TH>Status</TH>
+              <TH sortDir={dirFor("name")} onClick={() => sortBy("name")}>Name</TH>
+              <TH sortDir={dirFor("leadCount")} onClick={() => sortBy("leadCount")}>Leads</TH>
+              <TH sortDir={dirFor("status")} onClick={() => sortBy("status")}>Status</TH>
               <TH className="text-right">Actions</TH>
             </TR>
           </THead>
           <TBody>
-            {filtered.map((l) => {
+            {sorted.map((l) => {
               const isActive = activeListId === l.id;
               return (
                 <TR key={l.id} className={cn(isActive && "bg-brand-50/40")}>

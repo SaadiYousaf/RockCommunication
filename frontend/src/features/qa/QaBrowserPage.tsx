@@ -4,6 +4,7 @@ import {
   Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 function scoreTone(pct: number): "success" | "warning" | "danger" {
   if (pct >= 85) return "success";
@@ -22,6 +23,17 @@ export function QaBrowserPage() {
     const m = new Map((directory ?? []).map((u) => [u.id, u.userName]));
     return (id: string) => m.get(id) ?? id.slice(0, 8);
   }, [directory]);
+
+  const { sorted: sortedScorecards, dirFor: scorecardDir, toggle: sortScorecard } = useTableSort(scorecards, {
+    accessors: { agent: (s) => nameOf(s.agentUserId) },
+  });
+  const { sorted: sortedReviews, dirFor: reviewDir, toggle: sortReview } = useTableSort(reviews, {
+    accessors: {
+      agent: (r) => nameOf(r.agentUserId),
+      reviewer: (r) => nameOf(r.reviewerUserId),
+      when: (r) => Date.parse(r.reviewedAt),
+    },
+  });
 
   return (
     <>
@@ -63,15 +75,15 @@ export function QaBrowserPage() {
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
-                  <TH>Agent</TH>
-                  <TH>Reviews</TH>
-                  <TH><span className="inline-flex items-center gap-1">Avg %<InfoHint title="Avg %" side="top">The agent's average call-quality score as a percentage of the maximum across their reviews in this period.</InfoHint></span></TH>
-                  <TH><span className="inline-flex items-center gap-1">Avg score<InfoHint title="Avg score" side="top">The agent's average raw points scored across their reviews in this period.</InfoHint></span></TH>
+                  <TH sortDir={scorecardDir("agent")} onClick={() => sortScorecard("agent")}>Agent</TH>
+                  <TH sortDir={scorecardDir("reviewCount")} onClick={() => sortScorecard("reviewCount")}>Reviews</TH>
+                  <TH sortDir={scorecardDir("avgPercentage")} onClick={() => sortScorecard("avgPercentage")}><span className="inline-flex items-center gap-1">Avg %<InfoHint title="Avg %" side="top">The agent's average call-quality score as a percentage of the maximum across their reviews in this period.</InfoHint></span></TH>
+                  <TH sortDir={scorecardDir("avgScore")} onClick={() => sortScorecard("avgScore")}><span className="inline-flex items-center gap-1">Avg score<InfoHint title="Avg score" side="top">The agent's average raw points scored across their reviews in this period.</InfoHint></span></TH>
                   <TH><span className="inline-flex items-center gap-1">Performance<InfoHint title="Performance" side="left">Colour band for the average score: green at or above 85%, amber at or above 70%, red below.</InfoHint></span></TH>
                 </TR>
               </THead>
               <TBody>
-                {scorecards.map((s) => (
+                {sortedScorecards.map((s) => (
                   <TR key={s.agentUserId}>
                     <TD>
                       <div className="flex items-center gap-3 min-w-0">
@@ -124,16 +136,16 @@ export function QaBrowserPage() {
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
-                  <TH>When</TH>
-                  <TH>Agent</TH>
-                  <TH>Reviewer</TH>
-                  <TH>Score</TH>
-                  <TH>%</TH>
-                  <TH>Notes</TH>
+                  <TH sortDir={reviewDir("when")} onClick={() => sortReview("when")}>When</TH>
+                  <TH sortDir={reviewDir("agent")} onClick={() => sortReview("agent")}>Agent</TH>
+                  <TH sortDir={reviewDir("reviewer")} onClick={() => sortReview("reviewer")}>Reviewer</TH>
+                  <TH sortDir={reviewDir("totalScore")} onClick={() => sortReview("totalScore")}>Score</TH>
+                  <TH sortDir={reviewDir("percentage")} onClick={() => sortReview("percentage")}>%</TH>
+                  <TH sortDir={reviewDir("notes")} onClick={() => sortReview("notes")}>Notes</TH>
                 </TR>
               </THead>
               <TBody>
-                {reviews.map((r) => (
+                {sortedReviews.map((r) => (
                   <TR key={r.id}>
                     <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(r.reviewedAt).toLocaleString()}</TD>
                     <TD className="text-xs text-ink-700 truncate">{nameOf(r.agentUserId)}</TD>

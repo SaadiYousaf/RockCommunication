@@ -13,6 +13,7 @@ import {
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type Filters = { phone: string; email: string; name: string; state: string; stage: string };
 
@@ -59,6 +60,12 @@ export function LeadSearchPage() {
       return true;
     });
   }, [results, debounced.state, debounced.stage]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: {
+      name: (l) => `${l.firstName} ${l.lastName}`,
+    },
+  });
 
   const { data: duplicates, isLoading: dupLoading, refetch: refetchDups } = useDuplicateLeadsQuery();
   const [dialLead] = useDialLeadMutation();
@@ -188,18 +195,18 @@ export function LeadSearchPage() {
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
-                      <TH>Lead</TH>
-                      <TH>Phone</TH>
-                      <TH>Email</TH>
-                      <TH>State</TH>
-                      <TH>Stage</TH>
-                      <TH>Disposition</TH>
-                      <TH>Created</TH>
+                      <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Lead</TH>
+                      <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
+                      <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
+                      <TH sortDir={dirFor("state")} onClick={() => toggle("state")}>State</TH>
+                      <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>Stage</TH>
+                      <TH sortDir={dirFor("disposition")} onClick={() => toggle("disposition")}>Disposition</TH>
+                      <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>Created</TH>
                       <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {filtered.map((l) => (
+                    {sorted.map((l) => (
                       <TR key={l.id}>
                         <TD>
                           <Link to={`/leads/${l.id}`} className="flex items-center gap-3 group">

@@ -8,9 +8,10 @@ import {
 import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/types";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Select,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
@@ -20,12 +21,18 @@ export function VerifyQueuePage() {
   const [q, setQ] = useState("");
   const filtered = (queue ?? []).filter((l) =>
     !q.trim() || `${l.firstName} ${l.lastName} ${l.phoneNumber} ${l.city ?? ""} ${l.state ?? ""} ${l.email ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: {
+      name: (l) => `${l.firstName} ${l.lastName}`,
+      location: (l) => [l.city, l.state].filter(Boolean).join(", "),
+    },
+  });
   return (
     <>
       <PageHeader title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
       <Card>
         <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
-          action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
+          action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title="Queue is empty" description={q ? "No matches in this queue." : "New fronted leads will appear here."} />
@@ -33,13 +40,13 @@ export function VerifyQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH>
-                  <TH>
+                  <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
+                  <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>
                     <span className="inline-flex items-center gap-1">Waiting
                       <InfoHint title="Waiting time" side="bottom">How long this lead has sat in the queue — red means it's going stale. Work the oldest first.</InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("score")} onClick={() => toggle("score")}>
                     <span className="inline-flex items-center gap-1">Priority
                       <InfoHint title="Lead priority score" side="bottom">The lead's likelihood-to-convert score — higher is hotter.</InfoHint>
                     </span>
@@ -55,7 +62,7 @@ export function VerifyQueuePage() {
                 </TR>
               </THead>
               <TBody>
-                {filtered.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} />)}
+                {sorted.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} />)}
               </TBody>
             </Table>
           )}

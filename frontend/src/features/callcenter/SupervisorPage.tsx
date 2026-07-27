@@ -4,9 +4,10 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "danger"> = {
   Available: "success", OnCall: "info", Break: "warning", Lunch: "warning",
@@ -59,6 +60,10 @@ export function SupervisorPage() {
     return items;
   }, [agents, search, statusFilter]);
 
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: { duration: (a) => parseDuration(a.duration) },
+  });
+
   async function force(userId: string, status: string, label: string, reason: string) {
     try {
       await forceStatus({ id: userId, status, reason }).unwrap();
@@ -100,10 +105,9 @@ export function SupervisorPage() {
       <Card className="mb-4">
         <CardBody className="flex flex-wrap gap-3 items-center">
           <div className="flex-1 min-w-[260px]">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search by agent name..."
-              value={search} onChange={(e) => setSearch(e.target.value)}
+            <SearchInput
+              placeholder="Search by agent name…"
+              value={search} onChange={setSearch}
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -137,10 +141,10 @@ export function SupervisorPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Agent</TH>
-              <TH>Status</TH>
-              <TH>Reason</TH>
-              <TH>
+              <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>Agent</TH>
+              <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
+              <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
+              <TH sortDir={dirFor("duration")} onClick={() => toggle("duration")}>
                 <span className="inline-flex items-center gap-1">
                   Duration
                   <InfoHint title="Duration" side="top">
@@ -148,7 +152,7 @@ export function SupervisorPage() {
                   </InfoHint>
                 </span>
               </TH>
-              <TH>Call</TH>
+              <TH sortDir={dirFor("currentCallStatus")} onClick={() => toggle("currentCallStatus")}>Call</TH>
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                 <span className="inline-flex items-center gap-1">
                   Actions
@@ -160,7 +164,7 @@ export function SupervisorPage() {
             </TR>
           </THead>
           <TBody>
-            {filtered.map((a) => (
+            {sorted.map((a) => (
               <TR key={a.userId}>
                 <TD>
                   <div className="flex items-center gap-3">

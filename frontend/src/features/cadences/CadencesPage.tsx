@@ -7,6 +7,7 @@ import {
 } from "../../shared/ui";
 import type { Cadence, CadenceStep } from "../../shared/api/types";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const KINDS = ["Call", "Sms", "Email", "Wait"] as const;
 
@@ -39,6 +40,7 @@ export function CadencesPage() {
   const toast = useToast();
 
   const [editing, setEditing] = useState<any | null>(null);
+  const { sorted: sortedEnrollments, dirFor, toggle } = useTableSort(enrollments);
 
   function openNew() {
     setEditing({
@@ -146,15 +148,15 @@ export function CadencesPage() {
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
-                  <TH>Enrolled</TH>
-                  <TH>Lead</TH>
-                  <TH>Cadence</TH>
-                  <TH>Step</TH>
-                  <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Enrollment status" side="bottom">Where this lead is in the cadence run — Stopped means the sequence ended early (e.g. they replied and "stop if contacted" fired).</InfoHint></span></TH>
+                  <TH sortDir={dirFor("enrolledAt")} onClick={() => toggle("enrolledAt")}>Enrolled</TH>
+                  <TH sortDir={dirFor("leadId")} onClick={() => toggle("leadId")}>Lead</TH>
+                  <TH sortDir={dirFor("cadenceId")} onClick={() => toggle("cadenceId")}>Cadence</TH>
+                  <TH sortDir={dirFor("currentStepOrder")} onClick={() => toggle("currentStepOrder")}>Step</TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Enrollment status" side="bottom">Where this lead is in the cadence run — Stopped means the sequence ended early (e.g. they replied and "stop if contacted" fired).</InfoHint></span></TH>
                 </TR>
               </THead>
               <TBody>
-                {enrollments.map((e) => (
+                {sortedEnrollments.map((e) => (
                   <TR key={e.id}>
                     <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.enrolledAt).toLocaleString()}</TD>
                     <TD className="font-mono text-xs text-ink-700 tabular-nums">{e.leadId.slice(0, 8)}…</TD>

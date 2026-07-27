@@ -62,17 +62,21 @@ export function TH({ className, children, sortDir, numeric, ...rest }: ThProps) 
   return (
     <th
       className={cn(
-        "font-semibold px-4 py-2.5 select-none whitespace-nowrap",
+        "group font-semibold px-4 py-2.5 select-none whitespace-nowrap",
         numeric ? "text-right" : "text-left",
         sortDir !== undefined && "cursor-pointer hover:text-ink-800 transition-colors",
         className,
       )}
       {...rest}
     >
-      <span className="inline-flex items-center gap-1.5 align-middle">
+      <span className={cn("inline-flex items-center gap-1.5 align-middle", numeric && "flex-row-reverse")}>
         {children}
         {sortDir === "asc" && <Icon name="chevronUp" size={12} className="text-brand-600" />}
         {sortDir === "desc" && <Icon name="chevronDown" size={12} className="text-brand-600" />}
+        {/* Sortable but not the active column — advertise it faintly, brighten on header hover. */}
+        {sortDir === null && (
+          <Icon name="chevronsUpDown" size={12} className="text-ink-300 group-hover:text-ink-500 transition-colors" />
+        )}
       </span>
     </th>
   );

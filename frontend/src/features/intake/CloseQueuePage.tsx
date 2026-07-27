@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
@@ -19,6 +20,13 @@ export function CloseQueuePage() {
   const toast = useToast();
   const filtered = (queue ?? []).filter((l) =>
     !q.trim() || `${l.firstName} ${l.lastName} ${l.phoneNumber} ${l.city ?? ""} ${l.state ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+    accessors: {
+      name: (l) => `${l.firstName} ${l.lastName}`,
+      location: (l) => [l.city, l.state].filter(Boolean).join(", "),
+      application: (l) => (l.hasApplication ? "Started" : "New"),
+    },
+  });
 
   async function onAdd(input: IntakeLeadInput) {
     try {
@@ -45,7 +53,7 @@ export function CloseQueuePage() {
       />
       <Card>
         <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
-          action={<Input placeholder="Search this queue…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} className="w-56" />} />
+          action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description={q ? "No matches in this queue." : "Verified leads will appear here. Use “Add lead” to start one yourself."}
@@ -53,18 +61,18 @@ export function CloseQueuePage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH>Name</TH><TH>Phone</TH><TH>Location</TH><TH>Age</TH>
-                  <TH>
+                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
+                  <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>
                     <span className="inline-flex items-center gap-1">Waiting
                       <InfoHint title="Waiting time" side="bottom">How long this verified lead has waited for a closer — red means it's going stale. Work the oldest first.</InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("score")} onClick={() => toggle("score")}>
                     <span className="inline-flex items-center gap-1">Priority
                       <InfoHint title="Lead priority score" side="bottom">The lead's likelihood-to-convert score — higher is hotter.</InfoHint>
                     </span>
                   </TH>
-                  <TH>
+                  <TH sortDir={dirFor("application")} onClick={() => toggle("application")}>
                   <span className="inline-flex items-center gap-1">
                     Application
                     <InfoHint title="Closer statuses" side="bottom">
@@ -74,7 +82,7 @@ export function CloseQueuePage() {
                 </TH><TH></TH></TR>
               </THead>
               <TBody>
-                {filtered.map((l) => (
+                {sorted.map((l) => (
                   <TR key={l.id}>
                     <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
                     <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{l.phoneNumber}</TD>

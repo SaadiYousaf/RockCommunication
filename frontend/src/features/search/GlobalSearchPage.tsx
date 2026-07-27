@@ -9,10 +9,11 @@ import {
 } from "../../shared/api/baseApi";
 import type { Lead, UserSummary } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input,
-  PageHeader, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon,
+  PageHeader, SearchInput, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 
 function formatPhone(p?: string | null) {
@@ -86,6 +87,13 @@ export function GlobalSearchPage() {
     );
   }, [allUsers, debounced, hasQuery]);
 
+  const { sorted: sortedUsers, dirFor: userDir, toggle: sortUser } = useTableSort(matchingUsers, {
+    accessors: {
+      roles: (u) => u.roles[0] ?? "",
+      modules: (u) => u.modules?.length ?? 0,
+    },
+  });
+
   const leadCount = leads?.length ?? 0;
   const userCount = matchingUsers.length;
   const totalCount = leadCount + userCount;
@@ -114,22 +122,10 @@ export function GlobalSearchPage() {
 
       <Card className="mb-6">
         <CardBody>
-          <Input
-            placeholder="Search by name, phone, email, role…"
+          <SearchInput
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            leftIcon={<Icon name="search" size={16} />}
-            rightSlot={
-              query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="text-xs text-ink-500 hover:text-ink-800 px-2"
-                >
-                  Clear
-                </button>
-              ) : undefined
-            }
+            onChange={setQuery}
+            placeholder="Search by name, phone, email, role…"
             autoFocus
           />
           <div className="mt-3 flex items-center gap-2 text-xs text-ink-500">
@@ -267,14 +263,14 @@ export function GlobalSearchPage() {
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
-                      <TH>User</TH>
-                      <TH>Email</TH>
-                      <TH>Roles</TH>
-                      <TH>Modules</TH>
+                      <TH sortDir={userDir("userName")} onClick={() => sortUser("userName")}>User</TH>
+                      <TH sortDir={userDir("email")} onClick={() => sortUser("email")}>Email</TH>
+                      <TH sortDir={userDir("roles")} onClick={() => sortUser("roles")}>Roles</TH>
+                      <TH sortDir={userDir("modules")} onClick={() => sortUser("modules")}>Modules</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {matchingUsers.map((u) => (
+                    {sortedUsers.map((u) => (
                       <TR key={u.id}>
                         <TD>
                           <div className="flex items-center gap-2.5">

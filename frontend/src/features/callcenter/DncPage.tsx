@@ -3,9 +3,10 @@ import { useMemo, useState } from "react";
 import { useAddDncMutation, useListDncQuery, useRemoveDncMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 export function DncPage() {
   const { data: list, isLoading } = useListDncQuery();
@@ -28,6 +29,8 @@ export function DncPage() {
       e.reason?.toLowerCase().includes(q),
     );
   }, [list, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,10 +72,9 @@ export function DncPage() {
 
       <Card className="mb-4">
         <CardBody>
-          <Input
-            leftIcon={<Icon name="search" size={16} />}
-            placeholder="Search by phone or reason..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
+          <SearchInput
+            placeholder="Search by phone or reason…"
+            value={search} onChange={setSearch}
           />
         </CardBody>
       </Card>
@@ -94,9 +96,9 @@ export function DncPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Phone</TH>
-              <TH>Reason</TH>
-              <TH>
+              <TH sortDir={dirFor("phoneNormalized")} onClick={() => toggle("phoneNormalized")}>Phone</TH>
+              <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
+              <TH sortDir={dirFor("source")} onClick={() => toggle("source")}>
                 <span className="inline-flex items-center gap-1">
                   Source
                   <InfoHint title="Source" side="top">
@@ -104,7 +106,7 @@ export function DncPage() {
                   </InfoHint>
                 </span>
               </TH>
-              <TH>
+              <TH sortDir={dirFor("expiresAt")} onClick={() => toggle("expiresAt")}>
                 <span className="inline-flex items-center gap-1">
                   Expires
                   <InfoHint title="Expires" side="top">
@@ -116,7 +118,7 @@ export function DncPage() {
             </TR>
           </THead>
           <TBody>
-            {filtered.map((e) => {
+            {sorted.map((e) => {
               const expired = e.expiresAt && new Date(e.expiresAt) <= new Date();
               return (
                 <TR key={e.id}>

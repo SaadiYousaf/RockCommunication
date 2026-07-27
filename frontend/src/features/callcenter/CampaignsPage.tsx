@@ -10,6 +10,7 @@ import {
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type TabKey = "campaigns" | "sources" | "skills" | "wrapup";
 
@@ -57,6 +58,10 @@ function CampaignsSection() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
 
+  const { sorted, dirFor, toggle: sortToggle } = useTableSort(list, {
+    accessors: { status: (c) => (c.isActive ? "Active" : "Inactive") },
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -92,9 +97,14 @@ function CampaignsSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Name</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR></THead>
+            <THead><TR>
+              <TH sortDir={dirFor("code")} onClick={() => sortToggle("code")}>Code</TH>
+              <TH sortDir={dirFor("name")} onClick={() => sortToggle("name")}>Name</TH>
+              <TH sortDir={dirFor("status")} onClick={() => sortToggle("status")}>Status</TH>
+              <TH className="text-right">Actions</TH>
+            </TR></THead>
             <TBody>
-              {list.map((c) => (
+              {sorted.map((c) => (
                 <TR key={c.id}>
                   <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{c.code}</TD>
                   <TD className="font-medium text-ink-900 max-w-[280px] truncate">{c.name}</TD>
@@ -146,6 +156,10 @@ function LeadSourcesSection() {
   const [cost, setCost] = useState("0");
   const [campaignId, setCampaignId] = useState("");
 
+  const { sorted, dirFor, toggle } = useTableSort(list, {
+    accessors: { campaign: (s) => campaigns?.find((c) => c.id === s.campaignId)?.name ?? "" },
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -172,9 +186,14 @@ function LeadSourcesSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Name</TH><TH numeric><span className="inline-flex items-center gap-1">$ / Lead<InfoHint title="Cost per lead" side="top">What you pay this source for each lead it delivers.</InfoHint></span></TH><TH>Campaign</TH></TR></THead>
+            <THead><TR>
+              <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
+              <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
+              <TH numeric sortDir={dirFor("costPerLead")} onClick={() => toggle("costPerLead")}><span className="inline-flex items-center gap-1">$ / Lead<InfoHint title="Cost per lead" side="top">What you pay this source for each lead it delivers.</InfoHint></span></TH>
+              <TH sortDir={dirFor("campaign")} onClick={() => toggle("campaign")}>Campaign</TH>
+            </TR></THead>
             <TBody>
-              {list.map((s) => {
+              {sorted.map((s) => {
                 const camp = campaigns?.find((c) => c.id === s.campaignId);
                 return (
                   <TR key={s.id}>
@@ -290,6 +309,8 @@ function WrapUpCodesSection() {
   const [isContact, setIsContact] = useState(true);
   const [isRetry, setIsRetry] = useState(false);
 
+  const { sorted, dirFor, toggle } = useTableSort(list);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -313,9 +334,13 @@ function WrapUpCodesSection() {
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
-            <THead><TR><TH>Code</TH><TH>Label</TH><TH><span className="inline-flex items-center gap-1">Flags<InfoHint title="Flags" side="left">Sale counts the call as a sale, Contact as a live contact reached, and Retry queues the lead to be dialed again.</InfoHint></span></TH></TR></THead>
+            <THead><TR>
+              <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
+              <TH sortDir={dirFor("label")} onClick={() => toggle("label")}>Label</TH>
+              <TH><span className="inline-flex items-center gap-1">Flags<InfoHint title="Flags" side="left">Sale counts the call as a sale, Contact as a live contact reached, and Retry queues the lead to be dialed again.</InfoHint></span></TH>
+            </TR></THead>
             <TBody>
-              {list.map((w) => (
+              {sorted.map((w) => (
                 <TR key={w.id}>
                   <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{w.code}</TD>
                   <TD className="font-medium text-ink-900 max-w-[280px] truncate">{w.label}</TD>

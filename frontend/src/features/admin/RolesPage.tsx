@@ -8,7 +8,7 @@ import {
 import type { AppModuleDto, RoleDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Stat, useToast, cn,
+  SearchInput, Skeleton, Stat, useToast, cn,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
 
@@ -174,11 +174,10 @@ export function RolesPage() {
         {/* ── Roles list ────────────────────────────────────────────────── */}
         <Card className="self-start xl:sticky xl:top-4">
           <div className="px-4 pt-4 pb-3 border-b hairline">
-            <Input
-              leftIcon={<Icon name="search" size={15} />}
-              placeholder="Search roles…"
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
+              placeholder="Search roles…"
             />
           </div>
           <CardBody className="p-2">
