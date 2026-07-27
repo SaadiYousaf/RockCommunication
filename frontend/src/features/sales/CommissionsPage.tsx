@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 
@@ -93,6 +93,12 @@ export function CommissionsPage() {
         description="Review your earnings and let managers run payroll for the period."
       />
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <Stat label="Total"  value={`$${total.toFixed(2)}`}  icon={<Icon name="dollar" size={16} />}  tone="brand" />
+        <Stat label="Paid"   value={`$${paid.toFixed(2)}`}   icon={<Icon name="success" size={16} />} tone="success" />
+        <Stat label="Unpaid" value={`$${unpaid.toFixed(2)}`} icon={<Icon name="clock" size={16} />}   tone="warning" />
+      </div>
+
       <Card className="mb-6">
         <CardBody className="flex flex-wrap items-end gap-4">
           <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} containerClassName="w-44" />
@@ -101,11 +107,6 @@ export function CommissionsPage() {
             <Button size="sm" variant="ghost" onClick={() => setRange(7)}>7d</Button>
             <Button size="sm" variant="ghost" onClick={() => setRange(30)}>30d</Button>
             <Button size="sm" variant="ghost" onClick={() => setRange(90)}>90d</Button>
-          </div>
-          <div className="flex flex-wrap gap-3 ml-auto">
-            <Tile label="Total"  value={`$${total.toFixed(2)}`}  tone="bg-brand-50 text-brand-600" />
-            <Tile label="Paid"   value={`$${paid.toFixed(2)}`}   tone="bg-emerald-50 text-emerald-600" />
-            <Tile label="Unpaid" value={`$${unpaid.toFixed(2)}`} tone="bg-amber-50 text-amber-600" />
           </div>
         </CardBody>
       </Card>
@@ -254,14 +255,5 @@ export function CommissionsPage() {
         </Card>
       )}
     </>
-  );
-}
-
-function Tile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className={`rounded-lg px-4 py-2.5 ${tone}`}>
-      <div className="text-[10px] uppercase tracking-wide font-semibold opacity-80">{label}</div>
-      <div className="text-lg font-semibold leading-tight tabular-nums">{value}</div>
-    </div>
   );
 }

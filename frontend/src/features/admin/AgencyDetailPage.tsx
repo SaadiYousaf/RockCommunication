@@ -163,8 +163,8 @@ export function AgencyDetailPage() {
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Avatar name={u.userName} size={30} />
                           <div className="leading-tight min-w-0">
-                            <div className="font-medium text-ink-900 truncate">{u.userName}</div>
-                            <div className="text-xs text-ink-500 truncate">{u.email}</div>
+                            <div className="font-medium text-ink-900 truncate" title={u.userName}>{u.userName}</div>
+                            <div className="text-xs text-ink-500 truncate" title={u.email}>{u.email}</div>
                           </div>
                         </div>
                       </TD>
@@ -217,7 +217,7 @@ export function AgencyDetailPage() {
                   {items.map((s) => (
                     <TR key={s.id}>
                       <TD numeric className="font-mono text-xs text-ink-500 tabular-nums">{s.saleNumber}</TD>
-                      <TD className="font-medium text-ink-900"><span className="block truncate max-w-[12rem]">{s.leadName}</span></TD>
+                      <TD className="font-medium text-ink-900"><span className="block truncate max-w-[12rem]" title={s.leadName}>{s.leadName}</span></TD>
                       <TD className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</TD>
                       <TD className="text-sm">{s.carrierApproved ?? "—"}</TD>
                       <TD className="text-sm">{s.planApproved ?? "—"}</TD>

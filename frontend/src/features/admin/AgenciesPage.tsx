@@ -226,7 +226,7 @@ export function AgenciesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-ink-900 truncate">{a.name}</span>
+                      <span className="font-medium text-ink-900 truncate" title={a.name}>{a.name}</span>
                       {a.code && (
                         <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-ink-100 text-ink-600">
                           {a.code}
@@ -246,7 +246,7 @@ export function AgenciesPage() {
                       <span className="inline-flex items-center gap-1 min-w-0">
                         <Icon name="shield" size={12} className="shrink-0" />
                         {a.ceoUserName ? (
-                          <>CEO: <span className="text-ink-700 truncate">{a.ceoUserName}</span></>
+                          <>CEO: <span className="text-ink-700 truncate" title={a.ceoUserName}>{a.ceoUserName}</span></>
                         ) : (
                           <span className="text-amber-600">CEO unassigned</span>
                         )}

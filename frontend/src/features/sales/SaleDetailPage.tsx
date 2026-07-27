@@ -139,7 +139,7 @@ export function SaleDetailPage() {
             <Field label="Approved plan" value={sale.planApproved ?? "—"} />
             <Field label="Approved coverage" value={sale.coverageApproved != null ? money(sale.coverageApproved) : "—"} />
             <Field label="Approved premium" value={sale.premiumApproved != null ? money(sale.premiumApproved) : "—"} />
-            {sale.declineReason && <Field label="Decline reason" value={<span className="text-danger-700">{sale.declineReason}</span>} />}
+            {sale.declineReason && <Field label="Decline reason" value={<span className="text-rose-700">{sale.declineReason}</span>} />}
           </CardBody>
         </Card>
 
@@ -164,7 +164,7 @@ export function SaleDetailPage() {
             <Field label="Lyons reference" value={sale.lyonsReference ?? "—"} mono />
             <Field label="Verification recording" value={
               sale.hasRecording
-                ? <span className="inline-flex items-center gap-1 text-success-700"><Icon name="success" size={13} /> attached</span>
+                ? <span className="inline-flex items-center gap-1 text-emerald-700"><Icon name="success" size={13} /> attached</span>
                 : "—"
             } />
             {sale.bankingNote && <Field label="Note" value={sale.bankingNote} />}

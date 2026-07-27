@@ -390,7 +390,7 @@ function SmallStat({ label, value, icon, tone }: { label: string; value: number;
         <Icon name={icon} size={18} />
       </div>
       <div className="min-w-0">
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
+        <div className="section-title truncate">{label}</div>
         <div className="text-xl font-semibold text-ink-900 tabular-nums">{value}</div>
       </div>
     </div>

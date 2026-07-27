@@ -19,8 +19,8 @@ export function ForgotPasswordPage() {
     <AuthFrame title="Forgot your password?" subtitle="We'll email you a link to set a new one.">
       {submitted ? (
         <div className="space-y-4 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-success-100 flex items-center justify-center">
-            <Icon name="check" size={24} className="text-success-700" />
+          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Icon name="check" size={24} className="text-emerald-700" />
           </div>
           <p className="text-sm text-ink-700">
             If an account exists for <strong className="break-all">{email}</strong>, a reset link is on its way.

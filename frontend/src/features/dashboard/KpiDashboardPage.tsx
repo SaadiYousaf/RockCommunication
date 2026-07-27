@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { useDashboardQuery, useMetricCatalogQuery, useAgencyOptionsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, useToast, cn,
 } from "../../shared/ui";
 import { usePersistentState } from "../../shared/hooks/usePersistentState";
@@ -310,48 +310,48 @@ export function KpiDashboardPage() {
       </Card>
 
       {waitingForAgency ? (
-        <Card><CardBody className="py-10">
-          <div className="text-center max-w-md mx-auto">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
-              <Icon name="building" size={24} />
-            </div>
-            <h3 className="text-base font-semibold text-ink-900 mb-1 text-balance">Pick an agency</h3>
-            <p className="text-sm text-ink-500">
-              {!agencyOptions || agencyOptions.length === 0
+        <Card><CardBody>
+          <EmptyState
+            icon={<Icon name="building" size={20} />}
+            tone="neutral"
+            title="Pick an agency"
+            description={
+              !agencyOptions || agencyOptions.length === 0
                 ? "No agencies exist yet. Create one from the Agencies page to see its KPIs."
-                : "Choose an agency from the selector above to view its KPI dashboards."}
-            </p>
-          </div>
+                : "Choose an agency from the selector above to view its KPI dashboards."
+            }
+          />
         </CardBody></Card>
       ) : isFetching && !values ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : !values || values.length === 0 ? (
-        <Card><CardBody className="py-10">
-          <div className="text-center max-w-md mx-auto">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400">
-              <Icon name="chart" size={24} />
-            </div>
-            <h3 className="text-base font-semibold text-ink-900 mb-1 text-balance">No data for this range</h3>
-            <p className="text-sm text-ink-500 mb-5 text-balance">
-              {activeRange === 0
+        <Card><CardBody>
+          <EmptyState
+            icon={<Icon name="chart" size={20} />}
+            tone="neutral"
+            title="No data for this range"
+            description={
+              activeRange === 0
                 ? "There's no activity recorded today yet. Widen the range to see recent numbers."
-                : "Nothing was recorded in the selected dates. Try a wider range or show every metric."}
-            </p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <Button variant="primary" size="sm" leftIcon={<Icon name="calendar" size={14} />}
-                onClick={() => applyRange(90)}>
-                Widen to 90 days
-              </Button>
-              {selected.length > 0 && (
-                <Button variant="outline" size="sm" leftIcon={<Icon name="filter" size={14} />}
-                  onClick={() => setPicked({})}>
-                  Show all metrics
+                : "Nothing was recorded in the selected dates. Try a wider range or show every metric."
+            }
+            action={
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Button variant="primary" size="sm" leftIcon={<Icon name="calendar" size={14} />}
+                  onClick={() => applyRange(90)}>
+                  Widen to 90 days
                 </Button>
-              )}
-            </div>
-          </div>
+                {selected.length > 0 && (
+                  <Button variant="outline" size="sm" leftIcon={<Icon name="filter" size={14} />}
+                    onClick={() => setPicked({})}>
+                    Show all metrics
+                  </Button>
+                )}
+              </div>
+            }
+          />
         </CardBody></Card>
       ) : (
         Object.entries(groups).map(([group, list]) => (
@@ -367,7 +367,7 @@ export function KpiDashboardPage() {
                   key={v.key}
                   className="surface p-5 hover:shadow-card-hover transition-shadow"
                 >
-                  <div className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2">{v.label}</div>
+                  <div className="section-title mb-2">{v.label}</div>
                   <div className="text-3xl font-semibold tracking-tight text-ink-900 tabular-nums">
                     {v.value.toLocaleString()}
                     {v.unit && <span className="text-sm text-ink-500 ml-1.5 font-normal">{v.unit}</span>}

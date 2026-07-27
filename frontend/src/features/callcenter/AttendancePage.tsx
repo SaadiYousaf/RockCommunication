@@ -157,7 +157,7 @@ function PersonRow({ row }: { row: AttendanceRow }) {
         </div>
         <div className="hidden sm:flex items-center gap-5 text-sm shrink-0">
           <Metric label="Clocked" value={hm(row.totalClockedMinutes)} />
-          <Metric label="Available" value={hm(row.totalAvailableMinutes)} tone="text-success-700" />
+          <Metric label="Available" value={hm(row.totalAvailableMinutes)} tone="text-emerald-700" />
           <Metric label="On call" value={hm(row.totalOnCallMinutes)} tone="text-brand-700" />
           <Metric label="Break" value={hm(row.totalBreakMinutes)} tone="text-amber-700" />
         </div>
@@ -188,7 +188,7 @@ function SessionBlock({ session }: { session: AttendanceSession }) {
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <div className="text-sm font-medium text-ink-800 inline-flex items-center gap-1.5 tabular-nums whitespace-nowrap">
           <Icon name="clock" size={13} className="text-ink-400" />
-          {t(session.clockInAt)} → {session.clockOutAt ? t(session.clockOutAt) : <span className="text-success-700">active</span>}
+          {t(session.clockInAt)} → {session.clockOutAt ? t(session.clockOutAt) : <span className="text-emerald-700">active</span>}
         </div>
         <div className="text-xs text-ink-500 tabular-nums">
           {hm(session.clockedMinutes)} clocked · {hm(session.availableMinutes)} avail · {hm(session.onCallMinutes)} call · {hm(session.breakMinutes)} break
@@ -211,12 +211,8 @@ function SessionBlock({ session }: { session: AttendanceSession }) {
 
 function Notice({ icon, title, body }: { icon: string; title: string; body: string }) {
   return (
-    <Card><CardBody className="py-12">
-      <div className="text-center max-w-md mx-auto">
-        <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-ink-100 grid place-items-center text-ink-400"><Icon name={icon} size={24} /></div>
-        <h3 className="text-base font-semibold text-ink-900 mb-1">{title}</h3>
-        <p className="text-sm text-ink-500">{body}</p>
-      </div>
+    <Card><CardBody>
+      <EmptyState icon={<Icon name={icon} size={24} />} tone="neutral" title={title} description={body} />
     </CardBody></Card>
   );
 }

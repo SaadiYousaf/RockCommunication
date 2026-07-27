@@ -88,11 +88,11 @@ export function LeadSearchPage() {
         description="Find any lead by phone, email, or name. Detect duplicates and clean up the database."
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <Stat label="Search hits" value={hasQuery ? filtered.length : "—"} icon={<Icon name="search" size={16} />} />
-        <Stat label="Active filters" value={Object.values(debounced).filter(Boolean).length} icon={<Icon name="filter" size={16} />} />
-        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} icon={<Icon name="copy" size={16} />} />
-        <Stat label="Total dup leads" value={totalDupLeads} icon={<Icon name="users" size={16} />} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        <Stat label="Search hits" value={hasQuery ? filtered.length : "—"} icon={<Icon name="search" size={16} />} tone="brand" />
+        <Stat label="Active filters" value={Object.values(debounced).filter(Boolean).length} icon={<Icon name="filter" size={16} />} tone="neutral" />
+        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} icon={<Icon name="copy" size={16} />} tone={(duplicates?.length ?? 0) > 0 ? "warning" : "neutral"} />
+        <Stat label="Total dup leads" value={totalDupLeads} icon={<Icon name="users" size={16} />} tone={totalDupLeads > 0 ? "warning" : "neutral"} />
       </div>
 
       <Tabs<typeof tab>

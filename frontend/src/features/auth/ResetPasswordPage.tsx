@@ -23,8 +23,8 @@ export function ResetPasswordPage() {
     return (
       <AuthFrame title="Invalid reset link" subtitle="This link is missing required information.">
         <div className="space-y-4 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-danger-100 flex items-center justify-center">
-            <Icon name="alert" size={24} className="text-danger-700" />
+          <div className="mx-auto h-12 w-12 rounded-full bg-rose-100 flex items-center justify-center">
+            <Icon name="alert" size={24} className="text-rose-700" />
           </div>
           <Link to="/forgot-password" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
             <Icon name="refresh" size={14} /> Request a new link
@@ -71,8 +71,8 @@ export function ResetPasswordPage() {
           autoComplete="new-password"
         />
         {error && (
-          <div className="flex items-start gap-2 text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-lg p-2.5">
-            <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-danger-500" />
+          <div className="flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
+            <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
         )}

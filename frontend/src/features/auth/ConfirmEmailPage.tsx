@@ -43,8 +43,8 @@ export function ConfirmEmailPage() {
     return (
       <AuthFrame title="Email confirmed" subtitle="You're all set.">
         <div className="space-y-4 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-success-100 flex items-center justify-center">
-            <Icon name="check" size={24} className="text-success-700" />
+          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Icon name="check" size={24} className="text-emerald-700" />
           </div>
           <Link to="/login" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
             Sign in to your account <Icon name="arrowRight" size={14} />
@@ -76,8 +76,8 @@ function ResendForm({ reason }: { reason: string }) {
     <AuthFrame title="Confirmation needed" subtitle={reason}>
       {sent ? (
         <div className="space-y-4 text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-success-100 flex items-center justify-center">
-            <Icon name="check" size={24} className="text-success-700" />
+          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Icon name="check" size={24} className="text-emerald-700" />
           </div>
           <p className="text-sm text-ink-700">
             If an account exists for <strong className="break-all">{email}</strong>, a confirmation link has been sent.

@@ -90,13 +90,13 @@ export function UserManagementPage() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        <Stat label="Total users"  value={stats.total}      icon={<Icon name="users" size={16} />} tone="brand" />
-        <Stat label="Admins"       value={stats.admins}     icon={<Icon name="shield" size={16} />} tone="danger"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Stat label="Total users"  value={stats.total}      icon={<Icon name="users" size={18} />} tone="brand" />
+        <Stat label="Admins"       value={stats.admins}     icon={<Icon name="shield" size={18} />} tone="danger"
               hint="Admin & ProgramManager" />
-        <Stat label="Pending pwd"  value={stats.mustChange} icon={<Icon name="key" size={16} />} tone="warning"
+        <Stat label="Pending pwd"  value={stats.mustChange} icon={<Icon name="key" size={18} />} tone="warning"
               hint="First-login change required" />
-        <Stat label="No roles"     value={stats.noRoles}    icon={<Icon name="userX" size={16} />} tone="neutral"
+        <Stat label="No roles"     value={stats.noRoles}    icon={<Icon name="userX" size={18} />} tone="neutral"
               hint="Need role assignment" />
       </div>
 
@@ -163,7 +163,7 @@ export function UserManagementPage() {
                   <div className="flex items-center gap-3">
                     <Avatar name={u.userName} size={36} className={active ? "" : "opacity-50 grayscale"} />
                     <div className="min-w-0">
-                      <div className={"font-medium truncate " + (active ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")}>
+                      <div className={"font-medium truncate " + (active ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")} title={u.userName}>
                         {u.userName}
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
@@ -181,7 +181,7 @@ export function UserManagementPage() {
                     </div>
                   </div>
                 </TD>
-                <TD className="text-ink-600"><span className="block truncate max-w-[15rem]">{u.email}</span></TD>
+                <TD className="text-ink-600"><span className="block truncate max-w-[15rem]" title={u.email}>{u.email}</span></TD>
                 <TD>
                   <div className="flex flex-wrap gap-1">
                     {u.roles.length === 0

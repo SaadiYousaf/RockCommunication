@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useListRolesQuery, useRegisterMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, Icon, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
   Skeleton, useToast, cn,
 } from "../../shared/ui";
 import type { RootState } from "../../app/store";
@@ -270,6 +270,14 @@ export function RegisterPage() {
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}
                 </div>
+              ) : grouped.length === 0 ? (
+                <EmptyState
+                  compact
+                  tone="neutral"
+                  icon={<Icon name="users" size={22} />}
+                  title="No roles available"
+                  description="No roles were returned. Create roles in Role Management before assigning them here."
+                />
               ) : (
                 grouped.map((g) => (
                   <div key={g.label}>

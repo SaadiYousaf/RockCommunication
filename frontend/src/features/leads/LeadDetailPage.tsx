@@ -19,7 +19,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Button, Card, CardBody, EmptyState, Icon, InfoHint, Select, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
+import { Avatar, Badge, type BadgeTone, Button, Card, CardBody, EmptyState, Icon, InfoHint, Select, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
@@ -179,9 +179,7 @@ export function LeadDetailPage() {
       {/* Header */}
       <div className="surface p-5">
         <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center text-white font-bold text-lg">
-            {(lead.firstName?.[0] ?? "?")}{(lead.lastName?.[0] ?? "")}
-          </div>
+          <Avatar name={lead.fullName} size={48} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold text-balance">{lead.fullName}</h1>
@@ -189,7 +187,7 @@ export function LeadDetailPage() {
               <DispositionBadge disposition={lead.disposition} />
               {lead.jornayaVerified && (
                 <span className="inline-flex items-center gap-1">
-                  <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />Jornaya verified</Badge>
+                  <Badge tone="success"><Icon name="success" size={12} />Jornaya verified</Badge>
                   <InfoHint title="Jornaya verified" side="bottom">
                     The lead's Jornaya LeadiD token was validated — independent proof of when and where the prospect submitted their info and consented. Supports TCPA compliance.
                   </InfoHint>
@@ -197,7 +195,7 @@ export function LeadDetailPage() {
               )}
               {lead.consentCaptured && (
                 <span className="inline-flex items-center gap-1">
-                  <Badge tone="emerald"><Icon name="success" size={12} className="mr-1" />TCPA consent</Badge>
+                  <Badge tone="success"><Icon name="success" size={12} />TCPA consent</Badge>
                   <InfoHint title="TCPA consent" side="bottom">
                     The prospect gave prior express written consent to be contacted (TCPA). Required before auto-dialing or texting; without it, a call can be blocked.
                   </InfoHint>
@@ -372,7 +370,7 @@ export function LeadDetailPage() {
               <div className="text-sm font-semibold inline-flex items-center gap-1.5"><Icon name="phone" size={14} className="text-ink-400" /> Recent calls <span className="text-ink-400 font-normal">({lead.callCount})</span></div>
             </div>
             {lead.recentCalls.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-ink-500"><Icon name="phone" size={14} className="text-ink-400" /> No calls yet.</div>
+              <EmptyState compact icon={<Icon name="phone" size={18} />} title="No calls yet" description="Calls appear here once you dial this lead." />
             ) : (
               <div className="space-y-2">
                 {lead.recentCalls.map(c => (
@@ -410,7 +408,7 @@ export function LeadDetailPage() {
               ))}
             </ul>
             {(!timeline || timeline.entries.length === 0) && (
-              <div className="flex items-center gap-2 text-sm text-ink-500"><Icon name="activity" size={14} className="text-ink-400" /> No activity yet.</div>
+              <EmptyState compact icon={<Icon name="activity" size={18} />} title="No activity yet" description="Actions on this lead will show up here." />
             )}
           </div>
         </div>
@@ -559,29 +557,18 @@ function Stepper({ current }: { current: WorkflowStage }) {
 }
 
 function StageBadge({ stage }: { stage: string }) {
-  const tone = stage === "Funded" ? "emerald" : stage === "Lost" ? "rose"
-    : stage === "Closed" || stage === "Validated" ? "sky"
-    : stage === "Followup" || stage === "Winback" ? "amber" : "slate";
+  const tone: BadgeTone = stage === "Funded" ? "success" : stage === "Lost" ? "danger"
+    : stage === "Closed" || stage === "Validated" ? "info"
+    : stage === "Followup" || stage === "Winback" ? "warning" : "default";
   return <Badge tone={tone}>{stage}</Badge>;
 }
 
 function DispositionBadge({ disposition }: { disposition: string }) {
   if (disposition === "None") return null;
-  const tone = disposition === "Sold" ? "emerald"
-    : disposition === "DoNotCall" || disposition === "NotInterested" ? "rose"
-    : disposition === "Interested" ? "sky" : "slate";
+  const tone: BadgeTone = disposition === "Sold" ? "success"
+    : disposition === "DoNotCall" || disposition === "NotInterested" ? "danger"
+    : disposition === "Interested" ? "info" : "default";
   return <Badge tone={tone}>{disposition}</Badge>;
-}
-
-function Badge({ children, tone = "slate" }: { children: ReactNode; tone?: string }) {
-  const cls: Record<string, string> = {
-    sky: "bg-brand-100 text-brand-800",
-    emerald: "bg-emerald-100 text-emerald-800",
-    amber: "bg-amber-100 text-amber-800",
-    rose: "bg-rose-100 text-rose-800",
-    slate: "bg-ink-100 text-ink-700",
-  };
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${cls[tone]}`}>{children}</span>;
 }
 
 function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
