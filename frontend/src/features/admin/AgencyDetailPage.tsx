@@ -5,13 +5,12 @@ import {
   useGetAgencyQuery, useListSalesQuery, useAgencyLicenseAgentsQuery,
   useCreateCallCenterInAgencyMutation, useCreateLicenseAgentMutation,
   useAgencyCallCentersQuery, useUpdateCallCenterInAgencyMutation,
-  useListUsersQuery, useSetUserCallCenterMutation,
+  useListUsersQuery,
 } from "../../shared/api/baseApi";
-import type { CallCenterDto, UserSummary } from "../../shared/api/types";
-import { roleLabel } from "../../shared/constants/roles";
+import type { CallCenterDto } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 const money = (n: number | null | undefined) =>
@@ -36,37 +35,21 @@ export function AgencyDetailPage() {
 
   const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
   const { data: people } = useListUsersQuery({ agencyId }, { skip: !agencyId });
-  const [setUserCc] = useSetUserCallCenterMutation();
-  const toast = useToast();
   const [showCallCenter, setShowCallCenter] = useState(false);
   const [showAgent, setShowAgent] = useState(false);
   const [editCc, setEditCc] = useState<CallCenterDto | null>(null);
 
-  async function assignCallCentre(userId: string, value: string) {
-    try {
-      await setUserCc({ userId, callCenterId: value || null }).unwrap();
-      toast.success("Assignment saved", value ? "Pinned to the call centre." : "Set to agency-wide.");
-    } catch (err: unknown) {
-      toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
-    }
-  }
-
-  // Agency → call centres → the agents inside each. Every call centre gets its own group
-  // (even when empty), followed by an "agency-wide" bucket for users not pinned to one.
-  const peopleGroups = useMemo(() => {
-    const byCc = new Map<string, UserSummary[]>();
+  // Staff head-count per call centre (empty key = the agency-wide bucket) so the drill-down
+  // list can show how many people sit in each before you click into it.
+  const staffByCc = useMemo(() => {
+    const m = new Map<string, number>();
     for (const u of people ?? []) {
       const key = u.callCenterId ?? "";
-      (byCc.get(key) ?? byCc.set(key, []).get(key)!).push(u);
+      m.set(key, (m.get(key) ?? 0) + 1);
     }
-    const ccGroups = (callCenters ?? []).map((c) => ({
-      id: c.id, name: c.name, isActive: c.isActive, users: byCc.get(c.id) ?? [],
-    }));
-    return [
-      ...ccGroups,
-      { id: "", name: "Agency-wide (no call centre)", isActive: true, users: byCc.get("") ?? [] },
-    ];
-  }, [people, callCenters]);
+    return m;
+  }, [people]);
+  const agencyWideCount = staffByCc.get("") ?? 0;
 
   const total = sales?.total ?? 0;
   const items = sales?.items ?? [];
@@ -136,13 +119,19 @@ export function AgencyDetailPage() {
             <div className="overflow-x-auto">
               <Table>
                 <THead>
-                  <TR><TH>Name</TH><TH>Code</TH><TH numeric>Leads</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
+                  <TR><TH>Call centre</TH><TH numeric>Staff</TH><TH numeric>Leads</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
                 </THead>
                 <TBody>
                   {callCenters.map((c) => (
                     <TR key={c.id}>
-                      <TD className="font-medium text-ink-900">{c.name}</TD>
-                      <TD className="font-mono text-xs text-ink-500">{c.code ?? "—"}</TD>
+                      <TD>
+                        <Link to={`/admin/agencies/${agencyId}/call-centers/${c.id}`}
+                          className="font-medium text-brand-700 hover:underline inline-flex items-center gap-1.5">
+                          <Icon name="building" size={14} className="text-brand-500 shrink-0" />{c.name}
+                        </Link>
+                        {c.code && <span className="ml-2 font-mono text-xs text-ink-400">{c.code}</span>}
+                      </TD>
+                      <TD numeric className="text-sm text-ink-700 tabular-nums font-medium">{staffByCc.get(c.id) ?? 0}</TD>
                       <TD numeric className="text-sm text-ink-600 tabular-nums">{c.leadCount}</TD>
                       <TD><Badge tone={c.isActive ? "success" : "neutral"} variant="soft">{c.isActive ? "Active" : "Disabled"}</Badge></TD>
                       <TD className="text-right">
@@ -150,6 +139,19 @@ export function AgencyDetailPage() {
                       </TD>
                     </TR>
                   ))}
+                  {/* Agency-wide bucket — users not pinned to any call centre */}
+                  <TR>
+                    <TD>
+                      <Link to={`/admin/agencies/${agencyId}/call-centers/none`}
+                        className="font-medium text-ink-700 hover:underline inline-flex items-center gap-1.5">
+                        <Icon name="globe" size={14} className="text-ink-400 shrink-0" />Agency-wide (no call centre)
+                      </Link>
+                    </TD>
+                    <TD numeric className="text-sm text-ink-700 tabular-nums font-medium">{agencyWideCount}</TD>
+                    <TD numeric className="text-ink-400">—</TD>
+                    <TD className="text-ink-400">—</TD>
+                    <TD />
+                  </TR>
                 </TBody>
               </Table>
             </div>
@@ -157,74 +159,6 @@ export function AgencyDetailPage() {
         </CardBody>
       </Card>
 
-      {/* People — grouped by call centre (agency → call centres → agents) */}
-      <Card className="mb-4">
-        <CardHeader
-          title="Call centres & people"
-          subtitle={people ? `${people.length} user(s) across ${callCenters?.length ?? 0} call centre(s)` : undefined}
-        />
-        <CardBody className="space-y-6">
-          {!people ? <Skeleton className="h-24" /> : people.length === 0 ? (
-            <EmptyState icon={<Icon name="users" size={18} />} title="No users yet"
-              description="Invite a CEO, call-centre admin, or license agent — they'll appear here to assign." />
-          ) : (
-            peopleGroups.map((g) => (
-              <div key={g.id || "agency-wide"}>
-                <div className="flex items-center gap-2 mb-2 pb-1.5 border-b hairline">
-                  <Icon name={g.id ? "building" : "globe"} size={14} className="text-brand-500 shrink-0" />
-                  <h4 className="text-sm font-semibold text-ink-900">{g.name}</h4>
-                  {g.id && !g.isActive && <Badge tone="neutral" variant="soft">disabled</Badge>}
-                  <Badge tone="neutral" variant="soft" className="tabular-nums ml-auto">
-                    {g.users.length} {g.users.length === 1 ? "person" : "people"}
-                  </Badge>
-                </div>
-                {g.users.length === 0 ? (
-                  <div className="text-xs text-ink-400 py-1.5 pl-6">No one assigned yet.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <THead>
-                        <TR><TH>User</TH><TH>Roles</TH><TH>Call centre</TH></TR>
-                      </THead>
-                      <TBody>
-                        {g.users.map((u) => (
-                          <TR key={u.id}>
-                            <TD>
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <Avatar name={u.userName} size={30} />
-                                <div className="leading-tight min-w-0">
-                                  <div className="font-medium text-ink-900 truncate" title={u.userName}>{u.userName}</div>
-                                  <div className="text-xs text-ink-500 truncate" title={u.email}>{u.email}</div>
-                                </div>
-                              </div>
-                            </TD>
-                            <TD>
-                              <div className="flex flex-wrap gap-1">
-                                {u.roles.map((r) => <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>)}
-                              </div>
-                            </TD>
-                            <TD>
-                              <Select
-                                aria-label={`Call centre for ${u.userName}`}
-                                className="w-52"
-                                value={u.callCenterId ?? ""}
-                                onChange={(e) => assignCallCentre(u.id, e.target.value)}
-                              >
-                                <option value="">Agency-wide (no call centre)</option>
-                                {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.isActive ? "" : " (disabled)"}</option>)}
-                              </Select>
-                            </TD>
-                          </TR>
-                        ))}
-                      </TBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </CardBody>
-      </Card>
 
       {/* Sales list */}
       <Card>
