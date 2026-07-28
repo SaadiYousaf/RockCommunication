@@ -1,6 +1,6 @@
 import { roleLabel } from "../../shared/constants/roles";
 import type { IconName } from "../../shared/ui";
-import { getErrorDetail } from "../../shared/api/apiError";
+import { getErrorDetail, getErrorStatus, getValidationSummary } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -149,9 +149,18 @@ export function RegisterPage() {
       }
       navigate("/admin/users");
     } catch (err: unknown) {
-      const msg = getErrorDetail(err) ?? getErrorDetail(err) ?? "Registration failed.";
-      setError(msg);
-      toast.error("Registration failed", msg);
+      // A duplicate email/username comes back as 409 — call it out plainly ("already
+      // exists") instead of a vague "Registration failed", which reads like a system error.
+      if (getErrorStatus(err) === 409) {
+        const msg = getErrorDetail(err)
+          ?? "An account with that username or email already exists. Find them in User Management, or resend their invite.";
+        setError(msg);
+        toast.error("This user already exists", msg);
+      } else {
+        const msg = getErrorDetail(err) ?? getValidationSummary(err) ?? "Couldn't create the user. Please try again.";
+        setError(msg);
+        toast.error("Couldn't create user", msg);
+      }
     }
   }
 

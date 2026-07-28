@@ -211,10 +211,15 @@ public class IdentityService : IIdentityService
             throw new ForbiddenAccessException(generic);
         }
 
-        // Deactivated accounts are rejected only AFTER the password check runs, so an
-        // existing-but-inactive account is indistinguishable — by timing or message — from
-        // a wrong password. (Checking it earlier leaked account existence via response time.)
-        if (!user.IsActive) throw new ForbiddenAccessException(generic);
+        // Deactivated accounts are rejected only AFTER the password check runs — so a WRONG
+        // password on an inactive account is still indistinguishable (same generic message +
+        // timing) from any other bad login, which is what prevents account enumeration.
+        // But once the CORRECT password is supplied we can safely name the reason (same policy
+        // the tenant kill-switch below uses): a confusing "Invalid credentials." for someone
+        // holding valid credentials just looks like a broken password. Tell them they're blocked.
+        if (!user.IsActive)
+            throw new ForbiddenAccessException(
+                "Your account has been deactivated. Please contact your administrator.");
 
         // Company / call-center kill switch: if a SuperAdmin has disabled the user's agency
         // (or their call center), lock every user underneath it out of login — even though

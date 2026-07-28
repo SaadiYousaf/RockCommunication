@@ -1,6 +1,3 @@
-import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import type { SerializedError } from "@reduxjs/toolkit";
-
 /** Problem-details body the API returns on errors (ASP.NET ProblemDetails subset). */
 export interface ApiErrorBody {
   title?: string;
@@ -8,8 +5,6 @@ export interface ApiErrorBody {
   status?: number;
   errors?: Record<string, string[]>;
 }
-
-type UnknownError = FetchBaseQueryError | SerializedError | { data?: unknown; message?: string } | undefined | null;
 
 function bodyOf(err: unknown): ApiErrorBody | undefined {
   if (err && typeof err === "object" && "data" in err) {
@@ -41,7 +36,7 @@ export function getErrorStatus(err: unknown): number | undefined {
 }
 
 /** Field-level validation errors (from FluentValidation), flattened to a single string. */
-export function getValidationSummary(err: UnknownError): string | undefined {
+export function getValidationSummary(err: unknown): string | undefined {
   const errors = bodyOf(err)?.errors;
   if (!errors) return undefined;
   const parts = Object.values(errors).flat();

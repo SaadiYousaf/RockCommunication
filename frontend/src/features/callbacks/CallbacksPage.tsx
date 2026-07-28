@@ -33,8 +33,11 @@ function formatWhen(iso: string): { abs: string; rel: string; tone: "danger" | "
 
 export function CallbacksPage() {
   const [tab, setTab] = useState<Bucket>("today");
-  const includeCompleted = tab === "completed" || tab === "all";
-  const { data: callbacks, isLoading } = useMyCallbacksQuery({ includeCompleted });
+  // Always pull completed rows too — otherwise the "Completed" stat card and tab badge
+  // read 0 until you actually click into the Completed tab (the count is derived from
+  // whatever's loaded). Per-user callback volume is small, and loading them once also
+  // makes tab switches instant instead of refetching. The tab still filters client-side.
+  const { data: callbacks, isLoading } = useMyCallbacksQuery({ includeCompleted: true });
   const [schedule, { isLoading: scheduling }] = useScheduleCallbackMutation();
   const [complete] = useCompleteCallbackMutation();
   const toast = useToast();
