@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   useGetAgencyQuery, useListSalesQuery, useAgencyLicenseAgentsQuery,
@@ -7,7 +7,7 @@ import {
   useAgencyCallCentersQuery, useUpdateCallCenterInAgencyMutation,
   useListUsersQuery, useSetUserCallCenterMutation,
 } from "../../shared/api/baseApi";
-import type { CallCenterDto } from "../../shared/api/types";
+import type { CallCenterDto, UserSummary } from "../../shared/api/types";
 import { roleLabel } from "../../shared/constants/roles";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
@@ -50,6 +50,23 @@ export function AgencyDetailPage() {
       toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
     }
   }
+
+  // Agency → call centres → the agents inside each. Every call centre gets its own group
+  // (even when empty), followed by an "agency-wide" bucket for users not pinned to one.
+  const peopleGroups = useMemo(() => {
+    const byCc = new Map<string, UserSummary[]>();
+    for (const u of people ?? []) {
+      const key = u.callCenterId ?? "";
+      (byCc.get(key) ?? byCc.set(key, []).get(key)!).push(u);
+    }
+    const ccGroups = (callCenters ?? []).map((c) => ({
+      id: c.id, name: c.name, isActive: c.isActive, users: byCc.get(c.id) ?? [],
+    }));
+    return [
+      ...ccGroups,
+      { id: "", name: "Agency-wide (no call centre)", isActive: true, users: byCc.get("") ?? [] },
+    ];
+  }, [people, callCenters]);
 
   const total = sales?.total ?? 0;
   const items = sales?.items ?? [];
@@ -140,55 +157,71 @@ export function AgencyDetailPage() {
         </CardBody>
       </Card>
 
-      {/* People — assign to call centres */}
+      {/* People — grouped by call centre (agency → call centres → agents) */}
       <Card className="mb-4">
         <CardHeader
-          title="People"
-          subtitle={people ? `${people.length} user(s) — assign each to a call centre or leave agency-wide` : undefined}
+          title="Call centres & people"
+          subtitle={people ? `${people.length} user(s) across ${callCenters?.length ?? 0} call centre(s)` : undefined}
         />
-        <CardBody>
+        <CardBody className="space-y-6">
           {!people ? <Skeleton className="h-24" /> : people.length === 0 ? (
             <EmptyState icon={<Icon name="users" size={18} />} title="No users yet"
               description="Invite a CEO, call-centre admin, or license agent — they'll appear here to assign." />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <THead>
-                  <TR><TH>User</TH><TH>Roles</TH><TH>Call centre</TH></TR>
-                </THead>
-                <TBody>
-                  {people.map((u) => (
-                    <TR key={u.id}>
-                      <TD>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <Avatar name={u.userName} size={30} />
-                          <div className="leading-tight min-w-0">
-                            <div className="font-medium text-ink-900 truncate" title={u.userName}>{u.userName}</div>
-                            <div className="text-xs text-ink-500 truncate" title={u.email}>{u.email}</div>
-                          </div>
-                        </div>
-                      </TD>
-                      <TD>
-                        <div className="flex flex-wrap gap-1">
-                          {u.roles.map((r) => <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>)}
-                        </div>
-                      </TD>
-                      <TD>
-                        <Select
-                          aria-label={`Call centre for ${u.userName}`}
-                          className="w-52"
-                          value={u.callCenterId ?? ""}
-                          onChange={(e) => assignCallCentre(u.id, e.target.value)}
-                        >
-                          <option value="">Agency-wide (no call centre)</option>
-                          {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.isActive ? "" : " (disabled)"}</option>)}
-                        </Select>
-                      </TD>
-                    </TR>
-                  ))}
-                </TBody>
-              </Table>
-            </div>
+            peopleGroups.map((g) => (
+              <div key={g.id || "agency-wide"}>
+                <div className="flex items-center gap-2 mb-2 pb-1.5 border-b hairline">
+                  <Icon name={g.id ? "building" : "globe"} size={14} className="text-brand-500 shrink-0" />
+                  <h4 className="text-sm font-semibold text-ink-900">{g.name}</h4>
+                  {g.id && !g.isActive && <Badge tone="neutral" variant="soft">disabled</Badge>}
+                  <Badge tone="neutral" variant="soft" className="tabular-nums ml-auto">
+                    {g.users.length} {g.users.length === 1 ? "person" : "people"}
+                  </Badge>
+                </div>
+                {g.users.length === 0 ? (
+                  <div className="text-xs text-ink-400 py-1.5 pl-6">No one assigned yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <THead>
+                        <TR><TH>User</TH><TH>Roles</TH><TH>Call centre</TH></TR>
+                      </THead>
+                      <TBody>
+                        {g.users.map((u) => (
+                          <TR key={u.id}>
+                            <TD>
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <Avatar name={u.userName} size={30} />
+                                <div className="leading-tight min-w-0">
+                                  <div className="font-medium text-ink-900 truncate" title={u.userName}>{u.userName}</div>
+                                  <div className="text-xs text-ink-500 truncate" title={u.email}>{u.email}</div>
+                                </div>
+                              </div>
+                            </TD>
+                            <TD>
+                              <div className="flex flex-wrap gap-1">
+                                {u.roles.map((r) => <Badge key={r} tone="neutral" variant="soft">{roleLabel(r)}</Badge>)}
+                              </div>
+                            </TD>
+                            <TD>
+                              <Select
+                                aria-label={`Call centre for ${u.userName}`}
+                                className="w-52"
+                                value={u.callCenterId ?? ""}
+                                onChange={(e) => assignCallCentre(u.id, e.target.value)}
+                              >
+                                <option value="">Agency-wide (no call centre)</option>
+                                {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.isActive ? "" : " (disabled)"}</option>)}
+                              </Select>
+                            </TD>
+                          </TR>
+                        ))}
+                      </TBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </CardBody>
       </Card>
