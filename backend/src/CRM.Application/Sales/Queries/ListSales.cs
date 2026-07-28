@@ -143,8 +143,12 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
 
         // Call-center names — dictionary lookup with fallback (never an inner join, so legacy
         // rows with an empty CallCenterId aren't silently dropped).
+        // IgnoreQueryFilters: SuperAdmin viewing an agency panel has an empty AgencyId, so the
+        // tenant filter would return zero call centers and every CALL CENTRE would read "—".
+        // Safe: ccIds come from the already-scoped sales being shown, so we only ever resolve
+        // names for call centers the caller can already see.
         var ccIds = rawItems.Select(r => r.CallCenterId).Distinct().ToList();
-        var ccById = (await _db.CallCenters.AsNoTracking()
+        var ccById = (await _db.CallCenters.AsNoTracking().IgnoreQueryFilters()
                 .Where(c => ccIds.Contains(c.Id))
                 .Select(c => new { c.Id, c.Name }).ToListAsync(ct))
             .ToDictionary(c => c.Id, c => c.Name);
@@ -152,7 +156,7 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         // License-agent commission per sale — sum in memory (EF/SQLite doesn't translate a
         // server-side decimal SUM/GroupBy reliably).
         var saleIds = rawItems.Select(r => r.Id).ToList();
-        var commissionBySale = (await _db.CommissionEntries.AsNoTracking()
+        var commissionBySale = (await _db.CommissionEntries.AsNoTracking().IgnoreQueryFilters()
                 .Where(c => saleIds.Contains(c.SaleId) && c.RuleName == LicenseAgentRule)
                 .Select(c => new { c.SaleId, c.Amount }).ToListAsync(ct))
             .GroupBy(x => x.SaleId)
