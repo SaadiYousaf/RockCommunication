@@ -23,7 +23,10 @@ public record UserSummaryDto(
     bool TwoFactorSetupRequired = false,
     /// <summary>The user's agency name (null for SuperAdmin / central users with no agency),
     /// so the UI can show which agency the signed-in user belongs to.</summary>
-    string? AgencyName = null);
+    string? AgencyName = null,
+    /// <summary>The user's call-center name (null when they're agency-level / not pinned to a
+    /// call center), so the UI can show it under the agency in the sidebar.</summary>
+    string? CallCenterName = null);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 

@@ -325,6 +325,7 @@ function SidebarContent({
   // Show which agency the signed-in user belongs to (SuperAdmin/central users
   // have no agency and see the platform label instead).
   const agencyName = useSelector((s: RootState) => s.auth.user?.agencyName);
+  const callCenterName = useSelector((s: RootState) => s.auth.user?.callCenterName);
   const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
   const orgLabel = agencyName || (isSuperAdmin ? "Platform Admin" : "Insurance Agency");
 
@@ -345,9 +346,18 @@ function SidebarContent({
           className="drop-shadow-[0_2px_12px_rgba(60,114,105,0.30)]"
         />
         {!collapsed && (
-          <div className="leading-tight">
+          <div className="leading-tight min-w-0">
             <div className="text-sm font-semibold text-ink-900 tracking-tight">Rock Communication</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500 truncate max-w-[150px]" title={orgLabel}>{orgLabel}</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500 truncate max-w-[160px]" title={orgLabel}>{orgLabel}</div>
+            {callCenterName && (
+              <div
+                className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-brand-600 font-medium truncate max-w-[160px] flex items-center gap-1"
+                title={`Call center: ${callCenterName}`}
+              >
+                <span aria-hidden className="inline-block h-1 w-1 rounded-full bg-brand-400 shrink-0" />
+                {callCenterName}
+              </div>
+            )}
           </div>
         )}
         {mobile && (

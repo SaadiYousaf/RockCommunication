@@ -374,7 +374,8 @@ public class IdentityService : IIdentityService
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
             CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && DomainRoles.TwoFactorMandatory(roles),
-            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct));
+            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
+            CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct));
     }
 
     /// <summary>Agency display name for a user, or null for SuperAdmin / central users (Guid.Empty).</summary>
@@ -382,6 +383,12 @@ public class IdentityService : IIdentityService
         => agencyId == Guid.Empty
             ? Task.FromResult<string?>(null)
             : _db.Agencies.IgnoreQueryFilters().Where(a => a.Id == agencyId).Select(a => a.Name).FirstOrDefaultAsync(ct);
+
+    /// <summary>Call-center display name for a user, or null when they're agency-level (no call center).</summary>
+    private Task<string?> ResolveCallCenterNameAsync(Guid? callCenterId, CancellationToken ct)
+        => callCenterId is not { } ccId || ccId == Guid.Empty
+            ? Task.FromResult<string?>(null)
+            : _db.CallCenters.IgnoreQueryFilters().Where(c => c.Id == ccId).Select(c => c.Name).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default)
     {
@@ -440,7 +447,8 @@ public class IdentityService : IIdentityService
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: require2Fa,
-            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct));
+            AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
+            CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
     }
 

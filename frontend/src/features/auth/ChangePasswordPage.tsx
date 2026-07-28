@@ -30,6 +30,14 @@ export function ChangePasswordPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear a stale submit error as soon as the user edits any field — otherwise a
+  // "passwords do not match" (or any) message lingers on screen even after they've
+  // corrected it, since `error` was only reset on the next submit.
+  const edit = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setter(e.target.value);
+    if (error) setError(null);
+  };
+
   const matches = next.length > 0 && next === confirm;
   const meets = next.length >= 8
     && /[A-Z]/.test(next) && /[a-z]/.test(next)
@@ -90,7 +98,7 @@ export function ChangePasswordPage() {
               label={isForced ? "Temporary password" : "Current password"}
               type={showPwd ? "text" : "password"}
               value={current}
-              onChange={(e) => setCurrent(e.target.value)}
+              onChange={edit(setCurrent)}
               leftIcon={<Icon name="shield" size={16} />}
               autoComplete="current-password"
               required autoFocus
@@ -99,7 +107,7 @@ export function ChangePasswordPage() {
               label="New password"
               type={showPwd ? "text" : "password"}
               value={next}
-              onChange={(e) => setNext(e.target.value)}
+              onChange={edit(setNext)}
               leftIcon={<Icon name="shield" size={16} />}
               hint="≥ 8 chars · upper, lower, digit, symbol"
               autoComplete="new-password"
@@ -109,7 +117,7 @@ export function ChangePasswordPage() {
               label="Confirm new password"
               type={showPwd ? "text" : "password"}
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={edit(setConfirm)}
               leftIcon={<Icon name="shield" size={16} />}
               error={confirm && !matches ? "Passwords do not match." : undefined}
               autoComplete="new-password"
