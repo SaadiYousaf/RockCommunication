@@ -201,6 +201,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             var enc = new Security.EncryptedStringConverter();
             e.Property(x => x.Social).HasConversion(enc);
             e.Property(x => x.DriversLicense).HasConversion(enc);
+            // Bank account number is sensitive too — encrypt it at rest now that we store the full
+            // value (the submission agent needs it for the carrier portal). Routing numbers are
+            // public bank identifiers, so they stay plaintext.
+            e.Property(x => x.AccountNumber).HasConversion(enc);
             e.HasOne<Lead>().WithOne(l => l.Application).HasForeignKey<LeadApplication>(x => x.LeadId).OnDelete(DeleteBehavior.Cascade);
         });
 

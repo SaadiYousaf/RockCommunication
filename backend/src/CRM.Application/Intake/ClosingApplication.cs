@@ -226,9 +226,10 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
         a.Weight = d.Weight;
         a.AccountType = d.AccountType;
         a.BankName = d.BankName;
-        // Store only the last four of the account number at rest; full value flows to Lyons via the sale.
-        var digits = new string((d.AccountNumber ?? "").Where(char.IsDigit).ToArray());
-        a.AccountNumber = digits.Length >= 4 ? $"****{digits[^4..]}" : digits;
+        // Store the FULL account number — the submission agent needs it to key the policy into
+        // the carrier portal. It's encrypted at rest (EncryptedStringConverter, same as SSN/DL),
+        // so a stolen DB doesn't expose it in cleartext.
+        a.AccountNumber = d.AccountNumber;
         a.RoutingNumber = d.RoutingNumber;
     }
 
