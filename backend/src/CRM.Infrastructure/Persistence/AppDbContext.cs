@@ -65,6 +65,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ScheduledCallback> ScheduledCallbacks => Set<ScheduledCallback>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<LeadApplication> LeadApplications => Set<LeadApplication>();
+    public DbSet<PortalCredential> PortalCredentials => Set<PortalCredential>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -206,6 +207,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // public bank identifiers, so they stay plaintext.
             e.Property(x => x.AccountNumber).HasConversion(enc);
             e.HasOne<Lead>().WithOne(l => l.Application).HasForeignKey<LeadApplication>(x => x.LeadId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<PortalCredential>(e =>
+        {
+            e.Property(x => x.PortalName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Username).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Url).HasMaxLength(500);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            // The password is the secret — encrypt it at rest like SSN / bank account.
+            e.Property(x => x.Password).HasConversion(new Security.EncryptedStringConverter());
+            e.HasIndex(x => x.AgencyId);
         });
 
         b.Entity<RefreshToken>(e =>

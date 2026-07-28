@@ -72,6 +72,7 @@ const SubmissionAgentsPage = lazyWithReload(() => import("../features/admin/Subm
 const ChatOversightPage = lazyWithReload(() => import("../features/admin/ChatOversightPage").then(m => ({ default: m.ChatOversightPage })));
 const SecurityCenterPage = lazyWithReload(() => import("../features/admin/SecurityCenterPage").then(m => ({ default: m.SecurityCenterPage })));
 const AuditLogPage = lazyWithReload(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
+const ConfidentialPage = lazyWithReload(() => import("../features/confidential/ConfidentialPage").then(m => ({ default: m.ConfidentialPage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
@@ -301,6 +302,11 @@ const router = createBrowserRouter([
           {
             element: <ProtectedRoute modules={[M.Workflows]} roles={adminRoles} />,
             children: [{ path: "/workflows", element: <WorkflowsPage /> }],
+          },
+          {
+            // Confidential vault — Admin / SuperAdmin only (both bypass in ProtectedRoute).
+            element: <ProtectedRoute roles={["Admin"]} />,
+            children: [{ path: "/confidential", element: <ConfidentialPage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Admin]} roles={adminRoles} />,

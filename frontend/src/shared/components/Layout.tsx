@@ -92,6 +92,7 @@ const groups: NavGroup[] = [
       { to: "/admin/users",    label: "User Mgmt",        icon: "users",    module: "users.manage" },
       { to: "/admin/roles",    label: "Role Management",  icon: "shield",   module: "roles.manage" },
       { to: "/admin/security", label: "Security Center",  icon: "shield",   module: "roles.manage" },
+      { to: "/confidential",   label: "Confidential",     icon: "lock",     roles: ["Admin"] },
       { to: "/admin/register", label: "Register User",    icon: "plus",     module: "users.manage" },
       { to: "/admin",              label: "Admin",            icon: "cog",      module: "admin" },
       { to: "/admin/integrations", label: "Integrations",     icon: "filter",   module: "admin" },

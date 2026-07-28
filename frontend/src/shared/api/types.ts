@@ -30,6 +30,25 @@ export interface CallCenterDto {
   leadCount: number;
 }
 
+/** A stored insurance / carrier portal login (Confidential vault, Admin/SuperAdmin only). */
+export interface PortalCredential {
+  id: string;
+  portalName: string;
+  url?: string | null;
+  username: string;
+  password: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+export interface PortalCredentialInput {
+  portalName: string;
+  url?: string | null;
+  username: string;
+  password: string;
+  notes?: string | null;
+}
+
 export interface AppModuleDto {
   id: string;
   code: string;

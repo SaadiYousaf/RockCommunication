@@ -13,6 +13,7 @@ import type {
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
+  PortalCredential, PortalCredentialInput,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -90,7 +91,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1031,6 +1032,24 @@ export const baseApi = createApi({
       }),
       invalidatesTags: (_r, _e, arg) => [{ type: "RolePermissions", id: arg.roleId }, "Permissions"],
     }),
+
+    // ── Confidential vault — insurance-portal logins (Admin / SuperAdmin only) ──
+    listPortalCredentials: b.query<PortalCredential[], void>({
+      query: () => "/api/confidential/portal-credentials",
+      providesTags: ["PortalCredentials"],
+    }),
+    createPortalCredential: b.mutation<PortalCredential, PortalCredentialInput>({
+      query: (body) => ({ url: "/api/confidential/portal-credentials", method: "POST", body }),
+      invalidatesTags: ["PortalCredentials"],
+    }),
+    updatePortalCredential: b.mutation<PortalCredential, { id: string } & PortalCredentialInput>({
+      query: ({ id, ...body }) => ({ url: `/api/confidential/portal-credentials/${id}`, method: "PUT", body }),
+      invalidatesTags: ["PortalCredentials"],
+    }),
+    deletePortalCredential: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/confidential/portal-credentials/${id}`, method: "DELETE" }),
+      invalidatesTags: ["PortalCredentials"],
+    }),
   }),
 });
 
@@ -1227,6 +1246,8 @@ export const {
   useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation, useUpdateCallCenterInAgencyMutation,
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
+  useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
+  useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

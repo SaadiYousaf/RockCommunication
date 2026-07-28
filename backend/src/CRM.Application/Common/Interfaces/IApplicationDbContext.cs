@@ -16,6 +16,7 @@ public interface IApplicationDbContext
     DbSet<ScheduledCallback> ScheduledCallbacks { get; }
     DbSet<Sale> Sales { get; }
     DbSet<LeadApplication> LeadApplications { get; }
+    DbSet<PortalCredential> PortalCredentials { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<CommissionEntry> CommissionEntries { get; }
