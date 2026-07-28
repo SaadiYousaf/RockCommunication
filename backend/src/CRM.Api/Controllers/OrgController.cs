@@ -20,9 +20,11 @@ public class OrgController : ControllerBase
     /// <summary>
     /// Returns the org hierarchy — CEO → leadership → teams → members — for the
     /// caller's agency. SuperAdmin may pass <c>?agencyId=…</c> to view another tenant.
+    /// Read is open to ANY authenticated user (the query is agency-scoped, so they only
+    /// ever see their own agency) — everyone can view the team layout. Editing stays gated
+    /// by TeamWrite on the mutations below, so non-privileged users get a read-only view.
     /// </summary>
     [HttpGet("tree")]
-    [HasPermission(Permissions.TeamRead)]
     public async Task<IActionResult> Tree([FromQuery] Guid? agencyId, CancellationToken ct)
         => Ok(await _mediator.Send(new GetOrgTreeQuery(agencyId), ct));
 
