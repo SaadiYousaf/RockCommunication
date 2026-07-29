@@ -45,6 +45,12 @@ public static class Roles
     public const string Correspondence = "Correspondence";
     public const string Winbacks = "Winbacks";
 
+    // ── Back-office / support ─────────────────────────────────────────────────
+    /// <summary>Human-resources staff: manage employee records, attendance, payroll, hiring.</summary>
+    public const string HR = "HR";
+    /// <summary>Support staff (office boy) — an employee record with no pipeline duties.</summary>
+    public const string OfficeBoy = "OfficeBoy";
+
     public static readonly string[] All =
     {
         SuperAdmin,
@@ -54,7 +60,8 @@ public static class Roles
         Fronter, Verifier,
         JrCloser, Closer, Validator, SelfValidator,
         LicenseAgent,
-        Followups, Correspondence, Winbacks
+        Followups, Correspondence, Winbacks,
+        HR, OfficeBoy
     };
 
     /// <summary>

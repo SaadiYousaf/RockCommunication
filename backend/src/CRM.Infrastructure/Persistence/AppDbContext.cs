@@ -66,6 +66,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<LeadApplication> LeadApplications => Set<LeadApplication>();
     public DbSet<PortalCredential> PortalCredentials => Set<PortalCredential>();
+    public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -217,6 +218,28 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.Notes).HasMaxLength(2000);
             // The password is the secret — encrypt it at rest like SSN / bank account.
             e.Property(x => x.Password).HasConversion(new Security.EncryptedStringConverter());
+            e.HasIndex(x => x.AgencyId);
+        });
+
+        b.Entity<Employee>(e =>
+        {
+            e.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.AgentCode).HasMaxLength(60).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(40);
+            e.Property(x => x.OfficialEmail).HasMaxLength(200);
+            e.Property(x => x.GuardianPhone).HasMaxLength(40);
+            e.Property(x => x.WorkHours).HasMaxLength(120);
+            e.Property(x => x.BankName).HasMaxLength(200);
+            e.Property(x => x.BankAccountTitle).HasMaxLength(200);
+            e.Property(x => x.BankIban).HasMaxLength(60);
+            // Sensitive PII — encrypted at rest like SSN.
+            var empEnc = new Security.EncryptedStringConverter();
+            e.Property(x => x.Cnic).HasConversion(empEnc);
+            e.Property(x => x.BankAccountNumber).HasConversion(empEnc);
+            // Agent ID is unique within an agency (ignore soft-deleted rows).
+            e.HasIndex(x => new { x.AgencyId, x.AgentCode })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => x.AgencyId);
         });
 

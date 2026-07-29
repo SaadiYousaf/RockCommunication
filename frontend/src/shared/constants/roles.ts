@@ -7,6 +7,7 @@ export const ALL_ROLES = [
   "JrCloser", "Closer", "Validator", "SelfValidator",
   "LicenseAgent",
   "Followups", "Correspondence", "Winbacks",
+  "HR", "OfficeBoy",
 ] as const;
 
 export type RoleName = (typeof ALL_ROLES)[number];
@@ -15,6 +16,7 @@ export type RoleName = (typeof ALL_ROLES)[number];
 export const ROLE_LABELS: Record<string, string> = {
   Validator: "Submission Agent",
   LicenseAgent: "License Agent",
+  OfficeBoy: "Office Boy",
 };
 export const roleLabel = (r: string): string => ROLE_LABELS[r] ?? r;
 
@@ -24,6 +26,7 @@ export const ROLE_TONES: Record<string, BadgeTone> = {
   Closer: "success", JrCloser: "success", SelfValidator: "success",
   Validator: "info", LicenseAgent: "info", Fronter: "brand", Verifier: "brand",
   Followups: "neutral", Correspondence: "neutral", Winbacks: "neutral",
+  HR: "accent", OfficeBoy: "neutral",
 };
 
 /** Roles that manage / oversee (see all records in scope). */

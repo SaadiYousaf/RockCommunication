@@ -49,6 +49,85 @@ export interface PortalCredentialInput {
   notes?: string | null;
 }
 
+/** HR employee roster row (no sensitive fields). */
+export interface EmployeeListItem {
+  id: string;
+  fullName: string;
+  agentCode: string;
+  phoneNumber?: string | null;
+  officialEmail?: string | null;
+  designation: string;
+  employmentStatus: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
+  dateOfJoining?: string | null;
+  dateOfBirth?: string | null;
+}
+
+/** Full HR employee profile. */
+export interface Employee {
+  id: string;
+  fullName: string;
+  agentCode: string;
+  phoneNumber?: string | null;
+  officialEmail?: string | null;
+  designation: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
+  userId?: string | null;
+  cnic?: string | null;
+  gender: string;
+  maritalStatus: string;
+  dateOfBirth?: string | null;
+  guardianPhone?: string | null;
+  guardianRelationship?: string | null;
+  currentAddress?: string | null;
+  permanentAddress?: string | null;
+  dateOfJoining?: string | null;
+  employmentStatus: string;
+  reportingToEmployeeId?: string | null;
+  reportingToName?: string | null;
+  workHours?: string | null;
+  bankName?: string | null;
+  bankAccountTitle?: string | null;
+  bankAccountNumber?: string | null;
+  bankIban?: string | null;
+  photoKey?: string | null;
+  idCardFrontKey?: string | null;
+  idCardBackKey?: string | null;
+  createdAt: string;
+}
+
+/** Writable employee fields (create + update). */
+export interface EmployeeInput {
+  fullName: string;
+  agentCode: string;
+  phoneNumber?: string | null;
+  officialEmail?: string | null;
+  designation: string;
+  callCenterId?: string | null;
+  userId?: string | null;
+  cnic?: string | null;
+  gender: string;
+  maritalStatus: string;
+  dateOfBirth?: string | null;
+  guardianPhone?: string | null;
+  guardianRelationship?: string | null;
+  currentAddress?: string | null;
+  permanentAddress?: string | null;
+  dateOfJoining?: string | null;
+  employmentStatus: string;
+  reportingToEmployeeId?: string | null;
+  workHours?: string | null;
+  bankName?: string | null;
+  bankAccountTitle?: string | null;
+  bankAccountNumber?: string | null;
+  bankIban?: string | null;
+  photoKey?: string | null;
+  idCardFrontKey?: string | null;
+  idCardBackKey?: string | null;
+}
+
 export interface AppModuleDto {
   id: string;
   code: string;

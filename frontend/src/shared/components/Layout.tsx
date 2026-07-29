@@ -83,6 +83,12 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    label: "Human Resources",
+    items: [
+      { to: "/hr/employees", label: "Employees", icon: "users", roles: ["HR"] },
+    ],
+  },
+  {
     label: "Administration",
     items: [
       { to: "/admin/agencies",     label: "Agencies",         icon: "building", superAdminOnly: true },

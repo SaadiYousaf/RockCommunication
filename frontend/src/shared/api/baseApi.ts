@@ -14,6 +14,7 @@ import type {
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   PortalCredential, PortalCredentialInput,
+  Employee, EmployeeListItem, EmployeeInput,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -91,7 +92,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1050,6 +1051,28 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/api/confidential/portal-credentials/${id}`, method: "DELETE" }),
       invalidatesTags: ["PortalCredentials"],
     }),
+
+    // ── HR — employees ──────────────────────────────────────────────────────
+    listEmployees: b.query<EmployeeListItem[], { search?: string; callCenterId?: string; designation?: string } | void>({
+      query: (params) => ({ url: "/api/hr/employees", params: params ?? undefined }),
+      providesTags: ["Employees"],
+    }),
+    getEmployee: b.query<Employee, string>({
+      query: (id) => `/api/hr/employees/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Employees", id }],
+    }),
+    createEmployee: b.mutation<Employee, EmployeeInput>({
+      query: (body) => ({ url: "/api/hr/employees", method: "POST", body }),
+      invalidatesTags: ["Employees"],
+    }),
+    updateEmployee: b.mutation<Employee, { id: string } & EmployeeInput>({
+      query: ({ id, ...body }) => ({ url: `/api/hr/employees/${id}`, method: "PUT", body }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Employees", id: arg.id }, "Employees"],
+    }),
+    deleteEmployee: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/hr/employees/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Employees"],
+    }),
   }),
 });
 
@@ -1249,6 +1272,8 @@ export const {
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
   useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
   useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
+  useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
+  useUpdateEmployeeMutation, useDeleteEmployeeMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,
