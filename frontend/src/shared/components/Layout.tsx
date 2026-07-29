@@ -88,6 +88,7 @@ const groups: NavGroup[] = [
       { to: "/hr/employees", label: "Employees", icon: "users", roles: ["HR"] },
       { to: "/hr/attendance", label: "Attendance", icon: "clock", roles: ["HR"] },
       { to: "/hr/interviews", label: "Interviews", icon: "userPlus", roles: ["HR"] },
+      { to: "/hr/payroll", label: "Payroll", icon: "doc", roles: ["HR"] },
     ],
   },
   {

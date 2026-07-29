@@ -77,6 +77,7 @@ const ConfidentialPage = lazyWithReload(() => import("../features/confidential/C
 const EmployeesPage = lazyWithReload(() => import("../features/hr/EmployeesPage").then(m => ({ default: m.EmployeesPage })));
 const HrAttendancePage = lazyWithReload(() => import("../features/hr/HrAttendancePage").then(m => ({ default: m.HrAttendancePage })));
 const InterviewsPage = lazyWithReload(() => import("../features/hr/InterviewsPage").then(m => ({ default: m.InterviewsPage })));
+const PayrollPage = lazyWithReload(() => import("../features/hr/PayrollPage").then(m => ({ default: m.PayrollPage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
@@ -319,6 +320,7 @@ const router = createBrowserRouter([
               { path: "/hr/employees", element: <EmployeesPage /> },
               { path: "/hr/attendance", element: <HrAttendancePage /> },
               { path: "/hr/interviews", element: <InterviewsPage /> },
+              { path: "/hr/payroll", element: <PayrollPage /> },
             ],
           },
           {

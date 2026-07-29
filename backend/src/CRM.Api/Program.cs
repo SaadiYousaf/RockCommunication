@@ -17,6 +17,9 @@ using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// QuestPDF community licence (free for our use) — required before generating any PDF.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration).WriteTo.Console());
 
 builder.Services.AddHttpContextAccessor();

@@ -98,6 +98,57 @@ export interface Employee {
   createdAt: string;
 }
 
+/** One employee's payroll for a month, with computed totals. */
+export interface PayrollRow {
+  employeeId: string;
+  fullName: string;
+  agentCode: string;
+  year: number;
+  month: number;
+  basicSalary: number;
+  punctuality: number;
+  dailyBonus: number;
+  monthlyCommissions: number;
+  transportAllowance: number;
+  specialAllowance: number;
+  advanceSalary: number;
+  docks: number;
+  workingDays: number;
+  presentDays: number;
+  leavesApproved: number;
+  lateComing: number;
+  halfDays: number;
+  absentDays: number;
+  ncns: number;
+  grossEarnings: number;
+  deductions: number;
+  netPay: number;
+  notes?: string | null;
+  finalized: boolean;
+  saved: boolean;
+}
+
+/** Writable payroll fields. */
+export interface SavePayrollInput {
+  basicSalary: number;
+  punctuality: number;
+  dailyBonus: number;
+  monthlyCommissions: number;
+  transportAllowance: number;
+  specialAllowance: number;
+  advanceSalary: number;
+  docks: number;
+  workingDays: number;
+  presentDays: number;
+  leavesApproved: number;
+  lateComing: number;
+  halfDays: number;
+  absentDays: number;
+  ncns: number;
+  notes?: string | null;
+  finalized: boolean;
+}
+
 /** A recruitment / interview record. */
 export interface Interview {
   id: string;

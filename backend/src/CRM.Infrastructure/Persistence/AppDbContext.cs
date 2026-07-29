@@ -69,6 +69,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeAttendance> EmployeeAttendances => Set<EmployeeAttendance>();
     public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<EmployeePayroll> EmployeePayrolls => Set<EmployeePayroll>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -263,6 +264,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.Remarks).HasMaxLength(2000);
             e.Property(x => x.Cnic).HasConversion(new Security.EncryptedStringConverter());
             e.HasIndex(x => new { x.AgencyId, x.Status });
+        });
+
+        b.Entity<EmployeePayroll>(e =>
+        {
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            foreach (var p in new[] { nameof(EmployeePayroll.BasicSalary), nameof(EmployeePayroll.Punctuality),
+                nameof(EmployeePayroll.DailyBonus), nameof(EmployeePayroll.MonthlyCommissions),
+                nameof(EmployeePayroll.TransportAllowance), nameof(EmployeePayroll.SpecialAllowance),
+                nameof(EmployeePayroll.AdvanceSalary), nameof(EmployeePayroll.Docks) })
+                e.Property(p).HasColumnType("decimal(18,2)");
+            e.HasIndex(x => new { x.EmployeeId, x.Year, x.Month }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+            e.HasIndex(x => new { x.AgencyId, x.Year, x.Month });
         });
 
         b.Entity<RefreshToken>(e =>
