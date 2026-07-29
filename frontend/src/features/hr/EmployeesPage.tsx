@@ -10,6 +10,7 @@ import {
   hrLabel, EMPLOYMENT_TONE,
 } from "../../shared/constants/hr";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { EmployeeImageField } from "./EmployeeImageField";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
@@ -52,7 +53,7 @@ export function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EmployeeInput>(BLANK);
-  const { data: editingFull } = useGetEmployeeQuery(editingId!, { skip: !editingId });
+  const { data: editingFull, refetch: refetchEmployee } = useGetEmployeeQuery(editingId!, { skip: !editingId });
 
   // Hydrate the form when the full record for the edited employee arrives.
   useEffect(() => {
@@ -241,6 +242,18 @@ export function EmployeesPage() {
             <Input label="Account title" value={form.bankAccountTitle ?? ""} onChange={set("bankAccountTitle")} />
             <Input label="Account number" value={form.bankAccountNumber ?? ""} onChange={set("bankAccountNumber")} secure />
             <Input label="IBAN" value={form.bankIban ?? ""} onChange={set("bankIban")} />
+          </Section>
+
+          <Section title="Documents">
+            {editingId && editingFull ? (
+              <>
+                <EmployeeImageField employeeId={editingId} kind="Photo" label="Photo" hasImage={!!editingFull.photoKey} onChanged={refetchEmployee} />
+                <EmployeeImageField employeeId={editingId} kind="IdCardFront" label="ID card — front" hasImage={!!editingFull.idCardFrontKey} onChanged={refetchEmployee} />
+                <EmployeeImageField employeeId={editingId} kind="IdCardBack" label="ID card — back" hasImage={!!editingFull.idCardBackKey} onChanged={refetchEmployee} />
+              </>
+            ) : (
+              <div className="sm:col-span-2 text-xs text-ink-400">Save the employee first, then reopen to upload their photo and ID card.</div>
+            )}
           </Section>
         </form>
       </Modal>

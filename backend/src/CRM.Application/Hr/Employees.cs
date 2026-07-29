@@ -55,6 +55,12 @@ public record UpdateEmployeeCommand(Guid Id, EmployeeInput Input) : IRequest<Emp
 
 public record DeleteEmployeeCommand(Guid Id) : IRequest<Unit>;
 
+/// <summary>Point one of the employee's image slots at an already-stored file key.</summary>
+public record SetEmployeeImageCommand(Guid Id, EmployeeImageKind Kind, string StorageKey) : IRequest<Unit>;
+
+/// <summary>The storage key for one of the employee's image slots (null if unset).</summary>
+public record GetEmployeeImageKeyQuery(Guid Id, EmployeeImageKind Kind) : IRequest<string?>;
+
 // ── Validation ──────────────────────────────────────────────────────────────
 
 public class EmployeeInputValidator : AbstractValidator<EmployeeInput>
@@ -90,7 +96,9 @@ public class EmployeeHandlers :
     IRequestHandler<GetEmployeeQuery, EmployeeDto>,
     IRequestHandler<CreateEmployeeCommand, EmployeeDto>,
     IRequestHandler<UpdateEmployeeCommand, EmployeeDto>,
-    IRequestHandler<DeleteEmployeeCommand, Unit>
+    IRequestHandler<DeleteEmployeeCommand, Unit>,
+    IRequestHandler<SetEmployeeImageCommand, Unit>,
+    IRequestHandler<GetEmployeeImageKeyQuery, string?>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -178,6 +186,37 @@ public class EmployeeHandlers :
         e.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Unit.Value;
+    }
+
+    public async Task<Unit> Handle(SetEmployeeImageCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureHr();
+        var e = await _db.Employees.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
+            ?? throw new NotFoundException(nameof(Employee), request.Id);
+        switch (request.Kind)
+        {
+            case EmployeeImageKind.Photo: e.PhotoKey = request.StorageKey; break;
+            case EmployeeImageKind.IdCardFront: e.IdCardFrontKey = request.StorageKey; break;
+            case EmployeeImageKind.IdCardBack: e.IdCardBackKey = request.StorageKey; break;
+        }
+        e.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Unit.Value;
+    }
+
+    public async Task<string?> Handle(GetEmployeeImageKeyQuery request, CancellationToken ct)
+    {
+        EnsureHr();
+        var e = await _db.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.Id, ct)
+            ?? throw new NotFoundException(nameof(Employee), request.Id);
+        return request.Kind switch
+        {
+            EmployeeImageKind.Photo => e.PhotoKey,
+            EmployeeImageKind.IdCardFront => e.IdCardFrontKey,
+            EmployeeImageKind.IdCardBack => e.IdCardBackKey,
+            _ => null,
+        };
     }
 
     private async Task EnsureAgentCodeFreeAsync(string agentCode, Guid? excludeId, CancellationToken ct)

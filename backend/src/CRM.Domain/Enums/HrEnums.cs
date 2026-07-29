@@ -41,6 +41,14 @@ public enum EmploymentStatus
     Terminated = 5,
 }
 
+/// <summary>Which uploaded image slot on an employee record a file belongs to.</summary>
+public enum EmployeeImageKind
+{
+    Photo = 0,
+    IdCardFront = 1,
+    IdCardBack = 2,
+}
+
 /// <summary>Relationship of the emergency/guardian contact to the employee.</summary>
 public enum GuardianRelationship
 {

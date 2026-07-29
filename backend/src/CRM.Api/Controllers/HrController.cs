@@ -1,3 +1,4 @@
+using CRM.Application.Common.Interfaces;
 using CRM.Application.Hr;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
@@ -17,7 +18,12 @@ namespace CRM.Api.Controllers;
 public class HrController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public HrController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
+    private readonly IFileStorage _files;
+    public HrController(IMediator mediator, IFileStorage files)
+    {
+        _mediator = Guard.AgainstNull(mediator);
+        _files = Guard.AgainstNull(files);
+    }
 
     [HttpGet]
     public async Task<IActionResult> List(
@@ -49,4 +55,38 @@ public class HrController : ControllerBase
         await _mediator.Send(new DeleteEmployeeCommand(id), ct);
         return NoContent();
     }
+
+    /// <summary>Upload a photo / ID-card image for an employee. Stores the file and points the
+    /// chosen image slot at it. Returns the opaque storage key.</summary>
+    [HttpPost("{id:guid}/image")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadImage(Guid id, [FromQuery] EmployeeImageKind kind, IFormFile file, CancellationToken ct)
+    {
+        Guard.AgainstNull(file);
+        if (file.Length == 0 || !(file.ContentType?.StartsWith("image/") ?? false))
+            return BadRequest("Please upload an image file.");
+        await using var stream = file.OpenReadStream();
+        var key = await _files.SaveAsync("hr-employees", file.FileName, stream, ct);
+        await _mediator.Send(new SetEmployeeImageCommand(id, kind, key), ct);
+        return Ok(new { key });
+    }
+
+    /// <summary>Streams an employee's photo / ID-card image (HR-authorized).</summary>
+    [HttpGet("{id:guid}/image/{kind}")]
+    public async Task<IActionResult> GetImage(Guid id, EmployeeImageKind kind, CancellationToken ct)
+    {
+        var key = await _mediator.Send(new GetEmployeeImageKeyQuery(id, kind), ct);
+        if (string.IsNullOrEmpty(key)) return NotFound();
+        var stream = await _files.OpenReadAsync(key, ct);
+        return File(stream, ContentTypeFor(key));
+    }
+
+    private static string ContentTypeFor(string key) => System.IO.Path.GetExtension(key).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        _ => "application/octet-stream",
+    };
 }
