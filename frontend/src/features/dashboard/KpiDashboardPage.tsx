@@ -87,9 +87,9 @@ export function KpiDashboardPage() {
     }
   }
 
-  // Apply the initial preset on mount (if one is active and we haven't manually changed).
-  // Run once via lazy init in `picked`.
-  useMemo(() => {
+  // Apply the initial preset once on mount. This is a side effect (it setState's the date
+  // range), so it belongs in useEffect — doing it in useMemo runs setState during render.
+  useEffect(() => {
     if (Object.keys(picked).length === 0) {
       const active = presets.find((p) => p.id === activePresetId) ?? presets[0];
       if (active) applyPreset(active);

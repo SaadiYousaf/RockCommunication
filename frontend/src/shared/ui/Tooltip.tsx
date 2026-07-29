@@ -1,4 +1,4 @@
-import { cloneElement, useId, useState, type ReactElement, type ReactNode } from "react";
+import { cloneElement, useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { cn } from "./cn";
 
 /**
@@ -22,16 +22,21 @@ export function Tooltip({
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
-  let timer: ReturnType<typeof setTimeout>;
+  // Ref, not a plain local: a local `timer` is recreated on every render, so a re-render
+  // between show() and hide() would leave clearTimeout cancelling the wrong (empty) handle —
+  // the tooltip could pop open after the pointer already left.
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   function show() {
-    clearTimeout(timer);
-    timer = setTimeout(() => setOpen(true), delay);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(true), delay);
   }
   function hide() {
-    clearTimeout(timer);
+    clearTimeout(timer.current);
     setOpen(false);
   }
+
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   const sidePos: Record<typeof side, string> = {
     top:    "bottom-full left-1/2 -translate-x-1/2 mb-2",
