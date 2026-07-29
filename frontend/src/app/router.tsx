@@ -75,6 +75,7 @@ const SecurityCenterPage = lazyWithReload(() => import("../features/admin/Securi
 const AuditLogPage = lazyWithReload(() => import("../features/admin/AuditLogPage").then(m => ({ default: m.AuditLogPage })));
 const ConfidentialPage = lazyWithReload(() => import("../features/confidential/ConfidentialPage").then(m => ({ default: m.ConfidentialPage })));
 const EmployeesPage = lazyWithReload(() => import("../features/hr/EmployeesPage").then(m => ({ default: m.EmployeesPage })));
+const HrAttendancePage = lazyWithReload(() => import("../features/hr/HrAttendancePage").then(m => ({ default: m.HrAttendancePage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
@@ -313,7 +314,10 @@ const router = createBrowserRouter([
           {
             // HR module — HR staff + Admin/SuperAdmin (both bypass in ProtectedRoute).
             element: <ProtectedRoute roles={["HR"]} />,
-            children: [{ path: "/hr/employees", element: <EmployeesPage /> }],
+            children: [
+              { path: "/hr/employees", element: <EmployeesPage /> },
+              { path: "/hr/attendance", element: <HrAttendancePage /> },
+            ],
           },
           {
             element: <ProtectedRoute modules={[M.Admin]} roles={adminRoles} />,

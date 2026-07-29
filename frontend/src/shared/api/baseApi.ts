@@ -14,7 +14,7 @@ import type {
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   PortalCredential, PortalCredentialInput,
-  Employee, EmployeeListItem, EmployeeInput,
+  Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -92,7 +92,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1073,6 +1073,20 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/api/hr/employees/${id}`, method: "DELETE" }),
       invalidatesTags: ["Employees"],
     }),
+
+    // ── HR — attendance ───────────────────────────────────────────────────────
+    attendanceDay: b.query<HrAttendanceRow[], { date: string; callCenterId?: string }>({
+      query: (params) => ({ url: "/api/hr/attendance/day", params }),
+      providesTags: ["Attendance"],
+    }),
+    attendanceSummary: b.query<HrAttendanceSummaryRow[], { year: number; month: number; callCenterId?: string }>({
+      query: (params) => ({ url: "/api/hr/attendance/summary", params }),
+      providesTags: ["Attendance"],
+    }),
+    markAttendance: b.mutation<void, { employeeId: string; date: string; status: string; notes?: string | null }>({
+      query: (body) => ({ url: "/api/hr/attendance/mark", method: "POST", body }),
+      invalidatesTags: ["Attendance"],
+    }),
   }),
 });
 
@@ -1274,6 +1288,7 @@ export const {
   useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation,
+  useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

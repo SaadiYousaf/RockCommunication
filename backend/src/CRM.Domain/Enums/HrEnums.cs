@@ -41,6 +41,19 @@ public enum EmploymentStatus
     Terminated = 5,
 }
 
+/// <summary>An employee's attendance for a single day. Drives payroll present/absent/late counts.</summary>
+public enum AttendanceStatus
+{
+    Present = 0,
+    Absent = 1,
+    Late = 2,
+    HalfDay = 3,
+    /// <summary>Approved leave.</summary>
+    Leave = 4,
+    /// <summary>No call, no show.</summary>
+    Ncns = 5,
+}
+
 /// <summary>Which uploaded image slot on an employee record a file belongs to.</summary>
 public enum EmployeeImageKind
 {

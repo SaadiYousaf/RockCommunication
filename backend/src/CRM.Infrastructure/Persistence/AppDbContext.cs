@@ -67,6 +67,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<LeadApplication> LeadApplications => Set<LeadApplication>();
     public DbSet<PortalCredential> PortalCredentials => Set<PortalCredential>();
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<EmployeeAttendance> EmployeeAttendances => Set<EmployeeAttendance>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -241,6 +242,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 .IsUnique()
                 .HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => x.AgencyId);
+        });
+
+        b.Entity<EmployeeAttendance>(e =>
+        {
+            e.Property(x => x.Notes).HasMaxLength(500);
+            // One attendance mark per employee per day.
+            e.HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+            e.HasIndex(x => new { x.AgencyId, x.Date });
         });
 
         b.Entity<RefreshToken>(e =>

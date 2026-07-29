@@ -110,13 +110,7 @@ public class EmployeeHandlers :
     }
 
     /// <summary>HR module is HR / Admin / SuperAdmin only.</summary>
-    private void EnsureHr()
-    {
-        if (_user.IsSuperAdmin
-            || _user.Roles.Contains(DomainRoles.Admin)
-            || _user.Roles.Contains(DomainRoles.HR)) return;
-        throw new ForbiddenAccessException();
-    }
+    private void EnsureHr() => HrAccess.EnsureHr(_user);
 
     public async Task<IReadOnlyList<EmployeeListItemDto>> Handle(ListEmployeesQuery request, CancellationToken ct)
     {

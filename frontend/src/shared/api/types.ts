@@ -98,6 +98,35 @@ export interface Employee {
   createdAt: string;
 }
 
+/** One employee's HR attendance mark for a chosen day (status null = unmarked). */
+export interface HrAttendanceRow {
+  employeeId: string;
+  fullName: string;
+  agentCode: string;
+  designation: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
+  status?: string | null;
+  notes?: string | null;
+}
+
+/** One employee's monthly HR attendance roll-up. */
+export interface HrAttendanceSummaryRow {
+  employeeId: string;
+  fullName: string;
+  agentCode: string;
+  designation: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
+  present: number;
+  absent: number;
+  late: number;
+  halfDay: number;
+  leave: number;
+  ncns: number;
+  marked: number;
+}
+
 /** Writable employee fields (create + update). */
 export interface EmployeeInput {
   fullName: string;
