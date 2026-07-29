@@ -42,10 +42,11 @@ public class LeadsController : ControllerBase
         [FromQuery] string sort = "createdAt-desc",
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50,
+        [FromQuery] string? search = null,
         CancellationToken ct = default)
         => Ok(await _mediator.Send(new ListLeadsQuery(
             stage, assignedUserId, disposition, state, campaignId, leadSourceId,
-            minScore, createdAfter, createdBefore, sort, skip, take), ct));
+            minScore, createdAfter, createdBefore, sort, skip, take, search), ct));
 
     [HttpGet("mine")]
     [HasPermission(Permissions.QueueRead)]

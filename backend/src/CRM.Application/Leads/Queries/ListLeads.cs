@@ -23,7 +23,8 @@ public record ListLeadsQuery(
     DateTime? CreatedBefore = null,
     string Sort = "createdAt-desc",
     int Skip = 0,
-    int Take = 50)
+    int Take = 50,
+    string? Search = null)
     : IRequest<PagedLeadsResult>;
 
 public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult>
@@ -56,6 +57,13 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
         if (request.MinScore is { } ms) q = q.Where(l => l.Score >= ms);
         if (request.CreatedAfter is { } ca) q = q.Where(l => l.CreatedAt >= ca);
         if (request.CreatedBefore is { } cb) q = q.Where(l => l.CreatedAt < cb);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            // Server-side name/phone/email match so search spans ALL pages, not just the loaded one.
+            var s = request.Search.Trim();
+            q = q.Where(l => l.FirstName.Contains(s) || l.LastName.Contains(s)
+                || l.PhoneNumber.Contains(s) || (l.Email != null && l.Email.Contains(s)));
+        }
 
         q = request.Sort switch
         {

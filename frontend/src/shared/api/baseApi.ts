@@ -1166,6 +1166,7 @@ export interface ListLeadsParams {
   sort?: string;
   skip?: number;
   take?: number;
+  search?: string;
 }
 
 export interface BulkResult { updated: number; skipped: number; errors: string[]; }

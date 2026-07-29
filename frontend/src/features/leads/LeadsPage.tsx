@@ -78,6 +78,8 @@ export function LeadsPage() {
     sort,
     skip: page * PAGE_SIZE,
     take: PAGE_SIZE,
+    // Search server-side so it spans every page, not just the loaded one.
+    search: debouncedSearch.trim() || undefined,
   } as const;
 
   const { data: leadsResult, isLoading, isFetching, refetch } = useListLeadsQuery(queryParams);
