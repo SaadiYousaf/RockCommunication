@@ -45,7 +45,13 @@ export function CallbacksPage() {
   const [open, setOpen] = useState(false);
   const [leadId, setLeadId] = useState("");
   const { data: myLeads = [] } = useMyLeadsQuery();
-  const [when, setWhen] = useState(() => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16));
+  const [when, setWhen] = useState(() => {
+    // datetime-local wants a LOCAL wall-clock string; toISOString() is UTC, so shift by the
+    // tz offset first — otherwise the default reads hours off for anyone not on UTC.
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  });
   const [reason, setReason] = useState("");
 
   const buckets = useMemo(() => {

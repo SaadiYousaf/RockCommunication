@@ -212,7 +212,7 @@ export function UserManagementPage() {
                       aria-label="Reset password"
                       onClick={() => { setResetting({ id: u.id, userName: u.userName }); setNewPwd(""); }}
                     ><Icon name="key" size={15} /></Button>
-                    {active && !u.invitationAcceptedAt && (
+                    {active && u.mustChangePassword && (
                       <Button
                         variant="ghost" size="sm" disabled={resending} title="Resend invitation" aria-label="Resend invitation"
                         onClick={async () => {

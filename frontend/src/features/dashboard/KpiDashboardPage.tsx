@@ -21,19 +21,19 @@ const DEFAULT_PRESETS: DashboardPreset[] = [
   {
     id: "preset-leads-7d",
     name: "Leads · 7 days",
-    metrics: ["totalLeads", "frontedLeads", "conversionRate"],
+    metrics: ["leads.total", "leads.fronted", "leads.conversion-rate"],
     range: { kind: "rolling", days: 7 },
   },
   {
     id: "preset-sales-30d",
     name: "Sales · 30 days",
-    metrics: ["closedSales", "fundedSales", "totalPremium"],
+    metrics: ["sales.closed", "sales.funded", "sales.premium.monthly"],
     range: { kind: "rolling", days: 30 },
   },
   {
     id: "preset-callcenter",
     name: "Call center · today",
-    metrics: ["answerRate", "abandonRate", "avgHandleTime", "occupancy", "serviceLevel"],
+    metrics: ["calls.answer-rate", "calls.abandon-rate", "calls.aht-seconds", "agents.occupancy", "calls.sl-20s"],
     range: { kind: "rolling", days: 0 },
   },
 ];

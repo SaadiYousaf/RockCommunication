@@ -43,16 +43,16 @@ const ALL_ITEMS: PaletteItem[] = [
   // Pipeline
   { id: "leads",          label: "Browse Leads", to: "/leads", group: "Pipeline", icon: "list", module: "leads" },
   { id: "leads-search",   label: "Search & Dedup leads", to: "/leads/search", group: "Pipeline", icon: "search", module: "leads.search", keywords: ["dedup", "duplicate", "find"] },
-  { id: "lists",          label: "Lead Lists", to: "/lists", group: "Pipeline", icon: "inbox", module: "leads", keywords: ["list", "import"] },
+  { id: "lists",          label: "Lead Lists", to: "/lists", group: "Pipeline", icon: "inbox", module: "campaigns", keywords: ["list", "import"] },
   { id: "cadences",       label: "Cadences", to: "/cadences", group: "Pipeline", icon: "filter", module: "campaigns" },
   { id: "sales",          label: "Sales", to: "/sales", group: "Pipeline", icon: "briefcase", module: "sales" },
   { id: "commissions",    label: "Commissions", to: "/commissions", group: "Pipeline", icon: "doc", module: "commissions", keywords: ["pay", "earnings"] },
 
   // Operations
   { id: "supervisor", label: "Supervisor View", to: "/supervisor", group: "Operations", icon: "shield", module: "supervisor" },
-  { id: "wallboard",  label: "Wallboard", to: "/wallboard", group: "Operations", icon: "chart", module: "reports" },
+  { id: "wallboard",  label: "Wallboard", to: "/wallboard", group: "Operations", icon: "chart", module: "supervisor" },
   { id: "kpis",       label: "KPIs", to: "/kpis", group: "Operations", icon: "chart", module: "reports", keywords: ["analytics", "metrics", "performance"] },
-  { id: "queues",     label: "Queues + IVR", to: "/queues", group: "Operations", icon: "phone", module: "campaigns" },
+  { id: "queues",     label: "Queues + IVR", to: "/queues", group: "Operations", icon: "phone", module: "callcenter" },
   { id: "kb",         label: "Knowledge Base", to: "/kb", group: "Operations", icon: "doc", module: "knowledge", keywords: ["help", "articles", "docs"] },
   { id: "qa",         label: "QA Reviews", to: "/qa", group: "Operations", icon: "star", module: "qa" },
   { id: "qa-browser", label: "QA Browser", to: "/qa/browser", group: "Operations", icon: "doc", module: "qa" },
@@ -363,15 +363,18 @@ function Palette({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             groups.map(([group, list], gi) => {
-              const offset = items.indexOf(list[0]);
               return (
                 <div key={group}>
                   {gi > 0 && <div className="h-px bg-ink-100 mx-3 my-1" />}
                   <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
                     {group}
                   </div>
-                  {list.map((it, idx) => {
-                    const i = offset + idx;
+                  {list.map((it) => {
+                    // The item's TRUE index in the flat, score-sorted `items` array. Groups are
+                    // NOT contiguous in `items`, so a per-group `offset + idx` pointed hover/click
+                    // (and the keyboard highlight) at the wrong command — e.g. clicking a nav
+                    // result could run "Sign out" / "Clock in".
+                    const i = items.indexOf(it);
                     const isActive = i === active;
                     return (
                       <button

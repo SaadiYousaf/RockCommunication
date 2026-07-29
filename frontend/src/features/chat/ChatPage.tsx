@@ -146,7 +146,7 @@ export function ChatPage() {
 
   // PresenceHub — tracks who else is online so the chat header / room list
   // can show a green dot, and so we can decide between "delivered" vs "sent"
-  // ticks on our own messages. Status enum: Offline=2, anything else = online.
+  // ticks on our own messages. Status enum: Offline=0, anything else = online.
   useEffect(() => {
     if (!auth.accessToken) return;
     const conn = new HubConnectionBuilder()
@@ -160,7 +160,7 @@ export function ChatPage() {
       })
       .build();
 
-    const OFFLINE = 2; // matches AgentStatus.Offline on the server
+    const OFFLINE = 0; // matches AgentStatus.Offline on the server (0, not 2 — 2 is OnCall)
     conn.on("PresenceChanged", (uid: string, status: number) => {
       setOnlineUsers((prev) => {
         const next = new Set(prev);

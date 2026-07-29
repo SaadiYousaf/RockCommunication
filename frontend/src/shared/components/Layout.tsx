@@ -69,7 +69,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/supervisor", label: "Supervisor", icon: "shield", module: "supervisor" },
       { to: "/attendance", label: "Attendance", icon: "clock",  module: "attendance" },
-      { to: "/wallboard",  label: "Wallboard",  icon: "chart",  module: "reports" },
+      { to: "/wallboard",  label: "Wallboard",  icon: "chart",  module: "supervisor" },
       { to: "/kpis",       label: "KPIs",       icon: "chart",  module: "reports" },
       { to: "/queues",     label: "Queues + IVR", icon: "phone", module: "callcenter" },
       { to: "/kb",         label: "Knowledge",  icon: "doc",    module: "knowledge" },

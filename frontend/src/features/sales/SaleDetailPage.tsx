@@ -85,8 +85,8 @@ export function SaleDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         <Stat label="Monthly premium" value={money(sale.monthlyPremium)} icon={<Icon name="dollar" size={16} />} tone="brand" />
         <Stat label="Annual premium"  value={money(sale.annualPremium)}  icon={<Icon name="chart" size={16} />}  tone="accent" />
-        <Stat label="License-agent commission" value={money(sale.totalCommission)} icon={<Icon name="card" size={16} />} tone="success"
-              hint={sale.licenseAgentName ? `to ${sale.licenseAgentName}` : "not assigned"} />
+        <Stat label="Total commission" value={money(sale.totalCommission)} icon={<Icon name="card" size={16} />} tone="success"
+              hint={sale.licenseAgentName ? `License agent: ${sale.licenseAgentName}` : "No license agent"} />
         <Stat label="Validator status" value={sale.validatorStatus} icon={<Icon name="shield" size={16} />} tone="warning" />
       </div>
 

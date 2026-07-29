@@ -97,7 +97,7 @@ public class OccupancyMetric : MetricBase
 {
     public OccupancyMetric(IApplicationDbContext db) : base(db) { }
     public override string Key => "agents.occupancy";
-    public override string Label => "Agent occupancy (on-call ÷ available)";
+    public override string Label => "Agent occupancy (on-call ÷ on-call + available)";
     public override string? Group => "Agents";
 
     public override async Task<MetricValue> CalculateAsync(MetricFilter f, CancellationToken ct = default)

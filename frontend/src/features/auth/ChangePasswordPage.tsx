@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useChangePasswordMutation, useMeQuery } from "../../shared/api/baseApi";
-import { setAuth } from "../../app/store";
+import { setAuth, clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
 import { Button, Card, CardBody, Icon, Input, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
@@ -52,10 +52,20 @@ export function ChangePasswordPage() {
 
     try {
       await changePassword({ currentPassword: current, newPassword: next }).unwrap();
-      toast.success("Password updated", "You're all set.");
 
-      // Backend revokes refresh tokens on password change. Refetch /me to get
-      // the cleared mustChangePassword flag, then send the user to the dashboard.
+      // A FORCED first-login change: the old access token still carries the pwd_change=true
+      // claim, so reusing it would 403 every request (the middleware gates on the claim, not the
+      // DB flag), and the refresh token was just revoked — nothing can recover it. So sign out
+      // and send them to login to get a clean token. (Mirrors the 2FA-enrol flow.)
+      if (isForced) {
+        toast.success("Password set", "Please sign in with your new password.");
+        dispatch(clearAuth());
+        navigate("/login");
+        return;
+      }
+
+      toast.success("Password updated", "You're all set.");
+      // Voluntary change: refetch /me to pick up any changes, then continue to the dashboard.
       try {
         const me = await refetchMe().unwrap();
         if (auth.accessToken && auth.refreshToken && me) {

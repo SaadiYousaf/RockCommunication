@@ -5,6 +5,7 @@ import type { RootState } from "../../app/store";
 import {
   useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation,
   useAgencyOptionsQuery, useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
+  useUpdateCallCenterInAgencyMutation,
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -42,6 +43,7 @@ export function CallCentersPage() {
   const [createCc, { isLoading: creating }] = useCreateCallCenterMutation();
   const [createCcInAgency, { isLoading: creatingSa }] = useCreateCallCenterInAgencyMutation();
   const [updateCc, { isLoading: saving }] = useUpdateCallCenterMutation();
+  const [updateCcInAgency, { isLoading: savingSa }] = useUpdateCallCenterInAgencyMutation();
   const toast = useToast();
 
   const [editing, setEditing] = useState<CallCenterDto | null>(null);
@@ -67,10 +69,11 @@ export function CallCentersPage() {
     e.preventDefault();
     if (!editing) return;
     try {
-      await updateCc({
-        id: editing.id, name: editing.name.trim(), code: editing.code?.trim() || null,
-        isActive: editing.isActive,
-      }).unwrap();
+      // SuperAdmin manages call centres cross-tenant via the agency-scoped endpoint; the plain
+      // updateCc endpoint is agency-scoped and 403s for SuperAdmin (empty AgencyId). Mirror submitNew.
+      const body = { name: editing.name.trim(), code: editing.code?.trim() || null, isActive: editing.isActive };
+      if (isSuperAdmin) await updateCcInAgency({ agencyId, callCenterId: editing.id, ...body }).unwrap();
+      else await updateCc({ id: editing.id, ...body }).unwrap();
       toast.success("Saved", editing.name);
       setEditing(null);
     } catch (err: unknown) {
@@ -174,7 +177,7 @@ export function CallCentersPage() {
             </label>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-              <Button type="submit" loading={saving}>Save</Button>
+              <Button type="submit" loading={saving || savingSa}>Save</Button>
             </div>
           </form>
         )}
