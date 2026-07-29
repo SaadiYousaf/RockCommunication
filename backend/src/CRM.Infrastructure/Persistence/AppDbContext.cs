@@ -68,6 +68,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<PortalCredential> PortalCredentials => Set<PortalCredential>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeAttendance> EmployeeAttendances => Set<EmployeeAttendance>();
+    public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -250,6 +251,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // One attendance mark per employee per day.
             e.HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique().HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => new { x.AgencyId, x.Date });
+        });
+
+        b.Entity<Interview>(e =>
+        {
+            e.Property(x => x.CandidateName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(40);
+            e.Property(x => x.PositionAppliedFor).HasMaxLength(120);
+            e.Property(x => x.PositionOffered).HasMaxLength(120);
+            e.Property(x => x.Experience).HasMaxLength(500);
+            e.Property(x => x.Remarks).HasMaxLength(2000);
+            e.Property(x => x.Cnic).HasConversion(new Security.EncryptedStringConverter());
+            e.HasIndex(x => new { x.AgencyId, x.Status });
         });
 
         b.Entity<RefreshToken>(e =>

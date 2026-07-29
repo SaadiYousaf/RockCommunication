@@ -15,6 +15,14 @@ export const GUARDIAN_RELATIONSHIPS = [
   "Father", "Mother", "Spouse", "Brother", "Sister", "Son", "Daughter", "Guardian", "Other",
 ] as const;
 
+export const OFFER_STATUSES = [
+  "Applied", "Interviewed", "Offered", "Accepted", "Declined", "Rejected", "OnHold", "Hired",
+] as const;
+export const OFFER_TONE: Record<string, "success" | "warning" | "info" | "danger" | "neutral"> = {
+  Applied: "neutral", Interviewed: "info", Offered: "info", Accepted: "success", Hired: "success",
+  OnHold: "warning", Declined: "danger", Rejected: "danger",
+};
+
 export const ATTENDANCE_STATUSES = ["Present", "Absent", "Late", "HalfDay", "Leave", "Ncns"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 
@@ -29,6 +37,7 @@ const LABELS: Record<string, string> = {
   OfficeBoy: "Office Boy",
   HalfDay: "Half day",
   Ncns: "NCNS",
+  OnHold: "On hold",
 };
 export const hrLabel = (v: string | null | undefined): string => (v ? LABELS[v] ?? v : "—");
 

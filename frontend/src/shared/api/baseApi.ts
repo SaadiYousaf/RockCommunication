@@ -15,6 +15,7 @@ import type {
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
   PortalCredential, PortalCredentialInput,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
+  Interview, InterviewInput,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -92,7 +93,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1091,6 +1092,24 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/hr/attendance/mark", method: "POST", body }),
       invalidatesTags: ["Attendance"],
     }),
+
+    // ── HR — interviews / recruitment ─────────────────────────────────────────
+    listInterviews: b.query<Interview[], { search?: string; status?: string } | void>({
+      query: (params) => ({ url: "/api/hr/interviews", params: params ?? undefined }),
+      providesTags: ["Interviews"],
+    }),
+    createInterview: b.mutation<Interview, InterviewInput>({
+      query: (body) => ({ url: "/api/hr/interviews", method: "POST", body }),
+      invalidatesTags: ["Interviews"],
+    }),
+    updateInterview: b.mutation<Interview, { id: string } & InterviewInput>({
+      query: ({ id, ...body }) => ({ url: `/api/hr/interviews/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Interviews"],
+    }),
+    deleteInterview: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/hr/interviews/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Interviews"],
+    }),
   }),
 });
 
@@ -1293,6 +1312,7 @@ export const {
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation, useSyncEmployeesFromUsersMutation,
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
+  useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

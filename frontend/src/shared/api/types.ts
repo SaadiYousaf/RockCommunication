@@ -98,6 +98,40 @@ export interface Employee {
   createdAt: string;
 }
 
+/** A recruitment / interview record. */
+export interface Interview {
+  id: string;
+  interviewDate?: string | null;
+  candidateName: string;
+  cnic?: string | null;
+  phoneNumber?: string | null;
+  positionAppliedFor?: string | null;
+  experience?: string | null;
+  expectedSalary?: number | null;
+  ableToJoinOn?: string | null;
+  status: string;
+  positionOffered?: string | null;
+  salaryOffered?: number | null;
+  remarks?: string | null;
+  trainingScheduledAt?: string | null;
+  createdAt: string;
+}
+export interface InterviewInput {
+  interviewDate?: string | null;
+  candidateName: string;
+  cnic?: string | null;
+  phoneNumber?: string | null;
+  positionAppliedFor?: string | null;
+  experience?: string | null;
+  expectedSalary?: number | null;
+  ableToJoinOn?: string | null;
+  status: string;
+  positionOffered?: string | null;
+  salaryOffered?: number | null;
+  remarks?: string | null;
+  trainingScheduledAt?: string | null;
+}
+
 /** One employee's HR attendance mark for a chosen day (status null = unmarked). */
 export interface HrAttendanceRow {
   employeeId: string;

@@ -19,6 +19,7 @@ public interface IApplicationDbContext
     DbSet<PortalCredential> PortalCredentials { get; }
     DbSet<Employee> Employees { get; }
     DbSet<EmployeeAttendance> EmployeeAttendances { get; }
+    DbSet<Interview> Interviews { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<CommissionEntry> CommissionEntries { get; }

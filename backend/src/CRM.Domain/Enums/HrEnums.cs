@@ -41,6 +41,19 @@ public enum EmploymentStatus
     Terminated = 5,
 }
 
+/// <summary>Where a job candidate sits in the hiring pipeline.</summary>
+public enum OfferStatus
+{
+    Applied = 0,
+    Interviewed = 1,
+    Offered = 2,
+    Accepted = 3,
+    Declined = 4,
+    Rejected = 5,
+    OnHold = 6,
+    Hired = 7,
+}
+
 /// <summary>An employee's attendance for a single day. Drives payroll present/absent/late counts.</summary>
 public enum AttendanceStatus
 {
