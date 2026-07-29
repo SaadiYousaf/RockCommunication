@@ -197,6 +197,15 @@ public class ValidatorQueueHandler :
             sale.DeclineReason = request.DeclineReason?.Trim();
         }
 
+        // A negative terminal outcome (declined / client-cancelled → lead goes Lost) voids the
+        // sale's still-unpaid commission lines so payroll never pays out for a lost sale.
+        // Already-paid entries are left untouched (no claw-back). Mirrors ValidateSaleHandler.
+        if (request.Status is ValidatorStatus.Decline or ValidatorStatus.ClientCancelled)
+        {
+            var unpaid = await _db.CommissionEntries.Where(c => c.SaleId == sale.Id && !c.Paid).ToListAsync(ct);
+            _db.CommissionEntries.RemoveRange(unpaid);
+        }
+
         // Reflect the outcome on the lead's stage so the rest of the pipeline stays consistent.
         // Central agents act cross-agency, so the lead lookup must bypass the tenant filter too.
         var lead = central

@@ -47,7 +47,12 @@ public class QueueCountsHandler : IRequestHandler<QueueCountsQuery, QueueCountsD
         var isCentral = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
         var pendingSales = _db.Sales.AsQueryable();
         if (isCentral) pendingSales = pendingSales.IgnoreQueryFilters().Where(s => !s.IsDeleted);
-        var submissionQueue = await pendingSales.CountAsync(s => s.ValidatedAt == null && s.FundedAt == null, ct);
+        // Exclude terminal-lost outcomes (declined / client-cancelled) — they keep ValidatedAt /
+        // FundedAt null but are done, so without this the badge counts them as pending forever.
+        var submissionQueue = await pendingSales.CountAsync(s =>
+            s.ValidatedAt == null && s.FundedAt == null
+            && s.ValidatorStatus != ValidatorStatus.Decline
+            && s.ValidatorStatus != ValidatorStatus.ClientCancelled, ct);
 
         return new QueueCountsDto(myQueue, callbacks, verifierQueue, closerQueue, submissionQueue);
     }

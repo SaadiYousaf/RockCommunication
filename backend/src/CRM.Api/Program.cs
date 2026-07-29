@@ -131,7 +131,7 @@ builder.Services.AddRateLimiter(options =>
             });
         }
 
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        var ip = ClientIp.Resolve(httpContext);
         return RateLimitPartition.GetTokenBucketLimiter("ip:" + ip, _ => new TokenBucketRateLimiterOptions
         {
             TokenLimit         = builder.Configuration.GetValue("RateLimits:Anon:Burst", 120),
@@ -148,7 +148,7 @@ builder.Services.AddRateLimiter(options =>
     //   and token refresh don't burn the login budget. 10 attempts / minute per IP.
     options.AddPolicy("auth", httpContext =>
     {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        var ip = ClientIp.Resolve(httpContext);
         return RateLimitPartition.GetFixedWindowLimiter("auth-ip:" + ip, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = builder.Configuration.GetValue("RateLimits:Auth:PerMinute", 10),
@@ -161,7 +161,7 @@ builder.Services.AddRateLimiter(options =>
     //   bursts that could DoS us.
     options.AddPolicy("webhook", httpContext =>
     {
-        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        var ip = ClientIp.Resolve(httpContext);
         return RateLimitPartition.GetFixedWindowLimiter("hook-ip:" + ip, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = builder.Configuration.GetValue("RateLimits:Webhook:PerMinute", 600),

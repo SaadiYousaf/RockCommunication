@@ -157,7 +157,9 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         // server-side decimal SUM/GroupBy reliably).
         var saleIds = rawItems.Select(r => r.Id).ToList();
         var commissionBySale = (await _db.CommissionEntries.AsNoTracking().IgnoreQueryFilters()
-                .Where(c => saleIds.Contains(c.SaleId) && c.RuleName == LicenseAgentRule)
+                // IgnoreQueryFilters also drops the soft-delete filter, so re-add !IsDeleted by hand —
+                // otherwise voided/unassigned license-agent lines get summed into "Commission earned".
+                .Where(c => saleIds.Contains(c.SaleId) && c.RuleName == LicenseAgentRule && !c.IsDeleted)
                 .Select(c => new { c.SaleId, c.Amount }).ToListAsync(ct))
             .GroupBy(x => x.SaleId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));

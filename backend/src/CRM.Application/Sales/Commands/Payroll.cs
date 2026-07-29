@@ -47,9 +47,13 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
         // Atomically CLAIM every still-unpaid entry in the period for THIS run in one conditional
         // UPDATE. Because it filters on !Paid (and SQLite serialises writes), a second concurrent
         // payroll run finds nothing left to claim — preventing the double-payout TOCTOU.
+        // Make the period end inclusive of the whole PeriodEnd day: the UI sends `to` as a
+        // date-only UTC midnight, so a raw `< PeriodEnd` would drop everything earned that last
+        // day and never pay it (matches the CSV-export / MyCommissions rollover).
+        var periodEndExclusive = request.PeriodEnd.Date.AddDays(1);
         await _db.CommissionEntries
             .Where(c => c.AgencyId == _user.AgencyId && !c.Paid
-                        && c.EarnedAt >= request.PeriodStart && c.EarnedAt < request.PeriodEnd)
+                        && c.EarnedAt >= request.PeriodStart && c.EarnedAt < periodEndExclusive)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.Paid, true)
                 .SetProperty(c => c.PaidAt, run.ProcessedAt)

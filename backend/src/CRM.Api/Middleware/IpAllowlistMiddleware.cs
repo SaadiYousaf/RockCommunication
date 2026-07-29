@@ -1,3 +1,4 @@
+using CRM.Api.Services;
 using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,9 @@ public class IpAllowlistMiddleware
             return;
         }
 
-        var ip = ctx.Connection.RemoteIpAddress;
+        // Real client IP (CF-Connecting-IP/X-Forwarded-For), NOT the socket peer — behind the proxy
+        // that's always 127.0.0.1, which would make the loopback bypass below allow everyone.
+        var ip = ClientIp.ResolveAddress(ctx);
         if (ip is null) { await _next(ctx); return; }
         if (IPAddress.IsLoopback(ip)) { await _next(ctx); return; }
 
