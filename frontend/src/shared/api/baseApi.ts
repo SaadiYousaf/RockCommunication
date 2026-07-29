@@ -1073,6 +1073,10 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/api/hr/employees/${id}`, method: "DELETE" }),
       invalidatesTags: ["Employees"],
     }),
+    syncEmployeesFromUsers: b.mutation<{ created: number }, void>({
+      query: () => ({ url: "/api/hr/employees/sync-from-users", method: "POST" }),
+      invalidatesTags: ["Employees"],
+    }),
 
     // ── HR — attendance ───────────────────────────────────────────────────────
     attendanceDay: b.query<HrAttendanceRow[], { date: string; callCenterId?: string }>({
@@ -1287,7 +1291,7 @@ export const {
   useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
   useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
-  useUpdateEmployeeMutation, useDeleteEmployeeMutation,
+  useUpdateEmployeeMutation, useDeleteEmployeeMutation, useSyncEmployeesFromUsersMutation,
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
   useRegisterMutation,
   useChangePasswordMutation,

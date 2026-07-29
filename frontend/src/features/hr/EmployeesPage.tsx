@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation, useListCallCentersQuery,
+  useSyncEmployeesFromUsersMutation,
 } from "../../shared/api/baseApi";
 import type { EmployeeInput } from "../../shared/api/types";
 import {
@@ -47,8 +48,19 @@ export function EmployeesPage() {
   const [create, { isLoading: creating }] = useCreateEmployeeMutation();
   const [update, { isLoading: updating }] = useUpdateEmployeeMutation();
   const [remove] = useDeleteEmployeeMutation();
+  const [syncFromUsers, { isLoading: syncing }] = useSyncEmployeesFromUsersMutation();
   const toast = useToast();
   const confirm = useConfirm();
+
+  async function importFromUsers() {
+    try {
+      const r = await syncFromUsers().unwrap();
+      toast.success(r.created > 0 ? `Imported ${r.created} employee${r.created === 1 ? "" : "s"}` : "Already up to date",
+        r.created > 0 ? "Created records from your user accounts — fill in the rest of each profile." : "Every user already has an employee record.");
+    } catch (err: unknown) {
+      toast.error("Couldn't import", getErrorDetail(err) ?? "Try again.");
+    }
+  }
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -114,7 +126,14 @@ export function EmployeesPage() {
         eyebrow="Human Resources"
         title="Employees"
         description="The master roster of agents and staff — identity, employment, and banking details."
-        actions={<Button leftIcon={<Icon name="userPlus" size={15} />} onClick={openAdd}>Add employee</Button>}
+        actions={
+          <>
+            <Button variant="outline" leftIcon={<Icon name="download" size={15} />} loading={syncing} onClick={importFromUsers}>
+              Import from users
+            </Button>
+            <Button leftIcon={<Icon name="userPlus" size={15} />} onClick={openAdd}>Add employee</Button>
+          </>
+        }
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
@@ -142,8 +161,13 @@ export function EmployeesPage() {
       ) : rows.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="users" size={20} />} title={search || designation ? "No matches" : "No employees yet"}
-            description={search || designation ? "No employee matches your filters." : "Add your first employee record to build the roster."}
-            action={!search && !designation ? <Button leftIcon={<Icon name="userPlus" size={15} />} onClick={openAdd}>Add employee</Button> : undefined} />
+            description={search || designation ? "No employee matches your filters." : "Import your existing user accounts to get started, or add records manually."}
+            action={!search && !designation ? (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" leftIcon={<Icon name="download" size={15} />} loading={syncing} onClick={importFromUsers}>Import from users</Button>
+                <Button leftIcon={<Icon name="userPlus" size={15} />} onClick={openAdd}>Add employee</Button>
+              </div>
+            ) : undefined} />
         </CardBody></Card>
       ) : (
         <div className="overflow-x-auto">

@@ -56,6 +56,12 @@ public class HrController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Create an employee record for every existing user login that doesn't already
+    /// have one. Returns how many were created.</summary>
+    [HttpPost("sync-from-users")]
+    public async Task<IActionResult> SyncFromUsers(CancellationToken ct)
+        => Ok(new { created = await _mediator.Send(new SyncEmployeesFromUsersCommand(), ct) });
+
     /// <summary>Upload a photo / ID-card image for an employee. Stores the file and points the
     /// chosen image slot at it. Returns the opaque storage key.</summary>
     [HttpPost("{id:guid}/image")]

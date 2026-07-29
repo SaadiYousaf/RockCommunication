@@ -55,6 +55,10 @@ public record UpdateEmployeeCommand(Guid Id, EmployeeInput Input) : IRequest<Emp
 
 public record DeleteEmployeeCommand(Guid Id) : IRequest<Unit>;
 
+/// <summary>Create an employee record for every existing user login that doesn't already have
+/// one (name, email, call centre, designation-from-role, and the user link). Idempotent.</summary>
+public record SyncEmployeesFromUsersCommand : IRequest<int>;
+
 /// <summary>Point one of the employee's image slots at an already-stored file key.</summary>
 public record SetEmployeeImageCommand(Guid Id, EmployeeImageKind Kind, string StorageKey) : IRequest<Unit>;
 
@@ -97,16 +101,19 @@ public class EmployeeHandlers :
     IRequestHandler<CreateEmployeeCommand, EmployeeDto>,
     IRequestHandler<UpdateEmployeeCommand, EmployeeDto>,
     IRequestHandler<DeleteEmployeeCommand, Unit>,
+    IRequestHandler<SyncEmployeesFromUsersCommand, int>,
     IRequestHandler<SetEmployeeImageCommand, Unit>,
     IRequestHandler<GetEmployeeImageKeyQuery, string?>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIdentityService _identity;
 
-    public EmployeeHandlers(IApplicationDbContext db, ICurrentUser user)
+    public EmployeeHandlers(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
+        _identity = Guard.AgainstNull(identity);
     }
 
     /// <summary>HR module is HR / Admin / SuperAdmin only.</summary>
@@ -180,6 +187,58 @@ public class EmployeeHandlers :
         e.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Unit.Value;
+    }
+
+    public async Task<int> Handle(SyncEmployeesFromUsersCommand request, CancellationToken ct)
+    {
+        EnsureHr();
+        var agencyId = _user.AgencyId ?? Guid.Empty;
+        var users = await _identity.ListUsersAsync(agencyId, ct);
+
+        var linkedUserIds = (await _db.Employees.AsNoTracking()
+            .Where(e => e.UserId != null).Select(e => e.UserId!.Value).ToListAsync(ct)).ToHashSet();
+        var codes = (await _db.Employees.AsNoTracking().Select(e => e.AgentCode).ToListAsync(ct))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var created = 0;
+        foreach (var u in users)
+        {
+            if (linkedUserIds.Contains(u.Id)) continue;
+            // Unique agent code seeded from the username.
+            var code = u.UserName;
+            for (var n = 1; codes.Contains(code); n++) code = $"{u.UserName}-{n}";
+            codes.Add(code);
+            _db.Employees.Add(new Employee
+            {
+                AgencyId = agencyId,
+                UserId = u.Id,
+                FullName = u.UserName,
+                AgentCode = code,
+                OfficialEmail = u.Email,
+                CallCenterId = u.CallCenterId,
+                Designation = MapDesignation(u.Roles),
+                EmploymentStatus = EmploymentStatus.Permanent,
+            });
+            created++;
+        }
+        if (created > 0) await _db.SaveChangesAsync(ct);
+        return created;
+    }
+
+    /// <summary>Best-fit designation from a user's system roles.</summary>
+    private static EmployeeDesignation MapDesignation(IReadOnlyList<string> roles)
+    {
+        if (roles.Contains(DomainRoles.HR)) return EmployeeDesignation.HR;
+        if (roles.Contains(DomainRoles.OfficeBoy)) return EmployeeDesignation.OfficeBoy;
+        if (roles.Contains(DomainRoles.TeamLead)) return EmployeeDesignation.TeamLead;
+        if (roles.Contains(DomainRoles.Validator)) return EmployeeDesignation.SubmissionAgent;
+        if (roles.Contains(DomainRoles.Closer) || roles.Contains(DomainRoles.JrCloser)) return EmployeeDesignation.Closer;
+        if (roles.Contains(DomainRoles.Verifier)) return EmployeeDesignation.Verifier;
+        if (roles.Contains(DomainRoles.Fronter)) return EmployeeDesignation.Fronter;
+        if (roles.Contains(DomainRoles.Admin) || roles.Contains(DomainRoles.ProgramManager)
+            || roles.Contains(DomainRoles.CallCenterAdmin) || roles.Contains(DomainRoles.CEO))
+            return EmployeeDesignation.Manager;
+        return EmployeeDesignation.Other;
     }
 
     public async Task<Unit> Handle(SetEmployeeImageCommand request, CancellationToken ct)
