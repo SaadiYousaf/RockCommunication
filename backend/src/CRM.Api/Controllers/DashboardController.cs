@@ -106,6 +106,12 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<UpcomingEventDto>>> UpcomingEvents([FromQuery] int days = 14, CancellationToken ct = default)
         => Ok(await _mediator.Send(new UpcomingEventsQuery(days), ct));
 
+    /// <summary>Team-status widget: every employee in the viewer's call centre with today's attendance
+    /// and live work state. The handler gates to HR + supervisory/management and scopes per role.</summary>
+    [HttpGet("team-status")]
+    public async Task<ActionResult<IReadOnlyList<TeamStatusRowDto>>> TeamStatus([FromQuery] Guid? callCenterId = null, CancellationToken ct = default)
+        => Ok(await _mediator.Send(new TeamStatusQuery(callCenterId), ct));
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MetricValue>>> Compute(
         [FromQuery] DateTime? from, [FromQuery] DateTime? to,

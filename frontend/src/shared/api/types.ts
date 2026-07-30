@@ -759,6 +759,22 @@ export interface DashboardSummary {
   recentActivity: DashboardActivityItem[];
 }
 
+/** Live work state for the "Team status" widget (mirrors backend TeamLiveStatus). */
+export type TeamLiveStatus = "OnCall" | "Available" | "OnBreak" | "ClockedOut";
+
+/** One employee in the "Team status" dashboard widget: today's attendance + live work state. */
+export interface TeamStatusRow {
+  employeeId: string;
+  fullName: string;
+  agentCode: string;
+  designation: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
+  /** Today's attendance mark, or null when unmarked. */
+  attendanceStatus?: string | null;
+  liveStatus: TeamLiveStatus;
+}
+
 // ---- Lead troubleshooting ----------------------------------------------------
 
 export interface LeadDiagnostics {

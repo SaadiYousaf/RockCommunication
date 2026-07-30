@@ -6,10 +6,10 @@ import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton, cn,
   type IconName, type BadgeTone,
 } from "../shared/ui";
-import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery } from "../shared/api/baseApi";
+import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery, useTeamStatusQuery } from "../shared/api/baseApi";
 import { useDashboardLayout } from "./useDashboardLayout";
 import { usePermission, Perm } from "../shared/auth/permissions";
-import type { DashboardStageBucket, DashboardSummary, WorkflowStage } from "../shared/api/types";
+import type { DashboardStageBucket, DashboardSummary, WorkflowStage, TeamStatusRow, TeamLiveStatus } from "../shared/api/types";
 import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
 import type { WallboardSnapshot, AgentLeaderboard } from "../shared/api/types";
 
@@ -76,6 +76,7 @@ interface WidgetDef {
 
 const DASHBOARD_WIDGETS: readonly WidgetDef[] = [
   { id: "upcoming-events", label: "Upcoming events",  colSpan: 3 },
+  { id: "team-status",     label: "Team status",       colSpan: 3 },
   { id: "pipeline",        label: "Pipeline overview", colSpan: 2 },
   { id: "floor",           label: "Floor health",      colSpan: 1 },
   { id: "activity",        label: "Recent activity",   colSpan: 2 },
@@ -129,6 +130,7 @@ export function Dashboard() {
   // Maps each widget id to its already-existing section component (props unchanged).
   const widgetNodes: Record<string, ReactNode> = {
     "upcoming-events": <UpcomingEventsCard />,
+    "team-status": <TeamStatusCard />,
     "pipeline": <PipelineCard data={data} loading={isLoading} />,
     "floor": <FloorCard wall={wall} loading={isLoading} />,
     "activity": <ActivityCard data={data} loading={isLoading} />,
@@ -1022,6 +1024,136 @@ function UpcomingEventsCard() {
         )}
       </CardBody>
     </Card>
+  );
+}
+
+// =============================================================================
+// Team status — attendance + live work state for the viewer's call centre
+// =============================================================================
+// Backed by /api/dashboard/team-status, which gates to HR + supervisory/management and scopes
+// per role (call-centre-pinned → own centre; agency-level → whole agency). The card just renders
+// what the API returns, so the auth boundary stays on the server. Two badges per person:
+// attendance (today's HR mark) and live work state (from the wallboard/supervisor presence source).
+
+const attendanceTone: Record<string, BadgeTone> = {
+  Present: "success",
+  Late: "warning",
+  HalfDay: "warning",
+  Absent: "danger",
+  Ncns: "danger",
+  Leave: "info",
+};
+const attendanceLabel: Record<string, string> = {
+  Present: "Present", Absent: "Absent", Late: "Late",
+  HalfDay: "Half day", Leave: "Leave", Ncns: "NCNS",
+};
+
+const liveMeta: Record<TeamLiveStatus, { tone: BadgeTone; label: string }> = {
+  OnCall:     { tone: "brand",   label: "On call" },
+  Available:  { tone: "success", label: "Available" },
+  OnBreak:    { tone: "warning", label: "On break" },
+  ClockedOut: { tone: "neutral", label: "Clocked out" },
+};
+const livePresence: Record<TeamLiveStatus, "online" | "busy" | "away" | "offline"> = {
+  OnCall: "busy", Available: "online", OnBreak: "away", ClockedOut: "offline",
+};
+
+function TeamStatusCard() {
+  const { data, isLoading, isError } = useTeamStatusQuery();
+
+  // Group by call centre so a multi-centre viewer (agency-level) sees clear sections.
+  const groups = useMemo(() => {
+    const map = new Map<string, TeamStatusRow[]>();
+    for (const r of data ?? []) {
+      const key = r.callCenterName ?? "Unassigned";
+      const arr = map.get(key);
+      if (arr) arr.push(r);
+      else map.set(key, [r]);
+    }
+    return Array.from(map, ([name, rows]) => ({ name, rows }));
+  }, [data]);
+  const multi = groups.length > 1;
+
+  return (
+    <Card className="mb-5 overflow-hidden">
+      <CardHeader
+        title={
+          <span className="inline-flex items-center gap-1">
+            Team status
+            <InfoHint title="Team status" side="bottom">
+              Everyone in your call centre today. The first badge is their <b>attendance</b>
+              {" "}(Present, Late, Absent, Leave, Half day, NCNS — or Unmarked). The second is their
+              {" "}<b>live work state</b> right now: On call, Available, On break or Clocked out.
+            </InfoHint>
+          </span>
+        }
+        subtitle="Attendance and live floor state, today"
+        bordered
+      />
+      <CardBody>
+        {isLoading ? (
+          <ul className="space-y-3">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <li key={i} className="flex items-center gap-3">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </li>
+            ))}
+          </ul>
+        ) : isError || !data || data.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="users" size={20} />}
+            title="No team data"
+            description="No employees to show for your call centre today."
+          />
+        ) : (
+          <div className="space-y-5">
+            {groups.map((g) => (
+              <div key={g.name}>
+                {multi && (
+                  <div className="section-title mb-2 flex items-center gap-1.5">
+                    <Icon name="building" size={13} /> {g.name}
+                    <span className="text-ink-400 font-normal">· {g.rows.length}</span>
+                  </div>
+                )}
+                <ul className="divide-y divide-ink-100/70">
+                  {g.rows.map((r) => <TeamStatusRowItem key={r.employeeId} row={r} />)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function TeamStatusRowItem({ row }: { row: TeamStatusRow }) {
+  const live = liveMeta[row.liveStatus] ?? liveMeta.ClockedOut;
+  const att = row.attendanceStatus
+    ? {
+        tone: attendanceTone[row.attendanceStatus] ?? "neutral",
+        label: attendanceLabel[row.attendanceStatus] ?? row.attendanceStatus,
+      }
+    : { tone: "neutral" as BadgeTone, label: "Unmarked" };
+  const meta = [row.agentCode, row.designation].filter(Boolean).join(" · ");
+  return (
+    <li className="flex items-center gap-3 py-2.5">
+      <Avatar name={row.fullName} size={36} presence={livePresence[row.liveStatus]} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-ink-900 truncate">{row.fullName}</div>
+        {meta && <div className="text-xs text-ink-500 truncate">{meta}</div>}
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+        <Badge tone={att.tone} variant="soft" dot>{att.label}</Badge>
+        <Badge tone={live.tone} variant="soft" dot>{live.label}</Badge>
+      </div>
+    </li>
   );
 }
 

@@ -8,7 +8,7 @@ import type {
   CreateLeadInput, LeadTimeline, Sale, CommissionEntry, PayrollRun,
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
   OversightAgency, OversightCallCenter, AttendanceRow, AppNotification, QueueCounts,
-  WorkflowStage, LeadDisposition, DashboardSummary,
+  WorkflowStage, LeadDisposition, DashboardSummary, TeamStatusRow,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
@@ -268,6 +268,10 @@ export const baseApi = createApi({
     upcomingEvents: b.query<UpcomingEvent[], number | void>({
       query: (days) => ({ url: "/api/dashboard/upcoming-events", params: days ? { days } : undefined }),
       providesTags: ["Callbacks", "Interviews", "Employees"],
+    }),
+    teamStatus: b.query<TeamStatusRow[], string | void>({
+      query: (callCenterId) => ({ url: "/api/dashboard/team-status", params: callCenterId ? { callCenterId } : undefined }),
+      providesTags: ["Attendance", "Metrics"],
     }),
 
     rubrics: b.query<Rubric[], void>({
@@ -1308,7 +1312,7 @@ export const {
   useStartDirectMessageMutation,
   useMyCommissionsQuery, usePayrollRunsQuery, useCreatePayrollRunMutation,
   useMyCallbacksQuery, useScheduleCallbackMutation, useCompleteCallbackMutation,
-  useMetricCatalogQuery, useDashboardQuery, useDashboardSummaryQuery, useUpcomingEventsQuery,
+  useMetricCatalogQuery, useDashboardQuery, useDashboardSummaryQuery, useUpcomingEventsQuery, useTeamStatusQuery,
   useLeadDiagnosticsQuery,
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,

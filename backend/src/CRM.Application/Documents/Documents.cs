@@ -154,9 +154,11 @@ public class DocumentsHandler :
         EnsureManager();
         var d = await _db.Documents.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Document), request.Id);
+        // Soft delete only: the row is flagged IsDeleted (audited by the interceptor) and the
+        // physical file is INTENTIONALLY kept on disk so a soft-deleted document stays fully
+        // recoverable — nothing is permanently destroyed. (A future hard-purge tool would remove it.)
         d.IsDeleted = true;
         await _db.SaveChangesAsync(ct);
-        await _files.DeleteAsync(d.StorageKey, ct);
         return Unit.Value;
     }
 
