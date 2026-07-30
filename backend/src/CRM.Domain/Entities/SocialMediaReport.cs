@@ -15,5 +15,7 @@ public class SocialMediaReport : TenantEntity
     public string? Platform { get; set; }
     public int PostsMade { get; set; }
     public int QueriesAnswered { get; set; }
+    /// <summary>Optional link to the actual post / campaign (proof of the reported posting).</summary>
+    public string? Link { get; set; }
     public string? Notes { get; set; }
 }

@@ -20,7 +20,7 @@ public record AssignSaleLicenseAgentCommand(Guid SaleId, Guid? LicenseAgentUserI
 
 public class AssignSaleLicenseAgentHandler : IRequestHandler<AssignSaleLicenseAgentCommand, Unit>
 {
-    private const string LicenseAgentRule = "license-agent-approval";
+    private const string LicenseAgentRule = CommissionRuleNames.LicenseAgentApproval;
 
     private readonly IApplicationDbContext _db;
     private readonly IIdentityService _identity;

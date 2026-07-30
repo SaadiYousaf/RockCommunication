@@ -9,6 +9,9 @@ export interface UserSummary {
   modules: string[];
   /** True for accounts created with a temporary password — they must change it before using the app. */
   mustChangePassword?: boolean;
+  /** True when the onboarding invitation lapsed (never accepted within 2 days) — login is refused
+   * until an admin resends it. Distinguishes an "Expired" invite from a still-valid "Pending" one. */
+  invitationExpired?: boolean;
   /** False = deactivated account; login + active sessions are blocked. Defaults true on existing rows. */
   isActive?: boolean;
   teamId?: string | null;
@@ -107,6 +110,8 @@ export interface SocialMediaReport {
   platform?: string | null;
   postsMade: number;
   queriesAnswered: number;
+  /** Optional link to the actual post / campaign (proof of the reported posting). */
+  link?: string | null;
   notes?: string | null;
   createdAt: string;
 }
@@ -116,6 +121,7 @@ export interface SocialMediaInput {
   platform?: string | null;
   postsMade: number;
   queriesAnswered: number;
+  link?: string | null;
   notes?: string | null;
 }
 

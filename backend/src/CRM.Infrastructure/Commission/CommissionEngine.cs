@@ -46,7 +46,7 @@ public abstract class ConfigurableCommissionRule : ICommissionRule
 public class CloserFlatRateRule : ConfigurableCommissionRule
 {
     public CloserFlatRateRule(IAgencyCommissionConfigProvider c) : base(c) { }
-    public override string Name => "closer-flat-rate";
+    public override string Name => CommissionRuleNames.CloserFlatRate;
     public override int Priority => 100;
     protected override decimal DefaultAmount => 75m;
     protected override string TargetRole => Roles.Closer;
@@ -56,7 +56,7 @@ public class CloserFlatRateRule : ConfigurableCommissionRule
 public class JrCloserSplitRule : ConfigurableCommissionRule
 {
     public JrCloserSplitRule(IAgencyCommissionConfigProvider c) : base(c) { }
-    public override string Name => "jr-closer-split";
+    public override string Name => CommissionRuleNames.JrCloserSplit;
     public override int Priority => 110;
     protected override decimal DefaultAmount => 30m;
     protected override string TargetRole => Roles.JrCloser;
@@ -66,7 +66,7 @@ public class JrCloserSplitRule : ConfigurableCommissionRule
 public class ValidatorBonusRule : ConfigurableCommissionRule
 {
     public ValidatorBonusRule(IAgencyCommissionConfigProvider c) : base(c) { }
-    public override string Name => "validator-bonus";
+    public override string Name => CommissionRuleNames.ValidatorBonus;
     public override int Priority => 120;
     protected override decimal DefaultAmount => 15m;
     protected override string TargetRole => Roles.Validator;
@@ -82,7 +82,7 @@ public class ValidatorBonusRule : ConfigurableCommissionRule
 public class LicenseAgentApprovalRule : ConfigurableCommissionRule
 {
     public LicenseAgentApprovalRule(IAgencyCommissionConfigProvider c) : base(c) { }
-    public override string Name => "license-agent-approval";
+    public override string Name => CommissionRuleNames.LicenseAgentApproval;
     public override int Priority => 130;
     protected override decimal DefaultAmount => 50m;
     protected override string TargetRole => Roles.LicenseAgent;
@@ -94,7 +94,7 @@ public class LicenseAgentApprovalRule : ConfigurableCommissionRule
 public class HighPremiumKickerRule : ConfigurableCommissionRule
 {
     public HighPremiumKickerRule(IAgencyCommissionConfigProvider c) : base(c) { }
-    public override string Name => "high-premium-kicker";
+    public override string Name => CommissionRuleNames.HighPremiumKicker;
     public override int Priority => 200;
     protected override decimal DefaultAmount => 25m;
     protected override decimal? DefaultThreshold => 200m;
@@ -112,7 +112,7 @@ public class HighPremiumKickerRule : ConfigurableCommissionRule
 /// </summary>
 public class TeamLeadOverrideRule : ICommissionRule
 {
-    public string Name => "team-lead-override";
+    public string Name => CommissionRuleNames.TeamLeadOverride;
     public int Priority => 300;
     private readonly IAgencyCommissionConfigProvider _config;
     private readonly AppDbContext _db;

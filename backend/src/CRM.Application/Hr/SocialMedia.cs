@@ -10,10 +10,11 @@ namespace CRM.Application.Hr;
 
 public record SocialMediaReportDto(
     Guid Id, DateTime Date, Guid? EmployeeId, string? EmployeeName, string? Platform,
-    int PostsMade, int QueriesAnswered, string? Notes, DateTime CreatedAt);
+    int PostsMade, int QueriesAnswered, string? Link, string? Notes, DateTime CreatedAt);
 
 public record SocialMediaInput(
-    DateTime Date, Guid? EmployeeId, string? Platform, int PostsMade, int QueriesAnswered, string? Notes);
+    DateTime Date, Guid? EmployeeId, string? Platform, int PostsMade, int QueriesAnswered,
+    string? Link, string? Notes);
 
 public record ListSocialReportsQuery(string? Search = null) : IRequest<IReadOnlyList<SocialMediaReportDto>>;
 public record CreateSocialReportCommand(SocialMediaInput Input) : IRequest<SocialMediaReportDto>;
@@ -27,6 +28,7 @@ public class SocialMediaInputValidator : AbstractValidator<SocialMediaInput>
         RuleFor(x => x.PostsMade).GreaterThanOrEqualTo(0);
         RuleFor(x => x.QueriesAnswered).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Platform).MaximumLength(80);
+        RuleFor(x => x.Link).MaximumLength(500);
     }
 }
 public class CreateSocialReportValidator : AbstractValidator<CreateSocialReportCommand>
@@ -105,6 +107,7 @@ public class SocialMediaHandlers :
         r.Platform = string.IsNullOrWhiteSpace(i.Platform) ? null : i.Platform.Trim();
         r.PostsMade = i.PostsMade;
         r.QueriesAnswered = i.QueriesAnswered;
+        r.Link = string.IsNullOrWhiteSpace(i.Link) ? null : i.Link.Trim();
         r.Notes = string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes.Trim();
     }
 
@@ -121,5 +124,5 @@ public class SocialMediaHandlers :
         id is { } g && names.TryGetValue(g, out var n) ? n : null;
 
     private static SocialMediaReportDto Map(SocialMediaReport r, string? employeeName) => new(
-        r.Id, r.Date, r.EmployeeId, employeeName, r.Platform, r.PostsMade, r.QueriesAnswered, r.Notes, r.CreatedAt);
+        r.Id, r.Date, r.EmployeeId, employeeName, r.Platform, r.PostsMade, r.QueriesAnswered, r.Link, r.Notes, r.CreatedAt);
 }

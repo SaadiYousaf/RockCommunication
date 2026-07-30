@@ -11,12 +11,13 @@ import {
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
-const BLANK: SocialMediaInput = { date: new Date().toISOString(), employeeId: null, platform: "", postsMade: 0, queriesAnswered: 0, notes: "" };
+const BLANK: SocialMediaInput = { date: new Date().toISOString(), employeeId: null, platform: "", postsMade: 0, queriesAnswered: 0, link: "", notes: "" };
 const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "");
 
 /** HR → Social Media. Daily handling reports — posts made and customer queries answered. */
 export function SocialReportsPage() {
   const [search, setSearch] = useState("");
+  const [platformFilter, setPlatformFilter] = useState("");
   const { data: reports, isLoading } = useListSocialReportsQuery({ search: search.trim() || undefined });
   const { data: employees } = useListEmployeesQuery();
   const [create, { isLoading: creating }] = useCreateSocialReportMutation();
@@ -33,7 +34,8 @@ export function SocialReportsPage() {
     if (!editing) return;
     setForm({
       date: editing.date, employeeId: editing.employeeId ?? null, platform: editing.platform ?? "",
-      postsMade: editing.postsMade, queriesAnswered: editing.queriesAnswered, notes: editing.notes ?? "",
+      postsMade: editing.postsMade, queriesAnswered: editing.queriesAnswered,
+      link: editing.link ?? "", notes: editing.notes ?? "",
     });
   }, [editing]);
 
@@ -56,9 +58,21 @@ export function SocialReportsPage() {
     catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
   }
 
-  const rows = reports ?? [];
+  const allRows = reports ?? [];
+  const platforms = Array.from(new Set(allRows.map((r) => r.platform).filter((p): p is string => !!p))).sort();
+  const rows = platformFilter ? allRows.filter((r) => (r.platform ?? "") === platformFilter) : allRows;
   const totalPosts = rows.reduce((s, r) => s + r.postsMade, 0);
   const totalQueries = rows.reduce((s, r) => s + r.queriesAnswered, 0);
+
+  // Per-platform roll-up (posts + queries) so a "social media report" reads at a glance per channel.
+  const byPlatform = Array.from(
+    rows.reduce((m, r) => {
+      const key = r.platform || "Unspecified";
+      const cur = m.get(key) ?? { posts: 0, queries: 0 };
+      m.set(key, { posts: cur.posts + r.postsMade, queries: cur.queries + r.queriesAnswered });
+      return m;
+    }, new Map<string, { posts: number; queries: number }>()),
+  ).sort((a, b) => b[1].posts + b[1].queries - (a[1].posts + a[1].queries));
 
   return (
     <>
@@ -72,9 +86,34 @@ export function SocialReportsPage() {
         <Stat label="Queries answered" value={totalQueries} icon={<Icon name="chat" size={16} />} tone="success" />
       </div>
 
+      {byPlatform.length > 0 && (
+        <Card className="mb-4">
+          <CardBody>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Icon name="chart" size={15} className="text-brand-500" />
+              <h3 className="text-sm font-semibold text-ink-900">By platform</h3>
+              <InfoHint title="By platform" side="right">Posts published and customer queries answered, totalled per social channel for the current filter.</InfoHint>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {byPlatform.map(([name, v]) => (
+                <div key={name} className="inline-flex items-center gap-2 rounded-lg border border-ink-200 bg-white px-3 py-1.5">
+                  <Badge tone="neutral" variant="soft">{name}</Badge>
+                  <span className="text-xs text-ink-600 tabular-nums"><Icon name="send" size={11} className="inline mr-0.5 text-accent-500" />{v.posts}</span>
+                  <span className="text-xs text-ink-600 tabular-nums"><Icon name="chat" size={11} className="inline mr-0.5 text-emerald-500" />{v.queries}</span>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder="Search platform, notes…" /></div>
+          <Select aria-label="Filter by platform" value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className="w-44">
+            <option value="">All platforms</option>
+            {platforms.map((p) => <option key={p} value={p}>{p}</option>)}
+          </Select>
         </CardBody>
       </Card>
 
@@ -107,6 +146,11 @@ export function SocialReportsPage() {
                   <InfoHint title="Queries answered" side="top">Customer questions or messages the handler replied to that day.</InfoHint>
                 </span>
               </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Link
+                  <InfoHint title="Post link" side="top">A link to the actual post or campaign — proof of what was published.</InfoHint>
+                </span>
+              </TH>
               <TH>Notes</TH>
               <TH className="text-right">Actions</TH>
             </TR></THead>
@@ -118,6 +162,11 @@ export function SocialReportsPage() {
                   <TD>{r.platform ? <Badge tone="neutral" variant="soft">{r.platform}</Badge> : <span className="text-ink-400">—</span>}</TD>
                   <TD numeric className="tabular-nums font-medium text-ink-900">{r.postsMade}</TD>
                   <TD numeric className="tabular-nums font-medium text-ink-900">{r.queriesAnswered}</TD>
+                  <TD>
+                    {r.link
+                      ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline inline-flex items-center gap-1"><Icon name="externalLink" size={12} />Open</a>
+                      : <span className="text-ink-400">—</span>}
+                  </TD>
                   <TD className="text-ink-600 max-w-[220px]"><span className="line-clamp-2">{r.notes || <span className="text-ink-400">—</span>}</span></TD>
                   <TD>
                     <div className="flex items-center justify-end gap-1">
@@ -149,6 +198,7 @@ export function SocialReportsPage() {
           <Input label="Platform" value={form.platform ?? ""} onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))} placeholder="e.g. Facebook" />
           <Input label="Posts made" type="number" min={0} value={form.postsMade} onChange={(e) => setForm((f) => ({ ...f, postsMade: e.target.value === "" ? 0 : Number(e.target.value) }))} />
           <Input label="Queries answered" type="number" min={0} value={form.queriesAnswered} onChange={(e) => setForm((f) => ({ ...f, queriesAnswered: e.target.value === "" ? 0 : Number(e.target.value) }))} />
+          <Input label="Post link" type="url" containerClassName="sm:col-span-2" value={form.link ?? ""} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} placeholder="https://facebook.com/… (link to the post/campaign)" />
           <Textarea label="Notes" containerClassName="sm:col-span-2" value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
         </form>
       </Modal>

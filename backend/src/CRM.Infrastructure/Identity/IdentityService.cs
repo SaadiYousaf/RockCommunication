@@ -228,6 +228,13 @@ public class IdentityService : IIdentityService
         if (!await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
             throw new ForbiddenAccessException(TenantLoginGate.DisabledMessage);
 
+        // Onboarding invitations expire if never accepted within the policy window: a stale
+        // temporary-password link must not grant access — an admin has to resend a fresh one.
+        // Runs after the password check (so we can safely name the reason) and only affects
+        // users still on their forced first-login password; established users are unaffected.
+        if (InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow))
+            throw new ForbiddenAccessException(InvitationPolicy.ExpiredMessage);
+
         // Clean slate on every successful password check — even when 2FA still has to run.
         await _users.ResetAccessFailedCountAsync(user);
 
@@ -375,7 +382,8 @@ public class IdentityService : IIdentityService
             CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && DomainRoles.TwoFactorMandatory(roles),
             AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
-            CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct));
+            CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct),
+            InvitationExpired: InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow));
     }
 
     /// <summary>Agency display name for a user, or null for SuperAdmin / central users (Guid.Empty).</summary>
@@ -403,7 +411,8 @@ public class IdentityService : IIdentityService
             var modules = await _moduleAccess.GetCodesForUserAsync(u.Id, ct);
             result.Add(new UserSummaryDto(u.Id, u.UserName!, u.Email!, u.AgencyId, roles.ToList(), modules,
                 MustChangePassword: u.MustChangePassword, TeamId: u.TeamId, IsActive: u.IsActive,
-                CallCenterId: u.CallCenterId));
+                CallCenterId: u.CallCenterId,
+                InvitationExpired: InvitationPolicy.IsExpired(u.MustChangePassword, u.InvitationSentAt, u.InvitationAcceptedAt, DateTime.UtcNow)));
         }
         return result;
     }

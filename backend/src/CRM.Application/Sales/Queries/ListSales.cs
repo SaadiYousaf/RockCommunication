@@ -41,7 +41,7 @@ public record ListSalesQuery(
 
 public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult>
 {
-    private const string LicenseAgentRule = "license-agent-approval";
+    private const string LicenseAgentRule = CommissionRuleNames.LicenseAgentApproval;
 
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;

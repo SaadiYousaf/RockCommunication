@@ -282,6 +282,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         b.Entity<SocialMediaReport>(e =>
         {
             e.Property(x => x.Platform).HasMaxLength(80);
+            e.Property(x => x.Link).HasMaxLength(500);
             e.Property(x => x.Notes).HasMaxLength(1000);
             e.HasIndex(x => new { x.AgencyId, x.Date });
         });

@@ -26,7 +26,10 @@ public record UserSummaryDto(
     string? AgencyName = null,
     /// <summary>The user's call-center name (null when they're agency-level / not pinned to a
     /// call center), so the UI can show it under the agency in the sidebar.</summary>
-    string? CallCenterName = null);
+    string? CallCenterName = null,
+    /// <summary>True when this user's onboarding invitation lapsed (never accepted within the
+    /// policy window). The UI shows "Expired" instead of "Pending" and prompts an admin resend.</summary>
+    bool InvitationExpired = false);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 

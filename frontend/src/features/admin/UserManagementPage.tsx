@@ -72,6 +72,7 @@ export function UserManagementPage() {
       total: list.length,
       admins: list.filter((u) => u.roles.includes("Admin") || u.roles.includes("ProgramManager")).length,
       mustChange: list.filter((u) => u.mustChangePassword).length,
+      expired: list.filter((u) => u.invitationExpired).length,
       noRoles: list.filter((u) => u.roles.length === 0).length,
     };
   }, [users]);
@@ -95,7 +96,7 @@ export function UserManagementPage() {
         <Stat label="Admins"       value={stats.admins}     icon={<Icon name="shield" size={18} />} tone="danger"
               hint="Admin & ProgramManager" />
         <Stat label="Pending pwd"  value={stats.mustChange} icon={<Icon name="key" size={18} />} tone="warning"
-              hint="First-login change required" />
+              hint={stats.expired > 0 ? `${stats.expired} invite${stats.expired === 1 ? "" : "s"} expired — resend needed` : "First-login change required; invites expire after 2 days"} />
         <Stat label="No roles"     value={stats.noRoles}    icon={<Icon name="userX" size={18} />} tone="neutral"
               hint="Need role assignment" />
       </div>
@@ -167,9 +168,15 @@ export function UserManagementPage() {
                           </Badge>
                         )}
                         {u.mustChangePassword && (
-                          <Badge tone="warning" variant="soft" size="sm">
-                            <Icon name="key" size={10} className="mr-1" /> Must change password
-                          </Badge>
+                          u.invitationExpired ? (
+                            <Badge tone="danger" variant="soft" size="sm">
+                              <Icon name="clock" size={10} className="mr-1" /> Invite expired
+                            </Badge>
+                          ) : (
+                            <Badge tone="warning" variant="soft" size="sm">
+                              <Icon name="key" size={10} className="mr-1" /> Must change password
+                            </Badge>
+                          )
                         )}
                       </div>
                     </div>
@@ -214,7 +221,10 @@ export function UserManagementPage() {
                     ><Icon name="key" size={15} /></Button>
                     {active && u.mustChangePassword && (
                       <Button
-                        variant="ghost" size="sm" disabled={resending} title="Resend invitation" aria-label="Resend invitation"
+                        variant={u.invitationExpired ? "outline" : "ghost"} size="sm" disabled={resending}
+                        className={u.invitationExpired ? "text-amber-700 border-amber-300 hover:bg-amber-50" : undefined}
+                        title={u.invitationExpired ? "Invitation expired — resend a fresh link" : "Resend invitation"}
+                        aria-label="Resend invitation"
                         onClick={async () => {
                           try {
                             await resendInvite(u.id).unwrap();

@@ -3,10 +3,11 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import type { RootState } from "../app/store";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton, cn,
   type IconName, type BadgeTone,
 } from "../shared/ui";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery } from "../shared/api/baseApi";
+import { useDashboardLayout } from "./useDashboardLayout";
 import { usePermission, Perm } from "../shared/auth/permissions";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage } from "../shared/api/types";
 import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
@@ -57,6 +58,49 @@ function timeAgo(iso: string) {
   return `${d}d ago`;
 }
 
+// =============================================================================
+// Configurable-widget registry
+// -----------------------------------------------------------------------------
+// The single source of truth for what the user can show / hide / reorder on the
+// landing dashboard. Hero + KpiStrip are intentionally NOT here — they stay fixed.
+// `colSpan` maps to how wide the cell sits in a 3-column xl grid, preserving each
+// widget's current visual size while letting them reflow when reordered/hidden.
+// =============================================================================
+
+type WidgetColSpan = 1 | 2 | 3;
+interface WidgetDef {
+  id: string;
+  label: string;
+  colSpan: WidgetColSpan;
+}
+
+const DASHBOARD_WIDGETS: readonly WidgetDef[] = [
+  { id: "upcoming-events", label: "Upcoming events",  colSpan: 3 },
+  { id: "pipeline",        label: "Pipeline overview", colSpan: 2 },
+  { id: "floor",           label: "Floor health",      colSpan: 1 },
+  { id: "activity",        label: "Recent activity",   colSpan: 2 },
+  { id: "leaderboard",     label: "Top performers",    colSpan: 1 },
+  { id: "quick-actions",   label: "Quick actions",     colSpan: 3 },
+] as const;
+
+const WIDGET_BY_ID: Record<string, WidgetDef> = Object.fromEntries(
+  DASHBOARD_WIDGETS.map((w) => [w.id, w]),
+);
+const DEFAULT_WIDGET_ORDER: readonly string[] = DASHBOARD_WIDGETS.map((w) => w.id);
+
+// Literal strings so Tailwind's JIT scanner keeps these classes in the build.
+const COL_SPAN_CLASS: Record<WidgetColSpan, string> = {
+  1: "",
+  2: "xl:col-span-2",
+  3: "xl:col-span-3",
+};
+
+const COL_SPAN_LABEL: Record<WidgetColSpan, string> = {
+  1: "Compact",
+  2: "Wide",
+  3: "Full width",
+};
+
 export function Dashboard() {
   const auth = useSelector((s: RootState) => s.auth);
   const userName = auth.user?.userName ?? "there";
@@ -75,6 +119,28 @@ export function Dashboard() {
     pollingInterval: 30_000,
     skip: !canSeeSupervision,
   });
+
+  // Per-browser dashboard layout (which widgets show, and in what order).
+  const layout = useDashboardLayout(DEFAULT_WIDGET_ORDER);
+  const [customizing, setCustomizing] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // Maps each widget id to its already-existing section component (props unchanged).
+  const widgetNodes: Record<string, ReactNode> = {
+    "upcoming-events": <UpcomingEventsCard />,
+    "pipeline": <PipelineCard data={data} loading={isLoading} />,
+    "floor": <FloorCard wall={wall} loading={isLoading} />,
+    "activity": <ActivityCard data={data} loading={isLoading} />,
+    "leaderboard": <LeaderboardCard leaders={leaders} loading={isLoading} />,
+    "quick-actions": <QuickActions />,
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (dragId && dragId !== targetId) layout.reorder(dragId, targetId);
+    setDragId(null);
+    setDragOverId(null);
+  };
 
   return (
     <>
@@ -96,23 +162,169 @@ export function Dashboard() {
       {/* KPI strip */}
       <KpiStrip data={data} loading={isLoading} />
 
-      {/* Upcoming events — callbacks, birthdays, trainings */}
-      <UpcomingEventsCard />
-
-      {/* Main grid: pipeline funnel (2/3) + side rail (1/3) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
-        <PipelineCard data={data} loading={isLoading} />
-        <FloorCard wall={wall} loading={isLoading} />
+      {/* Customize toolbar */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Your dashboard</span>
+          <InfoHint title="Customize your dashboard" side="right">
+            Show, hide and reorder your dashboard widgets — saved to this browser.
+          </InfoHint>
+        </div>
+        <Button
+          variant={customizing ? "primary" : "outline"}
+          size="sm"
+          leftIcon={<Icon name="cog" size={14} />}
+          onClick={() => setCustomizing((v) => !v)}
+          aria-expanded={customizing}
+          aria-label={customizing ? "Close dashboard customization" : "Customize dashboard"}
+        >
+          {customizing ? "Done" : "Customize"}
+        </Button>
       </div>
 
-      {/* Lower grid: activity feed + leaderboard */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
-        <ActivityCard data={data} loading={isLoading} />
-        <LeaderboardCard leaders={leaders} loading={isLoading} />
-      </div>
+      {customizing && (
+        <CustomizePanel layout={layout} onClose={() => setCustomizing(false)} />
+      )}
 
-      <QuickActions />
+      {/* Configurable widget grid */}
+      {layout.visibleOrder.length === 0 ? (
+        <Card className="mb-5">
+          <CardBody>
+            <EmptyState
+              tone="neutral"
+              icon={<Icon name="layers" size={20} />}
+              title="All widgets are hidden"
+              description="Your dashboard is empty. Re-enable widgets in Customize, or restore the default layout."
+              action={
+                <Button variant="outline" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={layout.reset}>
+                  Reset to default
+                </Button>
+              }
+            />
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+          {layout.visibleOrder.map((id) => {
+            const w = WIDGET_BY_ID[id];
+            if (!w) return null;
+            return (
+              <div
+                key={id}
+                className={cn(
+                  COL_SPAN_CLASS[w.colSpan],
+                  "min-w-0",
+                  customizing && "relative rounded-2xl ring-2 ring-brand-200/70 ring-offset-2 cursor-move transition-shadow",
+                  customizing && dragOverId === id && dragId !== id && "ring-brand-500",
+                  customizing && dragId === id && "opacity-60",
+                )}
+                draggable={customizing}
+                onDragStart={customizing ? () => setDragId(id) : undefined}
+                onDragOver={customizing ? (e) => { e.preventDefault(); setDragOverId(id); } : undefined}
+                onDragLeave={customizing ? () => setDragOverId((cur) => (cur === id ? null : cur)) : undefined}
+                onDrop={customizing ? (e) => { e.preventDefault(); handleDrop(id); } : undefined}
+                onDragEnd={customizing ? () => { setDragId(null); setDragOverId(null); } : undefined}
+              >
+                {customizing && (
+                  <div className="absolute -top-2.5 left-3 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-600 text-white text-[10px] font-semibold shadow-sm">
+                    <Icon name="moreV" size={11} /> Drag to reorder
+                  </div>
+                )}
+                {/* Block interaction with the widget's own links while dragging. */}
+                <div className={cn(customizing && "pointer-events-none")}>
+                  {widgetNodes[id]}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
+  );
+}
+
+// =============================================================================
+// Customize panel — show/hide toggles + reorder controls for every widget
+// =============================================================================
+
+function CustomizePanel({
+  layout, onClose,
+}: {
+  layout: ReturnType<typeof useDashboardLayout>;
+  onClose: () => void;
+}) {
+  return (
+    <Card className="mb-4">
+      <CardHeader
+        title="Customize dashboard"
+        subtitle="Show, hide and drag or nudge widgets into the order you want"
+        action={
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={layout.reset}>
+              Reset to default
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close customization panel">
+              <Icon name="x" size={16} />
+            </Button>
+          </div>
+        }
+        bordered
+      />
+      <CardBody className="space-y-1">
+        {layout.order.map((id, idx) => {
+          const w = WIDGET_BY_ID[id];
+          if (!w) return null;
+          const hidden = layout.isHidden(id);
+          return (
+            <div
+              key={id}
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3 py-2 ring-1 ring-inset transition-colors",
+                hidden ? "bg-ink-50/50 ring-ink-100" : "bg-white ring-ink-200 hover:ring-ink-300",
+              )}
+            >
+              <Button
+                variant={hidden ? "ghost" : "outline"}
+                size="sm"
+                leftIcon={<Icon name={hidden ? "eyeOff" : "eye"} size={14} />}
+                onClick={() => layout.toggle(id)}
+                aria-pressed={!hidden}
+                aria-label={hidden ? `Show ${w.label}` : `Hide ${w.label}`}
+                className="w-24 justify-start"
+              >
+                {hidden ? "Hidden" : "Shown"}
+              </Button>
+
+              <div className={cn("flex-1 min-w-0", hidden && "opacity-50")}>
+                <div className="text-sm font-semibold text-ink-900 truncate">{w.label}</div>
+                <div className="text-[11px] text-ink-500">{COL_SPAN_LABEL[w.colSpan]}</div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => layout.move(id, -1)}
+                  disabled={idx === 0}
+                  aria-label={`Move ${w.label} up`}
+                >
+                  <Icon name="chevronUp" size={16} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => layout.move(id, 1)}
+                  disabled={idx === layout.order.length - 1}
+                  aria-label={`Move ${w.label} down`}
+                >
+                  <Icon name="chevronDown" size={16} />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </CardBody>
+    </Card>
   );
 }
 
