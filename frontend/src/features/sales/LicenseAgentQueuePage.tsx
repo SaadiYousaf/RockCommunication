@@ -7,10 +7,8 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { formatUsd } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
-
-const money = (n: number | null | undefined) =>
-  n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 
 function statusOf(s: SaleListItem): { label: string; tone: BadgeTone } {
   if (s.fundedAt) return { label: "Funded", tone: "success" };
@@ -40,7 +38,7 @@ export function LicenseAgentQueuePage() {
       <Card>
         <CardHeader
           title="Assigned to me"
-          subtitle={data ? `${items.length === 1 ? "1 sale" : `${items.length} sales`} · ${money(totalCommission)} commission` : undefined}
+          subtitle={data ? `${items.length === 1 ? "1 sale" : `${items.length} sales`} · ${formatUsd(totalCommission)} commission` : undefined}
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : items.length === 0 ? (
@@ -83,9 +81,9 @@ export function LicenseAgentQueuePage() {
                         <div className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</div>
                       </TD>
                       <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
-                      <TD className="text-sm tabular-nums whitespace-nowrap">{money(s.monthlyPremium)}/mo</TD>
+                      <TD className="text-sm tabular-nums whitespace-nowrap">{formatUsd(s.monthlyPremium)}/mo</TD>
                       <TD><Badge tone={st.tone} variant="soft">{st.label}</Badge></TD>
-                      <TD className="text-sm tabular-nums font-medium text-ink-800">{money(s.commissionEarned ?? 0)}</TD>
+                      <TD className="text-sm tabular-nums font-medium text-ink-800">{formatUsd(s.commissionEarned ?? 0)}</TD>
                       <TD className="whitespace-nowrap">
                         <span title={new Date(s.soldAt).toLocaleString()}>
                           <Badge tone={waitTone(s.soldAt)} variant="soft">{timeAgoShort(s.soldAt)}</Badge>

@@ -16,9 +16,7 @@ import {
   VALIDATOR_STATUS_TONE as TONE,
 } from "../../shared/constants/intake";
 import { useTableSort } from "../../shared/hooks/useTableSort";
-
-const money = (n: number | null | undefined) =>
-  n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+import { formatUsd } from "../../shared/lib/format";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
@@ -80,7 +78,7 @@ export function ValidateQueuePage() {
                     </TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
                     <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
-                    <TD className="text-sm tabular-nums whitespace-nowrap">{money(s.monthlyPremium)}</TD>
+                    <TD className="text-sm tabular-nums whitespace-nowrap">{formatUsd(s.monthlyPremium)}</TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.closerName ?? "—"}</TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.licenseAgentName ?? "—"}</TD>
                     <TD>
@@ -237,7 +235,7 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
   }
 
   return (
-    <Modal open onClose={onClose} title={`Submission — ${sale.leadName}`} description={`${sale.carrier} · ${money(sale.monthlyPremium)}/mo · closer ${sale.closerName ?? "—"}`} size="lg">
+    <Modal open onClose={onClose} title={`Submission — ${sale.leadName}`} description={`${sale.carrier} · ${formatUsd(sale.monthlyPremium)}/mo · closer ${sale.closerName ?? "—"}`} size="lg">
       <form onSubmit={submit} className="space-y-4">
         <div>
           <div className="flex items-center gap-1 mb-1.5">

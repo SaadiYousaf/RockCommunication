@@ -58,7 +58,7 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
 
         // Resolve which agency's sales to list. SuperAdmin (who has no agency) must target one
         // explicitly, mirroring the OrgTree/ListUsers "?agencyId honored only for SuperAdmin" rule.
-        var isSuperAdmin = _user.Roles.Contains("SuperAdmin");
+        var isSuperAdmin = _user.Roles.Contains(DomainRoles.SuperAdmin);
         Guid agencyId;
         if (isSuperAdmin)
         {

@@ -6,6 +6,7 @@ using CRM.Application.Common.Workflow;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -183,7 +184,7 @@ public class PublicLeadCaptureHandler :
     private void EnsureManager()
     {
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager))
             throw new ForbiddenAccessException();
     }
 

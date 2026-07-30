@@ -20,17 +20,10 @@ import {
 } from "../../shared/ui";
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
-
-
+import { formatPhone } from "../../shared/lib/format";
 
 
 const PAGE_SIZE = 25;
-
-function formatPhone(p: string) {
-  const d = (p || "").replace(/\D/g, "");
-  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-  return p;
-}
 
 export function LeadsPage() {
   const navigate = useNavigate();

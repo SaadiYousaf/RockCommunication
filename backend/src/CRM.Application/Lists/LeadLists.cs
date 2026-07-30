@@ -4,6 +4,7 @@ using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Scoring;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -164,7 +165,7 @@ public class LeadListHandler :
     {
         if (_user.IsSuperAdmin) return;   // platform operator — reads span all agencies (see below)
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager) && !_user.Roles.Contains(DomainRoles.TeamLead))
             throw new ForbiddenAccessException();
     }
 

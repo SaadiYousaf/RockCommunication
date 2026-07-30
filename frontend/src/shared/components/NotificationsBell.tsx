@@ -12,14 +12,7 @@ import type { ChatMessage } from "../api/types";
 import type { RootState } from "../../app/store";
 import { Avatar, Badge, Button, Icon, Tooltip, useToast, cn } from "../ui";
 import { useAgentHub } from "../hooks/useAgentHub";
-
-function timeAgo(iso: string): string {
-  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 60) return "just now";
-  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
+import { timeAgo } from "../lib/time";
 
 /**
  * Header notifications bell — shows live unread count + a dropdown of rooms with unread.

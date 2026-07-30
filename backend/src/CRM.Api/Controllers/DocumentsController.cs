@@ -1,6 +1,7 @@
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Documents;
 using CRM.Domain.Common;
+using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ public class DocumentsController : ControllerBase
     // (mammoth/xlsx → HTML) is a stored-XSS vector, so untrusted users must not be able to
     // plant one that executes in a higher-privileged user's session.
     [HttpPost("upload")]
-    [Authorize(Roles = "Admin,ProgramManager,SuperAdmin")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.ProgramManager + "," + Roles.SuperAdmin)]
     [RequestSizeLimit(MaxBytes + 1024 * 1024)]
     public async Task<ActionResult<DocumentDto>> Upload(
         [FromForm] string? name, IFormFile file, CancellationToken ct)
@@ -66,7 +67,7 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin,ProgramManager,SuperAdmin")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.ProgramManager + "," + Roles.SuperAdmin)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _mediator.Send(new DeleteDocumentCommand(id), ct);

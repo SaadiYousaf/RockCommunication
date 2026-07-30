@@ -12,9 +12,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
-
-const money = (n: number | null | undefined) =>
-  n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+import { formatUsd } from "../../shared/lib/format";
 
 const PAGE = 25;
 
@@ -78,7 +76,7 @@ export function AgencyDetailPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <Stat label="Sales" value={total} icon={<Icon name="chart" size={18} />} tone="brand" />
-        <Stat label="Premium (total)" value={money(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success" />
+        <Stat label="Premium (total)" value={formatUsd(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success" />
         <Stat label="Funded" value={sales?.fundedCount ?? 0} icon={<Icon name="check" size={18} />} tone="success"
           hint="First payment cleared" />
         <Stat label="License agents" value={agents?.length ?? 0} icon={<Icon name="userCheck" size={18} />} tone="accent" />
@@ -200,9 +198,9 @@ export function AgencyDetailPage() {
                       <TD className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</TD>
                       <TD className="text-sm">{s.carrierApproved ?? "—"}</TD>
                       <TD className="text-sm">{s.planApproved ?? "—"}</TD>
-                      <TD numeric className="text-sm tabular-nums">{money(s.coverageApproved)}</TD>
-                      <TD numeric className="text-sm tabular-nums">{money(s.premiumApproved)}</TD>
-                      <TD numeric className="text-sm tabular-nums">{money(s.commissionEarned)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{formatUsd(s.coverageApproved)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{formatUsd(s.premiumApproved)}</TD>
+                      <TD numeric className="text-sm tabular-nums">{formatUsd(s.commissionEarned)}</TD>
                       <TD className="text-sm text-ink-600">{s.callCenterName ?? "—"}</TD>
                       <TD className="text-sm text-ink-600">{s.licenseAgentName ?? "—"}</TD>
                       <TD><Badge tone={s.status === "Funded" ? "success" : s.status === "Validated" ? "info" : "neutral"} variant="soft">{s.status}</Badge></TD>

@@ -3,6 +3,7 @@ using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -80,7 +81,7 @@ public class ForceAgentStatusHandler : IRequestHandler<ForceAgentStatusCommand, 
     {
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager) && !_user.Roles.Contains(DomainRoles.TeamLead))
             throw new ForbiddenAccessException();
 
         var session = await _db.AgentSessions
@@ -123,7 +124,7 @@ public class CoachCallHandler : IRequestHandler<CoachCallCommand, Unit>
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager") && !_user.Roles.Contains("TeamLead"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager) && !_user.Roles.Contains(DomainRoles.TeamLead))
             throw new ForbiddenAccessException();
 
         // Vici and most dialers expose a function for monitor/whisper/barge — wired to provider for future expansion.

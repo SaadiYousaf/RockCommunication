@@ -3,6 +3,7 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 
@@ -122,7 +123,7 @@ public class UserAdminHandler :
     private async Task EnsurePermissionAsync(string code, CancellationToken ct)
     {
         if (_user.UserId is null) throw new ForbiddenAccessException();
-        if (_user.Roles.Contains("SuperAdmin")) return;
+        if (_user.Roles.Contains(DomainRoles.SuperAdmin)) return;
         if (!await _permissions.HasAsync(_user.UserId.Value, code, ct))
             throw new ForbiddenAccessException();
     }

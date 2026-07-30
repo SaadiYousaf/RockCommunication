@@ -25,6 +25,7 @@ import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   ALLOWED_TRANSITIONS, TERMINAL_STAGES, STAGE_DESCRIPTIONS, DISPOSITION_DESCRIPTIONS, WORKFLOW_STAGES,
 } from "../../shared/constants/leadStage";
+import { formatPhone } from "../../shared/lib/format";
 
 const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","CallBack","DoNotCall","Sold","NotQualified","Voicemail","NoAnswer","WrongNumber"];
 // The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
@@ -604,8 +605,3 @@ function Row({ label, value, mono }: { label: ReactNode; value: ReactNode; mono?
   );
 }
 
-function formatPhone(p: string) {
-  const d = (p || "").replace(/\D/g, "");
-  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
-  return p;
-}

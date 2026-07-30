@@ -14,14 +14,8 @@ import {
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { formatPhone } from "../../shared/lib/format";
 
-
-function formatPhone(p?: string | null) {
-  if (!p) return "";
-  const d = p.replace(/\D/g, "");
-  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-  return p;
-}
 
 function useDebounced<T>(value: T, delay = 300) {
   const [v, setV] = useState(value);

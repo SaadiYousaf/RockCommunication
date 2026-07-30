@@ -1,6 +1,7 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -79,7 +80,7 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
     {
         if (_user.IsSuperAdmin) return;   // platform operator — cross-tenant read
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager))
             throw new ForbiddenAccessException();
     }
 }
@@ -103,7 +104,7 @@ public class DistinctAuditFiltersHandler : IRequestHandler<DistinctAuditFiltersQ
         if (!_user.IsSuperAdmin)
         {
             if (_user.AgencyId is null) throw new ForbiddenAccessException();
-            if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
+            if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager))
                 throw new ForbiddenAccessException();
         }
 

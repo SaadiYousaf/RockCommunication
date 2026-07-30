@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -126,7 +127,7 @@ public class InboundQueueHandler :
     private void EnsureManager()
     {
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
-        if (!_user.Roles.Contains("Admin") && !_user.Roles.Contains("ProgramManager"))
+        if (!_user.Roles.Contains(DomainRoles.Admin) && !_user.Roles.Contains(DomainRoles.ProgramManager))
             throw new ForbiddenAccessException();
     }
 

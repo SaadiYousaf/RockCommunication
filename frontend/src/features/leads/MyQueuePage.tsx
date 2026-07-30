@@ -11,6 +11,7 @@ import {
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { formatPhone } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
@@ -25,15 +26,6 @@ const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   Winback: ["Fronted", "Lost"],
   Lost: ["Winback"],
 };
-
-
-
-
-function formatPhone(p: string) {
-  const d = (p || "").replace(/\D/g, "");
-  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-  return p;
-}
 
 const QUICK_DISPOSITIONS: { kind: WorkflowStage; disp: LeadDisposition; label: string }[] = [
   { kind: "Lost", disp: "NoAnswer", label: "No answer" },
