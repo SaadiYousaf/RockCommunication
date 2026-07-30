@@ -150,6 +150,7 @@ export function EmployeesPage() {
             <div className="flex items-center gap-2 mb-2.5">
               <Icon name="calendar" size={15} className="text-brand-500" />
               <h3 className="text-sm font-semibold text-ink-900">Upcoming birthdays</h3>
+              <InfoHint title="Birthdays" side="right">Refreshed once a day. A birthday reminder is automatically sent to each employee on the day.</InfoHint>
             </div>
             <div className="flex flex-wrap gap-2">
               {birthdays.map((b) => (

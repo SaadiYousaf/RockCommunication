@@ -968,6 +968,15 @@ function whenBadge(iso: string): { label: string; tone: BadgeTone } {
   return { label: new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }), tone: "neutral" };
 }
 
+/** Small muted footer telling users how fresh a widget's data is. */
+function RefreshNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-3 pt-2.5 border-t hairline flex items-center gap-1.5 text-[11px] text-ink-400">
+      <Icon name="refresh" size={11} /> {children}
+    </div>
+  );
+}
+
 function UpcomingEventsCard() {
   const { data: events, isLoading } = useUpcomingEventsQuery(14);
 
@@ -1022,6 +1031,7 @@ function UpcomingEventsCard() {
             })}
           </div>
         )}
+        <RefreshNote>Birthday &amp; training reminders are sent once a day; callbacks appear as they're scheduled.</RefreshNote>
       </CardBody>
     </Card>
   );
@@ -1059,7 +1069,8 @@ const livePresence: Record<TeamLiveStatus, "online" | "busy" | "away" | "offline
 };
 
 function TeamStatusCard() {
-  const { data, isLoading, isError } = useTeamStatusQuery();
+  // Refresh hourly so attendance/status stays current without hammering the endpoint.
+  const { data, isLoading, isError } = useTeamStatusQuery(undefined, { pollingInterval: 3_600_000 });
 
   // Group by call centre so a multi-centre viewer (agency-level) sees clear sections.
   const groups = useMemo(() => {
@@ -1128,6 +1139,7 @@ function TeamStatusCard() {
             ))}
           </div>
         )}
+        <RefreshNote>Refreshes every hour. Attendance comes from today's HR marks; live status reflects the floor in near real time.</RefreshNote>
       </CardBody>
     </Card>
   );
