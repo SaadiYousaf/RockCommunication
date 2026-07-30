@@ -31,6 +31,11 @@ public class HrController : ControllerBase
         [FromQuery] EmployeeDesignation? designation, CancellationToken ct)
         => Ok(await _mediator.Send(new ListEmployeesQuery(search, callCenterId, designation), ct));
 
+    /// <summary>Employees with a birthday in the next N days (soonest first).</summary>
+    [HttpGet("birthdays")]
+    public async Task<IActionResult> Birthdays([FromQuery] int days = 30, CancellationToken ct = default)
+        => Ok(await _mediator.Send(new UpcomingBirthdaysQuery(days), ct));
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetEmployeeQuery(id), ct));

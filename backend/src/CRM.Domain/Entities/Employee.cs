@@ -30,6 +30,8 @@ public class Employee : TenantEntity
     public MaritalStatus MaritalStatus { get; set; } = MaritalStatus.Single;
     /// <summary>Drives birthday notifications.</summary>
     public DateTime? DateOfBirth { get; set; }
+    /// <summary>Year we last sent this person's birthday notification (dedupe — one per year).</summary>
+    public int? LastBirthdayNotifiedYear { get; set; }
 
     // ── Guardian / emergency contact ──────────────────────────────────────────
     public string? GuardianPhone { get; set; }

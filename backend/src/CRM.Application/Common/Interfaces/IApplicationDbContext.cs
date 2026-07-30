@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<EmployeeAttendance> EmployeeAttendances { get; }
     DbSet<Interview> Interviews { get; }
     DbSet<EmployeePayroll> EmployeePayrolls { get; }
+    DbSet<SocialMediaReport> SocialMediaReports { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<CommissionEntry> CommissionEntries { get; }

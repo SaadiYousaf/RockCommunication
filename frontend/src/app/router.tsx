@@ -78,6 +78,7 @@ const EmployeesPage = lazyWithReload(() => import("../features/hr/EmployeesPage"
 const HrAttendancePage = lazyWithReload(() => import("../features/hr/HrAttendancePage").then(m => ({ default: m.HrAttendancePage })));
 const InterviewsPage = lazyWithReload(() => import("../features/hr/InterviewsPage").then(m => ({ default: m.InterviewsPage })));
 const PayrollPage = lazyWithReload(() => import("../features/hr/PayrollPage").then(m => ({ default: m.PayrollPage })));
+const SocialReportsPage = lazyWithReload(() => import("../features/hr/SocialReportsPage").then(m => ({ default: m.SocialReportsPage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
@@ -250,7 +251,7 @@ const router = createBrowserRouter([
             ],
           },
           {
-            element: <ProtectedRoute modules={[M.Knowledge]} />,
+            element: <ProtectedRoute modules={[M.Knowledge]} roles={["HR"]} />,
             children: [{ path: "/kb", element: <KnowledgeBasePage /> }],
           },
           {
@@ -321,6 +322,7 @@ const router = createBrowserRouter([
               { path: "/hr/attendance", element: <HrAttendancePage /> },
               { path: "/hr/interviews", element: <InterviewsPage /> },
               { path: "/hr/payroll", element: <PayrollPage /> },
+              { path: "/hr/social", element: <SocialReportsPage /> },
             ],
           },
           {

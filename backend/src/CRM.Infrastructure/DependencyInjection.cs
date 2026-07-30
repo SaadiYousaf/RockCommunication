@@ -413,6 +413,7 @@ public static class DependencyInjection
         {
             services.AddSingleton<Workflow.IBackgroundJobScheduler, BackgroundJobs.InProcessJobScheduler>();
             services.AddHostedService<CallbackReminderService>();
+            services.AddHostedService<BirthdayNotificationService>();
         }
         services.AddScoped<BackgroundJobs.WorkflowJobRunner>();
         services.AddScoped<BackgroundJobs.CallbackReminderJob>();

@@ -16,6 +16,7 @@ import type {
   PortalCredential, PortalCredentialInput,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput,
+  SocialMediaReport, SocialMediaInput, UpcomingBirthday,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -93,7 +94,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "SocialReports"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1120,6 +1121,28 @@ export const baseApi = createApi({
       query: ({ employeeId, year, month, input }) => ({ url: `/api/hr/payroll/${employeeId}`, method: "PUT", body: { year, month, input } }),
       invalidatesTags: ["Payroll"],
     }),
+
+    // ── HR — social-media reports + birthdays ─────────────────────────────────
+    listSocialReports: b.query<SocialMediaReport[], { search?: string } | void>({
+      query: (params) => ({ url: "/api/hr/social-reports", params: params ?? undefined }),
+      providesTags: ["SocialReports"],
+    }),
+    createSocialReport: b.mutation<SocialMediaReport, SocialMediaInput>({
+      query: (body) => ({ url: "/api/hr/social-reports", method: "POST", body }),
+      invalidatesTags: ["SocialReports"],
+    }),
+    updateSocialReport: b.mutation<SocialMediaReport, { id: string } & SocialMediaInput>({
+      query: ({ id, ...body }) => ({ url: `/api/hr/social-reports/${id}`, method: "PUT", body }),
+      invalidatesTags: ["SocialReports"],
+    }),
+    deleteSocialReport: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/hr/social-reports/${id}`, method: "DELETE" }),
+      invalidatesTags: ["SocialReports"],
+    }),
+    upcomingBirthdays: b.query<UpcomingBirthday[], number | void>({
+      query: (days) => ({ url: "/api/hr/employees/birthdays", params: days ? { days } : undefined }),
+      providesTags: ["Employees"],
+    }),
   }),
 });
 
@@ -1324,6 +1347,8 @@ export const {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
   useListPayrollQuery, useSavePayrollMutation,
+  useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
+  useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

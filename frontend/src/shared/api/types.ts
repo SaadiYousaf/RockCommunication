@@ -98,6 +98,37 @@ export interface Employee {
   createdAt: string;
 }
 
+/** A social-media handling report. */
+export interface SocialMediaReport {
+  id: string;
+  date: string;
+  employeeId?: string | null;
+  employeeName?: string | null;
+  platform?: string | null;
+  postsMade: number;
+  queriesAnswered: number;
+  notes?: string | null;
+  createdAt: string;
+}
+export interface SocialMediaInput {
+  date: string;
+  employeeId?: string | null;
+  platform?: string | null;
+  postsMade: number;
+  queriesAnswered: number;
+  notes?: string | null;
+}
+
+/** An employee whose birthday is coming up. */
+export interface UpcomingBirthday {
+  employeeId: string;
+  fullName: string;
+  agentCode: string;
+  dateOfBirth: string;
+  daysUntil: number;
+  isToday: boolean;
+}
+
 /** One employee's payroll for a month, with computed totals. */
 export interface PayrollRow {
   employeeId: string;

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation, useListCallCentersQuery,
-  useSyncEmployeesFromUsersMutation,
+  useSyncEmployeesFromUsersMutation, useUpcomingBirthdaysQuery,
 } from "../../shared/api/baseApi";
 import type { EmployeeInput } from "../../shared/api/types";
 import {
@@ -45,6 +45,7 @@ export function EmployeesPage() {
     designation: designation || undefined,
   });
   const { data: callCenters } = useListCallCentersQuery();
+  const { data: birthdays } = useUpcomingBirthdaysQuery(30);
   const [create, { isLoading: creating }] = useCreateEmployeeMutation();
   const [update, { isLoading: updating }] = useUpdateEmployeeMutation();
   const [remove] = useDeleteEmployeeMutation();
@@ -142,6 +143,24 @@ export function EmployeesPage() {
         <Stat label="Probation" value={rows.filter((r) => r.employmentStatus === "Probation").length} icon={<Icon name="clock" size={16} />} tone="warning" />
         <Stat label="Call centres" value={callCenters?.length ?? 0} icon={<Icon name="building" size={16} />} tone="accent" />
       </div>
+
+      {birthdays && birthdays.length > 0 && (
+        <Card className="mb-4">
+          <CardBody>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Icon name="calendar" size={15} className="text-brand-500" />
+              <h3 className="text-sm font-semibold text-ink-900">Upcoming birthdays</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {birthdays.map((b) => (
+                <Badge key={b.employeeId} tone={b.isToday ? "success" : "neutral"} variant="soft">
+                  {b.isToday ? "🎉 " : ""}{b.fullName} · {b.isToday ? "today" : b.daysUntil === 1 ? "tomorrow" : `in ${b.daysUntil} days`}
+                </Badge>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">

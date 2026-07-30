@@ -70,6 +70,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<EmployeeAttendance> EmployeeAttendances => Set<EmployeeAttendance>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<EmployeePayroll> EmployeePayrolls => Set<EmployeePayroll>();
+    public DbSet<SocialMediaReport> SocialMediaReports => Set<SocialMediaReport>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -276,6 +277,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 e.Property(p).HasColumnType("decimal(18,2)");
             e.HasIndex(x => new { x.EmployeeId, x.Year, x.Month }).IsUnique().HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => new { x.AgencyId, x.Year, x.Month });
+        });
+
+        b.Entity<SocialMediaReport>(e =>
+        {
+            e.Property(x => x.Platform).HasMaxLength(80);
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            e.HasIndex(x => new { x.AgencyId, x.Date });
         });
 
         b.Entity<RefreshToken>(e =>
