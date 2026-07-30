@@ -119,6 +119,14 @@ export interface SocialMediaInput {
   notes?: string | null;
 }
 
+/** A candidate with a training scheduled soon. */
+export interface UpcomingTraining {
+  id: string;
+  candidateName: string;
+  positionOffered?: string | null;
+  trainingScheduledAt: string;
+}
+
 /** An employee whose birthday is coming up. */
 export interface UpcomingBirthday {
   employeeId: string;

@@ -20,6 +20,11 @@ public class HrInterviewsController : ControllerBase
     public async Task<IActionResult> List([FromQuery] string? search, [FromQuery] OfferStatus? status, CancellationToken ct)
         => Ok(await _mediator.Send(new ListInterviewsQuery(search, status), ct));
 
+    /// <summary>Candidates with a training scheduled in the next N days (soonest first).</summary>
+    [HttpGet("trainings")]
+    public async Task<IActionResult> Trainings([FromQuery] int days = 14, CancellationToken ct = default)
+        => Ok(await _mediator.Send(new UpcomingTrainingsQuery(days), ct));
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
         => Ok(await _mediator.Send(new GetInterviewQuery(id), ct));

@@ -27,6 +27,10 @@ public record InterviewInput(
 
 public record ListInterviewsQuery(string? Search = null, OfferStatus? Status = null)
     : IRequest<IReadOnlyList<InterviewDto>>;
+
+public record UpcomingTrainingDto(Guid Id, string CandidateName, string? PositionOffered, DateTime TrainingScheduledAt);
+/// <summary>Candidates with a training scheduled within the next N days (soonest first).</summary>
+public record UpcomingTrainingsQuery(int Days = 14) : IRequest<IReadOnlyList<UpcomingTrainingDto>>;
 public record GetInterviewQuery(Guid Id) : IRequest<InterviewDto>;
 public record CreateInterviewCommand(InterviewInput Input) : IRequest<InterviewDto>;
 public record UpdateInterviewCommand(Guid Id, InterviewInput Input) : IRequest<InterviewDto>;
@@ -55,6 +59,7 @@ public class UpdateInterviewValidator : AbstractValidator<UpdateInterviewCommand
 
 public class InterviewHandlers :
     IRequestHandler<ListInterviewsQuery, IReadOnlyList<InterviewDto>>,
+    IRequestHandler<UpcomingTrainingsQuery, IReadOnlyList<UpcomingTrainingDto>>,
     IRequestHandler<GetInterviewQuery, InterviewDto>,
     IRequestHandler<CreateInterviewCommand, InterviewDto>,
     IRequestHandler<UpdateInterviewCommand, InterviewDto>,
@@ -83,6 +88,18 @@ public class InterviewHandlers :
         }
         var rows = await q.OrderByDescending(i => i.InterviewDate ?? i.CreatedAt).ToListAsync(ct);
         return rows.Select(Map).ToList();
+    }
+
+    public async Task<IReadOnlyList<UpcomingTrainingDto>> Handle(UpcomingTrainingsQuery request, CancellationToken ct)
+    {
+        HrAccess.EnsureHr(_user);
+        var now = DateTime.UtcNow;
+        var until = now.AddDays(request.Days);
+        return await _db.Interviews.AsNoTracking()
+            .Where(i => i.TrainingScheduledAt != null && i.TrainingScheduledAt >= now && i.TrainingScheduledAt <= until)
+            .OrderBy(i => i.TrainingScheduledAt)
+            .Select(i => new UpcomingTrainingDto(i.Id, i.CandidateName, i.PositionOffered, i.TrainingScheduledAt!.Value))
+            .ToListAsync(ct);
     }
 
     public async Task<InterviewDto> Handle(GetInterviewQuery request, CancellationToken ct)

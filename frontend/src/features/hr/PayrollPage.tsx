@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { PayrollRow, SavePayrollInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
@@ -89,7 +89,7 @@ export function PayrollPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         <Stat label="Employees" value={list.length} icon={<Icon name="users" size={16} />} tone="brand" />
-        <Stat label="Total net pay" value={money(totalNet)} icon={<Icon name="dollar" size={16} />} tone="success" />
+        <Stat label="Total net pay" value={money(totalNet)} hint="Earnings − deductions, summed across employees" icon={<Icon name="dollar" size={16} />} tone="success" />
         <Stat label="Finalized" value={list.filter((r) => r.finalized).length} icon={<Icon name="check" size={16} />} tone="accent" />
       </div>
 
@@ -114,8 +114,38 @@ export function PayrollPage() {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
-              <TH>Employee</TH><TH numeric>Basic</TH><TH numeric>Commission</TH><TH numeric>Allowances</TH>
-              <TH numeric>Deductions</TH><TH numeric>Net pay</TH><TH>Status</TH><TH className="text-right">Actions</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Employee
+                  <InfoHint title="Agent ID" side="bottom">The mono code beneath each name is the employee's unique Agent ID.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>Basic</TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Commission
+                  <InfoHint title="Monthly commission" side="bottom">Auto-derived from this employee's approved sales for the month.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Allowances
+                  <InfoHint title="Allowances" side="bottom">Punctuality, daily bonus, transport and special allowance combined.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Deductions
+                  <InfoHint title="Deductions" side="bottom">Advance salary plus docks withheld this month.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Net pay
+                  <InfoHint title="Net pay" side="bottom">Total earnings minus total deductions — the take-home amount.</InfoHint>
+                </span>
+              </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Status
+                  <InfoHint title="Payroll status" side="left">Auto (system estimate), Draft (saved by HR, still editable), or Finalized (locked for the month).</InfoHint>
+                </span>
+              </TH>
+              <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
               {list.map((r) => (
@@ -153,7 +183,7 @@ export function PayrollPage() {
         </>}>
         {form && (
           <form id="pay-form" onSubmit={submit} className="space-y-5">
-            <Section title="Earnings">
+            <Section title={<span className="inline-flex items-center gap-1">Earnings<InfoHint title="Earnings" side="right">Monthly commission is auto-derived from approved sales; the other components are entered by HR.</InfoHint></span>}>
               <Num label="Basic salary" v={form.basicSalary} on={num("basicSalary")} />
               <Num label="Punctuality" v={form.punctuality} on={num("punctuality")} />
               <Num label="Daily bonus" v={form.dailyBonus} on={num("dailyBonus")} />
@@ -161,11 +191,11 @@ export function PayrollPage() {
               <Num label="Transport allowance" v={form.transportAllowance} on={num("transportAllowance")} />
               <Num label="Special allowance" v={form.specialAllowance} on={num("specialAllowance")} />
             </Section>
-            <Section title="Deductions">
+            <Section title={<span className="inline-flex items-center gap-1">Deductions<InfoHint title="Deductions" side="right">Advance salary carries from last month and is deducted here; docks are ad-hoc penalties.</InfoHint></span>}>
               <Num label="Advance salary" v={form.advanceSalary} on={num("advanceSalary")} />
               <Num label="Docks" v={form.docks} on={num("docks")} />
             </Section>
-            <Section title="Attendance (days)">
+            <Section title={<span className="inline-flex items-center gap-1">Attendance (days)<InfoHint title="Attendance" side="right">NCNS = no call, no show; Half day and Leave (approved) are each counted separately.</InfoHint></span>}>
               <Num label="Working days" v={form.workingDays} on={num("workingDays")} />
               <Num label="Present days" v={form.presentDays} on={num("presentDays")} />
               <Num label="Late coming" v={form.lateComing} on={num("lateComing")} />
@@ -178,7 +208,9 @@ export function PayrollPage() {
             <label className="inline-flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
               <input type="checkbox" checked={form.finalized} onChange={(e) => setForm((f) => (f ? { ...f, finalized: e.target.checked } : f))}
                 className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
-              Finalize this month
+              <span className="inline-flex items-center gap-1">Finalize this month
+                <InfoHint title="Finalize" side="top">Locks this month's payroll so it's no longer auto-recalculated.</InfoHint>
+              </span>
             </label>
           </form>
         )}
@@ -187,7 +219,7 @@ export function PayrollPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 mb-2 pb-1 border-b hairline">{title}</div>

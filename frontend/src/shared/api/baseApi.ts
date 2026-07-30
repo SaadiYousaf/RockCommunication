@@ -16,7 +16,7 @@ import type {
   PortalCredential, PortalCredentialInput,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput,
-  SocialMediaReport, SocialMediaInput, UpcomingBirthday,
+  SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -1119,6 +1119,10 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/api/hr/interviews/${id}`, method: "DELETE" }),
       invalidatesTags: ["Interviews"],
     }),
+    upcomingTrainings: b.query<UpcomingTraining[], number | void>({
+      query: (days) => ({ url: "/api/hr/interviews/trainings", params: days ? { days } : undefined }),
+      providesTags: ["Interviews"],
+    }),
 
     // ── HR — payroll ──────────────────────────────────────────────────────────
     listPayroll: b.query<PayrollRow[], { year: number; month: number; callCenterId?: string }>({
@@ -1355,6 +1359,7 @@ export const {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
   useBulkMarkAttendanceMutation, useFillAttendanceFromClockInsMutation,
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
+  useUpcomingTrainingsQuery,
   useListPayrollQuery, useSavePayrollMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,

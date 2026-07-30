@@ -7,7 +7,7 @@ import {
 import type { SocialMediaReport, SocialMediaInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader, SearchInput,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
@@ -89,7 +89,27 @@ export function SocialReportsPage() {
       ) : (
         <div className="overflow-x-auto">
           <Table>
-            <THead><TR><TH>Date</TH><TH>Handler</TH><TH>Platform</TH><TH numeric>Posts</TH><TH numeric>Queries answered</TH><TH>Notes</TH><TH className="text-right">Actions</TH></TR></THead>
+            <THead><TR>
+              <TH>Date</TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Handler
+                  <InfoHint title="Handler" side="top">The employee who managed the social accounts on that date.</InfoHint>
+                </span>
+              </TH>
+              <TH>Platform</TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Posts
+                  <InfoHint title="Posts made" side="top">Number of posts the handler published that day.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Queries answered
+                  <InfoHint title="Queries answered" side="top">Customer questions or messages the handler replied to that day.</InfoHint>
+                </span>
+              </TH>
+              <TH>Notes</TH>
+              <TH className="text-right">Actions</TH>
+            </TR></THead>
             <TBody>
               {rows.map((r) => (
                 <TR key={r.id}>
@@ -112,7 +132,9 @@ export function SocialReportsPage() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit report" : "Add report"} size="lg"
+      <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit report" : "Add report"}
+        description="One handler's posts and answered queries for a given day."
+        size="lg"
         footer={<>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
           <Button form="soc-form" type="submit" loading={creating || updating}>{editing ? "Save" : "Add"}</Button>

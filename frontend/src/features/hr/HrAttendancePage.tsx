@@ -77,7 +77,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
     <>
       <div className="mb-4 flex items-center gap-3 flex-wrap">
         <Input type="date" aria-label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
-        <span className="text-sm text-ink-500">{rows?.length ?? 0} employees</span>
+        <span className="text-sm text-ink-500">{rows?.length ?? 0} {(rows?.length ?? 0) === 1 ? "employee" : "employees"}</span>
         <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" leftIcon={<Icon name="phone" size={13} />} loading={filling} onClick={fillFromClockIns}>Fill from clock-ins</Button>
           <Button variant="outline" size="sm" leftIcon={<Icon name="check" size={13} />} loading={bulking} onClick={markAllPresent}>Mark all present</Button>
@@ -93,7 +93,13 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
       ) : (
         <div className="overflow-x-auto">
           <Table>
-            <THead><TR><TH>Employee</TH><TH>Agent ID</TH><TH>Designation</TH><TH>Call centre</TH><TH>Status</TH></TR></THead>
+            <THead><TR>
+              <TH>Employee</TH>
+              <TH><span className="inline-flex items-center gap-1">Agent ID<InfoHint title="Agent ID" side="top">The employee's unique agent code, shared across the dialer, sales, and payroll systems.</InfoHint></span></TH>
+              <TH>Designation</TH>
+              <TH><span className="inline-flex items-center gap-1">Call centre<InfoHint title="Call centre" side="top">The centre this agent works from; "Agency-wide" means they aren't tied to a single centre.</InfoHint></span></TH>
+              <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Attendance status" side="left">Late = arrived after start; Half day = half a shift worked; Leave = pre-approved time off; NCNS = no call, no show (an unexcused absence).</InfoHint></span></TH>
+            </TR></THead>
             <TBody>
               {(rows ?? []).map((r) => (
                 <TR key={r.employeeId}>
@@ -126,11 +132,11 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
         <Input type="month" aria-label="Month" value={monthValue}
           onChange={(e) => { const [y, m] = e.target.value.split("-").map(Number); if (y && m) { setYear(y); setMonth(m); } }}
           className="w-44" />
-        <span className="text-sm text-ink-500">{rows?.length ?? 0} employees</span>
+        <span className="text-sm text-ink-500">{rows?.length ?? 0} {(rows?.length ?? 0) === 1 ? "employee" : "employees"}</span>
       </div>
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>
@@ -140,9 +146,14 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
-              <TH>Employee</TH><TH>Agent ID</TH>
-              <TH numeric>Present</TH><TH numeric>Late</TH><TH numeric>Half</TH>
-              <TH numeric>Leave</TH><TH numeric>Absent</TH><TH numeric>NCNS</TH><TH numeric>Marked</TH>
+              <TH>Employee</TH>
+              <TH><span className="inline-flex items-center gap-1">Agent ID<InfoHint title="Agent ID" side="top">The employee's unique agent code, shared across the dialer, sales, and payroll systems.</InfoHint></span></TH>
+              <TH numeric>Present</TH><TH numeric>Late</TH>
+              <TH numeric><span className="inline-flex items-center gap-1">Half<InfoHint title="Half day" side="top">Days where only half a shift was worked.</InfoHint></span></TH>
+              <TH numeric><span className="inline-flex items-center gap-1">Leave<InfoHint title="Leave" side="top">Days of pre-approved (excused) time off.</InfoHint></span></TH>
+              <TH numeric>Absent</TH>
+              <TH numeric><span className="inline-flex items-center gap-1">NCNS<InfoHint title="NCNS" side="top">No call, no show — absent with no notice or approval.</InfoHint></span></TH>
+              <TH numeric><span className="inline-flex items-center gap-1">Marked<InfoHint title="Days marked" side="left">Total days with any attendance status recorded this month — the base rolled up to payroll.</InfoHint></span></TH>
             </TR></THead>
             <TBody>
               {(rows ?? []).map((r) => (

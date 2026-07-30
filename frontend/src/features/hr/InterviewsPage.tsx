@@ -2,12 +2,13 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import {
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
+  useUpcomingTrainingsQuery,
 } from "../../shared/api/baseApi";
 import type { Interview, InterviewInput } from "../../shared/api/types";
 import { OFFER_STATUSES, OFFER_TONE, hrLabel } from "../../shared/constants/hr";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader, SearchInput,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
@@ -22,6 +23,14 @@ const money = (n: number | null | undefined) =>
 const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "");
 const dateTimeLocal = (iso: string | null | undefined) => (iso ? iso.slice(0, 16) : "");
 
+/** Whole calendar days from today (local) to the given instant; negative if past. */
+function daysUntil(iso: string): number {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const target = new Date(iso); target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - start.getTime()) / 86_400_000);
+}
+const whenLabel = (d: number) => (d <= 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`);
+
 /** HR → Interviews. Recruitment pipeline: candidates, offers, and scheduled training. */
 export function InterviewsPage() {
   const [search, setSearch] = useState("");
@@ -30,6 +39,7 @@ export function InterviewsPage() {
   const [create, { isLoading: creating }] = useCreateInterviewMutation();
   const [update, { isLoading: updating }] = useUpdateInterviewMutation();
   const [remove] = useDeleteInterviewMutation();
+  const { data: trainings } = useUpcomingTrainingsQuery(14);
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -97,6 +107,28 @@ export function InterviewsPage() {
         <Stat label="In pipeline" value={rows.filter((r) => !["Hired", "Rejected", "Declined"].includes(r.status)).length} icon={<Icon name="clock" size={16} />} tone="warning" />
       </div>
 
+      {trainings && trainings.length > 0 && (
+        <Card className="mb-4">
+          <CardBody>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Icon name="calendar" size={15} className="text-brand-500" />
+              <h3 className="text-sm font-semibold text-ink-900">Upcoming trainings</h3>
+              <InfoHint title="Upcoming trainings" side="right">Candidates with a training session booked in the next 14 days — a reminder is also sent automatically.</InfoHint>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {trainings.map((t) => {
+                const d = daysUntil(t.trainingScheduledAt);
+                return (
+                  <Badge key={t.id} tone={d <= 1 ? "success" : "neutral"} variant="soft">
+                    {d <= 1 ? "🎓 " : ""}{t.candidateName}{t.positionOffered ? ` · ${t.positionOffered}` : ""} · {whenLabel(d)}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder="Search candidate, phone, position…" /></div>
@@ -119,8 +151,28 @@ export function InterviewsPage() {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
-              <TH>Candidate</TH><TH>Position</TH><TH>Interview</TH><TH numeric>Expected</TH>
-              <TH numeric>Offered</TH><TH>Training</TH><TH>Status</TH><TH className="text-right">Actions</TH>
+              <TH>Candidate</TH><TH>Position</TH><TH>Interview</TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Expected
+                  <InfoHint title="Expected salary" side="top">The salary the candidate is asking to be paid.</InfoHint>
+                </span>
+              </TH>
+              <TH numeric>
+                <span className="inline-flex items-center gap-1">Offered
+                  <InfoHint title="Salary offered" side="top">The pay in the offer extended to the candidate.</InfoHint>
+                </span>
+              </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Training
+                  <InfoHint title="Training scheduled" side="top">When the new hire's onboarding/training session is booked.</InfoHint>
+                </span>
+              </TH>
+              <TH>
+                <span className="inline-flex items-center gap-1">Status
+                  <InfoHint title="Offer pipeline" side="top">Applied → Interviewed → Offered → Accepted → Hired; or Declined, Rejected, or On hold.</InfoHint>
+                </span>
+              </TH>
+              <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
               {rows.map((i) => (

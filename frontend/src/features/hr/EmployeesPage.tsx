@@ -13,7 +13,7 @@ import {
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { EmployeeImageField } from "./EmployeeImageField";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader, SearchInput,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
@@ -193,8 +193,13 @@ export function EmployeesPage() {
           <Table>
             <THead>
               <TR>
-                <TH>Employee</TH><TH>Agent ID</TH><TH>Designation</TH><TH>Call centre</TH>
-                <TH>Status</TH><TH>Joined</TH><TH className="text-right">Actions</TH>
+                <TH>Employee</TH>
+                <TH><span className="inline-flex items-center gap-1">Agent ID<InfoHint title="Agent ID" side="top">The employee's unique staff code (e.g. EMP-014), used to identify them across the CRM.</InfoHint></span></TH>
+                <TH>Designation</TH>
+                <TH><span className="inline-flex items-center gap-1">Call centre<InfoHint title="Call centre" side="top">The centre this employee works at; "Agency-wide" means they aren't tied to a single call centre.</InfoHint></span></TH>
+                <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Employment status" side="top">The employee's stage — e.g. Probation (new hire under review) or Permanent (confirmed on staff).</InfoHint></span></TH>
+                <TH>Joined</TH>
+                <TH className="text-right">Actions</TH>
               </TR>
             </THead>
             <TBody>
@@ -250,7 +255,7 @@ export function EmployeesPage() {
             <Input label="Official email" type="email" value={form.officialEmail ?? ""} onChange={set("officialEmail")} />
           </Section>
 
-          <Section title="Personal">
+          <Section title={<>Personal<InfoHint title="CNIC" side="right">The national ID number, encrypted at rest and visible only to authorised HR.</InfoHint></>}>
             <Input label="CNIC" value={form.cnic ?? ""} onChange={set("cnic")} secure />
             <Select label="Gender" value={form.gender} onChange={set("gender")}>{opts(GENDERS)}</Select>
             <Select label="Marital status" value={form.maritalStatus} onChange={set("maritalStatus")}>{opts(MARITAL_STATUSES)}</Select>
@@ -270,7 +275,7 @@ export function EmployeesPage() {
             <Textarea label="Permanent address" containerClassName="sm:col-span-2" value={form.permanentAddress ?? ""} onChange={set("permanentAddress")} />
           </Section>
 
-          <Section title="Employment">
+          <Section title={<>Employment<InfoHint title="Employment" side="right">Probation is a new hire under review, Permanent is confirmed staff; "Reporting to" is this person's line manager.</InfoHint></>}>
             <Input label="Date of joining" type="date" value={dateOnly(form.dateOfJoining)} onChange={setDate("dateOfJoining")} />
             <Select label="Employment status" value={form.employmentStatus} onChange={set("employmentStatus")}>{opts(EMPLOYMENT_STATUSES)}</Select>
             <Select label="Reporting to" value={form.reportingToEmployeeId ?? ""} onChange={set("reportingToEmployeeId")}>
@@ -280,7 +285,7 @@ export function EmployeesPage() {
             <Input label="Work hours" value={form.workHours ?? ""} onChange={set("workHours")} placeholder="e.g. 9:00 AM – 6:00 PM" />
           </Section>
 
-          <Section title="Banking">
+          <Section title={<>Banking<InfoHint title="Bank details" side="right">Used to pay salary; the account number is encrypted at rest, like the CNIC.</InfoHint></>}>
             <Input label="Bank name" value={form.bankName ?? ""} onChange={set("bankName")} />
             <Input label="Account title" value={form.bankAccountTitle ?? ""} onChange={set("bankAccountTitle")} />
             <Input label="Account number" value={form.bankAccountNumber ?? ""} onChange={set("bankAccountNumber")} secure />
@@ -304,10 +309,10 @@ export function EmployeesPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 mb-2 pb-1 border-b hairline">{title}</div>
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 mb-2 pb-1 border-b hairline">{title}</div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{children}</div>
     </div>
   );
