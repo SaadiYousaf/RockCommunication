@@ -16,6 +16,8 @@ public record PayrollRowDto(
     decimal BasicSalary, decimal Punctuality, decimal DailyBonus, decimal MonthlyCommissions,
     decimal TransportAllowance, decimal SpecialAllowance, decimal AdvanceSalary, decimal Docks,
     int WorkingDays, int PresentDays, int LeavesApproved, int LateComing, int HalfDays, int AbsentDays, int Ncns,
+    // The "amount against" each attendance-driven deduction line (its day count is the number).
+    decimal LateComingAmount, decimal HalfDaysAmount, decimal AbsentDaysAmount, decimal NcnsAmount,
     decimal GrossEarnings, decimal Deductions, decimal NetPay,
     string? Notes, bool Finalized, bool Saved);
 
@@ -23,6 +25,7 @@ public record SavePayrollInput(
     decimal BasicSalary, decimal Punctuality, decimal DailyBonus, decimal MonthlyCommissions,
     decimal TransportAllowance, decimal SpecialAllowance, decimal AdvanceSalary, decimal Docks,
     int WorkingDays, int PresentDays, int LeavesApproved, int LateComing, int HalfDays, int AbsentDays, int Ncns,
+    decimal LateComingAmount, decimal HalfDaysAmount, decimal AbsentDaysAmount, decimal NcnsAmount,
     string? Notes, bool Finalized);
 
 // ── Requests ────────────────────────────────────────────────────────────────
@@ -130,13 +133,20 @@ public class PayrollHandlers :
         var special = saved?.SpecialAllowance ?? 0m;
         var docks = saved?.Docks ?? 0m;
 
+        // Per-line deduction amounts sit next to their day counts (0 until HR sets them).
+        var lateAmt = saved?.LateComingAmount ?? 0m;
+        var halfAmt = saved?.HalfDaysAmount ?? 0m;
+        var absentAmt = saved?.AbsentDaysAmount ?? 0m;
+        var ncnsAmt = saved?.NcnsAmount ?? 0m;
+
         var gross = basic + punctuality + dailyBonus + commission + transport + special;
-        var deductions = advance + docks;
+        var deductions = advance + docks + lateAmt + halfAmt + absentAmt + ncnsAmt;
         var net = gross - deductions;
 
         return new PayrollRowDto(e.Id, e.FullName, e.AgentCode, year, month,
             basic, punctuality, dailyBonus, commission, transport, special, advance, docks,
             working, present, leave, late, half, absent, ncns,
+            lateAmt, halfAmt, absentAmt, ncnsAmt,
             gross, deductions, net, saved?.Notes, saved?.Finalized ?? false, saved is not null);
     }
 
@@ -147,6 +157,8 @@ public class PayrollHandlers :
         p.SpecialAllowance = i.SpecialAllowance; p.AdvanceSalary = i.AdvanceSalary; p.Docks = i.Docks;
         p.WorkingDays = i.WorkingDays; p.PresentDays = i.PresentDays; p.LeavesApproved = i.LeavesApproved;
         p.LateComing = i.LateComing; p.HalfDays = i.HalfDays; p.AbsentDays = i.AbsentDays; p.Ncns = i.Ncns;
+        p.LateComingAmount = i.LateComingAmount; p.HalfDaysAmount = i.HalfDaysAmount;
+        p.AbsentDaysAmount = i.AbsentDaysAmount; p.NcnsAmount = i.NcnsAmount;
         p.Notes = string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes.Trim();
         p.Finalized = i.Finalized;
     }

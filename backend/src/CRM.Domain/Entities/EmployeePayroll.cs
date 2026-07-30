@@ -27,6 +27,12 @@ public class EmployeePayroll : TenantEntity
     public decimal AdvanceSalary { get; set; }
     public decimal Docks { get; set; }
 
+    // Money withheld for each attendance-driven line — the "amount against" its day count.
+    public decimal LateComingAmount { get; set; }
+    public decimal HalfDaysAmount { get; set; }
+    public decimal AbsentDaysAmount { get; set; }
+    public decimal NcnsAmount { get; set; }
+
     // ── Attendance counts (the "number" against each line) ────────────────────
     public int WorkingDays { get; set; }
     public int PresentDays { get; set; }

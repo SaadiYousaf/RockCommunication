@@ -273,7 +273,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             foreach (var p in new[] { nameof(EmployeePayroll.BasicSalary), nameof(EmployeePayroll.Punctuality),
                 nameof(EmployeePayroll.DailyBonus), nameof(EmployeePayroll.MonthlyCommissions),
                 nameof(EmployeePayroll.TransportAllowance), nameof(EmployeePayroll.SpecialAllowance),
-                nameof(EmployeePayroll.AdvanceSalary), nameof(EmployeePayroll.Docks) })
+                nameof(EmployeePayroll.AdvanceSalary), nameof(EmployeePayroll.Docks),
+                nameof(EmployeePayroll.LateComingAmount), nameof(EmployeePayroll.HalfDaysAmount),
+                nameof(EmployeePayroll.AbsentDaysAmount), nameof(EmployeePayroll.NcnsAmount) })
                 e.Property(p).HasColumnType("decimal(18,2)");
             e.HasIndex(x => new { x.EmployeeId, x.Year, x.Month }).IsUnique().HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => new { x.AgencyId, x.Year, x.Month });

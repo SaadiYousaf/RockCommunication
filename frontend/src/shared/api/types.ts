@@ -174,6 +174,11 @@ export interface PayrollRow {
   halfDays: number;
   absentDays: number;
   ncns: number;
+  /** Money withheld against each attendance-driven line (its day count is the "number"). */
+  lateComingAmount: number;
+  halfDaysAmount: number;
+  absentDaysAmount: number;
+  ncnsAmount: number;
   grossEarnings: number;
   deductions: number;
   netPay: number;
@@ -199,6 +204,10 @@ export interface SavePayrollInput {
   halfDays: number;
   absentDays: number;
   ncns: number;
+  lateComingAmount: number;
+  halfDaysAmount: number;
+  absentDaysAmount: number;
+  ncnsAmount: number;
   notes?: string | null;
   finalized: boolean;
 }

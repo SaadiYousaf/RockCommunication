@@ -21,6 +21,8 @@ const toInput = (r: PayrollRow): SavePayrollInput => ({
   specialAllowance: r.specialAllowance, advanceSalary: r.advanceSalary, docks: r.docks,
   workingDays: r.workingDays, presentDays: r.presentDays, leavesApproved: r.leavesApproved,
   lateComing: r.lateComing, halfDays: r.halfDays, absentDays: r.absentDays, ncns: r.ncns,
+  lateComingAmount: r.lateComingAmount, halfDaysAmount: r.halfDaysAmount,
+  absentDaysAmount: r.absentDaysAmount, ncnsAmount: r.ncnsAmount,
   notes: r.notes ?? "", finalized: r.finalized,
 });
 
@@ -191,18 +193,18 @@ export function PayrollPage() {
               <Num label="Transport allowance" v={form.transportAllowance} on={num("transportAllowance")} />
               <Num label="Special allowance" v={form.specialAllowance} on={num("specialAllowance")} />
             </Section>
-            <Section title={<span className="inline-flex items-center gap-1">Deductions<InfoHint title="Deductions" side="right">Advance salary carries from last month and is deducted here; docks are ad-hoc penalties.</InfoHint></span>}>
-              <Num label="Advance salary" v={form.advanceSalary} on={num("advanceSalary")} />
-              <Num label="Docks" v={form.docks} on={num("docks")} />
-            </Section>
-            <Section title={<span className="inline-flex items-center gap-1">Attendance (days)<InfoHint title="Attendance" side="right">NCNS = no call, no show; Half day and Leave (approved) are each counted separately.</InfoHint></span>}>
+            <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Each attendance-driven line shows its day count (Number) and the money withheld against it (Amount). Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
+              <LedgerLine label="Late coming" count={form.lateComing} onCount={num("lateComing")} amount={form.lateComingAmount} onAmount={num("lateComingAmount")} />
+              <LedgerLine label="Half days" count={form.halfDays} onCount={num("halfDays")} amount={form.halfDaysAmount} onAmount={num("halfDaysAmount")} />
+              <LedgerLine label="Absent days" count={form.absentDays} onCount={num("absentDays")} amount={form.absentDaysAmount} onAmount={num("absentDaysAmount")} />
+              <LedgerLine label="NCNS" count={form.ncns} onCount={num("ncns")} amount={form.ncnsAmount} onAmount={num("ncnsAmount")} />
+              <LedgerLine label="Advance salary" amount={form.advanceSalary} onAmount={num("advanceSalary")} />
+              <LedgerLine label="Docks" amount={form.docks} onAmount={num("docks")} />
+            </Ledger>
+            <Section title={<span className="inline-flex items-center gap-1">Attendance summary<InfoHint title="Attendance summary" side="right">Informational day counts for the month. The deduction lines above carry the money; these are for reference and feed the slip's attendance line.</InfoHint></span>}>
               <Num label="Working days" v={form.workingDays} on={num("workingDays")} />
               <Num label="Present days" v={form.presentDays} on={num("presentDays")} />
-              <Num label="Late coming" v={form.lateComing} on={num("lateComing")} />
-              <Num label="Half days" v={form.halfDays} on={num("halfDays")} />
               <Num label="Leaves approved" v={form.leavesApproved} on={num("leavesApproved")} />
-              <Num label="Absent days" v={form.absentDays} on={num("absentDays")} />
-              <Num label="NCNS" v={form.ncns} on={num("ncns")} />
             </Section>
             <Textarea label="Notes" value={form.notes ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, notes: e.target.value } : f))} />
             <label className="inline-flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
@@ -230,4 +232,40 @@ function Section({ title, children }: { title: React.ReactNode; children: React.
 
 function Num({ label, v, on }: { label: string; v: number; on: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
   return <Input label={label} type="number" min={0} step="0.01" value={v} onChange={on} />;
+}
+
+/** A ledger block with explicit "Number" and "Amount" column headings (spec: number + amount against each line). */
+function Ledger({ title, hint, children }: { title: string; hint?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 mb-2 pb-1 border-b hairline flex items-center gap-1">{title}{hint}</div>
+      <div className="grid grid-cols-[1fr_4.5rem_7rem] gap-x-3 gap-y-1.5 items-center">
+        <span />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-400 text-right">Number</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-400 text-right">Amount</span>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const cell = "h-9 w-full rounded-lg border border-ink-200 px-2 text-sm text-right tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20";
+
+/** One ledger row: label + optional day-count input (the "number") + the amount input. */
+function LedgerLine({ label, count, onCount, amount, onAmount }: {
+  label: string;
+  count?: number;
+  onCount?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  amount: number;
+  onAmount: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <>
+      <span className="text-sm text-ink-700">{label}</span>
+      {onCount
+        ? <input aria-label={`${label} number`} type="number" min={0} value={count ?? 0} onChange={onCount} className={cell} />
+        : <span className="text-ink-300 text-right text-sm pr-2">—</span>}
+      <input aria-label={`${label} amount`} type="number" min={0} step="0.01" value={amount} onChange={onAmount} className={cell} />
+    </>
+  );
 }

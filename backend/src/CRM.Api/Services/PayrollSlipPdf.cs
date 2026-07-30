@@ -52,20 +52,24 @@ public static class PayrollSlipPdf
 
                     col.Item().Row(r =>
                     {
-                        r.RelativeItem().PaddingRight(8).Element(c => AmountTable(c, "Earnings", new (string, decimal)[]
+                        r.RelativeItem().PaddingRight(8).Element(c => AmountTable(c, "Earnings", new (string, string, decimal)[]
                         {
-                            ("Basic salary", p.BasicSalary),
-                            ("Punctuality", p.Punctuality),
-                            ("Daily bonus", p.DailyBonus),
-                            ("Monthly commissions", p.MonthlyCommissions),
-                            ("Transport allowance", p.TransportAllowance),
-                            ("Special allowance", p.SpecialAllowance),
+                            ("Basic salary", "", p.BasicSalary),
+                            ("Punctuality", "", p.Punctuality),
+                            ("Daily bonus", "", p.DailyBonus),
+                            ("Monthly commissions", "", p.MonthlyCommissions),
+                            ("Transport allowance", "", p.TransportAllowance),
+                            ("Special allowance", "", p.SpecialAllowance),
                         }, p.GrossEarnings, Colors.Green.Darken2));
 
-                        r.RelativeItem().PaddingLeft(8).Element(c => AmountTable(c, "Deductions", new (string, decimal)[]
+                        r.RelativeItem().PaddingLeft(8).Element(c => AmountTable(c, "Deductions", new (string, string, decimal)[]
                         {
-                            ("Advance salary", p.AdvanceSalary),
-                            ("Docks", p.Docks),
+                            ("Late coming", p.LateComing.ToString(), p.LateComingAmount),
+                            ("Half days", p.HalfDays.ToString(), p.HalfDaysAmount),
+                            ("Absent days", p.AbsentDays.ToString(), p.AbsentDaysAmount),
+                            ("NCNS", p.Ncns.ToString(), p.NcnsAmount),
+                            ("Advance salary", "", p.AdvanceSalary),
+                            ("Docks", "", p.Docks),
                         }, p.Deductions, Colors.Red.Darken1));
                     });
 
@@ -87,24 +91,33 @@ public static class PayrollSlipPdf
         return document.GeneratePdf();
     }
 
-    private static void AmountTable(IContainer container, string title, (string Label, decimal Amount)[] rows,
+    // A two-value ledger: each line shows its Number (quantity/day-count, blank when not applicable)
+    // and the Amount against it, under explicit "Number" / "Amount" headings.
+    private static void AmountTable(IContainer container, string title, (string Label, string Qty, decimal Amount)[] rows,
         decimal total, string totalColor)
     {
         container.Border(1).BorderColor(Colors.Grey.Lighten2).Column(col =>
         {
-            col.Item().Background(Colors.Grey.Lighten4).Padding(6).Text(title).SemiBold();
-            foreach (var (label, amount) in rows)
+            col.Item().Background(Colors.Grey.Lighten4).Padding(6).Row(r =>
             {
-                col.Item().Padding(6).Row(r =>
+                r.RelativeItem().Text(title).SemiBold();
+                r.ConstantItem(46).AlignRight().Text("Number").FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+                r.ConstantItem(78).AlignRight().Text("Amount").FontSize(7.5f).FontColor(Colors.Grey.Darken1);
+            });
+            foreach (var (label, qty, amount) in rows)
+            {
+                col.Item().PaddingHorizontal(6).PaddingVertical(4).Row(r =>
                 {
                     r.RelativeItem().Text(label).FontColor(Colors.Grey.Darken2);
-                    r.ConstantItem(90).AlignRight().Text(Money(amount));
+                    r.ConstantItem(46).AlignRight().Text(qty).FontColor(Colors.Grey.Darken1);
+                    r.ConstantItem(78).AlignRight().Text(Money(amount));
                 });
             }
-            col.Item().BorderTop(1).BorderColor(Colors.Grey.Lighten2).Padding(6).Row(r =>
+            col.Item().BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingHorizontal(6).PaddingVertical(6).Row(r =>
             {
                 r.RelativeItem().Text("Total").SemiBold();
-                r.ConstantItem(90).AlignRight().Text(Money(total)).SemiBold().FontColor(totalColor);
+                r.ConstantItem(46).Text("");
+                r.ConstantItem(78).AlignRight().Text(Money(total)).SemiBold().FontColor(totalColor);
             });
         });
     }
