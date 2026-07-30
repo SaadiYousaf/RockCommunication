@@ -118,7 +118,11 @@ export function ClosingApplicationPage() {
             <Field label="Phone" value={data.phoneNumber} />
             <Field label="Email" value={data.email} />
             <Field label="Created date" value={data.createdAt ? data.createdAt.slice(0, 10) : null} />
-            <Field label="Jornaya LeadiD" value={data.jornayaLeadId} className="col-span-2 sm:col-span-4 font-mono text-xs" />
+            <Field
+              label={<span className="inline-flex items-center gap-1">Jornaya LeadiD<InfoHint title="Jornaya LeadiD" side="right">A compliance tracking token from Jornaya proving the prospect consented to be contacted (TCPA) and tying this lead to its original web form.</InfoHint></span>}
+              value={data.jornayaLeadId}
+              className="col-span-2 sm:col-span-4 font-mono text-xs"
+            />
           </div>
         </CardBody>
       </Card>
@@ -166,12 +170,28 @@ export function ClosingApplicationPage() {
         <Section title="Policy">
           <Input label="Carrier" required={sold} secure value={f.carrier} onChange={set("carrier")} />
           <Input label="Plan" required={sold} secure value={f.plan} onChange={set("plan")} />
-          <Input label="Face amount" type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.faceAmount} onChange={set("faceAmount")} />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] font-medium text-ink-700 leading-none">Face amount{sold && <span className="text-rose-500 ml-0.5" aria-hidden>*</span>}</span>
+              <InfoHint title="Face amount" side="right">
+                The policy's face amount is its death benefit — the payout the beneficiary receives. This is the coverage amount, not the monthly premium.
+              </InfoHint>
+            </div>
+            <Input type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.faceAmount} onChange={set("faceAmount")} />
+          </div>
           <Input label="Premium" type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.premium} onChange={set("premium")} />
           <Input label="Email" type="email" required={sold} secure value={f.email} onChange={set("email")} />
           <Input label="Beneficiary" required={sold} secure value={f.beneficiary} onChange={set("beneficiary")} />
           <Input label="Second beneficiary" secure value={f.secondBeneficiary} onChange={set("secondBeneficiary")} />
-          <Input label="Initial draft date" type="date" required={sold} value={f.initialDraftDate} onChange={set("initialDraftDate")} />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] font-medium text-ink-700 leading-none">Initial draft date{sold && <span className="text-rose-500 ml-0.5" aria-hidden>*</span>}</span>
+              <InfoHint title="Initial draft date" side="right">
+                The date the first premium is drafted (auto-withdrawn) from the customer's bank account. “Draft” here means a bank draft, not a rough version.
+              </InfoHint>
+            </div>
+            <Input type="date" required={sold} value={f.initialDraftDate} onChange={set("initialDraftDate")} />
+          </div>
           <Input label="Future draft date" type="date" value={f.futureDraftDate} onChange={set("futureDraftDate")} />
         </Section>
 
@@ -216,7 +236,7 @@ export function ClosingApplicationPage() {
   );
 }
 
-function Field({ label, value, className }: { label: string; value?: string | null; className?: string }) {
+function Field({ label, value, className }: { label: React.ReactNode; value?: string | null; className?: string }) {
   return (
     <div className={className}>
       <div className="text-xs text-ink-500">{label}</div>

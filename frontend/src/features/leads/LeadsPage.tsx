@@ -308,10 +308,15 @@ export function LeadsPage() {
             )}
             <Can permission={Perm.LeadsAssign}>
               {bulkAction === "cadence" && (
-                <Select className="h-9 w-56 text-sm" value={bulkCadence} onChange={(e) => setBulkCadence(e.target.value)}>
-                  <option value="">Pick cadence…</option>
-                  {cadences?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </Select>
+                <span className="inline-flex items-center gap-1.5">
+                  <Select className="h-9 w-56 text-sm" value={bulkCadence} onChange={(e) => setBulkCadence(e.target.value)}>
+                    <option value="">Pick cadence…</option>
+                    {cadences?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </Select>
+                  <InfoHint title="Cadence" side="top">
+                    An automated, timed sequence of follow-up steps (calls, texts, emails). Enrolling a lead starts it on that schedule until it finishes or the lead responds.
+                  </InfoHint>
+                </span>
               )}
             </Can>
 

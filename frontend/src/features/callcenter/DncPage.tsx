@@ -96,7 +96,14 @@ export function DncPage() {
         <Table>
           <THead>
             <TR>
-              <TH sortDir={dirFor("phoneNormalized")} onClick={() => toggle("phoneNormalized")}>Phone</TH>
+              <TH sortDir={dirFor("phoneNormalized")} onClick={() => toggle("phoneNormalized")}>
+                <span className="inline-flex items-center gap-1">
+                  Phone
+                  <InfoHint title="Phone" side="top">
+                    Stored in normalized form (standardized digits, no formatting) so the number stays blocked no matter how it's typed or dialed.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
               <TH sortDir={dirFor("source")} onClick={() => toggle("source")}>
                 <span className="inline-flex items-center gap-1">

@@ -101,6 +101,11 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<MetricCatalogItem>>> Catalog(CancellationToken ct)
         => Ok(await _mediator.Send(new DashboardMetricCatalogQuery(), ct));
 
+    /// <summary>Upcoming events for the "what's coming up" widget (own callbacks + HR birthdays/trainings).</summary>
+    [HttpGet("upcoming-events")]
+    public async Task<ActionResult<IReadOnlyList<UpcomingEventDto>>> UpcomingEvents([FromQuery] int days = 14, CancellationToken ct = default)
+        => Ok(await _mediator.Send(new UpcomingEventsQuery(days), ct));
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MetricValue>>> Compute(
         [FromQuery] DateTime? from, [FromQuery] DateTime? to,

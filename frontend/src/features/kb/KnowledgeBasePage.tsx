@@ -3,7 +3,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useGetKbArticleQuery, useSearchKbQuery, useUpsertKbArticleMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Textarea, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -107,7 +107,12 @@ export function KnowledgeBasePage() {
                       {article.tags && article.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
                         <Badge key={tag} tone="neutral" variant="outline">#{tag}</Badge>
                       ))}
-                      {!article.isPublished && <Badge tone="warning" variant="soft">Draft</Badge>}
+                      {!article.isPublished && (
+                        <span className="inline-flex items-center gap-1">
+                          <Badge tone="warning" variant="soft">Draft</Badge>
+                          <InfoHint title="Draft" side="top">Not published yet — only teammates who can edit articles can find and read it.</InfoHint>
+                        </span>
+                      )}
                       <span className="tabular-nums whitespace-nowrap">· {article.viewCount ?? 0} views</span>
                     </div>
                   </div>
@@ -153,6 +158,7 @@ export function KnowledgeBasePage() {
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Slug" required placeholder="lower-case-with-hyphens"
+                hint="The article's web address id — lowercase words joined by hyphens."
                 value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} />
               <Input label="Category" placeholder="Onboarding, FAQ, ..."
                 value={editing.category ?? ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
@@ -169,6 +175,7 @@ export function KnowledgeBasePage() {
                 checked={!!editing.isPublished}
                 onChange={(e) => setEditing({ ...editing, isPublished: e.target.checked })} />
               Published
+              <InfoHint title="Published" side="top">When on, the whole team can search for and read this article. Off keeps it a draft only editors can see.</InfoHint>
             </label>
           </div>
         )}

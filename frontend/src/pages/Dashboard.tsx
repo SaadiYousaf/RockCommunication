@@ -4,9 +4,9 @@ import { Link } from "react-router-dom";
 import type { RootState } from "../app/store";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton,
-  type IconName,
+  type IconName, type BadgeTone,
 } from "../shared/ui";
-import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery } from "../shared/api/baseApi";
+import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery } from "../shared/api/baseApi";
 import { usePermission, Perm } from "../shared/auth/permissions";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage } from "../shared/api/types";
 import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
@@ -95,6 +95,9 @@ export function Dashboard() {
 
       {/* KPI strip */}
       <KpiStrip data={data} loading={isLoading} />
+
+      {/* Upcoming events — callbacks, birthdays, trainings */}
+      <UpcomingEventsCard />
 
       {/* Main grid: pipeline funnel (2/3) + side rail (1/3) */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
@@ -720,6 +723,93 @@ function Medal({ rank }: { rank: number }) {
     <div className={`h-7 w-7 rounded-full grid place-items-center font-bold text-[11px] shrink-0 ${styles}`}>
       {rank}
     </div>
+  );
+}
+
+// =============================================================================
+// Upcoming events — what's coming up (callbacks + birthdays + trainings)
+// =============================================================================
+// Backed by /api/dashboard/upcoming-events, which decides per-role what the caller may see:
+// their own scheduled callbacks (everyone), plus staff birthdays & candidate trainings (HR/managers).
+// This card just renders whatever the API returns, so the auth boundary stays on the server.
+
+const eventStyle: Record<string, { icon: IconName; tile: string }> = {
+  callback: { icon: "phone",     tile: "bg-brand-50 text-brand-600 ring-brand-100" },
+  training: { icon: "userCheck", tile: "bg-accent-50 text-accent-600 ring-accent-100" },
+  birthday: { icon: "sparkles",  tile: "bg-emerald-50 text-emerald-600 ring-emerald-100" },
+};
+const fallbackEventStyle = { icon: "calendar" as IconName, tile: "bg-ink-100 text-ink-500 ring-ink-200" };
+
+/** Whole calendar days (local) from today to the given instant; negative if already past. */
+function daysFromToday(iso: string): number {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const target = new Date(iso); target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - start.getTime()) / 86_400_000);
+}
+function whenBadge(iso: string): { label: string; tone: BadgeTone } {
+  const d = daysFromToday(iso);
+  if (d <= 0) return { label: "Today", tone: "warning" };
+  if (d === 1) return { label: "Tomorrow", tone: "brand" };
+  if (d <= 7) return { label: `In ${d} days`, tone: "neutral" };
+  return { label: new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }), tone: "neutral" };
+}
+
+function UpcomingEventsCard() {
+  const { data: events, isLoading } = useUpcomingEventsQuery(14);
+
+  return (
+    <Card className="mb-5 overflow-hidden">
+      <CardHeader
+        title={
+          <span className="inline-flex items-center gap-1">
+            Upcoming events
+            <InfoHint title="Upcoming events" side="bottom">
+              The next 14 days at a glance — your scheduled callbacks, plus staff birthdays and
+              candidate trainings (for HR &amp; managers). Reminders for these are also sent automatically.
+            </InfoHint>
+          </span>
+        }
+        subtitle="Callbacks, birthdays and trainings coming up"
+        action={
+          <Link to="/callbacks">
+            <Button variant="ghost" size="sm" rightIcon={<Icon name="arrowRight" size={14} />}>Callbacks</Button>
+          </Link>
+        }
+        bordered
+      />
+      <CardBody>
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+          </div>
+        ) : !events || events.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="calendar" size={20} />}
+            title="Nothing scheduled"
+            description="No callbacks, birthdays or trainings in the next 14 days."
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
+            {events.map((e, i) => {
+              const st = eventStyle[e.type] ?? fallbackEventStyle;
+              const w = whenBadge(e.whenUtc);
+              return (
+                <div key={i} className="flex items-center gap-3 py-2.5">
+                  <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 ring-inset shrink-0 ${st.tile}`}>
+                    <Icon name={st.icon} size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-ink-900 truncate">{e.title}</div>
+                    {e.subtitle && <div className="text-xs text-ink-500 truncate">{e.subtitle}</div>}
+                  </div>
+                  <Badge tone={w.tone} variant="soft" className="shrink-0 whitespace-nowrap tabular-nums">{w.label}</Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

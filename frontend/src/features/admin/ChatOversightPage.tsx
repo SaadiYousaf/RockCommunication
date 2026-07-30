@@ -4,7 +4,7 @@ import {
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Input, PageHeader, Skeleton, cn,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, PageHeader, SearchInput, Skeleton, cn,
 } from "../../shared/ui";
 
 const AGENCY_WIDE = "00000000-0000-0000-0000-000000000000";
@@ -132,13 +132,21 @@ function CallCenterGrid({ agency, onPick, onAllChats }: {
       ) : !data || data.length === 0 ? (
         <Empty icon="headset" title="No call centers with chats" body={`No conversations grouped by call center in ${agency.name}. Use "View all chats" above.`} />
       ) : (
-        <Grid>
-          {data.map((c) => (
-            <StatCard key={c.id} icon={c.id === AGENCY_WIDE ? "users" : "headset"} title={c.name}
-              subtitle={`${c.roomCount} chat ${c.roomCount === 1 ? "room" : "rooms"}`}
-              count={c.roomCount} onClick={() => onPick({ id: c.id, name: c.name })} />
-          ))}
-        </Grid>
+        <>
+          <Grid>
+            {data.map((c) => (
+              <StatCard key={c.id} icon={c.id === AGENCY_WIDE ? "users" : "headset"} title={c.name}
+                subtitle={`${c.roomCount} chat ${c.roomCount === 1 ? "room" : "rooms"}`}
+                count={c.roomCount} onClick={() => onPick({ id: c.id, name: c.name })} />
+            ))}
+          </Grid>
+          {data.some((c) => c.id === AGENCY_WIDE) && (
+            <p className="mt-3 text-xs text-ink-500 flex items-start gap-1.5">
+              <Icon name="info" size={13} className="text-ink-400 mt-0.5 shrink-0" />
+              <span>The <strong>Agency-wide</strong> group holds chats whose members work at agency level rather than inside one call centre.</span>
+            </p>
+          )}
+        </>
       )}
     </>
   );
@@ -165,7 +173,7 @@ function RoomBrowser({ agencyId, callCenter }: {
     <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
       <Card className="lg:h-[68vh] flex flex-col overflow-hidden">
         <div className="p-3 border-b hairline">
-          <Input placeholder="Search rooms or people…" leftIcon={<Icon name="search" size={14} />} value={q} onChange={(e) => setQ(e.target.value)} />
+          <SearchInput placeholder="Search rooms or people…" value={q} onChange={setQ} />
         </div>
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
@@ -183,7 +191,7 @@ function RoomBrowser({ agencyId, callCenter }: {
                 <span className="font-medium text-ink-900 truncate">{roomTitle(r)}</span>
                 <span className="text-[11px] text-ink-400 shrink-0 tabular-nums whitespace-nowrap">{r.lastMessageAt ? new Date(r.lastMessageAt).toLocaleDateString() : "—"}</span>
               </div>
-              <div className="text-xs text-ink-500 mt-0.5 tabular-nums">{r.messageCount} msg · {r.members.length} people</div>
+              <div className="text-xs text-ink-500 mt-0.5 tabular-nums">{r.messageCount} msg · {r.members.length} {r.members.length === 1 ? "person" : "people"}</div>
             </button>
           ))}
         </div>

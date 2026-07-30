@@ -231,7 +231,15 @@ export function CommissionsPage() {
                   <TR>
                     <TH>Period</TH>
                     <TH>Total</TH>
-                    <TH>Status</TH>
+                    <TH>
+                      <span className="inline-flex items-center gap-1">
+                        Status
+                        <InfoHint title="Payroll run status" side="top">
+                          Processed = payroll finalized, with its commissions frozen and marked paid.
+                          Anything else is still a draft that hasn't paid out.
+                        </InfoHint>
+                      </span>
+                    </TH>
                     <TH>Processed</TH>
                     <TH className="text-right">Export</TH>
                   </TR>

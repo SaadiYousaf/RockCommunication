@@ -102,7 +102,7 @@ export function CallCentersPage() {
       <Card>
         <CardHeader
           title="Call centers"
-          subtitle={list ? `${list.length} total` : undefined}
+          subtitle={list ? `${list.length} call center${list.length === 1 ? "" : "s"}` : undefined}
           action={isSuperAdmin ? (
             <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
               {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
@@ -120,9 +120,15 @@ export function CallCentersPage() {
               <THead>
                 <TR>
                   <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
-                  <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
-                  <TH numeric sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>Leads</TH>
-                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
+                  <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>
+                    <span className="inline-flex items-center gap-1">Code<InfoHint title="Short code" side="top">An optional short identifier for the call centre — it shows up in reports and logs so you can spot it at a glance.</InfoHint></span>
+                  </TH>
+                  <TH numeric sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>
+                    <span className="inline-flex items-center gap-1">Leads<InfoHint title="Leads" side="top">How many leads currently sit in this call centre's pipeline.</InfoHint></span>
+                  </TH>
+                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
+                    <span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active call centres accept sign-ins. Disabling one locks out every agent pinned to it — they can no longer sign in, and any active session ends within minutes.</InfoHint></span>
+                  </TH>
                   <TH></TH>
                 </TR>
               </THead>

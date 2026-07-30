@@ -75,9 +75,12 @@ export function IntegrationsPage() {
 
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <Stat label="Configured" value={stats.total} icon={<Icon name="cog" size={18} />}   tone="brand" />
-          <Stat label="Live"       value={stats.live}  icon={<Icon name="check" size={18} />} tone="success" />
-          <Stat label="On Stubs"   value={stats.stub}  icon={<Icon name="shield" size={18} />} tone="warning" />
+          <Stat label="Configured" value={stats.total} icon={<Icon name="cog" size={18} />}   tone="brand"
+            hint="Providers wired up — live or stub" />
+          <Stat label="Live"       value={stats.live}  icon={<Icon name="check" size={18} />} tone="success"
+            hint="Talking to the real external service" />
+          <Stat label="On Stubs"   value={stats.stub}  icon={<Icon name="shield" size={18} />} tone="warning"
+            hint="Built-in fake — returns canned responses, makes no real calls" />
         </div>
       )}
 

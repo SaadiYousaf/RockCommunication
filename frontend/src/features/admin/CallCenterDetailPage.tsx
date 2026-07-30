@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Avatar, Badge, Card, CardBody, EmptyState, Icon, PageHeader, Select, Skeleton,
+  Avatar, Badge, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader, Select, Skeleton,
   Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -79,7 +79,7 @@ export function CallCenterDetailPage() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <THead><TR><TH>User</TH><TH>Roles</TH><TH>Call centre</TH></TR></THead>
+                <THead><TR><TH>User</TH><TH><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">What the user is allowed to do in the system. A user can hold more than one role, and the roles together decide which pages and actions they see.</InfoHint></span></TH><TH><span className="inline-flex items-center gap-1">Call centre<InfoHint title="Call centre" side="left">Pin a user to one call centre to limit their pipeline to just that centre; set agency-wide to let them see the whole agency.</InfoHint></span></TH></TR></THead>
                 <TBody>
                   {staff.map((u) => (
                     <TR key={u.id}>

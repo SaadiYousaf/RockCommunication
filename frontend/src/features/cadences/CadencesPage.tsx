@@ -149,9 +149,15 @@ export function CadencesPage() {
               <THead>
                 <TR>
                   <TH sortDir={dirFor("enrolledAt")} onClick={() => toggle("enrolledAt")}>Enrolled</TH>
-                  <TH sortDir={dirFor("leadId")} onClick={() => toggle("leadId")}>Lead</TH>
-                  <TH sortDir={dirFor("cadenceId")} onClick={() => toggle("cadenceId")}>Cadence</TH>
-                  <TH sortDir={dirFor("currentStepOrder")} onClick={() => toggle("currentStepOrder")}>Step</TH>
+                  <TH sortDir={dirFor("leadId")} onClick={() => toggle("leadId")}>
+                    <span className="inline-flex items-center gap-1">Lead<InfoHint title="Lead" side="bottom">The lead's record ID, shortened. Open the lead to see the person's name and details.</InfoHint></span>
+                  </TH>
+                  <TH sortDir={dirFor("cadenceId")} onClick={() => toggle("cadenceId")}>
+                    <span className="inline-flex items-center gap-1">Cadence<InfoHint title="Cadence" side="bottom">The sequence this lead is enrolled in, shown as a shortened ID matching one of the cadences above.</InfoHint></span>
+                  </TH>
+                  <TH sortDir={dirFor("currentStepOrder")} onClick={() => toggle("currentStepOrder")}>
+                    <span className="inline-flex items-center gap-1">Step<InfoHint title="Step" side="bottom">Which step of the sequence this lead is on right now — matches the numbered steps in the cadence's timeline.</InfoHint></span>
+                  </TH>
                   <TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Enrollment status" side="bottom">Where this lead is in the cadence run — Stopped means the sequence ended early (e.g. they replied and "stop if contacted" fired).</InfoHint></span></TH>
                 </TR>
               </THead>
@@ -220,7 +226,10 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-semibold text-ink-700 uppercase tracking-wider">Steps</div>
+          <div className="text-xs font-semibold text-ink-700 uppercase tracking-wider inline-flex items-center gap-1">
+            Steps
+            <InfoHint title="Steps" side="right">Each step is one automatic touch. Delay is how long to wait after the previous step before this one fires; parameters JSON holds optional settings like a message template.</InfoHint>
+          </div>
           <Button type="button" variant="outline" size="sm" leftIcon={<Icon name="plus" size={14} />}
             onClick={() => setCadence({
               ...cadence,

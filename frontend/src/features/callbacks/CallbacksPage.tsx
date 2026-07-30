@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -115,7 +115,8 @@ export function CallbacksPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <Stat label="Overdue"   value={stats.overdue}  icon={<Icon name="alert" size={16} />}    tone="danger"
               hint={stats.overdue > 0 ? "Reach out now" : "All clear"} />
-        <Stat label="Upcoming"  value={stats.upcoming} icon={<Icon name="calendar" size={16} />} tone="warning" />
+        <Stat label="Upcoming"  value={stats.upcoming} icon={<Icon name="calendar" size={16} />} tone="warning"
+              hint="Due today or later" />
         <Stat label="Completed" value={stats.done}     icon={<Icon name="success" size={16} />}  tone="success" />
       </div>
 
@@ -158,10 +159,11 @@ export function CallbacksPage() {
           />
         </CardBody></Card>
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <THead>
             <TR>
-              <TH sortDir={dirFor("scheduledFor")} onClick={() => toggle("scheduledFor")}>When</TH>
+              <TH sortDir={dirFor("scheduledFor")} onClick={() => toggle("scheduledFor")}><span className="inline-flex items-center gap-1">When<InfoHint title="When" side="bottom">The scheduled date and time. The coloured tag shows how soon it's due — amber is within the hour, red means it's already overdue.</InfoHint></span></TH>
               <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Lead</TH>
               <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
               <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
@@ -205,6 +207,7 @@ export function CallbacksPage() {
             })}
           </TBody>
         </Table>
+        </div>
       )}
 
       <Modal

@@ -99,7 +99,10 @@ export function ScriptsPage() {
                   title={
                     <span className="flex items-center gap-2 flex-wrap">
                       <span className="truncate">{s.name}</span>
-                      <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">v{s.version}</Badge>
+                      <span className="inline-flex items-center gap-1">
+                        <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">v{s.version}</Badge>
+                        <InfoHint title="Version" side="top">Set when a script is created — a new script that reuses an existing name gets the next number up, so the highest is the latest revision. Editing a script in place keeps its number.</InfoHint>
+                      </span>
                       {!s.isActive && <Badge tone="danger" variant="soft">Disabled</Badge>}
                     </span>
                   }
@@ -176,7 +179,7 @@ export function ScriptsPage() {
               <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
                 checked={!!editing.isActive}
                 onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
-              Active
+              <span className="inline-flex items-center gap-1">Active<InfoHint title="Active" side="top">Only active scripts appear to agents in the dialer. Turn this off to retire a script without deleting it.</InfoHint></span>
             </label>
           </div>
         )}

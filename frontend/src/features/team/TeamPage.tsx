@@ -256,7 +256,9 @@ function TeamCard({
   return (
     <Card className="flex flex-col">
       <CardHeader
-        eyebrow={team.vertical ?? undefined}
+        eyebrow={team.vertical ? (
+          <span className="inline-flex items-center gap-1">{team.vertical}<InfoHint title="Vertical" side="right">The line of business or campaign this team is dedicated to (its "vertical").</InfoHint></span>
+        ) : undefined}
         title={team.name}
         subtitle={`${total} ${total === 1 ? "person" : "people"}`}
         bordered

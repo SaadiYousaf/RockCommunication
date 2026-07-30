@@ -152,7 +152,14 @@ export function SupervisorPage() {
                   </InfoHint>
                 </span>
               </TH>
-              <TH sortDir={dirFor("currentCallStatus")} onClick={() => toggle("currentCallStatus")}>Call</TH>
+              <TH sortDir={dirFor("currentCallStatus")} onClick={() => toggle("currentCallStatus")}>
+                <span className="inline-flex items-center gap-1">
+                  Call
+                  <InfoHint title="Call" side="top">
+                    The state of the agent's current live call (e.g. ringing, connected). Blank when they're not on a call.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                 <span className="inline-flex items-center gap-1">
                   Actions

@@ -11,7 +11,7 @@ import {
 import type { DocumentMeta } from "../../shared/api/types";
 import type { RootState } from "../../app/store";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input,
   PageHeader, Skeleton, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -97,7 +97,7 @@ export function DocumentsPage() {
         <Card>
           <CardHeader
             title={<span className="inline-flex items-center gap-2"><Icon name="book" size={16} className="text-ink-400" />Library</span>}
-            subtitle={<span className="tabular-nums">{docs?.length ?? 0} document(s)</span>}
+            subtitle={<span className="tabular-nums">{docs?.length ?? 0} document{(docs?.length ?? 0) === 1 ? "" : "s"}</span>}
           />
           <CardBody className="pt-0">
             {isLoading ? (
@@ -262,7 +262,12 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
       <CardHeader
         title={doc.name}
         subtitle={`${doc.kind} · view-only`}
-        action={<Badge tone="warning" variant="soft" dot>Protected — no copy / print / download</Badge>}
+        action={
+          <span className="inline-flex items-center gap-1.5">
+            <Badge tone="warning" variant="soft" dot>Protected — no copy / print / download</Badge>
+            <InfoHint title="Protected view" side="left">Your name and the time are stamped faintly across every page, and copying, printing, and downloading are switched off. Read it here instead of saving a copy.</InfoHint>
+          </span>
+        }
       />
       <CardBody>
         <div

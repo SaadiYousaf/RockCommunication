@@ -31,7 +31,7 @@ export function VerifyQueuePage() {
     <>
       <PageHeader title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
       <Card>
-        <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
+        <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
@@ -177,7 +177,15 @@ function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => voi
           <Input label="Birth date" type="date" leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
           <Input label="Age (years)" type="number" min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
           <Input label="Email" type="email" secure leftIcon={<Icon name="mail" size={14} />} value={f.email} onChange={set("email")} />
-          <Input label="Jornaya LeadiD" containerClassName="sm:col-span-2" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
+          <div className="sm:col-span-2 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] font-medium text-ink-700 leading-none">Jornaya LeadiD</span>
+              <InfoHint title="Jornaya LeadiD" side="right">
+                A compliance tracking token from Jornaya proving the prospect consented to be contacted (TCPA) and tying this lead to its original web form.
+              </InfoHint>
+            </div>
+            <Input value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
+          </div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" loading={saving} leftIcon={<Icon name="check" size={16} />}>Save changes</Button>

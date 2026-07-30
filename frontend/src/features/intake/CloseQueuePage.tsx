@@ -52,7 +52,7 @@ export function CloseQueuePage() {
         }
       />
       <Card>
-        <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} lead(s)</span> : undefined}
+        <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
@@ -75,8 +75,8 @@ export function CloseQueuePage() {
                   <TH sortDir={dirFor("application")} onClick={() => toggle("application")}>
                   <span className="inline-flex items-center gap-1">
                     Application
-                    <InfoHint title="Closer statuses" side="bottom">
-                      {"The closer's outcome for a verified lead. 'Complete and Sold' records the sale and sends it to the submission queue; Lost on Social / Lost on Account / DNC Lead / Not Interested (callback) do not create a sale."}
+                    <InfoHint title="Application" side="bottom">
+                      Whether a closing application has been started for this lead. “New” means none has been begun yet; “Started” means the closer has begun (but not finished) it.
                     </InfoHint>
                   </span>
                 </TH><TH></TH></TR>

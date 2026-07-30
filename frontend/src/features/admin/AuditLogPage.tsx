@@ -134,9 +134,11 @@ export function AuditLogPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Stat label="Total entries" value={total} icon={<Icon name="doc" size={16} />} />
-        <Stat label="Entity types" value={filterOpts?.entityNames.length ?? 0} icon={<Icon name="layers" size={16} />} />
+        <Stat label="Entity types" value={filterOpts?.entityNames.length ?? 0} icon={<Icon name="layers" size={16} />}
+          hint="Distinct record types with history (Lead, Sale, User…)" />
         <Stat label="Actions" value={filterOpts?.actions.length ?? 0} icon={<Icon name="activity" size={16} />} />
-        <Stat label="Active users" value={filterOpts?.users.length ?? 0} icon={<Icon name="userCheck" size={16} />} />
+        <Stat label="Active users" value={filterOpts?.users.length ?? 0} icon={<Icon name="userCheck" size={16} />}
+          hint="Users who have made a recorded change" />
       </div>
 
       <Card className="mb-4">
@@ -200,10 +202,10 @@ export function AuditLogPage() {
               <THead>
                 <TR>
                   <TH>When</TH>
-                  <TH>Entity</TH>
+                  <TH><span className="inline-flex items-center gap-1">Entity<InfoHint title="Entity" side="bottom">The record that was changed — a Lead, Sale, User, Campaign, etc. The short code beneath it is that record's unique ID.</InfoHint></span></TH>
                   <TH><span className="inline-flex items-center gap-1">Action<InfoHint title="Action" side="bottom">The type of change recorded — a "Transition" means a lead or sale moved between pipeline stages.</InfoHint></span></TH>
                   <TH>User</TH>
-                  <TH>IP</TH>
+                  <TH><span className="inline-flex items-center gap-1">IP<InfoHint title="IP address" side="left">The network address the change was made from. "localhost" means it originated on the server itself.</InfoHint></span></TH>
                   <TH></TH>
                 </TR>
               </THead>

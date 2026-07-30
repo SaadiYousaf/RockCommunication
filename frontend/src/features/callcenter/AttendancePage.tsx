@@ -88,9 +88,12 @@ export function AttendancePage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <Stat label="People" value={totals.people} icon={<Icon name="users" size={16} />} tone="brand" />
-        <Stat label="Clocked in now" value={totals.clockedIn} icon={<Icon name="phone" size={16} />} tone="success" />
-        <Stat label="Sessions" value={totals.sessions} icon={<Icon name="clock" size={16} />} tone="accent" />
-        <Stat label="Total clocked" value={hm(totals.hours)} icon={<Icon name="activity" size={16} />} tone="warning" />
+        <Stat label="Clocked in now" value={totals.clockedIn} icon={<Icon name="phone" size={16} />} tone="success"
+              hint="On the clock right now — a live count, not limited to the date range." />
+        <Stat label="Sessions" value={totals.sessions} icon={<Icon name="clock" size={16} />} tone="accent"
+              hint="A session is one clock-in to clock-out; clocking out and back in later counts as a new one. Breaks and lunch stay within the same session." />
+        <Stat label="Total clocked" value={hm(totals.hours)} icon={<Icon name="activity" size={16} />} tone="warning"
+              hint="Total on-the-clock time for the team, breaks included — not just time on calls." />
       </div>
 
       <Card className="mb-4">

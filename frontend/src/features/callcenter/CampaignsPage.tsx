@@ -100,7 +100,14 @@ function CampaignsSection() {
             <THead><TR>
               <TH sortDir={dirFor("code")} onClick={() => sortToggle("code")}>Code</TH>
               <TH sortDir={dirFor("name")} onClick={() => sortToggle("name")}>Name</TH>
-              <TH sortDir={dirFor("status")} onClick={() => sortToggle("status")}>Status</TH>
+              <TH sortDir={dirFor("status")} onClick={() => sortToggle("status")}>
+                <span className="inline-flex items-center gap-1">
+                  Status
+                  <InfoHint title="Status" side="top">
+                    Active campaigns feed the dialer with leads; inactive ones are paused and won't be dialed.
+                  </InfoHint>
+                </span>
+              </TH>
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>

@@ -129,8 +129,10 @@ export function WorkflowsPage() {
         <Stat label="Total rules"     value={stats.total}  icon={<Icon name="workflow" size={16} />} tone="brand" />
         <Stat label="Active"          value={stats.active} icon={<Icon name="zap" size={16} />}      tone="success"
               hint={stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}% of rules` : undefined} />
-        <Stat label="Distinct events" value={stats.events} icon={<Icon name="branch" size={16} />}   tone="accent" />
-        <Stat label="Recent runs"     value={stats.runs}   icon={<Icon name="activity" size={16} />} tone="warning" />
+        <Stat label="Distinct events" value={stats.events} icon={<Icon name="branch" size={16} />}   tone="accent"
+              hint="Different trigger events your rules cover" />
+        <Stat label="Recent runs"     value={stats.runs}   icon={<Icon name="activity" size={16} />} tone="warning"
+              hint="Times a rule has fired lately" />
       </div>
 
       <Card className="mb-4">
@@ -381,6 +383,7 @@ function RuleEditor({
         <Input label="Rule name" required value={rule.name}
           onChange={(e) => setRule({ ...rule, name: e.target.value })} containerClassName="sm:col-span-2" />
         <Input label="Priority" type="number" value={rule.priority}
+          hint="Lower runs first"
           onChange={(e) => setRule({ ...rule, priority: parseInt(e.target.value) || 100 })} />
         <Select label="On event" value={rule.eventType}
           onChange={(e) => setRule({ ...rule, eventType: e.target.value })}>

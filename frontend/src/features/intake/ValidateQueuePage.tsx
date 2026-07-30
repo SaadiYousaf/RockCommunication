@@ -39,7 +39,7 @@ export function ValidateQueuePage() {
         description="Sales submitted by closers. Open a sale to copy its details into the carrier portal, then set its submission status."
       />
       <Card>
-        <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} sale(s)</span> : undefined}
+        <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
@@ -48,7 +48,7 @@ export function ValidateQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
+                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title="Monthly premium" side="bottom">The amount the customer pays each month for this policy.</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
                   <TH sortDir={dirFor("licenseAgentName")} onClick={() => toggle("licenseAgentName")}>
                     <span className="inline-flex items-center gap-1">
                       Agent
@@ -256,6 +256,12 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
         {status === "Approved" && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-ink-200 bg-ink-50/50 p-3">
+              <div className="sm:col-span-2 flex items-center gap-1">
+                <span className="text-[12px] font-semibold text-ink-700 leading-none">Approved details</span>
+                <InfoHint title="Approved details" side="right">
+                  The final terms the carrier approved — these can differ from what the closer submitted. Coverage Approved = the death benefit (face amount); Premium Approved = the monthly payment.
+                </InfoHint>
+              </div>
               <Input label="Carrier Approved" required value={carrierApproved} onChange={(e) => setCarrierApproved(e.target.value)} />
               <Input label="Plan Approved" required value={planApproved} onChange={(e) => setPlanApproved(e.target.value)} />
               <Input label="Coverage Approved" type="number" min={0} step="0.01" required className="tabular-nums" leftIcon={<Icon name="dollar" size={14} />} value={coverageApproved} onChange={(e) => setCoverageApproved(e.target.value)} />

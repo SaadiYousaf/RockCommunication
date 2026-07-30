@@ -79,13 +79,25 @@ export function AgencyDetailPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <Stat label="Sales" value={total} icon={<Icon name="chart" size={18} />} tone="brand" />
         <Stat label="Premium (total)" value={money(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success" />
-        <Stat label="Funded" value={sales?.fundedCount ?? 0} icon={<Icon name="check" size={18} />} tone="success" />
+        <Stat label="Funded" value={sales?.fundedCount ?? 0} icon={<Icon name="check" size={18} />} tone="success"
+          hint="First payment cleared" />
         <Stat label="License agents" value={agents?.length ?? 0} icon={<Icon name="userCheck" size={18} />} tone="accent" />
       </div>
 
       {/* License-agent roster */}
       <Card className="mb-4">
-        <CardHeader title="License agents" subtitle={agents ? `${agents.length} agent(s)` : undefined} />
+        <CardHeader
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              License agents
+              <InfoHint title="License agent" side="right">
+                A licensed agent at this agency. Every approved sale is assigned to one license
+                agent, who is credentialed to submit the policy to the carrier.
+              </InfoHint>
+            </span>
+          }
+          subtitle={agents ? `${agents.length} agent(s)` : undefined}
+        />
         <CardBody>
           {!agents ? (
             <Skeleton className="h-24" />
@@ -119,7 +131,7 @@ export function AgencyDetailPage() {
             <div className="overflow-x-auto">
               <Table>
                 <THead>
-                  <TR><TH>Call centre</TH><TH numeric>Staff</TH><TH numeric>Leads</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
+                  <TR><TH>Call centre</TH><TH numeric><span className="inline-flex items-center gap-1">Staff<InfoHint title="Staff" side="top">How many users are assigned to this call centre. The bottom row counts everyone not pinned to any centre (agency-wide).</InfoHint></span></TH><TH numeric>Leads</TH><TH>Status</TH><TH className="text-right">Actions</TH></TR>
                 </THead>
                 <TBody>
                   {callCenters.map((c) => (
@@ -171,9 +183,9 @@ export function AgencyDetailPage() {
               <Table>
                 <THead>
                   <TR>
-                    <TH numeric>#</TH>
+                    <TH numeric><span className="inline-flex items-center gap-1">#<InfoHint title="Sale number" side="top">The sale's reference number in the system — use it to find this sale in reports or when raising a query.</InfoHint></span></TH>
                     <TH>Name</TH><TH>Phone</TH>
-                    <TH>Carrier appr.</TH><TH>Plan appr.</TH>
+                    <TH><span className="inline-flex items-center gap-1">Carrier appr.<InfoHint title="Carrier approved" side="top">The insurance carrier that approved the policy — may differ from the one originally quoted.</InfoHint></span></TH><TH><span className="inline-flex items-center gap-1">Plan appr.<InfoHint title="Plan approved" side="top">The specific plan (product) the carrier approved for this policy.</InfoHint></span></TH>
                     <TH numeric><span className="inline-flex items-center gap-1">Coverage appr.<InfoHint title="Coverage approved" side="top">The policy coverage amount (face amount / death benefit) the carrier approved.</InfoHint></span></TH><TH numeric><span className="inline-flex items-center gap-1">Premium appr.<InfoHint title="Premium approved" side="top">The monthly premium the carrier approved — may differ from the premium originally sold.</InfoHint></span></TH>
                     <TH numeric><span className="inline-flex items-center gap-1">Commission<InfoHint title="Commission earned" side="top">The commission earned on this sale under the applicable commission rules.</InfoHint></span></TH>
                     <TH>Call centre</TH><TH>License agent</TH>

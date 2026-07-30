@@ -9,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader,
-  EmptyState, Icon, Input, PageHeader, Select, Skeleton, Stat, Tabs,
+  EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
@@ -96,10 +96,13 @@ export function LeadSearchPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        <Stat label="Search hits" value={hasQuery ? filtered.length : "—"} icon={<Icon name="search" size={16} />} tone="brand" />
+        <Stat label="Search hits" value={hasQuery ? filtered.length : "—"} icon={<Icon name="search" size={16} />} tone="brand"
+              hint={hasQuery ? undefined : "Type a filter below to search"} />
         <Stat label="Active filters" value={Object.values(debounced).filter(Boolean).length} icon={<Icon name="filter" size={16} />} tone="neutral" />
-        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} icon={<Icon name="copy" size={16} />} tone={(duplicates?.length ?? 0) > 0 ? "warning" : "neutral"} />
-        <Stat label="Total dup leads" value={totalDupLeads} icon={<Icon name="users" size={16} />} tone={totalDupLeads > 0 ? "warning" : "neutral"} />
+        <Stat label="Duplicate groups" value={duplicates?.length ?? 0} icon={<Icon name="copy" size={16} />} tone={(duplicates?.length ?? 0) > 0 ? "warning" : "neutral"}
+              hint="Phone numbers shared by 2+ leads" />
+        <Stat label="Total dup leads" value={totalDupLeads} icon={<Icon name="users" size={16} />} tone={totalDupLeads > 0 ? "warning" : "neutral"}
+              hint="Leads across all duplicate groups" />
       </div>
 
       <Tabs<typeof tab>
@@ -199,8 +202,20 @@ export function LeadSearchPage() {
                       <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
                       <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
                       <TH sortDir={dirFor("state")} onClick={() => toggle("state")}>State</TH>
-                      <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>Stage</TH>
-                      <TH sortDir={dirFor("disposition")} onClick={() => toggle("disposition")}>Disposition</TH>
+                      <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>
+                        <span className="inline-flex items-center gap-1">Stage
+                          <InfoHint title="Pipeline stage" side="bottom">
+                            The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                          </InfoHint>
+                        </span>
+                      </TH>
+                      <TH sortDir={dirFor("disposition")} onClick={() => toggle("disposition")}>
+                        <span className="inline-flex items-center gap-1">Disposition
+                          <InfoHint title="Disposition" side="bottom">
+                            The outcome recorded after the most recent call attempt (e.g. Interested, Voicemail, No answer, DNC) — it doesn't change the pipeline stage.
+                          </InfoHint>
+                        </span>
+                      </TH>
                       <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>Created</TH>
                       <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                     </TR>
@@ -256,7 +271,14 @@ export function LeadSearchPage() {
           <Card>
             <CardHeader
               title="Duplicate phone numbers"
-              subtitle="Two or more leads share the same phone. Reach out once, then archive the rest."
+              subtitle={
+                <span className="inline-flex items-center gap-1 flex-wrap">
+                  Two or more leads share the same phone. Reach out once, then archive the rest.
+                  <InfoHint title="Primary lead" side="right">
+                    The lead tagged <strong>Primary</strong> in each group is the one to keep and work — the others are duplicates to archive.
+                  </InfoHint>
+                </span>
+              }
               action={
                 <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={14} />}
                   onClick={() => refetchDups()}>

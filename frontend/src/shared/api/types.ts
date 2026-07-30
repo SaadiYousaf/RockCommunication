@@ -119,6 +119,15 @@ export interface SocialMediaInput {
   notes?: string | null;
 }
 
+/** One item in the dashboard "Upcoming events" widget. */
+export interface UpcomingEvent {
+  /** "callback" | "training" | "birthday" — drives the icon/tone. */
+  type: string;
+  title: string;
+  subtitle?: string | null;
+  whenUtc: string;
+}
+
 /** A candidate with a training scheduled soon. */
 export interface UpcomingTraining {
   id: string;

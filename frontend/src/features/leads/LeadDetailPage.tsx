@@ -367,7 +367,11 @@ export function LeadDetailPage() {
           {/* Recent calls */}
           <div className="surface p-5">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold inline-flex items-center gap-1.5"><Icon name="phone" size={14} className="text-ink-400" /> Recent calls <span className="text-ink-400 font-normal">({lead.callCount})</span></div>
+              <div className="text-sm font-semibold inline-flex items-center gap-1.5"><Icon name="phone" size={14} className="text-ink-400" /> Recent calls <span className="text-ink-400 font-normal">({lead.callCount})</span>
+                <InfoHint title="Call log" side="right">
+                  Each entry shows the call's direction (in/out), its outcome status, an optional wrap-up code the agent logged at the end of the call, and the talk time in seconds.
+                </InfoHint>
+              </div>
             </div>
             {lead.recentCalls.length === 0 ? (
               <EmptyState compact icon={<Icon name="phone" size={18} />} title="No calls yet" description="Calls appear here once you dial this lead." />
@@ -443,7 +447,11 @@ export function LeadDetailPage() {
           {/* Recommendations */}
           {recs && recs.items.length > 0 && (
             <div className="surface p-5">
-              <div className="text-sm font-semibold mb-2 inline-flex items-center gap-1.5"><Icon name="target" size={14} className="text-ink-400" /> Recommended next steps</div>
+              <div className="text-sm font-semibold mb-2 inline-flex items-center gap-1.5"><Icon name="target" size={14} className="text-ink-400" /> Recommended next steps
+                <InfoHint title="Recommended next steps" side="left">
+                  AI-suggested actions for this lead. The % on each is the model's confidence — higher percentages are stronger suggestions.
+                </InfoHint>
+              </div>
               <ul className="space-y-2">
                 {recs.items.map((r, i) => (
                   <li key={i} className="text-sm flex items-start gap-2">
@@ -472,7 +480,13 @@ export function LeadDetailPage() {
                   Sold <span className="tabular-nums whitespace-nowrap">{new Date(lead.sale.soldAt).toLocaleDateString()}</span>
                   {lead.sale.validatedAt && ` · validated`}
                   {lead.sale.fundedAt && ` · funded`}
-                  {lead.sale.isInternalSale && <span className="text-amber-700"> · internal</span>}
+                  {lead.sale.isInternalSale && (
+                    <span className="text-amber-700 inline-flex items-center gap-0.5"> · internal
+                      <InfoHint title="Internal sale" side="top">
+                        Flagged as an in-house / internal deal rather than a standard external customer sale. Tracked separately for commission and reporting.
+                      </InfoHint>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -515,7 +529,16 @@ export function LeadDetailPage() {
               {lead.updatedAt && <Row label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />}
               <Row label="DOB" value={lead.dateOfBirth ? new Date(lead.dateOfBirth).toLocaleDateString() : null} />
               <Row label="Address" value={lead.address} />
-              <Row label="Skill required" value={lead.requiredSkillCode} />
+              <Row
+                label={
+                  <span className="inline-flex items-center gap-1">Skill required
+                    <InfoHint title="Skill required" side="left">
+                      A routing tag on the lead (e.g. a language or product-line skill). Calls are matched to agents who have this skill.
+                    </InfoHint>
+                  </span>
+                }
+                value={lead.requiredSkillCode}
+              />
               <Row label="Jornaya token" value={lead.jornayaLeadId} mono />
             </dl>
           </div>
@@ -571,7 +594,7 @@ function DispositionBadge({ disposition }: { disposition: string }) {
   return <Badge tone={tone}>{disposition}</Badge>;
 }
 
-function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
+function Row({ label, value, mono }: { label: ReactNode; value: ReactNode; mono?: boolean }) {
   if (!value) return null;
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-ink-100 last:border-0">

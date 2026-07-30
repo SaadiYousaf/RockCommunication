@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -85,7 +85,7 @@ export function SubmissionAgentsPage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH><TH className="text-right">Actions</TH></TR>
+                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
               </THead>
               <TBody>
                 {sorted.map((a) => (

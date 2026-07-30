@@ -237,9 +237,21 @@ export function LeadListsPage() {
                   <TR>
                     <TH>When</TH>
                     <TH>File</TH>
-                    <TH numeric>Total</TH>
+                    <TH numeric>
+                      <span className="inline-flex items-center gap-1">Total
+                        <InfoHint title="Total rows" side="left">
+                          Every row in the file — the sum of imported, duplicates, DNC scrubbed, and errors. That's why Imported is usually lower.
+                        </InfoHint>
+                      </span>
+                    </TH>
                     <TH numeric>Imported</TH>
-                    <TH numeric>Duplicates</TH>
+                    <TH numeric>
+                      <span className="inline-flex items-center gap-1">Duplicates
+                        <InfoHint title="Duplicates" side="left">
+                          Rows skipped because a lead with the same phone number already exists in the CRM.
+                        </InfoHint>
+                      </span>
+                    </TH>
                     <TH numeric>
                       <span className="inline-flex items-center gap-1">DNC scrubbed
                         <InfoHint title="DNC scrubbed" side="left">

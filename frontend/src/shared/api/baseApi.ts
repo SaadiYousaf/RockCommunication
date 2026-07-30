@@ -16,7 +16,7 @@ import type {
   PortalCredential, PortalCredentialInput,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput,
-  SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining,
+  SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
@@ -264,6 +264,10 @@ export const baseApi = createApi({
     dashboardSummary: b.query<DashboardSummary, void>({
       query: () => "/api/dashboard/summary",
       providesTags: ["Metrics"],
+    }),
+    upcomingEvents: b.query<UpcomingEvent[], number | void>({
+      query: (days) => ({ url: "/api/dashboard/upcoming-events", params: days ? { days } : undefined }),
+      providesTags: ["Callbacks", "Interviews", "Employees"],
     }),
 
     rubrics: b.query<Rubric[], void>({
@@ -1304,7 +1308,7 @@ export const {
   useStartDirectMessageMutation,
   useMyCommissionsQuery, usePayrollRunsQuery, useCreatePayrollRunMutation,
   useMyCallbacksQuery, useScheduleCallbackMutation, useCompleteCallbackMutation,
-  useMetricCatalogQuery, useDashboardQuery, useDashboardSummaryQuery,
+  useMetricCatalogQuery, useDashboardQuery, useDashboardSummaryQuery, useUpcomingEventsQuery,
   useLeadDiagnosticsQuery,
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,

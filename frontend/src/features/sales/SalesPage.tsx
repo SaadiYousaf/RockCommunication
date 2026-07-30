@@ -355,7 +355,8 @@ function SalesList() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
         <Stat label="Total sales"   value={total}                                                                                   icon={<Icon name="briefcase" size={16} />} tone="brand"
               onClick={() => update("status", undefined)} />
-        <Stat label="Total premium" value={`$${(data?.totalPremium ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}  icon={<Icon name="dollar" size={16} />}    tone="success" />
+        <Stat label="Total premium" value={`$${(data?.totalPremium ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}  icon={<Icon name="dollar" size={16} />}    tone="success"
+              hint="Combined premium across every sale matching the current filters." />
         <Stat label="Funded"        value={data?.fundedCount ?? 0}                                                                  icon={<Icon name="success" size={16} />}   tone="success"
               onClick={() => update("status", "Funded")} />
         <Stat label="Validated"     value={data?.validatedCount ?? 0}                                                               icon={<Icon name="shield" size={16} />}    tone="brand"
@@ -435,7 +436,14 @@ function SalesList() {
               <TR>
                 <TH>Sold</TH>
                 <TH>Lead</TH>
-                <TH>Closer</TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">
+                    Closer
+                    <InfoHint title="Closer" side="top">
+                      The agent who closed this deal with the customer and recorded the sale.
+                    </InfoHint>
+                  </span>
+                </TH>
                 <TH>Carrier</TH>
                 <TH>Premium</TH>
                 <TH>

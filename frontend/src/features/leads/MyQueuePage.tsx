@@ -119,7 +119,7 @@ export function MyQueuePage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        <Stat label="Active"   value={counts.Active}        icon={<Icon name="inbox" size={16} />}    tone="brand"    onClick={() => setFilter("Active")} />
+        <Stat label="Active"   value={counts.Active}        icon={<Icon name="inbox" size={16} />}    tone="brand"    hint="Still in play — excludes Lost & Funded" onClick={() => setFilter("Active")} />
         <Stat label="Total"    value={counts.All}           icon={<Icon name="rows" size={16} />}     tone="neutral"  onClick={() => setFilter("All")} />
         <Stat label="Fronted"  value={counts.Fronted ?? 0}  icon={<Icon name="phoneOut" size={16} />} tone="success"  onClick={() => setFilter("Fronted")} />
         <Stat label="Followup" value={counts.Followup ?? 0} icon={<Icon name="clock" size={16} />}    tone="warning"  onClick={() => setFilter("Followup")} />
@@ -175,7 +175,13 @@ export function MyQueuePage() {
                   <InfoHint title="Time in your queue" side="bottom">How long this lead has been waiting for your next action — red is going stale.</InfoHint>
                 </span>
               </TH>
-              <TH className="text-right">Quick actions</TH>
+              <TH className="text-right">
+                <span className="inline-flex items-center gap-1">Quick actions
+                  <InfoHint title="Quick actions" side="left">
+                    One-tap outcomes that log the call result and move the lead. DNC = Do Not Call (never dial again); Wrong # marks a bad number.
+                  </InfoHint>
+                </span>
+              </TH>
             </TR>
           </THead>
           <TBody>

@@ -7,7 +7,7 @@ import {
 import type { PortalCredential, PortalCredentialInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader, SearchInput,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
@@ -117,7 +117,9 @@ export function ConfidentialPage() {
           <Table>
             <THead>
               <TR>
-                <TH>Portal</TH><TH>Username</TH><TH>Password</TH><TH>Notes</TH><TH className="text-right">Actions</TH>
+                <TH>Portal</TH><TH>Username</TH>
+                <TH><span className="inline-flex items-center gap-1">Password<InfoHint title="Password" side="top">Stored encrypted at rest and shown masked. Use the eye to reveal it or the copy icon to grab it — only admins can view these.</InfoHint></span></TH>
+                <TH>Notes</TH><TH className="text-right">Actions</TH>
               </TR>
             </THead>
             <TBody>

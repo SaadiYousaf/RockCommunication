@@ -80,7 +80,7 @@ function QueueSection() {
               <TR>
                 <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
                 <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
-                <TH sortDir={dirFor("requiredSkillCode")} onClick={() => toggle("requiredSkillCode")}>Skill</TH>
+                <TH sortDir={dirFor("requiredSkillCode")} onClick={() => toggle("requiredSkillCode")}><span className="inline-flex items-center gap-1">Skill<InfoHint title="Required skill" side="bottom">Only agents tagged with this skill code (e.g. ES for Spanish) receive this queue's calls. Blank means any available agent qualifies.</InfoHint></span></TH>
                 <TH sortDir={dirFor("strategy")} onClick={() => toggle("strategy")}><span className="inline-flex items-center gap-1">Strategy<InfoHint title="Routing strategy" side="bottom">How the queue picks which available agent gets the next call (e.g. longest-idle = the agent who has waited longest since their last call).</InfoHint></span></TH>
                 <TH sortDir={dirFor("maxWaitSeconds")} onClick={() => toggle("maxWaitSeconds")}><span className="inline-flex items-center gap-1">Max wait<InfoHint title="Max wait" side="bottom">The longest a caller waits in this queue before overflow handling takes over.</InfoHint></span></TH>
                 <TH sortDir={dirFor("isActive")} onClick={() => toggle("isActive")}>Status</TH>
@@ -280,7 +280,7 @@ function PublicEndpointsSection() {
             <THead>
               <TR>
                 <TH sortDir={dirFor("slug")} onClick={() => toggle("slug")}>Slug</TH>
-                <TH sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>Leads captured</TH>
+                <TH sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}><span className="inline-flex items-center gap-1">Leads captured<InfoHint title="Leads captured" side="bottom">How many leads have arrived through this endpoint's web form so far.</InfoHint></span></TH>
                 <TH sortDir={dirFor("isActive")} onClick={() => toggle("isActive")}>Status</TH>
               </TR>
             </THead>

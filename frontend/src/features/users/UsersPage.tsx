@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { useListUsersQuery } from "../../shared/api/baseApi";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
-  Avatar, Badge, Card, CardBody, EmptyState, Icon, Input, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
+  Avatar, Badge, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 
 const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
@@ -75,10 +75,10 @@ export function UsersPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[260px]">
-            <Input
-              leftIcon={<Icon name="search" size={16} />}
-              placeholder="Search by name, email, or role..."
-              value={search} onChange={(e) => setSearch(e.target.value)}
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search by name, email, or role…"
             />
           </div>
           <Select
@@ -130,7 +130,7 @@ export function UsersPage() {
             <TR>
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
-              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
+              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">A person's roles decide which modules they can open and what they're allowed to do. Someone with no roles can sign in but can't access anything.</InfoHint></span></TH>
             </TR>
           </THead>
           <TBody>

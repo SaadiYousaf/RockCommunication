@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   useClockInMutation, useClockOutMutation, useListWrapUpCodesQuery,
   useMyRecentCallsQuery, useMySessionQuery, useSetAgentStatusMutation, useWrapUpCallMutation,
@@ -226,8 +226,10 @@ export function AgentPanelPage() {
       {/* Today's stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <SmallStat label="Calls today"     value={stats.total}   icon="phone"    tone="bg-brand-50 text-brand-600" />
-        <SmallStat label="Sales today"     value={stats.sales}   icon="briefcase" tone="bg-emerald-50 text-emerald-600" />
-        <SmallStat label="Pending wrap-ups" value={stats.pending} icon="clock"    tone="bg-amber-50 text-amber-600" />
+        <SmallStat label="Sales today"     value={stats.sales}   icon="briefcase" tone="bg-emerald-50 text-emerald-600"
+          hint={<InfoHint title="Sales today" side="top">Calls today that you closed with a wrap-up code flagged as a sale. Stays 0 until a sale is dispositioned.</InfoHint>} />
+        <SmallStat label="Pending wrap-ups" value={stats.pending} icon="clock"    tone="bg-amber-50 text-amber-600"
+          hint={<InfoHint title="Pending wrap-ups" side="top">Calls you've ended but not yet dispositioned. You can't return to Available until these are wrapped up.</InfoHint>} />
       </div>
 
       {/* Wrap-up alert */}
@@ -386,14 +388,17 @@ function HeroStat({ label, value, icon }: { label: string; value: string; icon: 
   );
 }
 
-function SmallStat({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
+function SmallStat({ label, value, icon, tone, hint }: { label: string; value: number; icon: IconName; tone: string; hint?: ReactNode }) {
   return (
     <div className="surface p-4 flex items-center gap-3 transition-shadow hover:shadow-card-hover">
       <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
         <Icon name={icon} size={18} />
       </div>
       <div className="min-w-0">
-        <div className="section-title truncate">{label}</div>
+        <div className="section-title flex items-center gap-1">
+          <span className="truncate">{label}</span>
+          {hint}
+        </div>
         <div className="text-xl font-semibold text-ink-900 tabular-nums">{value}</div>
       </div>
     </div>

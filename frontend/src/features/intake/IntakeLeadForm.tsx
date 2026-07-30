@@ -1,7 +1,7 @@
 import { MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
 import { useState } from "react";
 import type { IntakeLeadInput } from "../../shared/api/types";
-import { Button, Icon, Input, Select, Textarea } from "../../shared/ui";
+import { Button, Icon, InfoHint, Input, Select, Textarea } from "../../shared/ui";
 
 
 const empty = {
@@ -58,7 +58,15 @@ export function IntakeLeadForm({
       <Input label="Birth date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
       <Input label="Age (years)" type="number" required min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
       <Input label="Email" type="email" required secure leftIcon={<Icon name="mail" size={14} />} containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
-      <Input label="Jornaya LeadiD" containerClassName="sm:col-span-2" placeholder="Optional token" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
+      <div className="sm:col-span-2 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1">
+          <span className="text-[12px] font-medium text-ink-700 leading-none">Jornaya LeadiD</span>
+          <InfoHint title="Jornaya LeadiD" side="right">
+            A compliance tracking token from Jornaya that proves the prospect consented to be contacted (TCPA) and ties this lead to the web form it came from. Optional — leave blank if you don't have one.
+          </InfoHint>
+        </div>
+        <Input placeholder="Optional token" value={f.jornayaLeadId} onChange={set("jornayaLeadId")} />
+      </div>
       <Textarea
         label="Notes" containerClassName="sm:col-span-2" rows={3}
         placeholder="Optional — context for this lead (why they're interested, best time to call, etc.)"

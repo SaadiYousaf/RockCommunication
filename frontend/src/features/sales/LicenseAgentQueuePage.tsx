@@ -40,7 +40,7 @@ export function LicenseAgentQueuePage() {
       <Card>
         <CardHeader
           title="Assigned to me"
-          subtitle={data ? `${items.length} sale(s) · ${money(totalCommission)} commission` : undefined}
+          subtitle={data ? `${items.length === 1 ? "1 sale" : `${items.length} sales`} · ${money(totalCommission)} commission` : undefined}
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : items.length === 0 ? (

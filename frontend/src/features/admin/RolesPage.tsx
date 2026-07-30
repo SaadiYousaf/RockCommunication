@@ -165,7 +165,7 @@ export function RolesPage() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         <Stat label="Total roles" value={stats.total} icon={<Icon name="shield" size={16} />} tone="brand" />
-        <Stat label="System roles" value={stats.system} icon={<Icon name="lock" size={16} />} tone="neutral" hint="Built-in templates, immutable" />
+        <Stat label="System roles" value={stats.system} icon={<Icon name="lock" size={16} />} tone="neutral" hint="Built-in, can't be renamed or deleted" />
         <Stat label="Custom roles" value={stats.custom} icon={<Icon name="userCog" size={16} />} tone="accent" hint="Created by admins" />
         <Stat label="Modules" value={stats.modules} icon={<Icon name="layers" size={16} />} tone="success" hint="Assignable to roles" />
       </div>
@@ -297,6 +297,11 @@ export function RolesPage() {
                       {selected.isSystem
                         ? <Badge tone="neutral" variant="soft"><Icon name="lock" size={11} className="mr-1" />System role</Badge>
                         : <Badge tone="accent" variant="soft">Custom role</Badge>}
+                      <InfoHint title={selected.isSystem ? "System role" : "Custom role"} side="top">
+                        {selected.isSystem
+                          ? "A built-in role that ships with the CRM. You can adjust its module and permission access, but it can't be renamed or deleted."
+                          : "A role an admin created. You can rename it, delete it, and change its module and permission access at any time."}
+                      </InfoHint>
                     </div>
                     <div className="text-sm text-ink-500 mt-1 tabular-nums">
                       {selected.modules.length} module{selected.modules.length === 1 ? "" : "s"} · {stats.modules > 0 ? Math.round((selected.modules.length / stats.modules) * 100) : 0}% <span className="inline-flex items-center gap-1">coverage<InfoHint title="Module coverage" side="top">The share of all available modules this role can access.</InfoHint></span>

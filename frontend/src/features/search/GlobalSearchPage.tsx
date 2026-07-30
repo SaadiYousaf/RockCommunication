@@ -9,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { Lead, UserSummary } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint,
   PageHeader, SearchInput, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
@@ -193,14 +193,15 @@ export function GlobalSearchPage() {
                 subtitle="Click a row to open the lead, or dial directly."
               />
               <CardBody className="p-0">
+                <div className="overflow-x-auto">
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
                       <TH>Name</TH>
                       <TH>Phone</TH>
                       <TH>Email</TH>
-                      <TH>Stage</TH>
-                      <TH>State</TH>
+                      <TH><span className="inline-flex items-center gap-1">Stage<InfoHint title="Stage" side="top">Where this lead sits in the sales pipeline — e.g. New, Contacted, Verified, or Sold.</InfoHint></span></TH>
+                      <TH><span className="inline-flex items-center gap-1">State<InfoHint title="State" side="top">The US state the lead lives in — it drives carrier licensing and who can work the lead.</InfoHint></span></TH>
                       <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
                     </TR>
                   </THead>
@@ -249,6 +250,7 @@ export function GlobalSearchPage() {
                     ))}
                   </TBody>
                 </Table>
+                </div>
               </CardBody>
             </Card>
           )}
@@ -260,13 +262,14 @@ export function GlobalSearchPage() {
                 subtitle="Members matching your query."
               />
               <CardBody className="p-0">
+                <div className="overflow-x-auto">
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
                       <TH sortDir={userDir("userName")} onClick={() => sortUser("userName")}>User</TH>
                       <TH sortDir={userDir("email")} onClick={() => sortUser("email")}>Email</TH>
                       <TH sortDir={userDir("roles")} onClick={() => sortUser("roles")}>Roles</TH>
-                      <TH sortDir={userDir("modules")} onClick={() => sortUser("modules")}>Modules</TH>
+                      <TH sortDir={userDir("modules")} onClick={() => sortUser("modules")}><span className="inline-flex items-center gap-1">Modules<InfoHint title="Modules" side="top">How many app areas this user can open (Leads, Reports, Documents, etc.). More modules means broader access.</InfoHint></span></TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -294,6 +297,7 @@ export function GlobalSearchPage() {
                     ))}
                   </TBody>
                 </Table>
+                </div>
               </CardBody>
             </Card>
           )}

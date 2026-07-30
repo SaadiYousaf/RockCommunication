@@ -7,11 +7,20 @@ import {
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Tabs, useToast,
 } from "../../shared/ui";
 
 const RULES = ["closer-flat-rate", "jr-closer-split", "validator-bonus", "high-premium-kicker", "team-lead-override"];
+
+/** Plain-language explanation of each commission rule, shown as an info-hint next to its code. */
+const RULE_HINTS: Record<string, string> = {
+  "closer-flat-rate":   "A fixed amount paid to the closer for every closed sale.",
+  "jr-closer-split":    "The amount a junior closer earns for assisting on a close.",
+  "validator-bonus":    "A bonus paid to the validator for each sale they review and approve.",
+  "high-premium-kicker":"Extra commission added when a sale's premium is at or above the threshold.",
+  "team-lead-override": "An override the team lead earns on top of sales closed by their team.",
+};
 
 export function AdminPage() {
   const [tab, setTab] = useState<"ip" | "verticals" | "horizontals" | "commissions">("ip");
@@ -49,7 +58,8 @@ function IpAllowlistSection() {
 
   return (
     <Card>
-      <CardHeader eyebrow="Security" bordered title="IP allowlist"
+      <CardHeader eyebrow="Security" bordered
+        title={<span className="inline-flex items-center gap-1.5">IP allowlist<InfoHint title="IP / CIDR" side="right">Only these network addresses may reach the API. A single IP (e.g. 203.0.113.4) allows one machine; CIDR notation (e.g. 10.0.0.0/24) allows a whole range in one entry.</InfoHint></span>}
         subtitle="If empty, all IPs are allowed (loopback always permitted). Auth and Swagger paths bypass the check." />
       <CardBody>
         <form className="flex flex-wrap gap-2 mb-4" onSubmit={async (e) => {
@@ -208,8 +218,12 @@ function CommissionConfigSection() {
           <thead className="bg-ink-50/60 text-left">
             <tr>
               <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Rule</th>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Amount</th>
-              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Threshold</th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">Amount<InfoHint title="Amount" side="top">The payout for this rule for your agency. Leave blank to fall back to the platform default.</InfoHint></span>
+              </th>
+              <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">
+                <span className="inline-flex items-center gap-1">Threshold<InfoHint title="Threshold" side="top">Some rules only pay above a minimum value (e.g. a premium amount). Leave blank if the rule always applies.</InfoHint></span>
+              </th>
               <th className="px-5 py-2 text-xs uppercase tracking-wide text-ink-500 font-semibold whitespace-nowrap">Enabled</th>
               <th className="px-5 py-2"></th>
             </tr>
@@ -240,7 +254,12 @@ function RuleRow({ ruleName, initial, onSave }: {
 
   return (
     <tr className="border-t hairline hover:bg-ink-50/40 transition-colors">
-      <td className="px-5 py-2 font-mono text-xs whitespace-nowrap">{ruleName}</td>
+      <td className="px-5 py-2 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="font-mono text-xs">{ruleName}</span>
+          {RULE_HINTS[ruleName] && <InfoHint title={ruleName} side="right">{RULE_HINTS[ruleName]}</InfoHint>}
+        </span>
+      </td>
       <td className="px-5 py-2">
         <input type="number" className="border border-ink-200 rounded-lg px-2 py-1 w-24 text-sm tabular-nums transition-colors focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-400/30"
           value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="default" />

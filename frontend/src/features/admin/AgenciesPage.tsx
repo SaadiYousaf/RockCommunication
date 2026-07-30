@@ -11,7 +11,7 @@ import {
 import type { AgencyDto, UserSummary } from "../../shared/api/types";
 import { Link } from "react-router-dom";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 
@@ -187,7 +187,15 @@ export function AgenciesPage() {
       <Card>
         <CardHeader
           eyebrow="Tenants"
-          title="Agencies"
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              Agencies
+              <InfoHint title="Agency = tenant" side="right">
+                Each agency is a fully isolated tenant: its users, leads, and sales are walled off
+                from every other agency. Only a SuperAdmin can see across all of them.
+              </InfoHint>
+            </span>
+          }
           subtitle="Each row is one tenant. Click a row to edit, or use Assign CEO to set the agency owner."
           bordered
           action={

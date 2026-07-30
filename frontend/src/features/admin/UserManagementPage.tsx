@@ -141,7 +141,7 @@ export function UserManagementPage() {
             <TR>
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
-              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}>Roles</TH>
+              <TH sortDir={dirFor("role")} onClick={() => toggle("role")}><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">A user's roles decide which modules they see and what they can do. No roles means they can sign in but can't access anything until you assign one.</InfoHint></span></TH>
               <TH><span className="inline-flex items-center gap-1">Call center<InfoHint title="Call center" side="top">Pin a user to one call center to limit their pipeline to just that center; leave it agency-level to see the whole agency.</InfoHint></span></TH>
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>

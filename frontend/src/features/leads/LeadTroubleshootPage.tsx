@@ -248,7 +248,7 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
       {/* Issues + Recommendations */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
-          <CardHeader title="Issues found" subtitle={`${data.issues.length} item(s)`} />
+          <CardHeader title="Issues found" subtitle={`${data.issues.length} item${data.issues.length === 1 ? "" : "s"}`} />
           <CardBody className="pt-0">
             {data.issues.length === 0 ? (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border hairline">
@@ -438,7 +438,13 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
             <Row label="Team" value={data.assignment.team
               ? <Badge tone="info" variant="soft">{data.assignment.team}</Badge>
               : <span className="text-ink-400">—</span>} />
-            <Row label="Required skill" value={data.assignment.requiredSkill
+            <Row label={
+              <span className="inline-flex items-center gap-1">Required skill
+                <InfoHint title="Required skill" side="top">
+                  A skill code (e.g. ES for Spanish) this lead needs — routing only hands it to agents who hold that skill.
+                </InfoHint>
+              </span>
+            } value={data.assignment.requiredSkill
               ? <Badge tone="brand" variant="soft" className="font-mono">{data.assignment.requiredSkill}</Badge>
               : <span className="text-ink-400">—</span>} />
           </CardBody>
@@ -488,8 +494,14 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
 
         <Card>
           <CardHeader
-            title="Call activity"
-            subtitle={`${data.callActivity.totalCalls} call(s) · ${data.callActivity.answeredCalls} answered`}
+            title={
+              <span className="inline-flex items-center gap-1">Call activity
+                <InfoHint title="Wrap-up codes" side="bottom">
+                  A wrap-up code is the outcome an agent records after each call. "Unwrapped" calls have none yet — they leave reporting incomplete and can block the next dial.
+                </InfoHint>
+              </span>
+            }
+            subtitle={`${data.callActivity.totalCalls} call${data.callActivity.totalCalls === 1 ? "" : "s"} · ${data.callActivity.answeredCalls} answered`}
             action={data.callActivity.unwrappedCalls > 0 && (
               <Badge tone="warning" variant="soft" dot>
                 {data.callActivity.unwrappedCalls} unwrapped
@@ -546,7 +558,15 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
           ) : (
             <Table className="border-0 shadow-none rounded-none">
               <THead><TR>
-                <TH>Rule</TH><TH>Event</TH><TH>Status</TH>
+                <TH>Rule</TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">Event
+                    <InfoHint title="Trigger event" side="bottom">
+                      The system event that makes this rule run — e.g. a lead being created, a stage change, or a call ending.
+                    </InfoHint>
+                  </span>
+                </TH>
+                <TH>Status</TH>
               </TR></THead>
               <TBody>
                 {data.workflows.activeRules.map((r) => (
@@ -627,7 +647,7 @@ function DetailBlock({ label, text }: { label: string; text: string }) {
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="text-xs font-medium text-ink-500 uppercase tracking-wider">{label}</div>

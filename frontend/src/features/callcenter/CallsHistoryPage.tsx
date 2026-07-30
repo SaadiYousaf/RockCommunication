@@ -42,7 +42,8 @@ export function CallsHistoryPage() {
         <Stat label="Total calls" value={total}                                icon={<Icon name="phoneCall" size={16} />} tone="brand" />
         <Stat label="Answered"    value={data?.answeredCount ?? 0}             icon={<Icon name="phoneIn" size={16} />}   tone="success" />
         <Stat label="Voicemail"   value={data?.voicemailCount ?? 0}            icon={<Icon name="mic" size={16} />}       tone="accent" />
-        <Stat label="Avg talk"    value={`${formatSec(data?.avgTalkSeconds ?? 0)}`} icon={<Icon name="clock" size={16} />} tone="warning" />
+        <Stat label="Avg talk"    value={`${formatSec(data?.avgTalkSeconds ?? 0)}`} icon={<Icon name="clock" size={16} />} tone="warning"
+          hint="Average connected talk time across the calls in this view — excludes ring and voicemail time." />
       </div>
 
       <Card className="mb-4">
@@ -118,7 +119,14 @@ export function CallsHistoryPage() {
                 <TH>Lead</TH>
                 <TH>Agent</TH>
                 <TH>Direction</TH>
-                <TH>Status</TH>
+                <TH>
+                  <span className="inline-flex items-center gap-1">
+                    Status
+                    <InfoHint title="Call status" side="top">
+                      Answered / Completed = connected to an agent. Voicemail = went to voicemail. Abandoned = caller hung up before an agent answered. Failed / Busy = the call couldn't connect.
+                    </InfoHint>
+                  </span>
+                </TH>
                 <TH>
                   <span className="inline-flex items-center gap-1">
                     Talk
