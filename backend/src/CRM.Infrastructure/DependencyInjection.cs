@@ -415,6 +415,7 @@ public static class DependencyInjection
             services.AddHostedService<CallbackReminderService>();
             services.AddHostedService<BirthdayNotificationService>();
             services.AddHostedService<InvitationExpiryNotificationService>();
+            services.AddHostedService<TrainingReminderService>();
         }
         services.AddScoped<BackgroundJobs.WorkflowJobRunner>();
         services.AddScoped<BackgroundJobs.CallbackReminderJob>();

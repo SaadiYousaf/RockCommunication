@@ -159,6 +159,8 @@ public class InterviewHandlers :
         i.PositionOffered = Clean(input.PositionOffered);
         i.SalaryOffered = input.SalaryOffered;
         i.Remarks = Clean(input.Remarks);
+        // Rescheduling (or clearing) the training re-arms the reminder so a fresh one fires for the new time.
+        if (i.TrainingScheduledAt != input.TrainingScheduledAt) i.TrainingReminderSentAt = null;
         i.TrainingScheduledAt = input.TrainingScheduledAt;
     }
 

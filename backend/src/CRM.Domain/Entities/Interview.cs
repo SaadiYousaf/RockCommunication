@@ -25,4 +25,9 @@ public class Interview : TenantEntity
     public string? Remarks { get; set; }
     /// <summary>Scheduled onboarding/training date-time (surfaces reminders).</summary>
     public DateTime? TrainingScheduledAt { get; set; }
+
+    /// <summary>When the automatic "training coming up" reminder was last sent, so the background
+    /// job fires at most once per scheduled training. Reset to null whenever the training is
+    /// rescheduled so a fresh reminder goes out for the new time.</summary>
+    public DateTime? TrainingReminderSentAt { get; set; }
 }

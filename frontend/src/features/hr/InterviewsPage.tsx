@@ -113,7 +113,7 @@ export function InterviewsPage() {
             <div className="flex items-center gap-2 mb-2.5">
               <Icon name="calendar" size={15} className="text-brand-500" />
               <h3 className="text-sm font-semibold text-ink-900">Upcoming trainings</h3>
-              <InfoHint title="Upcoming trainings" side="right">Candidates with a training session booked in the next 14 days — a reminder is also sent automatically.</InfoHint>
+              <InfoHint title="Upcoming trainings" side="right">Candidates with a training booked in the next 14 days. Refreshed daily — HR &amp; admins get an automatic reminder the day before each training.</InfoHint>
             </div>
             <div className="flex flex-wrap gap-2">
               {trainings.map((t) => {
