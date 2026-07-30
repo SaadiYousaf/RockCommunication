@@ -977,6 +977,15 @@ function RefreshNote({ children }: { children: ReactNode }) {
   );
 }
 
+/** Details page an upcoming-event row opens when clicked, by type. */
+function eventHref(type: string): string {
+  switch (type) {
+    case "training": return "/hr/interviews";
+    case "birthday": return "/hr/employees";
+    case "callback": default: return "/callbacks";
+  }
+}
+
 function UpcomingEventsCard() {
   const { data: events, isLoading } = useUpcomingEventsQuery(14);
 
@@ -1017,7 +1026,8 @@ function UpcomingEventsCard() {
               const st = eventStyle[e.type] ?? fallbackEventStyle;
               const w = whenBadge(e.whenUtc);
               return (
-                <div key={i} className="flex items-center gap-3 py-2.5">
+                <Link key={i} to={eventHref(e.type)}
+                  className="group flex items-center gap-3 py-2.5 -mx-2 px-2 rounded-lg hover:bg-ink-50/70 transition-colors">
                   <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 ring-inset shrink-0 ${st.tile}`}>
                     <Icon name={st.icon} size={16} />
                   </div>
@@ -1026,7 +1036,8 @@ function UpcomingEventsCard() {
                     {e.subtitle && <div className="text-xs text-ink-500 truncate">{e.subtitle}</div>}
                   </div>
                   <Badge tone={w.tone} variant="soft" className="shrink-0 whitespace-nowrap tabular-nums">{w.label}</Badge>
-                </div>
+                  <Icon name="chevronRight" size={14} className="text-ink-300 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                </Link>
               );
             })}
           </div>
@@ -1099,6 +1110,11 @@ function TeamStatusCard() {
           </span>
         }
         subtitle="Attendance and live floor state, today"
+        action={
+          <Link to="/team">
+            <Button variant="ghost" size="sm" rightIcon={<Icon name="arrowRight" size={14} />}>Team</Button>
+          </Link>
+        }
         bordered
       />
       <CardBody>
@@ -1155,16 +1171,19 @@ function TeamStatusRowItem({ row }: { row: TeamStatusRow }) {
     : { tone: "neutral" as BadgeTone, label: "Unmarked" };
   const meta = [row.agentCode, row.designation].filter(Boolean).join(" · ");
   return (
-    <li className="flex items-center gap-3 py-2.5">
-      <Avatar name={row.fullName} size={36} presence={livePresence[row.liveStatus]} />
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-ink-900 truncate">{row.fullName}</div>
-        {meta && <div className="text-xs text-ink-500 truncate">{meta}</div>}
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-        <Badge tone={att.tone} variant="soft" dot>{att.label}</Badge>
-        <Badge tone={live.tone} variant="soft" dot>{live.label}</Badge>
-      </div>
+    <li>
+      <Link to="/team" className="group flex items-center gap-3 py-2.5 px-1 -mx-1 rounded-lg hover:bg-ink-50/70 transition-colors">
+        <Avatar name={row.fullName} size={36} presence={livePresence[row.liveStatus]} />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-ink-900 truncate">{row.fullName}</div>
+          {meta && <div className="text-xs text-ink-500 truncate">{meta}</div>}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <Badge tone={att.tone} variant="soft" dot>{att.label}</Badge>
+          <Badge tone={live.tone} variant="soft" dot>{live.label}</Badge>
+        </div>
+        <Icon name="chevronRight" size={14} className="text-ink-300 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+      </Link>
     </li>
   );
 }
