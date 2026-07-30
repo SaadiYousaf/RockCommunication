@@ -1,4 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useState } from "react";
 import {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation, useListCallCentersQuery,
@@ -55,16 +56,25 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
   const [bulk, { isLoading: bulking }] = useBulkMarkAttendanceMutation();
   const [fill, { isLoading: filling }] = useFillAttendanceFromClockInsMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+  const [bulkStatus, setBulkStatus] = useState("Present");
 
   async function setStatus(employeeId: string, status: string) {
     try { await mark({ employeeId, date, status }).unwrap(); }
     catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
-  async function markAllPresent() {
+  async function applyToAll() {
+    const label = hrLabel(bulkStatus);
+    const n = rows?.length ?? 0;
+    if (!(await confirm({
+      title: `Set everyone to "${label}"?`,
+      description: `This sets all ${n} ${n === 1 ? "employee" : "employees"} to "${label}" for ${date}, overwriting any status already marked. You can still fine-tune individuals afterwards.`,
+      confirmLabel: `Set all to ${label}`,
+    }))) return;
     try {
-      const r = await bulk({ date, status: "Present", callCenterId, onlyUnmarked: true }).unwrap();
-      toast.success(r.count > 0 ? `Marked ${r.count} present` : "Everyone's already marked", "Only unmarked employees were changed.");
-    } catch (err: unknown) { toast.error("Couldn't mark all", getErrorDetail(err) ?? "Try again."); }
+      const r = await bulk({ date, status: bulkStatus, callCenterId, onlyUnmarked: false }).unwrap();
+      toast.success(`Set ${r.count} to ${label}`, "Every employee on this date was updated.");
+    } catch (err: unknown) { toast.error("Couldn't apply to all", getErrorDetail(err) ?? "Try again."); }
   }
   async function fillFromClockIns() {
     try {
@@ -80,9 +90,14 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
         <span className="text-sm text-ink-500">{rows?.length ?? 0} {(rows?.length ?? 0) === 1 ? "employee" : "employees"}</span>
         <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" leftIcon={<Icon name="phone" size={13} />} loading={filling} onClick={fillFromClockIns}>Fill from clock-ins</Button>
-          <Button variant="outline" size="sm" leftIcon={<Icon name="check" size={13} />} loading={bulking} onClick={markAllPresent}>Mark all present</Button>
-          <InfoHint title="Attendance shortcuts" side="left">
-            "Fill from clock-ins" auto-marks Present anyone whose login clocked in that day. "Mark all present" fills the remaining unmarked employees. Neither overwrites a status you've already set — adjust individuals with the dropdowns.
+          <div className="flex items-center gap-1.5">
+            <Select aria-label="Status to apply to everyone" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="w-32">
+              {ATTENDANCE_STATUSES.map((s) => <option key={s} value={s}>{hrLabel(s)}</option>)}
+            </Select>
+            <Button variant="outline" size="sm" leftIcon={<Icon name="check" size={13} />} loading={bulking} onClick={applyToAll}>Apply to all</Button>
+          </div>
+          <InfoHint title="Bulk actions" side="left">
+            "Fill from clock-ins" marks Present anyone whose login clocked in that day (only the unmarked). "Apply to all" sets the chosen status — Present, Absent, Leave, NCNS, anything — for every employee on this date, overwriting existing marks. Fine-tune anyone with their own dropdown.
           </InfoHint>
         </div>
       </div>
