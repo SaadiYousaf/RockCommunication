@@ -1093,6 +1093,14 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/hr/attendance/mark", method: "POST", body }),
       invalidatesTags: ["Attendance"],
     }),
+    bulkMarkAttendance: b.mutation<{ count: number }, { date: string; status: string; callCenterId?: string; onlyUnmarked?: boolean }>({
+      query: (body) => ({ url: "/api/hr/attendance/bulk", method: "POST", body }),
+      invalidatesTags: ["Attendance"],
+    }),
+    fillAttendanceFromClockIns: b.mutation<{ count: number }, { date: string; callCenterId?: string }>({
+      query: (body) => ({ url: "/api/hr/attendance/fill-from-clock-ins", method: "POST", body }),
+      invalidatesTags: ["Attendance"],
+    }),
 
     // ── HR — interviews / recruitment ─────────────────────────────────────────
     listInterviews: b.query<Interview[], { search?: string; status?: string } | void>({
@@ -1345,6 +1353,7 @@ export const {
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation, useSyncEmployeesFromUsersMutation,
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
+  useBulkMarkAttendanceMutation, useFillAttendanceFromClockInsMutation,
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
   useListPayrollQuery, useSavePayrollMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,

@@ -32,12 +32,23 @@ public record AttendanceForDateQuery(DateTime Date, Guid? CallCenterId = null)
 public record AttendanceSummaryQuery(int Year, int Month, Guid? CallCenterId = null)
     : IRequest<IReadOnlyList<AttendanceSummaryRowDto>>;
 
+/// <summary>Mark every (filtered) employee for a day with one status. By default only fills the
+/// UNmarked ones so it never clobbers manual marks; returns how many were set.</summary>
+public record BulkMarkAttendanceCommand(DateTime Date, AttendanceStatus Status, Guid? CallCenterId = null,
+    bool OnlyUnmarked = true) : IRequest<int>;
+
+/// <summary>Auto-mark Present for every (filtered) employee whose linked login clocked in that day
+/// (from the agent sessions), skipping anyone already marked. Returns how many were set.</summary>
+public record FillAttendanceFromClockInsCommand(DateTime Date, Guid? CallCenterId = null) : IRequest<int>;
+
 // ── Handlers ────────────────────────────────────────────────────────────────
 
 public class AttendanceHandlers :
     IRequestHandler<MarkAttendanceCommand, Unit>,
     IRequestHandler<AttendanceForDateQuery, IReadOnlyList<AttendanceRowDto>>,
-    IRequestHandler<AttendanceSummaryQuery, IReadOnlyList<AttendanceSummaryRowDto>>
+    IRequestHandler<AttendanceSummaryQuery, IReadOnlyList<AttendanceSummaryRowDto>>,
+    IRequestHandler<BulkMarkAttendanceCommand, int>,
+    IRequestHandler<FillAttendanceFromClockInsCommand, int>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -115,6 +126,69 @@ public class AttendanceHandlers :
                 Count(AttendanceStatus.Present), Count(AttendanceStatus.Absent), Count(AttendanceStatus.Late),
                 Count(AttendanceStatus.HalfDay), Count(AttendanceStatus.Leave), Count(AttendanceStatus.Ncns), ms.Count);
         }).ToList();
+    }
+
+    public async Task<int> Handle(BulkMarkAttendanceCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        HrAccess.EnsureHr(_user);
+        var day = request.Date.Date;
+        var employees = await EmployeesQuery(request.CallCenterId).ToListAsync(ct);
+        var empIds = employees.Select(e => e.Id).ToList();
+        var existing = (await _db.EmployeeAttendances
+                .Where(a => a.Date == day && empIds.Contains(a.EmployeeId)).ToListAsync(ct))
+            .ToDictionary(a => a.EmployeeId);
+
+        var count = 0;
+        foreach (var e in employees)
+        {
+            if (existing.TryGetValue(e.Id, out var a))
+            {
+                if (request.OnlyUnmarked) continue;
+                a.Status = request.Status;
+                a.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                _db.EmployeeAttendances.Add(new EmployeeAttendance
+                { AgencyId = e.AgencyId, EmployeeId = e.Id, Date = day, Status = request.Status });
+            }
+            count++;
+        }
+        if (count > 0) await _db.SaveChangesAsync(ct);
+        return count;
+    }
+
+    public async Task<int> Handle(FillAttendanceFromClockInsCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        HrAccess.EnsureHr(_user);
+        var day = request.Date.Date;
+        var next = day.AddDays(1);
+        var employees = await EmployeesQuery(request.CallCenterId).ToListAsync(ct);
+        var userIds = employees.Where(e => e.UserId is { } u && u != Guid.Empty)
+            .Select(e => e.UserId!.Value).ToList();
+        if (userIds.Count == 0) return 0;
+
+        var clockedIn = (await _db.AgentSessions.AsNoTracking()
+            .Where(s => userIds.Contains(s.UserId) && s.ClockInAt >= day && s.ClockInAt < next)
+            .Select(s => s.UserId).ToListAsync(ct)).ToHashSet();
+        var empIds = employees.Select(e => e.Id).ToList();
+        var alreadyMarked = (await _db.EmployeeAttendances.AsNoTracking()
+            .Where(a => a.Date == day && empIds.Contains(a.EmployeeId)).Select(a => a.EmployeeId).ToListAsync(ct))
+            .ToHashSet();
+
+        var count = 0;
+        foreach (var e in employees)
+        {
+            if (e.UserId is not { } uid || uid == Guid.Empty) continue;
+            if (!clockedIn.Contains(uid) || alreadyMarked.Contains(e.Id)) continue;
+            _db.EmployeeAttendances.Add(new EmployeeAttendance
+            { AgencyId = e.AgencyId, EmployeeId = e.Id, Date = day, Status = AttendanceStatus.Present });
+            count++;
+        }
+        if (count > 0) await _db.SaveChangesAsync(ct);
+        return count;
     }
 
     private IQueryable<Employee> EmployeesQuery(Guid? callCenterId)

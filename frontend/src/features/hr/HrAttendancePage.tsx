@@ -2,10 +2,11 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation, useListCallCentersQuery,
+  useBulkMarkAttendanceMutation, useFillAttendanceFromClockInsMutation,
 } from "../../shared/api/baseApi";
 import { ATTENDANCE_STATUSES, hrLabel } from "../../shared/constants/hr";
 import {
-  Badge, Card, CardBody, EmptyState, Icon, Input, PageHeader, Select, Skeleton,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton,
   Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 
@@ -51,18 +52,39 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
   const [date, setDate] = useState(today());
   const { data: rows, isLoading } = useAttendanceDayQuery({ date, callCenterId });
   const [mark] = useMarkAttendanceMutation();
+  const [bulk, { isLoading: bulking }] = useBulkMarkAttendanceMutation();
+  const [fill, { isLoading: filling }] = useFillAttendanceFromClockInsMutation();
   const toast = useToast();
 
   async function setStatus(employeeId: string, status: string) {
     try { await mark({ employeeId, date, status }).unwrap(); }
     catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
   }
+  async function markAllPresent() {
+    try {
+      const r = await bulk({ date, status: "Present", callCenterId, onlyUnmarked: true }).unwrap();
+      toast.success(r.count > 0 ? `Marked ${r.count} present` : "Everyone's already marked", "Only unmarked employees were changed.");
+    } catch (err: unknown) { toast.error("Couldn't mark all", getErrorDetail(err) ?? "Try again."); }
+  }
+  async function fillFromClockIns() {
+    try {
+      const r = await fill({ date, callCenterId }).unwrap();
+      toast.success(r.count > 0 ? `Marked ${r.count} present from clock-ins` : "No new clock-ins", "Anyone who clocked in that day was marked Present.");
+    } catch (err: unknown) { toast.error("Couldn't fill", getErrorDetail(err) ?? "Try again."); }
+  }
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
         <Input type="date" aria-label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
         <span className="text-sm text-ink-500">{rows?.length ?? 0} employees</span>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="outline" size="sm" leftIcon={<Icon name="phone" size={13} />} loading={filling} onClick={fillFromClockIns}>Fill from clock-ins</Button>
+          <Button variant="outline" size="sm" leftIcon={<Icon name="check" size={13} />} loading={bulking} onClick={markAllPresent}>Mark all present</Button>
+          <InfoHint title="Attendance shortcuts" side="left">
+            "Fill from clock-ins" auto-marks Present anyone whose login clocked in that day. "Mark all present" fills the remaining unmarked employees. Neither overwrites a status you've already set — adjust individuals with the dropdowns.
+          </InfoHint>
+        </div>
       </div>
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>

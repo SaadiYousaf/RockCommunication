@@ -34,4 +34,26 @@ public class HrAttendanceController : ControllerBase
         await _mediator.Send(new MarkAttendanceCommand(body.EmployeeId, body.Date, body.Status, body.Notes), ct);
         return NoContent();
     }
+
+    public record BulkBody(DateTime Date, AttendanceStatus Status, Guid? CallCenterId, bool OnlyUnmarked = true);
+
+    /// <summary>Mark all (filtered) employees for a day with one status (unmarked only by default).</summary>
+    [HttpPost("bulk")]
+    public async Task<IActionResult> Bulk([FromBody] BulkBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        var count = await _mediator.Send(new BulkMarkAttendanceCommand(body.Date, body.Status, body.CallCenterId, body.OnlyUnmarked), ct);
+        return Ok(new { count });
+    }
+
+    public record FillBody(DateTime Date, Guid? CallCenterId);
+
+    /// <summary>Auto-mark Present anyone who clocked in that day (from agent sessions).</summary>
+    [HttpPost("fill-from-clock-ins")]
+    public async Task<IActionResult> Fill([FromBody] FillBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        var count = await _mediator.Send(new FillAttendanceFromClockInsCommand(body.Date, body.CallCenterId), ct);
+        return Ok(new { count });
+    }
 }
