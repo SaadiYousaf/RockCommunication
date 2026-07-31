@@ -20,7 +20,8 @@ import { formatUsd } from "../../shared/lib/format";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
-  const { data: queue, isLoading } = useValidatorQueueQuery();
+  // Poll: sales arrive as closers submit them, so the submission queue stays live across users.
+  const { data: queue, isLoading } = useValidatorQueueQuery(undefined, { pollingInterval: 30_000 });
   const [active, setActive] = useState<ValidatorQueueItem | null>(null);
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");

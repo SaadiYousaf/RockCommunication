@@ -38,7 +38,8 @@ const QUICK_DISPOSITIONS: { kind: WorkflowStage; disp: LeadDisposition; label: s
 export function MyQueuePage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { data: leads, isLoading, refetch } = useMyLeadsQuery();
+  // Poll: managers/round-robin can assign leads to me while I'm on this page.
+  const { data: leads, isLoading, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000 });
   const [transition] = useTransitionLeadMutation();
   const [dial] = useDialLeadMutation();
 

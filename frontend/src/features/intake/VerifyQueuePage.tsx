@@ -16,7 +16,8 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
 export function VerifyQueuePage() {
-  const { data: queue, isLoading } = useVerifierQueueQuery();
+  // Poll: leads land here from other users' actions (fronters capturing), so refresh without a reload.
+  const { data: queue, isLoading } = useVerifierQueueQuery(undefined, { pollingInterval: 30_000 });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const filtered = (queue ?? []).filter((l) =>

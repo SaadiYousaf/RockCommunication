@@ -35,7 +35,8 @@ function formatDelay(min: number) {
 
 export function CadencesPage() {
   const { data: cadences, isLoading } = useListCadencesQuery();
-  const { data: enrollments, isLoading: enrLoading } = useCadenceEnrollmentsQuery();
+  // Poll: the cadence runner advances step/status every minute server-side, so track it live.
+  const { data: enrollments, isLoading: enrLoading } = useCadenceEnrollmentsQuery(undefined, { pollingInterval: 30_000 });
   const [upsert, { isLoading: saving }] = useUpsertCadenceMutation();
   const toast = useToast();
 

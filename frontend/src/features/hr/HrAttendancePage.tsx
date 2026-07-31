@@ -102,7 +102,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
         </div>
       </div>
       <p className="text-[11px] text-ink-400 flex items-center gap-1.5 mb-3">
-        <Icon name="refresh" size={11} /> Marks save instantly here; the dashboard "Team status" widget refreshes hourly.
+        <Icon name="refresh" size={11} /> Marks save instantly here; the dashboard "Team status" widget updates every minute.
       </p>
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>

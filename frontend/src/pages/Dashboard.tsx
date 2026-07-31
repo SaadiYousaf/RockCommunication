@@ -111,7 +111,9 @@ export function Dashboard() {
   // Only supervisory users get them polled — a floor agent should not poll these.
   const canSeeSupervision = usePermission(Perm.SupervisorView);
 
-  const { data, isLoading, isError, refetch } = useDashboardSummaryQuery();
+  // Poll so the KPI strip, pipeline, activity feed and open-callback count stay near-real-time
+  // without a manual refresh (mirrors the wallboard/leaderboard cadence below).
+  const { data, isLoading, isError, refetch } = useDashboardSummaryQuery(undefined, { pollingInterval: 30_000 });
   const { data: leaders } = useLeaderboardQuery("today", {
     pollingInterval: 60_000,
     skip: !canSeeSupervision,
@@ -987,7 +989,8 @@ function eventHref(type: string): string {
 }
 
 function UpcomingEventsCard() {
-  const { data: events, isLoading } = useUpcomingEventsQuery(14);
+  // Poll so newly-scheduled callbacks/trainings surface without a refresh.
+  const { data: events, isLoading } = useUpcomingEventsQuery(14, { pollingInterval: 60_000 });
 
   return (
     <Card className="mb-5 overflow-hidden">
@@ -1081,7 +1084,8 @@ const livePresence: Record<TeamLiveStatus, "online" | "busy" | "away" | "offline
 
 function TeamStatusCard() {
   // Refresh hourly so attendance/status stays current without hammering the endpoint.
-  const { data, isLoading, isError } = useTeamStatusQuery(undefined, { pollingInterval: 3_600_000 });
+  // 60s so the live work-state column (On call/Available/On break) tracks the floor, not an hour behind.
+  const { data, isLoading, isError } = useTeamStatusQuery(undefined, { pollingInterval: 60_000 });
 
   // Group by call centre so a multi-centre viewer (agency-level) sees clear sections.
   const groups = useMemo(() => {
@@ -1155,7 +1159,7 @@ function TeamStatusCard() {
             ))}
           </div>
         )}
-        <RefreshNote>Refreshes every hour. Attendance comes from today's HR marks; live status reflects the floor in near real time.</RefreshNote>
+        <RefreshNote>Updates every minute. Attendance comes from today's HR marks; live status reflects the floor in near real time.</RefreshNote>
       </CardBody>
     </Card>
   );

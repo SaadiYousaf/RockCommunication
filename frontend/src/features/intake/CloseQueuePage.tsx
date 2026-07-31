@@ -13,7 +13,8 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
-  const { data: queue, isLoading } = useCloserQueueQuery();
+  // Poll: leads flow in as verifiers promote them, so keep the pool live without a manual reload.
+  const { data: queue, isLoading } = useCloserQueueQuery(undefined, { pollingInterval: 30_000 });
   const [addLead, { isLoading: adding }] = useCaptureCloserLeadMutation();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
