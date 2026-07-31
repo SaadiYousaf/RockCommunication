@@ -31,6 +31,7 @@ public class CadenceRunnerJob
         var now = DateTime.UtcNow;
         var due = await _db.CadenceEnrollments
             .Where(e => e.Status == "Active" && e.NextRunAt <= now)
+            .OrderBy(e => e.NextRunAt)   // most-overdue first, so a >200 backlog drains FIFO and can't starve
             .Take(200)
             .ToListAsync(ct);
 

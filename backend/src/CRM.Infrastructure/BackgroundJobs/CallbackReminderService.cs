@@ -1,4 +1,5 @@
 using CRM.Application.Common.Notifications;
+using CRM.Application.Common.Workflow;
 using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,7 @@ public class CallbackReminderService : BackgroundService
         using var scope = _sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var dispatcher = scope.ServiceProvider.GetRequiredService<INotificationDispatcher>();
+        var workflow = scope.ServiceProvider.GetRequiredService<IWorkflowEngine>();
 
         var threshold = DateTime.UtcNow.Add(LeadTime);
         var due = await db.ScheduledCallbacks
@@ -65,6 +67,18 @@ public class CallbackReminderService : BackgroundService
                 new[] { NotificationChannelType.InApp, NotificationChannelType.Email },
                 ct);
             cb.Reminded = true;
+
+            // Let workflow rules react to a due callback (escalate if unattended, auto-SMS the lead,
+            // webhook out…). Best-effort per callback so one failure never aborts the tick.
+            try
+            {
+                await workflow.PublishAsync(new CallbackDueEvent
+                {
+                    AgencyId = cb.AgencyId, LeadId = cb.LeadId, CallbackId = cb.Id,
+                    AssignedUserId = cb.AssignedUserId, ScheduledFor = cb.ScheduledFor,
+                }, ct);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Callback-due workflow publish failed for {CallbackId}", cb.Id); }
         }
         if (due.Count > 0) await db.SaveChangesAsync(ct);
     }

@@ -134,14 +134,16 @@ public class WorkflowAdminHandler :
     }
 
     public Task<IReadOnlyList<string>> Handle(AvailableEventTypesQuery request, CancellationToken ct) =>
-        // Only expose events the backend actually PUBLISHES — offering stage-changed / sale-validated /
-        // sale-funded / callback-due would let users build rules that silently never fire. Re-add each
-        // here only once a PublishAsync is wired at the corresponding transition.
+        // Only expose events the backend actually PUBLISHES — offering an unpublished event would let
+        // users build rules that silently never fire. Add each here only once its PublishAsync is wired.
+        // (sale.validated / sale.funded remain unpublished for now — do not expose them yet.)
         Task.FromResult<IReadOnlyList<string>>(new[]
         {
             WorkflowEventTypes.LeadCreated,
             WorkflowEventTypes.CallCompleted,
             WorkflowEventTypes.SaleClosed,
+            WorkflowEventTypes.LeadStageChanged,
+            WorkflowEventTypes.CallbackDue,
         });
 
     public Task<IReadOnlyList<string>> Handle(AvailableActionTypesQuery request, CancellationToken ct)

@@ -82,3 +82,20 @@ public class LeadStageChangedEvent : IWorkflowEvent
         ["agentId"] = AgentUserId
     };
 }
+
+/// <summary>Raised when a scheduled callback becomes due (from the reminder job).</summary>
+public class CallbackDueEvent : IWorkflowEvent
+{
+    public string EventType => WorkflowEventTypes.CallbackDue;
+    public Guid AgencyId { get; init; }
+    public Guid LeadId { get; init; }
+    public Guid CallbackId { get; init; }
+    public Guid AssignedUserId { get; init; }
+    public DateTime ScheduledFor { get; init; }
+
+    public IReadOnlyDictionary<string, object?> Facts => new Dictionary<string, object?>
+    {
+        ["leadId"] = LeadId, ["callbackId"] = CallbackId,
+        ["assignedUserId"] = AssignedUserId, ["scheduledFor"] = ScheduledFor
+    };
+}
