@@ -727,6 +727,16 @@ export interface ChatRoom {
   isDirect: boolean;
   memberUserIds: string[];
   members: ChatRoomMember[];
+  /** Preview of the most recent message (or "📎 filename" for an attachment). */
+  lastMessagePreview?: string | null;
+  lastMessageAt?: string | null;
+  lastMessageSenderId?: string | null;
+}
+
+/** One emoji reaction and everyone who applied it (client derives count + "mine"). */
+export interface ChatReaction {
+  emoji: string;
+  userIds: string[];
 }
 
 export interface ChatMessage {
@@ -738,6 +748,8 @@ export interface ChatMessage {
   attachmentName?: string | null;
   attachmentContentType?: string | null;
   attachmentSize?: number | null;
+  editedAt?: string | null;
+  reactions?: ChatReaction[] | null;
 }
 
 export interface DashboardStageBucket {

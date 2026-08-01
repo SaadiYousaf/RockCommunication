@@ -343,6 +343,18 @@ export const baseApi = createApi({
       query: () => "/api/chat/unread",
       providesTags: ["Rooms"],
     }),
+    toggleReaction: b.mutation<void, { messageId: string; emoji: string; roomId: string }>({
+      query: ({ messageId, emoji }) => ({ url: `/api/chat/messages/${messageId}/react`, method: "POST", body: { emoji } }),
+      // Live update arrives via the "ReactionsChanged" hub event; no refetch needed.
+    }),
+    editChatMessage: b.mutation<ChatMessage, { messageId: string; body: string; roomId: string }>({
+      query: ({ messageId, body }) => ({ url: `/api/chat/messages/${messageId}`, method: "PUT", body: { body } }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Messages", id: arg.roomId }],
+    }),
+    deleteChatMessage: b.mutation<void, { messageId: string; roomId: string }>({
+      query: ({ messageId }) => ({ url: `/api/chat/messages/${messageId}`, method: "DELETE" }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Messages", id: arg.roomId }],
+    }),
 
     // ===== Notification inbox (pipeline / work-assignment alerts) =====
     notifications: b.query<AppNotification[], { take?: number; unreadOnly?: boolean } | void>({
@@ -1317,6 +1329,7 @@ export const {
   useListIntegrationsQuery, useCheckIntegrationMutation,
   useRubricsQuery, useCreateRubricMutation,
   useChatRoomsQuery, useCreateRoomMutation, useRoomMessagesQuery, useSendMessageMutation, useSendAttachmentMutation,
+  useToggleReactionMutation, useEditChatMessageMutation, useDeleteChatMessageMutation,
   useAttendanceQuery,
   useChatOversightAgenciesQuery, useChatOversightCallCentersQuery,
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,

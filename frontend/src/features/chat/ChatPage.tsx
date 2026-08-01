@@ -8,10 +8,12 @@ import {
   useStartDirectMessageMutation,
   useMarkRoomReadMutation, useRoomMessagesQuery, useSendAttachmentMutation,
   useSendMessageMutation, useUserDirectoryQuery,
+  useToggleReactionMutation, useEditChatMessageMutation, useDeleteChatMessageMutation,
 } from "../../shared/api/baseApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
-import type { ChatMessage } from "../../shared/api/types";
+import type { ChatMessage, ChatReaction } from "../../shared/api/types";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Avatar, Badge, Button, EmptyState, Icon, Input, Modal, Skeleton, useToast, cn,
 } from "../../shared/ui";
@@ -34,6 +36,16 @@ function dayLabel(iso: string) {
 }
 
 /** A direct room stores its name as "DM: <person>" — show just the person. Channels keep their name. */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉", "👀"];
+
+function roomListTime(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.toDateString() === now.toDateString()
+    ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function roomLabel(name: string, isDirect: boolean) {
   return isDirect ? name.replace(/^DM:\s*/i, "") : name;
 }
@@ -90,6 +102,16 @@ export function ChatPage() {
   // userId -> last "Typing" timestamp (ms) in the ACTIVE room; entries expire after a few seconds.
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const lastTypingSentRef = useRef(0);
+  // Live overrides applied over the fetched/live messages: reaction sets, edits, and deletions
+  // arriving via SignalR, so we never mutate the RTK cache directly.
+  type MsgOverride = { body?: string; editedAt?: string | null; reactions?: ChatReaction[]; deleted?: boolean };
+  const [overrides, setOverrides] = useState<Record<string, MsgOverride>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [toggleReactionMut] = useToggleReactionMutation();
+  const [editMsg] = useEditChatMessageMutation();
+  const [deleteMsg] = useDeleteChatMessageMutation();
+  const confirm = useConfirm();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +156,18 @@ export function ChatPage() {
     conn.on("Typing", (roomId: string, uid: string) => {
       if (roomId !== activeRoomRef.current || uid === auth.user?.id) return;
       setTypingUsers((prev) => ({ ...prev, [uid]: Date.now() }));
+    });
+    conn.on("ReactionsChanged", (e: { roomId: string; messageId: string; reactions: ChatReaction[] }) => {
+      if (e.roomId !== activeRoomRef.current) return;
+      setOverrides((prev) => ({ ...prev, [e.messageId]: { ...prev[e.messageId], reactions: e.reactions } }));
+    });
+    conn.on("MessageEdited", (m: ChatMessage) => {
+      if (m.roomId !== activeRoomRef.current) return;
+      setOverrides((prev) => ({ ...prev, [m.id]: { ...prev[m.id], body: m.body, editedAt: m.editedAt, reactions: m.reactions ?? undefined } }));
+    });
+    conn.on("MessageDeleted", (e: { roomId: string; messageId: string }) => {
+      if (e.roomId !== activeRoomRef.current) return;
+      setOverrides((prev) => ({ ...prev, [e.messageId]: { ...prev[e.messageId], deleted: true } }));
     });
     conn.onreconnecting(() => setConnectionState("connecting"));
     conn.onreconnected(() => setConnectionState("connected"));
@@ -200,6 +234,8 @@ export function ChatPage() {
   useEffect(() => {
     setLiveMessages([]);
     setTypingUsers({});
+    setOverrides({});
+    setEditingId(null);
     if (activeRoom) {
       markRead(activeRoom).unwrap().then(() => refetchUnread()).catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -244,15 +280,17 @@ export function ChatPage() {
   const messages = useMemo(() => {
     const seen = new Set<string>();
     const out: ChatMessage[] = [];
-    for (const m of serverMessages ?? []) {
-      if (!seen.has(m.id)) { seen.add(m.id); out.push(m); }
-    }
-    for (const m of liveMessages) {
-      if (m.roomId !== activeRoom) continue;
-      if (!seen.has(m.id)) { seen.add(m.id); out.push(m); }
-    }
+    const add = (m: ChatMessage) => {
+      if (seen.has(m.id)) return;
+      seen.add(m.id);
+      const o = overrides[m.id];
+      if (o?.deleted) return;
+      out.push(o ? { ...m, ...(o.body !== undefined && { body: o.body }), ...(o.editedAt !== undefined && { editedAt: o.editedAt }), ...(o.reactions !== undefined && { reactions: o.reactions }) } : m);
+    };
+    for (const m of serverMessages ?? []) add(m);
+    for (const m of liveMessages) { if (m.roomId === activeRoom) add(m); }
     return out;
-  }, [serverMessages, liveMessages, activeRoom]);
+  }, [serverMessages, liveMessages, activeRoom, overrides]);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
@@ -260,8 +298,13 @@ export function ChatPage() {
   const filteredRooms = useMemo(() => {
     if (!rooms) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return rooms;
-    return rooms.filter((r) => r.name.toLowerCase().includes(q));
+    const list = q
+      ? rooms.filter((r) => r.name.toLowerCase().includes(q) || (r.lastMessagePreview ?? "").toLowerCase().includes(q))
+      : rooms;
+    // Most-recently-active room first (rooms with no messages fall to the bottom).
+    return [...list].sort((a, b) =>
+      (b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0) -
+      (a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0));
   }, [rooms, search]);
 
   // Seed lastReadAt map from the rooms list. Live updates layer on top.
@@ -329,6 +372,27 @@ export function ChatPage() {
     : typingNames.length === 1 ? `${typingNames[0]} is typing…`
     : typingNames.length === 2 ? `${typingNames[0]} and ${typingNames[1]} are typing…`
     : "Several people are typing…";
+
+  function toggleReaction(messageId: string, emoji: string) {
+    if (!activeRoom) return;
+    toggleReactionMut({ messageId, emoji, roomId: activeRoom }).unwrap().catch(() => {});
+  }
+  function startEdit(m: ChatMessage) { setEditingId(m.id); setEditBody(m.body); }
+  function cancelEdit() { setEditingId(null); setEditBody(""); }
+  async function saveEdit(m: ChatMessage) {
+    const text = editBody.trim();
+    if (!text || !activeRoom) { cancelEdit(); return; }
+    if (text === m.body) { cancelEdit(); return; }
+    try { await editMsg({ messageId: m.id, body: text, roomId: activeRoom }).unwrap(); }
+    catch (err: unknown) { toast.error("Couldn't edit", getErrorDetail(err) ?? "Try again."); }
+    cancelEdit();
+  }
+  async function onDeleteMessage(m: ChatMessage) {
+    if (!activeRoom) return;
+    if (!(await confirm({ title: "Delete message?", description: "This removes the message for everyone.", confirmLabel: "Delete", danger: true }))) return;
+    try { await deleteMsg({ messageId: m.id, roomId: activeRoom }).unwrap(); }
+    catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); }
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -473,12 +537,17 @@ export function ChatPage() {
                           <span className={cn("text-sm truncate", active || unreadCount > 0 ? "font-semibold text-ink-900" : "font-medium text-ink-700")}>
                             {r.isDirect ? roomLabel(r.name, true) : r.name}
                           </span>
-                          {unreadCount > 0 && (
-                            <Badge tone="brand" variant="solid" className="shrink-0 tabular-nums">{unreadCount}</Badge>
-                          )}
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {r.lastMessageAt && <span className="text-[11px] text-ink-400 tabular-nums">{roomListTime(r.lastMessageAt)}</span>}
+                            {unreadCount > 0 && (
+                              <Badge tone="brand" variant="solid" className="tabular-nums">{unreadCount}</Badge>
+                            )}
+                          </span>
                         </div>
-                        <div className="text-xs text-ink-500 truncate tabular-nums">
-                          {r.memberUserIds.length} member{r.memberUserIds.length === 1 ? "" : "s"}
+                        <div className={cn("text-xs truncate", unreadCount > 0 ? "text-ink-700 font-medium" : "text-ink-500")}>
+                          {r.lastMessagePreview
+                            ? <>{r.lastMessageSenderId === auth.user?.id ? "You: " : ""}{r.lastMessagePreview}</>
+                            : <span className="italic text-ink-400">No messages yet</span>}
                         </div>
                       </div>
                     </button>
@@ -584,8 +653,9 @@ export function ChatPage() {
                         const showHeader = !prev || prev.senderUserId !== m.senderUserId;
                         const senderName = isMe ? "You" : (userMap.get(m.senderUserId) ?? "User");
                         const emojiOnly = !!m.body && !m.attachmentName && isEmojiOnly(m.body);
+                        const isEditing = editingId === m.id;
                         return (
-                          <div key={m.id} className={cn("flex gap-2.5", isMe ? "justify-end" : "justify-start")}>
+                          <div key={m.id} className={cn("group relative flex gap-2.5", isMe ? "justify-end" : "justify-start")}>
                             {!isMe && (
                               <div className="w-8 shrink-0">
                                 {showHeader && <Avatar name={senderName} size={32} />}
@@ -597,7 +667,15 @@ export function ChatPage() {
                                   {senderName} · {formatTime(m.sentAt)}
                                 </div>
                               )}
-                              {emojiOnly ? (
+                              {isEditing ? (
+                                <div className="flex items-center gap-2">
+                                  <input autoFocus className="input-base h-9 w-56 sm:w-64" value={editBody}
+                                    onChange={(e) => setEditBody(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(m); if (e.key === "Escape") cancelEdit(); }} />
+                                  <Button size="sm" onClick={() => saveEdit(m)}>Save</Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                                </div>
+                              ) : emojiOnly ? (
                                 <div className={cn("text-[2.75rem] leading-none select-none px-1 py-0.5", isMe && "text-right")}>{m.body}</div>
                               ) : (
                                 <div className={cn(
@@ -610,11 +688,31 @@ export function ChatPage() {
                                     <Attachment message={m} accessToken={auth.accessToken} isMe={isMe} />
                                   )}
                                   {m.body && (
-                                    <div className="px-3.5 py-2 text-sm leading-relaxed">{m.body}</div>
+                                    <div className="px-3.5 py-2 text-sm leading-relaxed">
+                                      {m.body}
+                                      {m.editedAt && <span className={cn("text-[10px] ml-1.5", isMe ? "text-white/60" : "text-ink-400")}>(edited)</span>}
+                                    </div>
                                   )}
                                 </div>
                               )}
-                              {isMe && otherMembers.length > 0 && (
+
+                              {/* Reactions */}
+                              {m.reactions && m.reactions.some((r) => r.userIds.length > 0) && (
+                                <div className={cn("flex flex-wrap gap-1 mt-1", isMe && "justify-end")}>
+                                  {m.reactions.filter((r) => r.userIds.length > 0).map((r) => {
+                                    const mine = r.userIds.includes(auth.user?.id ?? "");
+                                    return (
+                                      <button key={r.emoji} type="button" onClick={() => toggleReaction(m.id, r.emoji)}
+                                        className={cn("inline-flex items-center gap-1 px-1.5 h-6 rounded-full text-xs border transition-colors",
+                                          mine ? "bg-brand-50 border-brand-300 text-brand-700" : "bg-white border-ink-200 text-ink-600 hover:border-ink-300")}>
+                                        <span>{r.emoji}</span><span className="tabular-nums">{r.userIds.length}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {isMe && otherMembers.length > 0 && !isEditing && (
                                 <div className="mt-0.5 px-1 text-right">
                                   <ReadReceipt
                                     state={
@@ -626,6 +724,27 @@ export function ChatPage() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Hover toolbar: quick-react + edit/delete (own) */}
+                            {!isEditing && (
+                              <div className={cn(
+                                "absolute -top-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center gap-0.5 bg-white border hairline rounded-lg shadow-sm px-1 h-7 z-10",
+                                isMe ? "right-1" : "left-10",
+                              )}>
+                                {QUICK_REACTIONS.map((e) => (
+                                  <button key={e} type="button" onClick={() => toggleReaction(m.id, e)}
+                                    className="h-6 w-6 grid place-items-center hover:bg-ink-100 rounded text-sm" aria-label={`React ${e}`}>{e}</button>
+                                ))}
+                                {isMe && !m.attachmentName && (
+                                  <button type="button" onClick={() => startEdit(m)}
+                                    className="h-6 w-6 grid place-items-center hover:bg-ink-100 rounded" aria-label="Edit message"><Icon name="edit" size={12} /></button>
+                                )}
+                                {isMe && (
+                                  <button type="button" onClick={() => onDeleteMessage(m)}
+                                    className="h-6 w-6 grid place-items-center hover:bg-rose-50 rounded" aria-label="Delete message"><Icon name="trash" size={12} className="text-rose-500" /></button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
