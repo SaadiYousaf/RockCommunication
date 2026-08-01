@@ -96,6 +96,8 @@ interface CommandPaletteApi {
   open: () => void;
   close: () => void;
   toggle: () => void;
+  /** Open the keyboard-shortcuts help overlay. */
+  showHelp: () => void;
 }
 
 const Ctx = createContext<CommandPaletteApi | null>(null);
@@ -106,30 +108,76 @@ export function useCommandPalette() {
   return ctx;
 }
 
+/** "g then key" quick-navigation shortcuts, also rendered in the help overlay. */
+const GOTO: { key: string; to: string; label: string }[] = [
+  { key: "d", to: "/dashboard", label: "Dashboard" },
+  { key: "l", to: "/leads",     label: "Leads" },
+  { key: "s", to: "/sales",     label: "Sales" },
+  { key: "q", to: "/queue",     label: "My Queue" },
+  { key: "c", to: "/chat",      label: "Chat" },
+  { key: "m", to: "/calendar",  label: "Calendar" },
+  { key: "a", to: "/agent",     label: "Agent Panel" },
+  { key: "t", to: "/team",      label: "Team" },
+  { key: "k", to: "/kb",        label: "Knowledge" },
+  { key: "p", to: "/profile",   label: "My Profile" },
+];
+
+function isEditableTarget(t: EventTarget | null): boolean {
+  const el = t as HTMLElement | null;
+  if (!el) return false;
+  return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+}
+
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
   const api = useMemo<CommandPaletteApi>(() => ({
     open: () => setOpen(true),
     close: () => setOpen(false),
     toggle: () => setOpen((o) => !o),
+    showHelp: () => setHelpOpen(true),
   }), []);
 
-  // Global ⌘K / Ctrl+K
+  // "g" prefix state for the g-then-key navigation combos.
+  const gotoArmed = useRef(false);
+  const gotoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // ⌘K / Ctrl+K toggles the palette from anywhere (even inside inputs).
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         api.toggle();
+        return;
+      }
+      // Single-key shortcuts must not fire while typing, or while a dialog/palette is open.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+
+      if (gotoArmed.current) {
+        gotoArmed.current = false;
+        const target = GOTO.find((g) => g.key === e.key.toLowerCase());
+        if (target) { e.preventDefault(); navigate(target.to); }
+        return;
+      }
+      if (e.key === "?") { e.preventDefault(); setHelpOpen(true); return; }
+      if (e.key.toLowerCase() === "g") {
+        gotoArmed.current = true;
+        if (gotoTimer.current) clearTimeout(gotoTimer.current);
+        gotoTimer.current = setTimeout(() => { gotoArmed.current = false; }, 1500);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [api]);
+  }, [api, navigate]);
 
   return (
     <Ctx.Provider value={api}>
       {children}
       {open && <Palette onClose={api.close} />}
+      {helpOpen && <ShortcutsHelp onClose={() => setHelpOpen(false)} />}
     </Ctx.Provider>
   );
 }
@@ -143,6 +191,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const toast = useToast();
+  const palette = useCommandPalette();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -174,6 +223,10 @@ function Palette({ onClose }: { onClose: () => void }) {
   // Dynamic action items (clock-in, status changes, sign out, etc.)
   const actionItems: PaletteItem[] = useMemo(() => [
     {
+      id: "act-shortcuts", label: "Keyboard shortcuts", group: "Actions", icon: "info", keywords: ["help", "shortcuts", "keys", "cheatsheet", "?"],
+      onRun: () => palette.showHelp(),
+    },
+    {
       id: "act-clockin", label: "Clock in", group: "Actions", icon: "phone", keywords: ["start shift", "available"],
       onRun: async () => { try { await clockIn().unwrap(); toast.success("Clocked in"); } catch (e) { toast.error("Couldn't clock in", getErrorDetail(e)); } },
     },
@@ -197,7 +250,7 @@ function Palette({ onClose }: { onClose: () => void }) {
       id: "act-signout", label: "Sign out", group: "Actions", icon: "x", keywords: ["log out", "logout"],
       onRun: () => { dispatch(clearAuth()); navigate("/login"); },
     },
-  ], [clockIn, clockOut, dispatch, navigate, setAgentStatus, toast]);
+  ], [clockIn, clockOut, dispatch, navigate, setAgentStatus, toast, palette]);
 
   // Live result items (Leads / Users / Knowledge / Dial-this-lead)
   const liveItems: PaletteItem[] = useMemo(() => {
@@ -425,5 +478,78 @@ function Kbd({ children }: { children: ReactNode }) {
     <kbd className="font-mono px-1 py-0.5 rounded border border-ink-200 text-ink-600 bg-white">
       {children}
     </kbd>
+  );
+}
+
+/* -------------------- keyboard-shortcuts help overlay -------------------- */
+
+function ShortcutsHelp({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  const sections: { title: string; rows: { keys: ReactNode; label: string }[] }[] = [
+    {
+      title: "General",
+      rows: [
+        { keys: <><Kbd>⌘</Kbd><Kbd>K</Kbd></>, label: "Open command palette" },
+        { keys: <Kbd>?</Kbd>, label: "Show this help" },
+        { keys: <Kbd>Esc</Kbd>, label: "Close menus & dialogs" },
+      ],
+    },
+    {
+      title: "Lists & palette",
+      rows: [
+        { keys: <><Kbd>↑</Kbd><Kbd>↓</Kbd></>, label: "Move selection" },
+        { keys: <Kbd>↵</Kbd>, label: "Open / run" },
+      ],
+    },
+    {
+      title: "Go to (press G, then…)",
+      rows: GOTO.map((g) => ({
+        keys: <><Kbd>G</Kbd><span className="text-ink-400 text-[10px]">then</span><Kbd>{g.key.toUpperCase()}</Kbd></>,
+        label: g.label,
+      })),
+    },
+  ];
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
+      className="fixed inset-0 z-[70] grid place-items-center p-4 animate-fade-in">
+      <div className="absolute inset-0 bg-ink-900/55 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-pop border border-ink-200/70 overflow-hidden animate-scale-in">
+        <div className="flex items-center justify-between px-5 py-4 border-b hairline">
+          <div className="flex items-center gap-2.5">
+            <span className="h-8 w-8 rounded-lg bg-brand-50 text-brand-600 grid place-items-center"><Icon name="info" size={16} /></span>
+            <h2 className="text-base font-semibold text-ink-900">Keyboard shortcuts</h2>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40">
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto grid sm:grid-cols-2 gap-x-8 gap-y-5">
+          {sections.map((s) => (
+            <div key={s.title} className={cn(s.title.startsWith("Go to") && "sm:row-span-2")}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500 mb-2">{s.title}</div>
+              <div className="space-y-1.5">
+                {s.rows.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-ink-700">{r.label}</span>
+                    <span className="inline-flex items-center gap-1 shrink-0">{r.keys}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-2.5 border-t hairline bg-ink-50/60 text-[11px] text-ink-500">
+          Tip: press <Kbd>?</Kbd> anywhere to reopen this, or <Kbd>⌘</Kbd><Kbd>K</Kbd> to search & jump.
+        </div>
+      </div>
+    </div>
   );
 }
