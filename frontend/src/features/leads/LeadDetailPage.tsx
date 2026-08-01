@@ -182,6 +182,7 @@ export function LeadDetailPage() {
         <div className="flex items-start gap-4">
           <Avatar name={lead.fullName} size={48} />
           <div className="flex-1 min-w-0">
+            <div className="section-title mb-1">Lead</div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold text-balance">{lead.fullName}</h1>
               <StageBadge stage={lead.stage} />

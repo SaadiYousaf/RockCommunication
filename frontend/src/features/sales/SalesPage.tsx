@@ -89,18 +89,19 @@ export function SalesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Revenue"
         title="Sales"
         description="Record new sales, validate them, and fund them through to commission."
-      />
-
-      <Tabs<ViewTab>
-        className="mb-4"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { value: "record", label: "Record & validate", icon: <Icon name="edit" size={14} /> },
-          { value: "list", label: "All sales", icon: <Icon name="list" size={14} /> },
-        ]}
+        tabs={
+          <Tabs<ViewTab>
+            value={tab}
+            onChange={setTab}
+            items={[
+              { value: "record", label: "Record & validate", icon: <Icon name="edit" size={14} /> },
+              { value: "list", label: "All sales", icon: <Icon name="list" size={14} /> },
+            ]}
+          />
+        }
       />
 
       {/* RecordView is called inline (not <RecordView/>) on purpose: it's a nested render helper,

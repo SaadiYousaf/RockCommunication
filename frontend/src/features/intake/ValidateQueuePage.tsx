@@ -7,7 +7,7 @@ import {
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import {
   VALIDATOR_STATUSES as STATUSES,
@@ -30,13 +30,24 @@ export function ValidateQueuePage() {
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => LABEL[s.status] },
   });
+  const total = queue?.length ?? 0;
+  const approved = (queue ?? []).filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
+  const premiumTotal = (queue ?? []).reduce((sum, s) => sum + (s.monthlyPremium ?? 0), 0);
 
   return (
     <>
       <PageHeader
+        eyebrow="Submission"
         title="Submission Queue"
         description="Sales submitted by closers. Open a sale to copy its details into the carrier portal, then set its submission status."
       />
+      {queue && total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+          <Stat label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />
+          <Stat label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
+          <Stat label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint="Total across the queue" />
+        </div>
+      )}
       <Card>
         <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />

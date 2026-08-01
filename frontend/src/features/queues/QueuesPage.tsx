@@ -16,6 +16,7 @@ export function QueuesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Operations"
         title="Telephony"
         description="Configure inbound queues, voicemail drops, and public web-form lead capture endpoints."
       />

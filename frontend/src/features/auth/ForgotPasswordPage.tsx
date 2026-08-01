@@ -53,7 +53,7 @@ export function ForgotPasswordPage() {
 export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-ink-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-soft p-8">
+      <div className="w-full max-w-md surface-elevated p-8">
         <div className="flex flex-col items-center mb-6">
           <BrandLogo variant="mark" size={44} />
           <h1 className="mt-4 text-xl font-semibold text-ink-900 text-center text-balance">{title}</h1>

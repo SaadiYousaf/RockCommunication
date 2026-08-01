@@ -4,7 +4,7 @@ import type { SaleListItem } from "../../shared/api/baseApi";
 import type { BadgeTone } from "../../shared/ui";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatUsd } from "../../shared/lib/format";
@@ -25,6 +25,8 @@ export function LicenseAgentQueuePage() {
   const { data, isLoading } = useListSalesQuery({ take: 200, sort: "soldAt-desc" });
   const items = data?.items ?? [];
   const totalCommission = items.reduce((sum, s) => sum + (s.commissionEarned ?? 0), 0);
+  const fundedCount = items.filter((s) => s.fundedAt).length;
+  const inReviewCount = items.length - fundedCount;
   const { sorted, dirFor, toggle } = useTableSort(items, {
     accessors: { status: (s) => statusOf(s).label },
   });
@@ -32,16 +34,32 @@ export function LicenseAgentQueuePage() {
   return (
     <>
       <PageHeader
+        eyebrow="License agent"
         title="My Sales"
         description="Sales assigned to you as the licensed agent of record — review each and track the commission you've earned."
       />
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          <Stat label="Assigned"          value={items.length}                 icon={<Icon name="briefcase" size={16} />} tone="brand" />
+          <Stat label="Funded"            value={fundedCount}                  icon={<Icon name="success" size={16} />}   tone="success"
+                hint="First premium draft cleared — commission payable." />
+          <Stat label="In review"         value={inReviewCount}                icon={<Icon name="clock" size={16} />}     tone="warning"
+                hint="Pending or approved, not yet funded." />
+          <Stat label="Commission earned" value={formatUsd(totalCommission)}   icon={<Icon name="card" size={16} />}      tone="accent" />
+        </div>
+      )}
+
       <Card>
-        <CardHeader
-          title="Assigned to me"
-          subtitle={data ? `${items.length === 1 ? "1 sale" : `${items.length} sales`} · ${formatUsd(totalCommission)} commission` : undefined}
-        />
+        <CardHeader title="Assigned to me" />
         <CardBody>
-          {isLoading ? <Skeleton className="h-40" /> : items.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : items.length === 0 ? (
             <EmptyState
               icon={<Icon name="briefcase" size={20} />}
               title="No sales assigned yet"

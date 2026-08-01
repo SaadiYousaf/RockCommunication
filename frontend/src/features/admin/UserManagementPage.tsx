@@ -80,6 +80,7 @@ export function UserManagementPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title="User management"
         description="Add or remove user roles, reset passwords, and manage account access."
         actions={

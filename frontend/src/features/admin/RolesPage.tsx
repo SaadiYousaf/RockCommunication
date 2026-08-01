@@ -151,6 +151,7 @@ export function RolesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title="Role management"
         description="Create roles with any name and grant access to specific modules. Users with the role automatically see only the modules you tick."
         actions={

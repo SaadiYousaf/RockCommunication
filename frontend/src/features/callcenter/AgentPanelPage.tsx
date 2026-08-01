@@ -126,6 +126,7 @@ export function AgentPanelPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Call center"
         title="Agent control panel"
         description="Your live workspace for status, calls, and wrap-ups."
         actions={

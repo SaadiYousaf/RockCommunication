@@ -56,6 +56,7 @@ export function DncPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Call center"
         title="Do Not Call list"
         description="Phone numbers your team is prohibited from contacting. Auto-checked before every dial."
         actions={<Can permission={Perm.DncManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Add number</Button></Can>}

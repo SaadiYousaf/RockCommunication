@@ -1,5 +1,4 @@
 import type { LeadList } from "../../shared/api/types";
-import type { IconName } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -7,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -90,15 +89,16 @@ export function LeadListsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Pipeline"
         title="Lead lists"
         description="Group leads into named lists and import them via CSV (automatically scrubbed against your DNC list)."
         actions={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button></Can>}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <SmallTile label="Total lists"  value={stats.total}      icon="inbox"     tone="bg-brand-50 text-brand-600" />
-        <SmallTile label="Active"       value={stats.active}     icon="check"     tone="bg-emerald-50 text-emerald-600" />
-        <SmallTile label="Total leads"  value={stats.totalLeads} icon="list"      tone="bg-accent-50 text-accent-600" />
+        <Stat label="Total lists" value={stats.total}      icon={<Icon name="inbox" size={16} />} tone="brand" />
+        <Stat label="Active"      value={stats.active}     icon={<Icon name="check" size={16} />} tone="success" />
+        <Stat label="Total leads" value={stats.totalLeads.toLocaleString()} icon={<Icon name="list" size={16} />}  tone="accent" />
       </div>
 
       <Card className="mb-4">
@@ -304,19 +304,5 @@ export function LeadListsPage() {
         </form>
       </Modal>
     </>
-  );
-}
-
-function SmallTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
-  return (
-    <div className="surface p-4 flex items-center gap-3 hover:shadow-card-hover transition-shadow">
-      <div className={`h-10 w-10 rounded-lg grid place-items-center shrink-0 ${tone}`}>
-        <Icon name={icon} size={18} />
-      </div>
-      <div className="min-w-0">
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
-        <div className="text-xl font-semibold text-ink-900 tabular-nums">{value.toLocaleString()}</div>
-      </div>
-    </div>
   );
 }

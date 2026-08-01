@@ -24,6 +24,7 @@ export function CampaignsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Call center"
         title="Call-center configuration"
         description="Campaigns, lead sources, skills, and wrap-up dispositions — the building blocks of your dialer."
       />

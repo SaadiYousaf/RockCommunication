@@ -23,6 +23,7 @@ export function IntakeFormPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Fronter intake"
         title="Get Yourself Protected — Lead Intake"
         description="Capture the prospect's Jornaya details. All fields are required and must be typed (no paste)."
       />

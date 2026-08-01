@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
 } from "../../shared/api/baseApi";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader, Skeleton, cn } from "../../shared/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader, Skeleton, Stat, cn } from "../../shared/ui";
 
 /**
  * Full notification inbox — every work-assignment / pipeline alert for the signed-in user,
@@ -23,9 +23,19 @@ export function NotificationsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Activity"
         title="Notifications"
         description="Every alert about work assigned to you and leads moving into your queue."
       />
+
+      {!isLoading && notifs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <Stat label="Total" value={notifs.length} icon={<Icon name="bell" size={16} />} tone="brand" />
+          <Stat label="Unread" value={unread} icon={<Icon name="mail" size={16} />} tone="warning" />
+          <Stat label="Read" value={notifs.length - unread} icon={<Icon name="check" size={16} />} tone="success" />
+        </div>
+      )}
+
       <Card>
         <CardHeader
           title="All notifications"

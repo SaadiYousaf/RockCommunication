@@ -107,6 +107,7 @@ export function MyQueuePage() {
   return (
     <>
       <PageHeader
+        eyebrow="Workspace"
         title="My Queue"
         description="Leads currently assigned to you. Dial, dispose, and move them through the pipeline."
       />
@@ -195,7 +196,7 @@ export function MyQueuePage() {
                       </div>
                     </div>
                   </TD>
-                  <TD className="font-mono text-xs text-ink-700">{formatPhone(l.phoneNumber)}</TD>
+                  <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
                   <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
                   <TD className="whitespace-nowrap">
                     <span title={new Date(l.createdAt).toLocaleString()}>

@@ -9,7 +9,7 @@ import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/type
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
@@ -28,9 +28,19 @@ export function VerifyQueuePage() {
       location: (l) => [l.city, l.state].filter(Boolean).join(", "),
     },
   });
+  const total = queue?.length ?? 0;
+  const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
+  const topScore = total ? Math.max(...(queue ?? []).map((l) => l.score)) : 0;
   return (
     <>
-      <PageHeader title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
+      <PageHeader eyebrow="Verifier" title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
+      {queue && total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+          <Stat label="In queue" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Awaiting verification" />
+          <Stat label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
+          <Stat label="Top priority" value={Math.round(topScore)} icon={<Icon name="zap" size={16} />} tone="accent" hint="Highest score in queue" />
+        </div>
+      )}
       <Card>
         <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />

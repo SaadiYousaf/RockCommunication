@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import {
@@ -11,7 +11,7 @@ import type { CallCenterDto } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /**
@@ -39,6 +39,16 @@ export function CallCentersPage() {
     accessors: { status: (c) => (c.isActive ? 1 : 0) },
   });
   const isLoading = isSuperAdmin ? (scoped.isLoading || !agencyId) : own.isLoading;
+
+  // At-a-glance totals for the currently-scoped agency (mirrors AgenciesPage).
+  const stats = useMemo(() => {
+    const l = list ?? [];
+    return {
+      total: l.length,
+      active: l.filter((c) => c.isActive).length,
+      leads: l.reduce((sum, c) => sum + (c.leadCount ?? 0), 0),
+    };
+  }, [list]);
 
   const [createCc, { isLoading: creating }] = useCreateCallCenterMutation();
   const [createCcInAgency, { isLoading: creatingSa }] = useCreateCallCenterInAgencyMutation();
@@ -84,6 +94,7 @@ export function CallCentersPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title="Call Centers"
         badge={
           <InfoHint title="Agency vs call centre" side="right">
@@ -99,6 +110,32 @@ export function CallCentersPage() {
           </Button>
         }
       />
+
+      {/* At-a-glance totals for the scoped agency */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+        <Stat
+          label="Call centers"
+          value={stats.total}
+          icon={<Icon name="building" size={18} />}
+          hint="Operational units"
+          tone="brand"
+        />
+        <Stat
+          label="Active"
+          value={stats.active}
+          icon={<Icon name="check" size={18} />}
+          hint={`${stats.total - stats.active} inactive`}
+          tone="success"
+        />
+        <Stat
+          label="Leads"
+          value={stats.leads}
+          icon={<Icon name="target" size={18} />}
+          hint="Across all centers"
+          tone="accent"
+        />
+      </div>
+
       <Card>
         <CardHeader
           title="Call centers"

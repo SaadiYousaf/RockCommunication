@@ -55,10 +55,17 @@ export function AgencyDetailPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title={agency?.name ?? "Agency"}
         description={agency
           ? `${agency.code ? agency.code + " · " : ""}CEO ${agency.ceoUserName ?? "unassigned"} · ${agency.userCount} user(s)`
           : undefined}
+        breadcrumbs={[{ label: "Admin" }, { label: "Agencies", to: "/admin/agencies" }, { label: agency?.name ?? "Agency" }]}
+        badge={
+          <Badge tone="brand" variant="soft">
+            <Icon name="shield" size={11} className="-ml-0.5" /> SuperAdmin
+          </Badge>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">

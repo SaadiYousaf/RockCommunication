@@ -53,6 +53,7 @@ export function DocumentsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Operations"
         title="Documents"
         description="Shared Word documents and spreadsheets. Open to read in the protected viewer — copying, printing and downloading are disabled."
       />

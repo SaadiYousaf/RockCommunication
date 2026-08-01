@@ -1,11 +1,10 @@
-import type { IconName } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, cn,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
@@ -86,6 +85,7 @@ export function SupervisorPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Call center"
         title="Supervisor"
         description="Live floor view — monitor, coach, and intervene with agents in real time."
         actions={
@@ -95,11 +95,11 @@ export function SupervisorPage() {
         }
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <SupTile label="Clocked in" value={stats.total}     icon="users" tone="bg-brand-50 text-brand-600" />
-        <SupTile label="Available"  value={stats.available} icon="check"   tone="bg-emerald-50 text-emerald-600" />
-        <SupTile label="On call"    value={stats.onCall}    icon="phone"  tone="bg-brand-50 text-brand-600" />
-        <SupTile label="On break"   value={stats.onBreak}   icon="clock"  tone="bg-amber-50 text-amber-600" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <Stat label="Clocked in" value={stats.total}     icon={<Icon name="users" size={16} />} tone="brand" />
+        <Stat label="Available"  value={stats.available} icon={<Icon name="check" size={16} />} tone="success" />
+        <Stat label="On call"    value={stats.onCall}    icon={<Icon name="phone" size={16} />} tone="accent" />
+        <Stat label="On break"   value={stats.onBreak}   icon={<Icon name="clock" size={16} />} tone="warning" />
       </div>
 
       <Card className="mb-4">
@@ -219,19 +219,5 @@ export function SupervisorPage() {
         </Table>
       )}
     </>
-  );
-}
-
-function SupTile({ label, value, icon, tone }: { label: string; value: number; icon: IconName; tone: string }) {
-  return (
-    <div className="surface p-4 flex items-center gap-3 transition-shadow hover:shadow-card-hover">
-      <div className={`h-10 w-10 rounded-lg grid place-items-center ${tone}`}>
-        <Icon name={icon} size={18} />
-      </div>
-      <div className="min-w-0">
-        <div className="text-xs font-medium text-ink-500 uppercase tracking-wide truncate">{label}</div>
-        <div className="text-xl font-semibold text-ink-900 tabular-nums">{value}</div>
-      </div>
-    </div>
   );
 }

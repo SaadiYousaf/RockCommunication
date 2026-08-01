@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useChangePasswordMutation, useMeQuery } from "../../shared/api/baseApi";
 import { setAuth, clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
-import { Button, Card, CardBody, Icon, Input, useToast } from "../../shared/ui";
+import { Button, Card, CardBody, Icon, Input, cn, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
 
 /**
@@ -39,9 +39,13 @@ export function ChangePasswordPage() {
   };
 
   const matches = next.length > 0 && next === confirm;
-  const meets = next.length >= 8
-    && /[A-Z]/.test(next) && /[a-z]/.test(next)
-    && /\d/.test(next) && /[^A-Za-z0-9]/.test(next);
+  // Individual rule checks power both the submit guard (`meets`) and the live
+  // requirement chips under the field — same booleans, no behavior change.
+  const lenOk = next.length >= 8;
+  const caseOk = /[A-Z]/.test(next) && /[a-z]/.test(next);
+  const digitOk = /\d/.test(next);
+  const symbolOk = /[^A-Za-z0-9]/.test(next);
+  const meets = lenOk && caseOk && digitOk && symbolOk;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -113,16 +117,26 @@ export function ChangePasswordPage() {
               autoComplete="current-password"
               required autoFocus
             />
-            <Input
-              label="New password"
-              type={showPwd ? "text" : "password"}
-              value={next}
-              onChange={edit(setNext)}
-              leftIcon={<Icon name="shield" size={16} />}
-              hint="≥ 8 chars · upper, lower, digit, symbol"
-              autoComplete="new-password"
-              required
-            />
+            <div>
+              <Input
+                label="New password"
+                type={showPwd ? "text" : "password"}
+                value={next}
+                onChange={edit(setNext)}
+                leftIcon={<Icon name="shield" size={16} />}
+                hint="≥ 8 chars · upper, lower, digit, symbol"
+                autoComplete="new-password"
+                required
+              />
+              {next.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Req ok={lenOk} label="8+ characters" />
+                  <Req ok={caseOk} label="Upper & lower" />
+                  <Req ok={digitOk} label="Number" />
+                  <Req ok={symbolOk} label="Symbol" />
+                </div>
+              )}
+            </div>
             <Input
               label="Confirm new password"
               type={showPwd ? "text" : "password"}
@@ -158,5 +172,22 @@ export function ChangePasswordPage() {
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+/** A single password-requirement chip: emerald + check once satisfied, muted until then. */
+function Req({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ring-1 ring-inset transition-colors",
+        ok ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-ink-50 text-ink-500 ring-ink-200",
+      )}
+    >
+      {ok
+        ? <Icon name="check" size={11} className="text-emerald-600" />
+        : <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-ink-300" />}
+      {label}
+    </span>
   );
 }

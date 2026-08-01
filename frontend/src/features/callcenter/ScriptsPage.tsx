@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useListCampaignsQuery, useListScriptsQuery, useUpsertScriptMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Textarea, useToast,
+  SearchInput, Select, Skeleton, Stat, Textarea, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -39,6 +39,15 @@ export function ScriptsPage() {
     );
   }, [scripts, search]);
 
+  const stats = useMemo(() => {
+    const all = scripts ?? [];
+    return {
+      total: all.length,
+      active: all.filter((s) => s.isActive).length,
+      universal: all.filter((s) => !s.stage && !s.role && !s.campaignId).length,
+    };
+  }, [scripts]);
+
   async function handleSave() {
     if (!editing) return;
     try {
@@ -64,10 +73,19 @@ export function ScriptsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Call center"
         title="Scripts"
         description="Reusable call scripts agents see in the dialer based on stage, role, and campaign."
         actions={<Can permission={Perm.ScriptsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button></Can>}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <Stat label="Total scripts" value={stats.total} icon={<Icon name="doc" size={16} />} tone="brand" />
+        <Stat label="Active" value={stats.active} icon={<Icon name="check" size={16} />} tone="success"
+              hint="Currently visible to agents in the dialer." />
+        <Stat label="Universal" value={stats.universal} icon={<Icon name="star" size={16} />} tone="accent"
+              hint="Not tied to a stage, role, or campaign — usable on every call." />
+      </div>
 
       <Card className="mb-4">
         <CardBody>

@@ -1,6 +1,6 @@
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Badge, Card, CardBody, CardHeader, Icon, InfoHint, PageHeader, Table, TBody, TD, TH, THead, TR,
+  Badge, Card, CardBody, CardHeader, Icon, InfoHint, PageHeader, Stat, Table, TBody, TD, TH, THead, TR,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
 import type { IconName } from "../../shared/ui/Icon";
@@ -72,6 +72,11 @@ const ISOLATION: { icon: IconName; title: string; body: string }[] = [
 ];
 
 export function SecurityCenterPage() {
+  // At-a-glance summary of the access model documented below.
+  const totalRoles = TIERS.reduce((n, t) => n + t.roles.length, 0);
+  const crossAgencyRoles = TIERS.find((t) => t.tier === "Company")?.roles.length ?? 0;
+  const twoFactorRoles = TIERS.reduce((n, t) => n + t.roles.filter((r) => r.twoFactor).length, 0);
+
   return (
     <>
       <PageHeader
@@ -80,6 +85,14 @@ export function SecurityCenterPage() {
         description="How access is governed across the platform — each role's level, the data it can reach, and the boundaries between tenants."
         badge={<Badge tone="brand" variant="soft"><Icon name="shield" size={11} className="-ml-0.5" /> Access overview</Badge>}
       />
+
+      {/* Summary of the access model */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <Stat label="Roles" value={totalRoles} icon={<Icon name="shield" size={18} />} tone="brand" hint="Across every level" />
+        <Stat label="Access levels" value={TIERS.length} icon={<Icon name="layers" size={18} />} tone="accent" hint="Company → Floor" />
+        <Stat label="Cross-agency" value={crossAgencyRoles} icon={<Icon name="globe" size={18} />} tone="warning" hint="See more than one agency" />
+        <Stat label="2FA required" value={twoFactorRoles} icon={<Icon name="lock" size={18} />} tone="success" hint="Mandatory second factor" />
+      </div>
 
       <Card className="mb-5">
         <CardHeader eyebrow="Data isolation" title="Boundaries" subtitle="Who can see whose data — enforced server-side." bordered />

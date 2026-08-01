@@ -94,6 +94,7 @@ export function CommissionsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Revenue"
         title="Commissions"
         description="Review your earnings and let managers run payroll for the period."
       />

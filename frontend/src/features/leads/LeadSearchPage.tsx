@@ -85,6 +85,7 @@ export function LeadSearchPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Pipeline"
         title="Lead troubleshooting"
         description="Find any lead by phone, email, or name. Detect duplicates and clean up the database."
       />

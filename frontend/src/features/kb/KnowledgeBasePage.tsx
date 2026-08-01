@@ -35,6 +35,7 @@ export function KnowledgeBasePage() {
   return (
     <>
       <PageHeader
+        eyebrow="Operations"
         title="Knowledge Base"
         description="Searchable team knowledge — talking points, FAQs, scripts, and onboarding."
         actions={<Can permission={Perm.KnowledgeWrite}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New article</Button></Can>}

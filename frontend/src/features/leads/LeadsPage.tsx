@@ -210,6 +210,7 @@ export function LeadsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Pipeline"
         title="Leads"
         description="Search, transition, and manage every lead in your pipeline."
         actions={

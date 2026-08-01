@@ -5,7 +5,7 @@ import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
@@ -28,6 +28,9 @@ export function CloseQueuePage() {
       application: (l) => (l.hasApplication ? "Started" : "New"),
     },
   });
+  const total = queue?.length ?? 0;
+  const started = (queue ?? []).filter((l) => l.hasApplication).length;
+  const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
 
   async function onAdd(input: IntakeLeadInput) {
     try {
@@ -44,6 +47,7 @@ export function CloseQueuePage() {
   return (
     <>
       <PageHeader
+        eyebrow="Closer"
         title="Closer Queue"
         description="Verified leads ready to close. Open a lead to complete the application."
         actions={
@@ -52,6 +56,13 @@ export function CloseQueuePage() {
           </Button>
         }
       />
+      {queue && total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+          <Stat label="Ready to close" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Verified leads waiting" />
+          <Stat label="Started" value={started} icon={<Icon name="briefcase" size={16} />} tone="accent" hint="Application begun" />
+          <Stat label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
+        </div>
+      )}
       <Card>
         <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />

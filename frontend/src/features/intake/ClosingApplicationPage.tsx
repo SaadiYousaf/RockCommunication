@@ -83,13 +83,13 @@ export function ClosingApplicationPage() {
 
   if (isLoading) return (
     <>
-      <PageHeader title="Closing application" />
+      <PageHeader eyebrow="Closer" title="Closing application" />
       <div className="max-w-4xl space-y-4"><Skeleton className="h-40" /><Skeleton className="h-64" /></div>
     </>
   );
   if (!data) return (
     <>
-      <PageHeader title="Closing application" />
+      <PageHeader eyebrow="Closer" title="Closing application" />
       <Card><CardBody>
         <EmptyState icon={<Icon name="briefcase" size={20} />} title="Lead not found"
           description="It may have been removed, or you may not have access to it." />
@@ -102,6 +102,7 @@ export function ClosingApplicationPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Closer"
         title={`Closing — ${data.firstName} ${data.lastName}`}
         description="Complete the application. All fields are typed (no paste). 'Complete and Sold' validates banking via Lyons and creates the sale."
       />
