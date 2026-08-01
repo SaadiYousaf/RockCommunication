@@ -9,7 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace CRM.Application.Chat;
 
 public record ChatRoomMemberDto(Guid UserId, DateTime? LastReadAt);
-public record ChatRoomDto(Guid Id, string Name, bool IsDirect, IReadOnlyList<Guid> MemberUserIds, IReadOnlyList<ChatRoomMemberDto> Members);
+public record ChatRoomDto(
+    Guid Id, string Name, bool IsDirect,
+    IReadOnlyList<Guid> MemberUserIds, IReadOnlyList<ChatRoomMemberDto> Members,
+    string? LastMessagePreview = null, DateTime? LastMessageAt = null, Guid? LastMessageSenderId = null);
+
+/// <summary>One emoji reaction and everyone who applied it (the client derives count + "mine").</summary>
+public record ReactionDto(string Emoji, IReadOnlyList<Guid> UserIds);
+
 public record ChatMessageDto(
     Guid Id,
     Guid RoomId,
@@ -18,7 +25,9 @@ public record ChatMessageDto(
     DateTime SentAt,
     string? AttachmentName = null,
     string? AttachmentContentType = null,
-    long? AttachmentSize = null);
+    long? AttachmentSize = null,
+    DateTime? EditedAt = null,
+    IReadOnlyList<ReactionDto>? Reactions = null);
 
 public record CreateRoomDto(string Name, bool IsDirect, IReadOnlyList<Guid> MemberUserIds);
 public record CreateRoomCommand(CreateRoomDto Input) : IRequest<ChatRoomDto>;
@@ -224,11 +233,29 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
             .Include(r => r.Members)
             .Where(r => roomIds.Contains(r.Id) && r.AgencyId == _user.AgencyId)
             .ToListAsync(ct);
-        return rooms.Select(r => new ChatRoomDto(
-            r.Id, r.Name, r.IsDirect,
-            r.Members.Select(m => m.UserId).ToList(),
-            r.Members.Select(m => new ChatRoomMemberDto(m.UserId, m.LastReadAt)).ToList()
-        )).ToList();
+
+        // Latest message per room, for the list preview + sort. Projected lightweight and grouped in
+        // memory (internal chat volume is modest; the (RoomId, SentAt) index keeps the scan cheap).
+        var lastByRoom = (await _db.ChatMessages
+                .Where(m => roomIds.Contains(m.RoomId))
+                .Select(m => new { m.RoomId, m.SentAt, m.Body, m.AttachmentName, m.SenderUserId })
+                .ToListAsync(ct))
+            .GroupBy(x => x.RoomId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.SentAt).First());
+
+        return rooms.Select(r =>
+        {
+            lastByRoom.TryGetValue(r.Id, out var last);
+            var preview = last is null ? null
+                : !string.IsNullOrWhiteSpace(last.Body) ? last.Body
+                : last.AttachmentName is not null ? "📎 " + last.AttachmentName
+                : null;
+            return new ChatRoomDto(
+                r.Id, r.Name, r.IsDirect,
+                r.Members.Select(m => m.UserId).ToList(),
+                r.Members.Select(m => new ChatRoomMemberDto(m.UserId, m.LastReadAt)).ToList(),
+                preview, last?.SentAt, last?.SenderUserId);
+        }).ToList();
     }
 }
 
@@ -275,13 +302,146 @@ public class RoomMessagesHandler : IRequestHandler<RoomMessagesQuery, IReadOnlyL
         var member = await _db.ChatRoomMembers.AnyAsync(
             m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct);
         if (!member) throw new ForbiddenAccessException();
-        return await _db.ChatMessages
+        var msgs = await _db.ChatMessages
             .Where(m => m.RoomId == request.RoomId)
             .OrderByDescending(m => m.SentAt).Take(Math.Min(request.Take, 200))
             .OrderBy(m => m.SentAt)
-            .Select(m => new ChatMessageDto(
+            .Select(m => new
+            {
                 m.Id, m.RoomId, m.SenderUserId, m.Body, m.SentAt,
-                m.AttachmentName, m.AttachmentContentType, m.AttachmentSize))
+                m.AttachmentName, m.AttachmentContentType, m.AttachmentSize, m.EditedAt,
+            })
             .ToListAsync(ct);
+
+        var ids = msgs.Select(m => m.Id).ToList();
+        var reactions = await ChatReactions.ForMessagesAsync(_db, ids, ct);
+
+        return msgs.Select(m => new ChatMessageDto(
+            m.Id, m.RoomId, m.SenderUserId, m.Body, m.SentAt,
+            m.AttachmentName, m.AttachmentContentType, m.AttachmentSize, m.EditedAt,
+            reactions.TryGetValue(m.Id, out var rs) ? rs : null)).ToList();
+    }
+}
+
+/// <summary>Reaction aggregation shared by the message-list read and the toggle broadcast.</summary>
+internal static class ChatReactions
+{
+    public static async Task<Dictionary<Guid, List<ReactionDto>>> ForMessagesAsync(
+        IApplicationDbContext db, IReadOnlyList<Guid> messageIds, CancellationToken ct)
+    {
+        if (messageIds.Count == 0) return new();
+        return (await db.ChatMessageReactions
+                .Where(x => messageIds.Contains(x.MessageId))
+                .Select(x => new { x.MessageId, x.Emoji, x.UserId })
+                .ToListAsync(ct))
+            .GroupBy(x => x.MessageId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(x => x.Emoji)
+                      .Select(eg => new ReactionDto(eg.Key, eg.Select(x => x.UserId).ToList()))
+                      .ToList());
+    }
+
+    public static async Task<IReadOnlyList<ReactionDto>> ForMessageAsync(
+        IApplicationDbContext db, Guid messageId, CancellationToken ct)
+        => (await ForMessagesAsync(db, new[] { messageId }, ct)).TryGetValue(messageId, out var r)
+            ? r : new List<ReactionDto>();
+}
+
+// ── Reactions + edit + delete ─────────────────────────────────────────────────
+
+public record ToggleReactionCommand(Guid MessageId, string Emoji) : IRequest<Unit>;
+public record EditMessageCommand(Guid MessageId, string Body) : IRequest<ChatMessageDto>;
+public record DeleteMessageCommand(Guid MessageId) : IRequest<Unit>;
+
+public class ChatMessageActionsValidator : AbstractValidator<EditMessageCommand>
+{
+    public ChatMessageActionsValidator()
+    {
+        RuleFor(x => x.Body).NotEmpty().MaximumLength(4000);
+    }
+}
+public class ToggleReactionValidator : AbstractValidator<ToggleReactionCommand>
+{
+    public ToggleReactionValidator()
+    {
+        RuleFor(x => x.Emoji).NotEmpty().MaximumLength(16);
+    }
+}
+
+public class ChatMessageActionsHandler :
+    IRequestHandler<ToggleReactionCommand, Unit>,
+    IRequestHandler<EditMessageCommand, ChatMessageDto>,
+    IRequestHandler<DeleteMessageCommand, Unit>
+{
+    private readonly IApplicationDbContext _db;
+    private readonly ICurrentUser _user;
+    private readonly IChatBroadcaster _broadcaster;
+
+    public ChatMessageActionsHandler(IApplicationDbContext db, ICurrentUser user, IChatBroadcaster broadcaster)
+    {
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _broadcaster = Guard.AgainstNull(broadcaster);
+    }
+
+    /// <summary>Loads a message the caller can act on, verifying room membership.</summary>
+    private async Task<ChatMessage> LoadMemberMessageAsync(Guid messageId, CancellationToken ct)
+    {
+        if (_user.UserId is null) throw new ForbiddenAccessException();
+        var msg = await _db.ChatMessages.FirstOrDefaultAsync(m => m.Id == messageId, ct)
+            ?? throw new NotFoundException(nameof(ChatMessage), messageId);
+        var member = await _db.ChatRoomMembers.AnyAsync(m => m.RoomId == msg.RoomId && m.UserId == _user.UserId, ct);
+        if (!member) throw new ForbiddenAccessException("Not a member of this room.");
+        return msg;
+    }
+
+    public async Task<Unit> Handle(ToggleReactionCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        var msg = await LoadMemberMessageAsync(request.MessageId, ct);
+        var emoji = request.Emoji.Trim();
+        var existing = await _db.ChatMessageReactions.FirstOrDefaultAsync(
+            x => x.MessageId == msg.Id && x.UserId == _user.UserId && x.Emoji == emoji, ct);
+        if (existing is null)
+            _db.ChatMessageReactions.Add(new ChatMessageReaction
+            { AgencyId = msg.AgencyId, MessageId = msg.Id, UserId = _user.UserId!.Value, Emoji = emoji });
+        else
+            _db.ChatMessageReactions.Remove(existing);
+        await _db.SaveChangesAsync(ct);
+
+        var reactions = await ChatReactions.ForMessageAsync(_db, msg.Id, ct);
+        await _broadcaster.BroadcastReactionsAsync(msg.RoomId, msg.Id, reactions, ct);
+        return Unit.Value;
+    }
+
+    public async Task<ChatMessageDto> Handle(EditMessageCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        var msg = await LoadMemberMessageAsync(request.MessageId, ct);
+        if (msg.SenderUserId != _user.UserId) throw new ForbiddenAccessException("You can only edit your own messages.");
+        if (string.IsNullOrEmpty(msg.AttachmentUrl) is false && string.IsNullOrWhiteSpace(request.Body))
+            throw new ConflictException("Message cannot be empty.");
+
+        msg.Body = request.Body.Trim();
+        msg.EditedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        var reactions = await ChatReactions.ForMessageAsync(_db, msg.Id, ct);
+        var dto = new ChatMessageDto(msg.Id, msg.RoomId, msg.SenderUserId, msg.Body, msg.SentAt,
+            msg.AttachmentName, msg.AttachmentContentType, msg.AttachmentSize, msg.EditedAt, reactions);
+        await _broadcaster.BroadcastMessageEditedAsync(msg.RoomId, dto, ct);
+        return dto;
+    }
+
+    public async Task<Unit> Handle(DeleteMessageCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        var msg = await LoadMemberMessageAsync(request.MessageId, ct);
+        if (msg.SenderUserId != _user.UserId) throw new ForbiddenAccessException("You can only delete your own messages.");
+
+        _db.ChatMessages.Remove(msg); // audit interceptor turns this into a soft delete (IsDeleted=true)
+        await _db.SaveChangesAsync(ct);
+
+        await _broadcaster.BroadcastMessageDeletedAsync(msg.RoomId, msg.Id, ct);
+        return Unit.Value;
     }
 }

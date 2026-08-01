@@ -22,4 +22,13 @@ public class ChatBroadcaster : IChatBroadcaster
 
     public Task BroadcastRoomReadAsync(Guid roomId, Guid userId, DateTime readAt, CancellationToken ct = default)
         => _hub.Clients.Group($"room:{roomId}").SendAsync("RoomRead", new { roomId, userId, readAt }, ct);
+
+    public Task BroadcastReactionsAsync(Guid roomId, Guid messageId, IReadOnlyList<ReactionDto> reactions, CancellationToken ct = default)
+        => _hub.Clients.Group($"room:{roomId}").SendAsync("ReactionsChanged", new { roomId, messageId, reactions }, ct);
+
+    public Task BroadcastMessageEditedAsync(Guid roomId, ChatMessageDto message, CancellationToken ct = default)
+        => _hub.Clients.Group($"room:{roomId}").SendAsync("MessageEdited", message, ct);
+
+    public Task BroadcastMessageDeletedAsync(Guid roomId, Guid messageId, CancellationToken ct = default)
+        => _hub.Clients.Group($"room:{roomId}").SendAsync("MessageDeleted", new { roomId, messageId }, ct);
 }

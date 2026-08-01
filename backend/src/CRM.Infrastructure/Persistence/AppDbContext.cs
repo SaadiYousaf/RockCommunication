@@ -84,6 +84,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ChatRoom> ChatRooms => Set<ChatRoom>();
     public DbSet<ChatRoomMember> ChatRoomMembers => Set<ChatRoomMember>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<ChatMessageReaction> ChatMessageReactions => Set<ChatMessageReaction>();
     public DbSet<CallRecord> CallRecords => Set<CallRecord>();
     public DbSet<AgencyCommissionConfig> AgencyCommissionConfigs => Set<AgencyCommissionConfig>();
     public DbSet<Vertical> Verticals => Set<Vertical>();
@@ -349,6 +350,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.AttachmentUrl).HasMaxLength(500);
             e.Property(x => x.AttachmentName).HasMaxLength(260);
             e.Property(x => x.AttachmentContentType).HasMaxLength(120);
+            e.HasMany(x => x.Reactions).WithOne().HasForeignKey(r => r.MessageId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ChatMessageReaction>(e =>
+        {
+            e.HasIndex(x => x.MessageId);
+            e.HasIndex(x => new { x.MessageId, x.UserId, x.Emoji }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+            e.Property(x => x.Emoji).HasMaxLength(16).IsRequired();
         });
 
         b.Entity<Document>(e =>

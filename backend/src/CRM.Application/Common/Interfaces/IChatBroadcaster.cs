@@ -13,4 +13,13 @@ public interface IChatBroadcaster
 
     /// <summary>Notifies room members that <paramref name="userId"/> read the room up to <paramref name="readAt"/>.</summary>
     Task BroadcastRoomReadAsync(Guid roomId, Guid userId, DateTime readAt, CancellationToken ct = default);
+
+    /// <summary>Pushes a message's full reaction set after a reaction was added/removed.</summary>
+    Task BroadcastReactionsAsync(Guid roomId, Guid messageId, IReadOnlyList<ReactionDto> reactions, CancellationToken ct = default);
+
+    /// <summary>Pushes an edited message so clients replace their copy in place.</summary>
+    Task BroadcastMessageEditedAsync(Guid roomId, ChatMessageDto message, CancellationToken ct = default);
+
+    /// <summary>Notifies room members that a message was deleted so clients remove it.</summary>
+    Task BroadcastMessageDeletedAsync(Guid roomId, Guid messageId, CancellationToken ct = default);
 }

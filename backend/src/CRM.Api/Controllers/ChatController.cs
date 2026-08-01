@@ -83,6 +83,37 @@ public class ChatController : ControllerBase
         return Ok(dto);
     }
 
+    public record ReactBody(string Emoji);
+    public record EditBody(string Body);
+
+    /// <summary>Toggle an emoji reaction (add if absent, remove if present) on a message in a room you're in.</summary>
+    [HttpPost("messages/{messageId:guid}/react")]
+    [HasPermission(Permissions.ChatWrite)]
+    public async Task<IActionResult> React(Guid messageId, [FromBody] ReactBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(new ToggleReactionCommand(messageId, body.Emoji), ct);
+        return NoContent();
+    }
+
+    /// <summary>Edit the body of your OWN message.</summary>
+    [HttpPut("messages/{messageId:guid}")]
+    [HasPermission(Permissions.ChatWrite)]
+    public async Task<ActionResult<ChatMessageDto>> Edit(Guid messageId, [FromBody] EditBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new EditMessageCommand(messageId, body.Body), ct));
+    }
+
+    /// <summary>Delete your OWN message.</summary>
+    [HttpDelete("messages/{messageId:guid}")]
+    [HasPermission(Permissions.ChatWrite)]
+    public async Task<IActionResult> Delete(Guid messageId, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteMessageCommand(messageId), ct);
+        return NoContent();
+    }
+
     [HttpGet("messages/{messageId:guid}/attachment")]
     [HasPermission(Permissions.ChatRead)]
     public async Task<IActionResult> DownloadAttachment(Guid messageId, CancellationToken ct)

@@ -33,6 +33,7 @@ public interface IApplicationDbContext
     DbSet<ChatRoom> ChatRooms { get; }
     DbSet<ChatRoomMember> ChatRoomMembers { get; }
     DbSet<ChatMessage> ChatMessages { get; }
+    DbSet<ChatMessageReaction> ChatMessageReactions { get; }
     DbSet<CallRecord> CallRecords { get; }
     DbSet<AgencyCommissionConfig> AgencyCommissionConfigs { get; }
     DbSet<Vertical> Verticals { get; }

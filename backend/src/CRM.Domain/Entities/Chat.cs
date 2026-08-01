@@ -31,6 +31,20 @@ public class ChatMessage : TenantEntity
     public string? AttachmentName { get; set; }
     public string? AttachmentContentType { get; set; }
     public long? AttachmentSize { get; set; }
+
+    /// <summary>When the sender last edited the body (null = never edited).</summary>
+    public DateTime? EditedAt { get; set; }
+
+    public ICollection<ChatMessageReaction> Reactions { get; set; } = new List<ChatMessageReaction>();
+}
+
+/// <summary>One emoji reaction by one user on one message. Unique per (Message, User, Emoji).</summary>
+public class ChatMessageReaction : TenantEntity
+{
+    public Guid MessageId { get; set; }
+    public Guid UserId { get; set; }
+    /// <summary>The reaction emoji (a short grapheme, e.g. "👍").</summary>
+    public string Emoji { get; set; } = string.Empty;
 }
 
 public class CallRecord : CallCenterEntity
