@@ -2,6 +2,7 @@ using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -24,11 +25,13 @@ public class JwtTokenService : IJwtTokenService
 {
     private readonly JwtOptions _opts;
     private readonly AppDbContext _db;
+    private readonly bool _enforce2Fa;
 
-    public JwtTokenService(IOptions<JwtOptions> opts, AppDbContext db)
+    public JwtTokenService(IOptions<JwtOptions> opts, AppDbContext db, Microsoft.Extensions.Configuration.IConfiguration config)
     {
         _opts = Guard.AgainstNull(opts).Value;
         _db = Guard.AgainstNull(db);
+        _enforce2Fa = Guard.AgainstNull(config).GetValue("Security:EnforceMandatoryTwoFactor", true);
     }
 
     public async Task<TokenResult> IssueAsync(
@@ -104,7 +107,11 @@ public class JwtTokenService : IJwtTokenService
                            select r.Name!).ToListAsync(ct);
 
         existing.RevokedAt = DateTime.UtcNow;
-        var newToken = await IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, null, ct);
+        // SECURITY: re-derive the enforcement claims from CURRENT user state and carry them onto the
+        // refreshed token. Passing null here previously let a confined session (must-change-password
+        // or mandatory-2FA-not-enrolled) strip its confinement simply by calling /auth/refresh.
+        var extra = AuthEnforcementClaims.Build(user, roles, _enforce2Fa);
+        var newToken = await IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         existing.ReplacedByHash = Hash(newToken.RefreshToken);
         await _db.SaveChangesAsync(ct);
         return newToken;

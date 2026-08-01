@@ -134,7 +134,12 @@ public class SalesController : ControllerBase
             sb.AppendLine($"{Csv(r.AgentUserName)},{Csv(r.AgentEmail)},{Csv(r.RuleName)},{r.Amount},{r.EarnedAt:O},{r.Paid}");
         return sb.ToString();
 
-        static string Csv(string s) => s.Contains(',') || s.Contains('"') ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
+        static string Csv(string s)
+        {
+            // Neutralise spreadsheet formula injection (leading = + - @ / tab / CR).
+            if (s.Length > 0 && s[0] is '=' or '+' or '-' or '@' or '\t' or '\r') s = "'" + s;
+            return s.Contains(',') || s.Contains('"') ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
+        }
     }
 
     [HttpGet("commissions")]

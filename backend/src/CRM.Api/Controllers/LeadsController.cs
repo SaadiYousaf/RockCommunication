@@ -154,6 +154,9 @@ public class LeadsController : ControllerBase
         static string Csv(string? s)
         {
             s ??= "";
+            // Neutralise spreadsheet formula injection: a leading = + - @ (or tab/CR) makes Excel/
+            // Sheets execute the cell. Prefix with an apostrophe so it's rendered as literal text.
+            if (s.Length > 0 && s[0] is '=' or '+' or '-' or '@' or '\t' or '\r') s = "'" + s;
             return s.Contains(',') || s.Contains('"') || s.Contains('\n')
                 ? $"\"{s.Replace("\"", "\"\"")}\""
                 : s;

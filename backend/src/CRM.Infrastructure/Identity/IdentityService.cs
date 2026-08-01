@@ -439,18 +439,10 @@ public class IdentityService : IIdentityService
         // Tag the access token when the user is forced to change their password. The
         // PasswordChangeRequiredFilter on the API side rejects every non-auth call until
         // the password is rotated, so a stolen "must-change" token can't be used.
-        Dictionary<string, string>? extra = null;
-        if (user.MustChangePassword)
-            (extra ??= new())[CustomJwtClaims.PasswordChangeRequired] = "true";
-        // Mandatory 2FA: a privileged user (or a cross-agency "central" Submission Agent, who
-        // reads cross-tenant PII) without 2FA enabled is confined to the 2FA-setup endpoints
-        // until they enrol (TwoFactorSetupRequiredMiddleware). Cleared once they enable 2FA and
-        // re-login (their next login is a normal 2FA challenge).
-        var require2Fa = _enforce2Fa && !user.TwoFactorEnabled &&
-            (DomainRoles.TwoFactorMandatory(roles) ||
-             DomainRoles.IsCentralSubmissionAgent(user.AgencyId, roles));
-        if (require2Fa)
-            (extra ??= new())[CustomJwtClaims.TwoFactorSetupRequired] = "true";
+        // Enforcement claims (forced password change + mandatory-2FA setup) computed via the shared
+        // helper so login and token-refresh stay in lockstep — a refresh must not be able to drop them.
+        var extra = AuthEnforcementClaims.Build(user, roles, _enforce2Fa);
+        var require2Fa = extra?.ContainsKey(CustomJwtClaims.TwoFactorSetupRequired) ?? false;
 
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,

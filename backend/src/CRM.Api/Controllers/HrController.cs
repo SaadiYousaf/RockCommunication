@@ -13,7 +13,9 @@ namespace CRM.Api.Controllers;
 /// (enforced in the handlers via EnsureHr). CNIC and bank account number are encrypted at rest.
 /// </summary>
 [ApiController]
-[Authorize]
+// Declarative role gate runs BEFORE any action body — so e.g. the image upload can't write a file
+// to disk before authorization. Handlers still call EnsureHr as defense-in-depth.
+[Authorize(Roles = Roles.HR + "," + Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/hr/employees")]
 public class HrController : ControllerBase
 {

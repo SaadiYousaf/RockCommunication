@@ -44,7 +44,10 @@ public class ChatHub : Hub
 
     public async Task Typing(Guid roomId)
     {
-        var uid = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub");
+        // Same membership gate as JoinRoom/Send — a non-member must not be able to inject a
+        // "typing" signal into a room they don't belong to.
+        if (!TryGetUserId(out var uid)) return;
+        if (!await _db.ChatRoomMembers.AnyAsync(m => m.RoomId == roomId && m.UserId == uid)) return;
         await Clients.OthersInGroup(RoomName(roomId)).SendAsync("Typing", roomId, uid);
     }
 

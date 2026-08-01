@@ -45,6 +45,14 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
+    /// <summary>Roles allowed to see the decrypted identity/banking PII (SSN, DL, bank account). A
+    /// Verifier/Fronter is deliberately NOT here — they reach this handler but must be masked.</summary>
+    private static readonly string[] PiiRoles =
+    {
+        DomainRoles.Closer, DomainRoles.JrCloser, DomainRoles.Validator,
+        DomainRoles.Admin, DomainRoles.ProgramManager, DomainRoles.CEO,
+    };
+
     public GetClosingApplicationHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
     public async Task<ClosingApplicationView> Handle(GetClosingApplicationQuery request, CancellationToken ct)
@@ -56,6 +64,12 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
         // the soft-delete predicate by hand. Agency-scoped users stay pinned to their own agency.
         var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
+
+        // A Verifier reaches this same handler (GetVerifyLead) but is walled off from the encrypted
+        // identity/banking PII a Closer captures — mask SSN / driver's licence / bank account for
+        // anyone who isn't in a closing/validation/admin role (or a central Submission Agent).
+        var canSeeBankingPii = central || _user.IsSuperAdmin
+            || _user.Roles.Any(r => PiiRoles.Contains(r, StringComparer.OrdinalIgnoreCase));
 
         var lead = (central
             ? await _db.Leads.IgnoreQueryFilters().FirstOrDefaultAsync(l => l.Id == request.LeadId && !l.IsDeleted, ct)
@@ -69,9 +83,11 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
         LeadApplicationDto? appDto = a is null ? null : new LeadApplicationDto(
             a.HealthConditions, a.Gender, a.Age, a.SmokerStatus, a.Name, a.DateOfBirth, a.Address,
             a.Carrier, a.Plan, a.FaceAmount, a.Premium, a.Email, a.Beneficiary, a.SecondBeneficiary,
-            a.InitialDraftDate, a.FutureDraftDate, a.PhoneNumber, a.AltPhone, a.PrimaryDoctor, a.Social,
-            a.BornIn, a.DriversLicense, a.Height, a.Weight, a.AccountType, a.BankName, a.AccountNumber,
-            a.RoutingNumber, a.CloserStatus, a.SaleId);
+            a.InitialDraftDate, a.FutureDraftDate, a.PhoneNumber, a.AltPhone, a.PrimaryDoctor,
+            canSeeBankingPii ? a.Social : null,
+            a.BornIn, canSeeBankingPii ? a.DriversLicense : null, a.Height, a.Weight, a.AccountType, a.BankName,
+            canSeeBankingPii ? a.AccountNumber : null,
+            canSeeBankingPii ? a.RoutingNumber : null, a.CloserStatus, a.SaleId);
 
         return new ClosingApplicationView(
             lead.Id, lead.FirstName, lead.LastName, lead.PhoneNumber, lead.Email, lead.Address,
