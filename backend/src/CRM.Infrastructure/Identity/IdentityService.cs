@@ -72,6 +72,14 @@ public class IdentityService : IIdentityService
         if (await _users.FindByNameAsync(userName) is not null)
             throw new ConflictException("A user with that username already exists.");
 
+        // Reject unknown roles up front — before creating the user, so a typo'd role can't leave an
+        // orphaned, permission-less account or mint a junk global role. Mirrors UpdateRolesAsync;
+        // every real role is seeded at startup (DbSeeder), so valid invites/registrations pass.
+        var roleList = roles.ToList();
+        foreach (var role in roleList)
+            if (!await _roles.RoleExistsAsync(role))
+                throw new ConflictException($"Role '{role}' does not exist.");
+
         var user = new ApplicationUser
         {
             Email = email,
@@ -87,13 +95,8 @@ public class IdentityService : IIdentityService
         if (!result.Succeeded)
             throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
-        var roleList = roles.ToList();
         foreach (var role in roleList)
-        {
-            if (!await _roles.RoleExistsAsync(role))
-                await _roles.CreateAsync(new ApplicationRole(role));
             await _users.AddToRoleAsync(user, role);
-        }
 
         // Send the invite email — best-effort, errors are logged but don't fail registration.
         if (mustChange)

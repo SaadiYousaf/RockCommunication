@@ -72,6 +72,11 @@ public class CallCenterController : ControllerBase
     public async Task<IActionResult> RecentCalls([FromQuery] int take = 50, CancellationToken ct = default)
         => Ok(await _mediator.Send(new MyRecentCallsQuery(take), ct));
 
+    // Authoritative today totals for the agent panel (all of today's calls, not just the recent list).
+    [HttpGet("calls/today-stats")]
+    public async Task<IActionResult> TodayStats(CancellationToken ct = default)
+        => Ok(await _mediator.Send(new MyTodayCallStatsQuery(), ct));
+
     [HttpGet("calls")]
     public async Task<IActionResult> ListCalls(
         [FromQuery] Guid? agentUserId,

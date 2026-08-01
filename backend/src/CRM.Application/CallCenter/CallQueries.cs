@@ -75,3 +75,42 @@ public class MyRecentCallsHandler : IRequestHandler<MyRecentCallsQuery, IReadOnl
             : c).ToList();
     }
 }
+
+public record TodayCallStatsDto(int Calls, int Sales);
+
+public record MyTodayCallStatsQuery : IRequest<TodayCallStatsDto>;
+
+/// <summary>
+/// Authoritative "today" totals for the signed-in agent's panel. The panel previously derived
+/// these from the last-20-calls list, so an agent past 20 calls saw understated Calls/Sales.
+/// This aggregates over ALL of today's calls, not a truncated recent window.
+/// </summary>
+public class MyTodayCallStatsHandler : IRequestHandler<MyTodayCallStatsQuery, TodayCallStatsDto>
+{
+    private readonly IApplicationDbContext _db;
+    private readonly ICurrentUser _user;
+    public MyTodayCallStatsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+
+    public async Task<TodayCallStatsDto> Handle(MyTodayCallStatsQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
+
+        var startOfDay = DateTime.UtcNow.Date;
+        // Pull today's wrap-up codes for this agent, then classify in memory against the agency's
+        // sale-flagged codes (no decimals summed, so the SQLite-decimal-SUM gotcha doesn't apply).
+        var todaysCodes = await _db.CallRecords.AsNoTracking()
+            .Where(c => c.AgencyId == _user.AgencyId && c.AgentUserId == _user.UserId && c.InitiatedAt >= startOfDay)
+            .Select(c => c.WrapUpCode)
+            .ToListAsync(ct);
+
+        var saleCodes = (await _db.WrapUpCodes.AsNoTracking()
+                .Where(w => w.AgencyId == _user.AgencyId && w.IsSale)
+                .Select(w => w.Code)
+                .ToListAsync(ct))
+            .ToHashSet();
+
+        var sales = todaysCodes.Count(code => code != null && saleCodes.Contains(code));
+        return new TodayCallStatsDto(todaysCodes.Count, sales);
+    }
+}

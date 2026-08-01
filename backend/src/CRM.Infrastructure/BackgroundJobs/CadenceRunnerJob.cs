@@ -35,18 +35,22 @@ public class CadenceRunnerJob
             .Take(200)
             .ToListAsync(ct);
 
+        // Save after EACH enrollment's side effect succeeds. A single batched SaveChanges at the end
+        // means one failed save rolls back all step advances while the SMS/emails already went out —
+        // the whole batch then re-sends next tick (duplicate paid messages). Per-enrollment save
+        // shrinks that blast radius to at most the one enrollment whose save fails.
         foreach (var enr in due)
         {
             try
             {
                 await ProcessOneAsync(enr, ct);
+                await _db.SaveChangesAsync(ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Cadence enrollment {Id} step failed", enr.Id);
             }
         }
-        if (due.Count > 0) await _db.SaveChangesAsync(ct);
     }
 
     private async Task ProcessOneAsync(CadenceEnrollment enr, CancellationToken ct)

@@ -187,20 +187,18 @@ public class CommissionEngine : ICommissionEngine
 
     private async Task<IReadOnlyList<(Guid agentId, string role)>> GetParticipantsAsync(Sale sale, CancellationToken ct)
     {
-        var ids = new List<Guid> { sale.CloserUserId };
-        if (sale.ValidatorUserId is { } vid) ids.Add(vid);
+        // Tag each participant with the FUNCTION they performed on this sale, not every identity
+        // role they happen to hold. The old UserRoles fan-out paid, e.g., a ValidatorBonus to a
+        // closer who merely also holds the Validator role (double-count / phantom lines), and
+        // dropped a participant who had no UserRoles row at all.
+        var participants = new List<(Guid agentId, string role)> { (sale.CloserUserId, Roles.Closer) };
+        if (sale.ValidatorUserId is { } vid) participants.Add((vid, Roles.Validator));
 
         var jrCloser = await _db.LeadActivities.AsNoTracking()
             .Where(a => a.LeadId == sale.LeadId && a.ToStage == WorkflowStage.JrClosed)
             .Select(a => a.UserId).FirstOrDefaultAsync(ct);
-        if (jrCloser != Guid.Empty) ids.Add(jrCloser);
+        if (jrCloser != Guid.Empty) participants.Add((jrCloser, Roles.JrCloser));
 
-        var roleByUser = await (from ur in _db.UserRoles
-                                join r in _db.Roles on ur.RoleId equals r.Id
-                                where ids.Contains(ur.UserId)
-                                select new { ur.UserId, RoleName = r.Name! })
-                                .ToListAsync(ct);
-
-        return roleByUser.Select(x => (x.UserId, x.RoleName)).ToList();
+        return participants;
     }
 }

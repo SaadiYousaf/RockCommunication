@@ -489,7 +489,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
         b.Entity<AgentSkill>(e =>
         {
-            e.HasIndex(x => new { x.UserId, x.SkillId }).IsUnique();
+            // Partial filter so a soft-deleted (removed) skill tombstone doesn't block re-assigning
+            // the same skill to the same agent — matches Sale/Employee filtered unique indexes.
+            e.HasIndex(x => new { x.UserId, x.SkillId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<WorkflowRule>(e =>
@@ -521,7 +523,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
         b.Entity<RolePermission>(e =>
         {
-            e.HasIndex(x => new { x.RoleId, x.PermissionId }).IsUnique();
+            // Partial filter: DbSeeder reconciles role specs by soft-deleting then re-adding grants,
+            // so a tombstone must not block re-inserting a previously-removed permission (else startup crashes).
+            e.HasIndex(x => new { x.RoleId, x.PermissionId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<AppModule>(e =>
@@ -536,7 +540,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
         b.Entity<RoleModule>(e =>
         {
-            e.HasIndex(x => new { x.RoleId, x.ModuleId }).IsUnique();
+            // Partial filter: same DbSeeder remove-then-re-add reconcile as RolePermission — a
+            // tombstone must not block re-adding a module grant a later release restores.
+            e.HasIndex(x => new { x.RoleId, x.ModuleId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<LeadScoringRule>(e =>

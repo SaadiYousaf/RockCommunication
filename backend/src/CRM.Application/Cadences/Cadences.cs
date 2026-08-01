@@ -120,6 +120,13 @@ public class CadenceHandler :
             // FirstOrDefault: a cadence can be active with zero steps — re-enrolling must not throw.
             var reDelay = cadence.Steps.OrderBy(s => s.Order).FirstOrDefault()?.DelayMinutes ?? 0;
             existing.NextRunAt = DateTime.UtcNow.AddMinutes(reDelay);
+            // Reset the lifecycle: without this, EnrolledAt stays at the original enrollment so the
+            // StopIfContacted check re-matches an old contact activity and stops the run before it
+            // sends step 1, and the enrollment reports Active while still carrying a stale
+            // CompletedAt / StopReason.
+            existing.EnrolledAt = DateTime.UtcNow;
+            existing.CompletedAt = null;
+            existing.StopReason = null;
             await _db.SaveChangesAsync(ct);
             return Unit.Value;
         }

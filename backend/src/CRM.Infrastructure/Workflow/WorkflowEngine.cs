@@ -91,17 +91,30 @@ public class WorkflowEngine : IWorkflowEngine
             var facts = ParseFacts(doc.RootElement);
             var ev = new ReplayedEvent(rule.EventType, rule.AgencyId, facts);
 
+            // Per-action try/catch so ContinueOnError actually governs continuation: previously one
+            // action throwing skipped every later action even with ContinueOnError=true (its name/default).
+            var anyFailed = false;
             foreach (var action in rule.Actions.OrderBy(a => a.Order))
             {
-                var impl = _registry.Get(action.ActionType);
-                var prms = string.IsNullOrWhiteSpace(action.ParametersJson)
-                    ? new Dictionary<string, object?>()
-                    : JsonSerializer.Deserialize<Dictionary<string, object?>>(action.ParametersJson)
-                        ?? new Dictionary<string, object?>();
-                await impl.ExecuteAsync(ev, prms, ct);
+                try
+                {
+                    var impl = _registry.Get(action.ActionType);
+                    var prms = string.IsNullOrWhiteSpace(action.ParametersJson)
+                        ? new Dictionary<string, object?>()
+                        : JsonSerializer.Deserialize<Dictionary<string, object?>>(action.ParametersJson)
+                            ?? new Dictionary<string, object?>();
+                    await impl.ExecuteAsync(ev, prms, ct);
+                }
+                catch (Exception ex)
+                {
+                    anyFailed = true;
+                    _logger.LogError(ex, "Workflow action {ActionType} (rule {RuleId}) failed", action.ActionType, rule.Id);
+                    if (!rule.ContinueOnError) throw; // outer catch records the generic error + rethrows for retry
+                }
             }
-            execution.Status = "Completed";
+            execution.Status = anyFailed ? "Failed" : "Completed";
             execution.CompletedAt = DateTime.UtcNow;
+            if (anyFailed) execution.Error = "One or more actions failed to execute.";
             await _db.SaveChangesAsync(ct);
         }
         catch (Exception ex)

@@ -32,6 +32,15 @@ public class ExceptionMiddleware
 
     private async Task HandleAsync(HttpContext ctx, Exception ex)
     {
+        // If the response has already begun (e.g. a file/stream download that faulted mid-copy),
+        // setting StatusCode/ContentType throws a second exception that escapes to Kestrel and
+        // aborts the connection. Log and bail — we can't write an error body over a committed response.
+        if (ctx.Response.HasStarted)
+        {
+            _logger.LogError(ex, "Unhandled exception after the response has started; cannot write an error response");
+            return;
+        }
+
         var (status, problem) = ex switch
         {
             ValidationException v => ((int)HttpStatusCode.BadRequest, new ProblemDetails

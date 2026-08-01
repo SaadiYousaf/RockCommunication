@@ -202,7 +202,14 @@ public class ValidatorQueueHandler :
         // Already-paid entries are left untouched (no claw-back). Mirrors ValidateSaleHandler.
         if (request.Status is ValidatorStatus.Decline or ValidatorStatus.ClientCancelled)
         {
-            var unpaid = await _db.CommissionEntries.Where(c => c.SaleId == sale.Id && !c.Paid).ToListAsync(ct);
+            // Central agents act with an empty tenant (AgencyId = Guid.Empty) and are not SuperAdmin,
+            // so the global tenant filter would scope this read to Guid.Empty and match nothing —
+            // leaving the real agency's unpaid lines to be paid on a lost sale. Bypass the filter and
+            // scope explicitly to the sale's agency (re-adding !IsDeleted, which IgnoreQueryFilters drops).
+            // Mirrors AssignLicenseAgentAsync; behaviour-preserving for the agency-scoped path.
+            var unpaid = await _db.CommissionEntries.IgnoreQueryFilters()
+                .Where(c => c.SaleId == sale.Id && c.AgencyId == sale.AgencyId && !c.Paid && !c.IsDeleted)
+                .ToListAsync(ct);
             _db.CommissionEntries.RemoveRange(unpaid);
         }
 

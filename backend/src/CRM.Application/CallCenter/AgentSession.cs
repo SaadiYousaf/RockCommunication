@@ -113,10 +113,15 @@ public class AgentSessionHandler :
         // Block "Available" if there is an unresolved on-call wrap-up
         if (request.Status == AgentStatus.Available)
         {
+            // Bound to the CURRENT session's clock-in window (CallRecord has no SessionId).
+            // Without this, an unwrapped call from a prior day/session permanently blocks the
+            // agent from ever going Available again — a lockout with no wrap-up path for
+            // voicemail/abandoned records.
             var unwrapped = await _db.CallRecords.AnyAsync(c =>
                 c.AgencyId == session.AgencyId &&
                 c.AgentUserId == session.UserId &&
                 c.EndedAt != null &&
+                c.EndedAt >= session.ClockInAt &&
                 (c.WrapUpCode == null || c.WrapUpCode == ""), ct);
             if (unwrapped)
                 throw new ConflictException("You must wrap up your last call before going available.");

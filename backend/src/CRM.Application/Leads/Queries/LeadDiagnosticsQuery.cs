@@ -1,3 +1,4 @@
+using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -69,12 +70,14 @@ public class LeadDiagnosticsHandler : IRequestHandler<LeadDiagnosticsQuery, Lead
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
+    private readonly IPhoneNormalizer _phone;
 
-    public LeadDiagnosticsHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    public LeadDiagnosticsHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IPhoneNormalizer phone)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
+        _phone = Guard.AgainstNull(phone);
     }
 
     public async Task<LeadDiagnosticsDto> Handle(LeadDiagnosticsQuery req, CancellationToken ct)
@@ -93,8 +96,12 @@ public class LeadDiagnosticsHandler : IRequestHandler<LeadDiagnosticsQuery, Lead
             lead.Stage, lead.Disposition, lead.Score, lead.CreatedAt, ageDays);
 
         // ---- Compliance ----
-        var dnc = await _db.DncEntries.FirstOrDefaultAsync(
-            d => d.AgencyId == _user.AgencyId && d.PhoneNormalized == lead.PhoneNumber, ct);
+        // DncEntry stores the NORMALISED phone; compare against the normalised lead phone
+        // (mirrors DncChecker) — otherwise a formatted number like "(555) 123-4567" never
+        // matches its "5551234567" DNC entry and the tool wrongly reports OnDnc=false.
+        var phoneNorm = _phone.Normalize(lead.PhoneNumber);
+        var dnc = string.IsNullOrEmpty(phoneNorm) ? null : await _db.DncEntries.FirstOrDefaultAsync(
+            d => d.AgencyId == _user.AgencyId && d.PhoneNormalized == phoneNorm, ct);
         var compliance = new ComplianceStatus(
             OnDnc: dnc is not null,
             DncReason: dnc?.Reason,

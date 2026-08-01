@@ -81,9 +81,12 @@ public class AuditInterceptor : SaveChangesInterceptor
                     .Where(p => p.IsModified)
                     .ToDictionary(p => p.Metadata.Name, p => new { Old = p.OriginalValue, New = p.CurrentValue });
 
+            // Same SuperAdmin (empty agency) normalisation as BuildAudit: fall back to the role's
+            // own agency so a tenant admin sees platform-operator changes to their roles.
+            var roleActingAgency = _user.AgencyId is { } ra && ra != Guid.Empty ? ra : (Guid?)null;
             audits.Add(new AuditEntry
             {
-                AgencyId = _user.AgencyId,
+                AgencyId = roleActingAgency ?? entry.Entity.AgencyId,
                 EntityName = nameof(ApplicationRole),
                 EntityId = entry.Entity.Id.ToString(),
                 Action = action,
@@ -97,21 +100,30 @@ public class AuditInterceptor : SaveChangesInterceptor
         if (audits.Count > 0) ctx.Set<AuditEntry>().AddRange(audits);
     }
 
+    // A property whose column is AES-encrypted at rest (SSN, bank account, portal password, CNIC).
+    // Detected via the value converter so every current and future encrypted column is covered
+    // without a denylist — its old/new values must never be written to the audit log in cleartext.
+    private static bool IsSensitive(Microsoft.EntityFrameworkCore.Metadata.IProperty p)
+        => p.GetValueConverter() is CRM.Infrastructure.Security.EncryptedStringConverter;
+
     private AuditEntry BuildAudit(EntityEntry<BaseEntity> entry, string action, string? userId, string userName)
     {
         var changes = entry.State == EntityState.Added
             ? null
             : entry.Properties
                 .Where(p => p.IsModified && p.Metadata.Name != nameof(BaseEntity.UpdatedAt))
-                .ToDictionary(p => p.Metadata.Name, p => new { Old = p.OriginalValue, New = p.CurrentValue });
+                .ToDictionary(p => p.Metadata.Name, p => IsSensitive(p.Metadata)
+                    ? new { Old = (object?)"[REDACTED]", New = (object?)"[REDACTED]" }
+                    : new { Old = p.OriginalValue, New = p.CurrentValue });
 
         // Attribute the audit to the acting user's agency; for a cross-tenant SuperAdmin
-        // (no agency claim) fall back to the audited row's own agency so a tenant admin can
-        // still see changes made to their data.
+        // (empty/no agency claim) fall back to the audited row's own agency so a tenant admin can
+        // still see changes made to their data. Guid.Empty is normalised to null so the fallback fires.
         var entityAgency = (entry.Entity as Domain.Common.TenantEntity)?.AgencyId;
+        var actingAgency = _user.AgencyId is { } ua && ua != Guid.Empty ? ua : (Guid?)null;
         return new AuditEntry
         {
-            AgencyId = _user.AgencyId ?? (entityAgency == Guid.Empty ? null : entityAgency),
+            AgencyId = actingAgency ?? (entityAgency == Guid.Empty ? null : entityAgency),
             EntityName = entry.Entity.GetType().Name,
             EntityId = entry.Entity.Id.ToString(),
             Action = action,

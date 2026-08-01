@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   useClockInMutation, useClockOutMutation, useListWrapUpCodesQuery,
-  useMyRecentCallsQuery, useMySessionQuery, useSetAgentStatusMutation, useWrapUpCallMutation,
+  useMyRecentCallsQuery, useMyTodayCallStatsQuery, useMySessionQuery, useSetAgentStatusMutation, useWrapUpCallMutation,
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
@@ -51,6 +51,9 @@ export function AgentPanelPage() {
   // null it out when the latest fetch failed to avoid showing a phantom shift.
   const session = sessionError ? null : rawSession;
   const { data: recentCalls, isLoading: callsLoading } = useMyRecentCallsQuery(20);
+  // Authoritative day totals — the recent list is capped at 20, so an agent past 20 calls
+  // had understated "Calls today" / "Sales today". Invalidated on wrap-up via the "Calls" tag.
+  const { data: todayStats } = useMyTodayCallStatsQuery();
   const { data: codes } = useListWrapUpCodesQuery();
   const [clockIn, { isLoading: clockingIn }] = useClockInMutation();
   const [clockOut, { isLoading: clockingOut }] = useClockOutMutation();
@@ -75,15 +78,14 @@ export function AgentPanelPage() {
 
   const stats = useMemo(() => {
     const calls = recentCalls ?? [];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todays = calls.filter((c) => new Date(c.initiatedAt) >= today);
-    const sales = todays.filter((c) => c.wrapUpCode && codes?.find((cc) => cc.code === c.wrapUpCode && cc.isSale));
     return {
-      total: todays.length,
-      sales: sales.length,
+      // Day totals come from the authoritative aggregate (all of today's calls, not the last 20).
+      total: todayStats?.calls ?? 0,
+      sales: todayStats?.sales ?? 0,
+      // "Pending wrap-up" is a transient, small set — deriving it from the recent list is fine.
       pending: calls.filter((c) => c.endedAt && !c.wrapUpCode).length,
     };
-  }, [recentCalls, codes]);
+  }, [recentCalls, todayStats]);
 
   async function changeStatus(status: string) {
     setPendingStatus(status);

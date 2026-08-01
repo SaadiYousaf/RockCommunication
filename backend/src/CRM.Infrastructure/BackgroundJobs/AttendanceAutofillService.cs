@@ -72,7 +72,9 @@ public class AttendanceAutofillService : BackgroundService
         var empIds = employees.Select(e => e.Id).ToList();
 
         var clockedIn = (await db.AgentSessions.AsNoTracking().IgnoreQueryFilters()
-                .Where(s => userIds.Contains(s.UserId) && s.ClockInAt >= day && s.ClockInAt < next)
+                // IgnoreQueryFilters drops the soft-delete filter too — re-add !IsDeleted so a voided
+                // clock-in doesn't auto-mark the employee Present (matches FillAttendanceFromClockInsCommand).
+                .Where(s => !s.IsDeleted && userIds.Contains(s.UserId) && s.ClockInAt >= day && s.ClockInAt < next)
                 .Select(s => s.UserId).ToListAsync(ct))
             .ToHashSet();
         if (clockedIn.Count == 0) return 0;

@@ -75,30 +75,42 @@ public class ListCallsHandler : IRequestHandler<ListCallsQuery, PagedCallsResult
         var avgTalk = talkData.Count == 0 ? 0
             : talkData.Average(c => (c.EndedAt!.Value - c.AnsweredAt!.Value).TotalSeconds);
 
+        // SQLite can't translate (EndedAt - AnsweredAt) TimeSpan math, so talkTime-desc is sorted
+        // and paged in memory (like avgTalk above); every other sort stays SQL-paged unchanged.
         q = request.Sort switch
         {
             "initiatedAt-asc" => q.OrderBy(c => c.InitiatedAt),
-            "talkTime-desc" => q.OrderByDescending(c => c.EndedAt != null && c.AnsweredAt != null
-                ? (long)(c.EndedAt!.Value - c.AnsweredAt!.Value).TotalSeconds : 0L)
-                .ThenByDescending(c => c.InitiatedAt),
-            _ => q.OrderByDescending(c => c.InitiatedAt),
+            _ => q.OrderByDescending(c => c.InitiatedAt), // talkTime-desc handled in memory below
         };
 
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 500);
 
-        var rawItems = await q.Skip(skip).Take(take)
-            .Join(_db.Leads.AsNoTracking(),
-                c => c.LeadId, l => l.Id,
-                (c, l) => new
-                {
-                    c.Id, c.LeadId, l.FirstName, l.LastName, l.PhoneNumber,
-                    c.AgentUserId, c.Provider, c.ProviderCallId,
-                    c.Status, c.Direction,
-                    c.InitiatedAt, c.AnsweredAt, c.EndedAt,
-                    c.RecordingUrl, c.WrapUpCode
-                })
-            .ToListAsync(ct);
+        var rawItems = request.Sort == "talkTime-desc"
+            ? (await q.Join(_db.Leads.AsNoTracking(),
+                    c => c.LeadId, l => l.Id,
+                    (c, l) => new
+                    {
+                        c.Id, c.LeadId, l.FirstName, l.LastName, l.PhoneNumber,
+                        c.AgentUserId, c.Provider, c.ProviderCallId,
+                        c.Status, c.Direction,
+                        c.InitiatedAt, c.AnsweredAt, c.EndedAt,
+                        c.RecordingUrl, c.WrapUpCode
+                    }).ToListAsync(ct))
+                .OrderByDescending(r => r.AnsweredAt is { } a && r.EndedAt is { } e ? (e - a).TotalSeconds : double.MinValue)
+                .ThenByDescending(r => r.InitiatedAt)
+                .Skip(skip).Take(take).ToList()
+            : await q.Skip(skip).Take(take)
+                .Join(_db.Leads.AsNoTracking(),
+                    c => c.LeadId, l => l.Id,
+                    (c, l) => new
+                    {
+                        c.Id, c.LeadId, l.FirstName, l.LastName, l.PhoneNumber,
+                        c.AgentUserId, c.Provider, c.ProviderCallId,
+                        c.Status, c.Direction,
+                        c.InitiatedAt, c.AnsweredAt, c.EndedAt,
+                        c.RecordingUrl, c.WrapUpCode
+                    }).ToListAsync(ct);
 
         var users = await _identity.ListUsersAsync(_user.AgencyId, ct);
         var byId = users.ToDictionary(u => u.Id);

@@ -60,9 +60,11 @@ public class UsersController : ControllerBase
         [FromQuery] Guid? agencyId,
         CancellationToken ct)
     {
+        // Use the lightweight name projection (one query) — ListUsersAsync fans out ~5 identity/module
+        // queries per user (N+1) only to discard everything but id/userName on this hot, permission-free path.
         var agencyFilter = ResolveAgencyFilter(agencyId);
-        var users = await _identity.ListUsersAsync(agencyFilter, ct);
-        return Ok(users.Select(u => new { id = u.Id, userName = u.UserName }).ToList());
+        var names = await _identity.ListUserNamesAsync(agencyFilter, ct);
+        return Ok(names.Select(kv => new { id = kv.Key, userName = kv.Value }).ToList());
     }
 
     /// <summary>

@@ -66,7 +66,11 @@ public class AuthController : ControllerBase
             if (_user.AgencyId is null) return BadRequest(new { error = "agencyId is required." });
             agencyId = _user.AgencyId.Value;
         }
-        return Ok(await _identity.RegisterAsync(req.Email, req.UserName, req.Password, agencyId, req.Roles, ct: ct));
+        // Confinement: a call-center-pinned caller (e.g. CallCenterAdmin) may only create users
+        // inside their own call center — mirrors UserAdminService.AuthorizeTargetAsync. Agency-level
+        // callers (CallCenterId == null) and SuperAdmin keep agency-wide reach.
+        var callCenterId = isSuperAdmin ? null : _user.CallCenterId;
+        return Ok(await _identity.RegisterAsync(req.Email, req.UserName, req.Password, agencyId, req.Roles, callCenterId: callCenterId, ct: ct));
     }
 
     [Authorize]

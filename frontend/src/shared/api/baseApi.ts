@@ -95,7 +95,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "SocialReports", "Meetings", "Profile"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "SocialReports", "Meetings", "Profile"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -213,7 +213,7 @@ export const baseApi = createApi({
 
     recordSale: b.mutation<Sale, { leadId: string; carrier: string; policyNumber?: string; monthlyPremium: number; routingNumber: string; accountNumber: string; accountType?: string; recordingKey?: string | null }>({
       query: (body) => ({ url: "/api/sales", method: "POST", body }),
-      invalidatesTags: ["Leads", "Sales"],
+      invalidatesTags: ["Leads", "Sales", "Commissions"],   // a recorded sale mints a commission entry
     }),
     uploadSaleRecording: b.mutation<{ key: string; fileName: string; size: number }, File>({
       query: (file) => {
@@ -224,7 +224,7 @@ export const baseApi = createApi({
     }),
     validateSale: b.mutation<Sale, { id: string; approve: boolean; notes?: string }>({
       query: ({ id, ...body }) => ({ url: `/api/sales/${id}/validate`, method: "POST", body }),
-      invalidatesTags: ["Leads", "Sales"],
+      invalidatesTags: ["Leads", "Sales", "Commissions"],   // approve/reject creates or voids commission lines
     }),
     fundSale: b.mutation<Sale, string>({
       query: (id) => ({ url: `/api/sales/${id}/fund`, method: "POST" }),
@@ -236,10 +236,11 @@ export const baseApi = createApi({
     }),
     payrollRuns: b.query<PayrollRun[], void>({
       query: () => "/api/sales/payroll-runs",
+      providesTags: ["PayrollRuns"],
     }),
     createPayrollRun: b.mutation<PayrollRun, { periodStart: string; periodEnd: string }>({
       query: (body) => ({ url: "/api/sales/payroll-runs", method: "POST", body }),
-      invalidatesTags: ["Commissions"],
+      invalidatesTags: ["Commissions", "PayrollRuns"],   // show the new run in the list immediately
     }),
 
     myCallbacks: b.query<Callback[], { includeCompleted?: boolean } | void>({
@@ -268,7 +269,7 @@ export const baseApi = createApi({
     }),
     upcomingEvents: b.query<UpcomingEvent[], number | void>({
       query: (days) => ({ url: "/api/dashboard/upcoming-events", params: days ? { days } : undefined }),
-      providesTags: ["Callbacks", "Interviews", "Employees"],
+      providesTags: ["Callbacks", "Interviews", "Employees", "Meetings"],   // widget lists meetings too
     }),
     teamStatus: b.query<TeamStatusRow[], string | void>({
       query: (callCenterId) => ({ url: "/api/dashboard/team-status", params: callCenterId ? { callCenterId } : undefined }),
@@ -504,7 +505,7 @@ export const baseApi = createApi({
     }),
     setValidatorStatus: b.mutation<{ saleId: string; status: string; leadStage: string }, { saleId: string } & SetValidatorStatusInput>({
       query: ({ saleId, ...body }) => ({ url: `/api/intake/validate/${saleId}/status`, method: "POST", body }),
-      invalidatesTags: ["ValidatorQueue", "Sales", "Leads"],
+      invalidatesTags: ["ValidatorQueue", "Sales", "Leads", "Commissions"],   // approve/decline mints or voids commission lines
     }),
     listCommissionConfig: b.query<{ ruleName: string; amount: number | null; threshold: number | null; enabled: boolean }[], void>({
       query: () => "/api/admin/commission-config",
@@ -583,6 +584,12 @@ export const baseApi = createApi({
     }),
     myRecentCalls: b.query<CallSummary[], number | void>({
       query: (take) => ({ url: "/api/cc/calls/recent", params: take ? { take } : undefined }),
+      providesTags: ["Calls"],
+    }),
+    // Authoritative "today" totals for the agent panel — aggregated over ALL of today's calls,
+    // not derived from the truncated recent-calls list (which understated agents past 20 calls).
+    myTodayCallStats: b.query<{ calls: number; sales: number }, void>({
+      query: () => "/api/cc/calls/today-stats",
       providesTags: ["Calls"],
     }),
 
@@ -1380,7 +1387,7 @@ export const {
   useSelfValidateSaleMutation,
   useListQaReviewsQuery, useQaScorecardsQuery,
   useMySessionQuery, useClockInMutation, useClockOutMutation, useSetAgentStatusMutation,
-  useWrapUpCallMutation, useMyRecentCallsQuery,
+  useWrapUpCallMutation, useMyRecentCallsQuery, useMyTodayCallStatsQuery,
   useListWrapUpCodesQuery, useUpsertWrapUpCodeMutation,
   useListDncQuery, useAddDncMutation, useRemoveDncMutation,
   useCheckComplianceMutation,

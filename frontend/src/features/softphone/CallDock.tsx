@@ -30,6 +30,19 @@ export function CallDock() {
 
   useEffect(() => { setCall(initial ?? null); }, [initial]);
 
+  // Re-render every second while a call is live so the duration display ticks smoothly
+  // (SignalR events / the 30s poll are too infrequent to drive a running clock).
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!call) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [call]);
+
+  // Stop the synthetic ring on unmount (forced sign-out / route change while still ringing),
+  // otherwise the module-level ring interval + AudioContext keep beeping.
+  useEffect(() => () => stopRing(), []);
+
   useAgentHub((event, payload) => {
     switch (event) {
       case "incoming-call":
@@ -40,9 +53,14 @@ export function CallDock() {
         break;
       case "call-ringing":
       case "call-answered":
-      case "call-state-changed":
-        setCall(payload as ActiveCall);
+      case "call-state-changed": {
+        // Stop the ring the moment the call leaves "ringing" (answered/connected) — previously it
+        // beeped for the whole connected call, only stopping on call-ended.
+        const next = payload as ActiveCall;
+        if (next.status !== "ringing") stopRing();
+        setCall(next);
         break;
+      }
       case "call-ended":
         stopRing();
         setCall(null);

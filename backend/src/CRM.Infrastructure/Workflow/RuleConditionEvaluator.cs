@@ -70,7 +70,10 @@ public class RuleConditionEvaluator
         if (a is null) return -1;
         if (decimal.TryParse(a.ToString(), out var da) && b.TryGetDecimal(out var db))
             return da.CompareTo(db);
-        return string.CompareOrdinal(a.ToString(), b.GetString());
+        // b.GetString() throws if b is a Number/Bool (e.g. a numeric rule value compared against a
+        // non-numeric fact). GetRawText() never throws, preserving the lexical fallback without crashing.
+        var bStr = b.ValueKind == JsonValueKind.String ? b.GetString() : b.GetRawText();
+        return string.CompareOrdinal(a.ToString(), bStr);
     }
 
     private static bool InArray(object? a, JsonElement b)

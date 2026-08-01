@@ -1,6 +1,8 @@
 import { API_URL } from "../../shared/config";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   useBulkAssignLeadsMutation,
@@ -28,6 +30,9 @@ const PAGE_SIZE = 25;
 export function LeadsPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  // Source the token from THIS tab's redux session, not shared localStorage — otherwise a second
+  // tab signed into another agency would export that agency's leads (mismatched with the on-screen list).
+  const auth = useSelector((s: RootState) => s.auth);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const stageParam = searchParams.get("stage");
@@ -173,8 +178,7 @@ export function LeadsPage() {
   function exportCsv() {
     const params = new URLSearchParams();
     if (filter !== "All") params.set("stage", filter);
-    let token: string | null = null;
-    try { token = JSON.parse(localStorage.getItem("auth") ?? "null")?.accessToken ?? null; } catch { /* malformed */ }
+    const token = auth.accessToken;
     if (!token) { toast.error("Not authenticated"); return; }
     setExporting(true);
     fetch(`${API_URL}/api/leads/export.csv?${params.toString()}`, {

@@ -50,9 +50,13 @@ public class MeetingInputValidator : AbstractValidator<MeetingInput>
         RuleFor(x => x.Location).MaximumLength(SchedulingDefaults.MaxLocationLength);
         RuleFor(x => x.OnlineUrl).MaximumLength(SchedulingDefaults.MaxOnlineUrlLength);
         RuleFor(x => x.EndsAt).GreaterThan(x => x.StartsAt).WithMessage("End time must be after the start time.");
-        RuleFor(x => x.AttendeeUserIds!.Count + x.AttendeeEmails!.Count)
+        // Null-safe combined count with no When-gate: previously the cap was skipped entirely when
+        // either list was null, so a request with one huge list (and the other null) bypassed the
+        // limit and could insert thousands of attendees + fire thousands of email invites.
+        // Ternaries (not ?. — illegal in an expression-tree lambda) keep this null-safe.
+        RuleFor(x => (x.AttendeeUserIds == null ? 0 : x.AttendeeUserIds.Count)
+                   + (x.AttendeeEmails == null ? 0 : x.AttendeeEmails.Count))
             .LessThanOrEqualTo(SchedulingDefaults.MaxAttendees)
-            .When(x => x.AttendeeUserIds != null && x.AttendeeEmails != null)
             .WithMessage($"A meeting can have at most {SchedulingDefaults.MaxAttendees} attendees.");
     }
 }

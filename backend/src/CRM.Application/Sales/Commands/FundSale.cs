@@ -36,6 +36,12 @@ public class FundSaleHandler : IRequestHandler<FundSaleCommand, SaleDto>
         if (sale.ValidatedAt is null)
             throw new ConflictException("Sale must be validated before funding.");
 
+        // Idempotency: a sale can be auto-funded inside ValidateSaleHandler, so ValidatedAt alone
+        // does not prove it is unfunded. Without this guard a manual re-fund re-submits the same
+        // policy to the funding provider (duplicate real money movement). Mirrors ValidateSaleHandler.
+        if (sale.FundedAt is not null)
+            throw new ConflictException("Sale is already funded.");
+
         var result = await _funding.SubmitAsync(
             new FundingRequest(sale.Id, sale.PolicyNumber ?? string.Empty, sale.AnnualPremium, sale.Carrier), ct);
 

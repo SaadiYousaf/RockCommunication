@@ -31,7 +31,7 @@ public class ListQaReviewsHandler : IRequestHandler<ListQaReviewsQuery, IReadOnl
         // SQLite stores decimal as TEXT and can't evaluate the % divide in SQL — pull the rows first,
         // then compute the percentage in memory (same guard the AgentScorecard/dashboard/sales use).
         var rows = await q.OrderByDescending(r => r.ReviewedAt)
-            .Take(Math.Min(request.Take, 200))
+            .Take(Math.Clamp(request.Take, 1, 200))   // Clamp both ends: a negative Take becomes LIMIT -1 (unbounded) on SQLite.
             .Select(r => new { r.Id, r.LeadId, r.AgentUserId, r.ReviewerUserId, r.RubricId, r.TotalScore, r.MaxScore, r.Notes, r.ReviewedAt })
             .ToListAsync(ct);
         return rows.Select(r => new QaReviewSummaryDto(r.Id, r.LeadId, r.AgentUserId, r.ReviewerUserId,

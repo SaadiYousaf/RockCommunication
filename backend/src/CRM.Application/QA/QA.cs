@@ -132,8 +132,13 @@ public class SubmitReviewHandler : IRequestHandler<SubmitReviewCommand, ReviewDt
             MaxScore = max
         };
 
+        // Guard against the same rubric item being scored more than once — otherwise its bounded
+        // score is added repeatedly and TotalScore can exceed MaxScore (percentages over 100%).
+        var seen = new HashSet<Guid>();
         foreach (var item in input.Items)
         {
+            if (!seen.Add(item.RubricItemId))
+                throw new ConflictException($"Rubric item {item.RubricItemId} scored more than once.");
             var rubricItem = rubric.Items.FirstOrDefault(i => i.Id == item.RubricItemId)
                 ?? throw new ConflictException($"Rubric item {item.RubricItemId} not found.");
             var bounded = Math.Max(0, Math.Min(item.Score, rubricItem.MaxScore));

@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Authorization;
+using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Leads.Commands;
 using CRM.Domain.Common;
@@ -21,13 +22,15 @@ public class IntegrationsController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IDialerProvider _dialer;
     private readonly ICarrierRegistry _carriers;
+    private readonly IComplianceGuard _compliance;
     private readonly AppDbContext _db;
 
-    public IntegrationsController(IMediator mediator, IDialerProvider dialer, ICarrierRegistry carriers, AppDbContext db)
+    public IntegrationsController(IMediator mediator, IDialerProvider dialer, ICarrierRegistry carriers, IComplianceGuard compliance, AppDbContext db)
     {
         _mediator = Guard.AgainstNull(mediator);
         _dialer = Guard.AgainstNull(dialer);
         _carriers = Guard.AgainstNull(carriers);
+        _compliance = Guard.AgainstNull(compliance);
         _db = Guard.AgainstNull(db);
     }
 
@@ -48,11 +51,18 @@ public class IntegrationsController : ControllerBase
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == body.LeadId && l.AgencyId == user.AgencyId, ct);
         if (lead is null) return NotFound();
 
+        // Same DNC/TCPA gate the /api/cc/calls/dial path enforces — without it this endpoint
+        // would place calls to do-not-call numbers or outside the legal calling window.
+        var compliance = await _compliance.CheckOutboundDialAsync(lead.AgencyId, lead.PhoneNumber, lead.State, ct);
+        if (!compliance.Allowed)
+            return Conflict(new { error = compliance.BlockReason ?? "Call blocked by compliance." });
+
         var result = await _dialer.DialAsync(user.UserId.Value, lead.PhoneNumber, lead.Id, ct);
 
         _db.CallRecords.Add(new CallRecord
         {
             AgencyId = lead.AgencyId,
+            CallCenterId = lead.CallCenterId,
             LeadId = lead.Id,
             AgentUserId = user.UserId.Value,
             Provider = _dialer.Name,

@@ -47,12 +47,16 @@ public class LeadLifecycleTests : IClassFixture<CrmWebAppFactory>
         });
         var saleId = sale.GetProperty("id").GetGuid();
 
-        // Validator approves
+        // Validator approves. With policy-funding automation on (the default), an approved sale is
+        // auto-funded immediately, so it is already Funded once validation returns.
         var validatorClient = await _factory.LoginAsync(validatorName, "Val@1234!");
-        await validatorClient.PostJsonAsync($"/api/sales/{saleId}/validate", new { approve = true, notes = "Approved" });
+        var validated = await validatorClient.PostJsonAsync($"/api/sales/{saleId}/validate", new { approve = true, notes = "Approved" });
+        Assert.NotEqual(System.Text.Json.JsonValueKind.Null, validated.GetProperty("fundedAt").ValueKind);
 
-        // Admin funds
-        await admin.PostJsonAsync($"/api/sales/{saleId}/fund", new { });
+        // Funding is idempotent: manually re-funding an already-funded sale is rejected (409),
+        // never re-submitted to the funding provider.
+        var refund = await admin.PostAsJsonAsync($"/api/sales/{saleId}/fund", new { });
+        Assert.Equal(System.Net.HttpStatusCode.Conflict, refund.StatusCode);
 
         // Timeline includes stage changes
         var timeline = await admin.GetJsonAsync($"/api/leads/{leadId}/timeline");

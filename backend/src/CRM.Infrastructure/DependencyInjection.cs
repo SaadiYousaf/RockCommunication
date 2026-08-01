@@ -418,6 +418,7 @@ public static class DependencyInjection
             services.AddHostedService<InvitationExpiryNotificationService>();
             services.AddHostedService<TrainingReminderService>();
             services.AddHostedService<AttendanceAutofillService>();
+            services.AddHostedService<CadenceRunnerService>();
         }
         services.AddScoped<BackgroundJobs.WorkflowJobRunner>();
         services.AddScoped<BackgroundJobs.CallbackReminderJob>();
