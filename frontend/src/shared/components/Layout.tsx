@@ -3,8 +3,10 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, type RootState } from "../../app/store";
-import { Avatar, Badge, Icon, type IconName, Spinner, cn } from "../ui";
+import { Badge, Icon, type IconName, Spinner, cn } from "../ui";
 import { useQueueCountsQuery } from "../api/baseApi";
+import { useMyProfileQuery } from "../../features/profile/baseApi";
+import { AvatarImage } from "../../features/profile/ProfileAvatar";
 import type { QueueCounts } from "../api/types";
 import { CallDock } from "../../features/softphone/CallDock";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
@@ -176,6 +178,11 @@ function LayoutInner() {
   const userName = auth.user?.userName ?? "User";
   const primaryRole = roleLabel(auth.user?.roles[0] ?? "Member");
 
+  // The signed-in user's own profile — drives the header avatar (uploaded photo when set).
+  // Skipped during onboarding, where non-auth API calls are gated server-side.
+  const onboarding = !!(auth.user?.mustChangePassword || auth.user?.twoFactorSetupRequired);
+  const { data: myProfile } = useMyProfileQuery(undefined, { skip: !auth.accessToken || onboarding });
+
   return (
     // overflow-x-clip is a mobile safety net: no stray-wide descendant can ever
     // push the whole page sideways. `clip` (not `hidden`) keeps sticky headers /
@@ -257,7 +264,7 @@ function LayoutInner() {
               onClick={() => setMenuOpen((o) => !o)}
               className="flex items-center gap-3 pr-2 pl-1 py-1 rounded-xl hover:bg-ink-100/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
-              <Avatar name={userName} size={32} />
+              <AvatarImage userId={auth.user?.id ?? ""} hasAvatar={!!myProfile?.hasAvatar} name={userName} size={32} />
               <div className="text-left hidden sm:block min-w-0">
                 <div className="text-sm font-medium text-ink-900 leading-tight truncate">{userName}</div>
                 <div className="text-[11px] text-ink-500 leading-tight truncate">{primaryRole}</div>
@@ -275,6 +282,12 @@ function LayoutInner() {
                   </div>
                 </div>
                 <nav className="py-1.5 text-sm">
+                  <button
+                    onClick={() => { setMenuOpen(false); navigate("/profile"); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                  >
+                    <Icon name="user" size={16} /> My Profile
+                  </button>
                   <button
                     onClick={() => { setMenuOpen(false); navigate("/2fa"); }}
                     className="w-full flex items-center gap-2.5 px-4 py-2 text-ink-700 hover:bg-ink-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"

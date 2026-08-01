@@ -21,6 +21,7 @@ import { AdminPage } from "../features/admin/AdminPage";
 import { AgenciesPage } from "../features/admin/AgenciesPage";
 import { CallCentersPage } from "../features/admin/CallCentersPage";
 import { TeamPage } from "../features/team/TeamPage";
+import { ProfilePage } from "../features/profile/ProfilePage";
 import { UserManagementPage } from "../features/admin/UserManagementPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { ChangePasswordPage } from "../features/auth/ChangePasswordPage";
@@ -158,6 +159,10 @@ const router = createBrowserRouter([
           { path: "/2fa",       element: <TwoFactorEnrollPage /> },
           { path: "/team",      element: <TeamPage /> },
           { path: "/calendar",  element: <CalendarPage /> },
+          // Self-service profile — /profile is the signed-in user (editable);
+          // /profile/:userId views another (same-agency) user, read-only.
+          { path: "/profile",          element: <ProfilePage /> },
+          { path: "/profile/:userId",  element: <ProfilePage /> },
 
           // Workspace
           {

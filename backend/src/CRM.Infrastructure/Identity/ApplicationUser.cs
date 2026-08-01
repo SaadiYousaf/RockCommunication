@@ -14,6 +14,21 @@ public class ApplicationUser : IdentityUser<Guid>
     /// </summary>
     public Guid? CallCenterId { get; set; }
     public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Opaque <see cref="Application.Common.Interfaces.IFileStorage"/> key for the user's
+    /// self-uploaded profile photo (container "avatars"), or null for none. A PERSONAL field the
+    /// user edits themselves — never set by admins/HR. Bytes are only ever served through the
+    /// authorized ProfileController avatar endpoint.
+    /// </summary>
+    public string? AvatarKey { get; set; }
+
+    /// <summary>Free-text "about me" the user maintains themselves (PERSONAL, self-editable).</summary>
+    public string? Bio { get; set; }
+
+    /// <summary>The user's city / location (PERSONAL, self-editable). PhoneNumber is inherited.</summary>
+    public string? Location { get; set; }
+
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string PreferredTwoFactorMethod { get; set; } = "Totp";

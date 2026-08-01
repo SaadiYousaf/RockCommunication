@@ -166,6 +166,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ITwoFactorService, TwoFactorService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<AuthEmailSender>();

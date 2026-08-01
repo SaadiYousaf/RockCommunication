@@ -131,6 +131,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     {
         base.OnModelCreating(b);
 
+        // Self-service profile fields on the Identity user. Personal, self-editable columns
+        // (org-owned fields keep the base Identity mappings); caps mirror ProfileConstants so the
+        // DB schema, the validator, and the API stay in lockstep.
+        b.Entity<ApplicationUser>(e =>
+        {
+            e.Property(x => x.AvatarKey).HasMaxLength(Application.Profile.ProfileConstants.MaxAvatarKeyLength);
+            e.Property(x => x.Bio).HasMaxLength(Application.Profile.ProfileConstants.MaxBioLength);
+            e.Property(x => x.Location).HasMaxLength(Application.Profile.ProfileConstants.MaxLocationLength);
+        });
+
         b.Entity<Agency>(e =>
         {
             e.HasIndex(x => x.Name).IsUnique();
