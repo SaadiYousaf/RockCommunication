@@ -9,10 +9,18 @@
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
+    <!-- Transitive pin: Swashbuckle/AspNetCore.OpenApi pull Microsoft.OpenApi 2.4.1
+         (GHSA-v5pm-xwqc-g5wc, High), whose fix landed later in the 2.x line. 2.11.0 is
+         the patched build; stay on 2.x for Swashbuckle compat. Remove once the parents bump it. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
     <!-- Redis backplane for multi-instance SignalR scale-out. Wired only when
-         SignalR:Backplane=Redis in configuration; otherwise the package is unused. -->
+         SignalR:Backplane=Redis in configuration; otherwise the package is unused.
+         (The SignalR server itself ships in the ASP.NET Core shared framework — no package needed.) -->
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.0" />
+    <!-- Transitive pin: SignalR.StackExchangeRedis pulls MessagePack 2.5.187
+         (GHSA-hv8m-jj95-wg3x, High). 2.5.302 is the patched 2.5.x build — stays on the
+         2.5 line the Redis backplane expects, avoiding the 3.x breaking changes. -->
+    <PackageReference Include="MessagePack" Version="2.5.302" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
