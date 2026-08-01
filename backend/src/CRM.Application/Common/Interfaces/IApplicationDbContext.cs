@@ -72,6 +72,8 @@ public interface IApplicationDbContext
     DbSet<PublicLeadCaptureEndpoint> PublicLeadCaptureEndpoints { get; }
     DbSet<Document> Documents { get; }
     DbSet<DocumentNote> DocumentNotes { get; }
+    DbSet<Meeting> Meetings { get; }
+    DbSet<MeetingAttendee> MeetingAttendees { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

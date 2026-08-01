@@ -305,6 +305,57 @@ export interface EmployeeInput {
   idCardBackKey?: string | null;
 }
 
+// ---- Scheduler / meetings ---------------------------------------------------
+
+export type MeetingStatus = "Scheduled" | "Cancelled" | "Completed";
+export type AttendeeResponse = "Pending" | "Accepted" | "Declined" | "Tentative";
+
+/** One invitee on a meeting, with their resolved display name and RSVP. */
+export interface MeetingAttendee {
+  id: string;
+  /** The agency user (they can RSVP in-app), or null for an external email guest. */
+  userId: string | null;
+  email: string;
+  userName: string | null;
+  response: AttendeeResponse;
+}
+
+/** A meeting as seen by the current user. */
+export interface Meeting {
+  id: string;
+  title: string;
+  description?: string | null;
+  /** UTC ISO instant. */
+  startsAt: string;
+  /** UTC ISO instant, always after startsAt. */
+  endsAt: string;
+  location?: string | null;
+  onlineUrl?: string | null;
+  organizerUserId: string;
+  organizerName?: string | null;
+  status: MeetingStatus;
+  /** True when the current user owns (organizes) the meeting. */
+  isOrganizer: boolean;
+  /** The current user's own RSVP, or null when they're the organizer / not invited. */
+  myResponse?: AttendeeResponse | null;
+  attendees: MeetingAttendee[];
+  createdAt: string;
+}
+
+/** Writable meeting fields (create + update). Times are UTC ISO instants. */
+export interface MeetingInput {
+  title: string;
+  description?: string | null;
+  startsAt: string;
+  endsAt: string;
+  location?: string | null;
+  onlineUrl?: string | null;
+  /** Agency users invited (they can RSVP in-app). */
+  attendeeUserIds: string[];
+  /** Free-text external email guests. */
+  attendeeEmails: string[];
+}
+
 export interface AppModuleDto {
   id: string;
   code: string;

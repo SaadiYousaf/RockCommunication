@@ -36,6 +36,7 @@ const groups: NavGroup[] = [
     label: "Workspace",
     items: [
       { to: "/dashboard", label: "Dashboard",   icon: "dashboard", module: "dashboard" },
+      { to: "/calendar",  label: "Calendar",    icon: "calendar" },
       { to: "/guide",     label: "Guide",       icon: "book" },
       // No module gate — Team is visible to everyone as a read-only org view; editing is
       // still gated by the team.write permission inside the page + on the API mutations.

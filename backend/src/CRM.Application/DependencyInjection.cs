@@ -21,6 +21,7 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
         services.AddScoped<Intake.IIntakeNotifier, Intake.IntakeNotifier>();
+        services.AddScoped<Scheduling.IMeetingInviteSender, Scheduling.MeetingInviteSender>();
         return services;
     }
 }

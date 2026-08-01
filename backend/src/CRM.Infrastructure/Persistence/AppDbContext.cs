@@ -124,6 +124,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<PublicLeadCaptureEndpoint> PublicLeadCaptureEndpoints => Set<PublicLeadCaptureEndpoint>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentNote> DocumentNotes => Set<DocumentNote>();
+    public DbSet<Meeting> Meetings => Set<Meeting>();
+    public DbSet<MeetingAttendee> MeetingAttendees => Set<MeetingAttendee>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -374,6 +376,25 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             e.HasIndex(x => new { x.DocumentId, x.CreatedAt });
             e.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+        });
+
+        b.Entity<Meeting>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(SchedulingDefaults.MaxTitleLength).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(SchedulingDefaults.MaxDescriptionLength);
+            e.Property(x => x.Location).HasMaxLength(SchedulingDefaults.MaxLocationLength);
+            e.Property(x => x.OnlineUrl).HasMaxLength(SchedulingDefaults.MaxOnlineUrlLength);
+            e.HasMany(x => x.Attendees).WithOne().HasForeignKey(a => a.MeetingId).OnDelete(DeleteBehavior.Cascade);
+            // Calendar reads scan a date window within an agency.
+            e.HasIndex(x => new { x.AgencyId, x.StartsAt });
+        });
+
+        b.Entity<MeetingAttendee>(e =>
+        {
+            e.Property(x => x.Email).HasMaxLength(SchedulingDefaults.MaxEmailLength).IsRequired();
+            e.HasIndex(x => x.MeetingId);
+            // One invite per address per meeting (live rows only — soft-deleted invites don't block re-add).
+            e.HasIndex(x => new { x.MeetingId, x.Email }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<AgencyCommissionConfig>(e =>

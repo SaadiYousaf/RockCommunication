@@ -22,6 +22,7 @@ import type {
   QaReviewSummary, AgentScorecard, CallSummary, WrapUpCode, DncEntry, Campaign, LeadSource,
   Skill, AgentSkill, Script, LiveAgent, WorkflowRule, WorkflowExecution, ImportBatch,
   Cadence, CadenceEnrollment, VoicemailAsset, InboundQueue, AgentLeaderboard, KbArticle, PublicEndpoint, LeadList, Upsert,
+  Meeting, MeetingInput, AttendeeResponse,
 } from "./types";
 
 const rawBaseQuery = fetchBaseQuery({
@@ -94,7 +95,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "SocialReports"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "SocialReports", "Meetings"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1175,6 +1176,34 @@ export const baseApi = createApi({
       query: (days) => ({ url: "/api/hr/employees/birthdays", params: days ? { days } : undefined }),
       providesTags: ["Employees"],
     }),
+
+    // ── Scheduler / meetings ──────────────────────────────────────────────────
+    // `from`/`to` are UTC ISO instants; returns meetings I organize or am invited to
+    // that overlap that window.
+    listMeetings: b.query<Meeting[], { from: string; to: string }>({
+      query: (params) => ({ url: "/api/meetings", params }),
+      providesTags: ["Meetings"],
+    }),
+    getMeeting: b.query<Meeting, string>({
+      query: (id) => `/api/meetings/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Meetings", id }],
+    }),
+    createMeeting: b.mutation<Meeting, MeetingInput>({
+      query: (body) => ({ url: "/api/meetings", method: "POST", body }),
+      invalidatesTags: ["Meetings"],
+    }),
+    updateMeeting: b.mutation<Meeting, { id: string } & MeetingInput>({
+      query: ({ id, ...body }) => ({ url: `/api/meetings/${id}`, method: "PUT", body }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings"],
+    }),
+    cancelMeeting: b.mutation<Meeting, string>({
+      query: (id) => ({ url: `/api/meetings/${id}/cancel`, method: "POST" }),
+      invalidatesTags: (_r, _e, id) => [{ type: "Meetings", id }, "Meetings"],
+    }),
+    respondMeeting: b.mutation<Meeting, { id: string; response: AttendeeResponse }>({
+      query: ({ id, response }) => ({ url: `/api/meetings/${id}/respond`, method: "POST", body: { response } }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings"],
+    }),
   }),
 });
 
@@ -1384,6 +1413,8 @@ export const {
   useListPayrollQuery, useSavePayrollMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
+  useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,
+  useUpdateMeetingMutation, useCancelMeetingMutation, useRespondMeetingMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,
