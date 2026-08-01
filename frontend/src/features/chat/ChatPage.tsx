@@ -87,6 +87,9 @@ export function ChatPage() {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   // roomId -> userId -> lastReadAt (ISO). Mirrors server state, updated live via "RoomRead" events.
   const [roomReads, setRoomReads] = useState<Record<string, Record<string, string>>>({});
+  // userId -> last "Typing" timestamp (ms) in the ACTIVE room; entries expire after a few seconds.
+  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+  const lastTypingSentRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -126,6 +129,11 @@ export function ChatPage() {
         room[e.userId] = e.readAt;
         return { ...prev, [e.roomId]: room };
       });
+    });
+    // Live "someone is typing" — the server broadcasts this to a room's other members.
+    conn.on("Typing", (roomId: string, uid: string) => {
+      if (roomId !== activeRoomRef.current || uid === auth.user?.id) return;
+      setTypingUsers((prev) => ({ ...prev, [uid]: Date.now() }));
     });
     conn.onreconnecting(() => setConnectionState("connecting"));
     conn.onreconnected(() => setConnectionState("connected"));
@@ -191,11 +199,29 @@ export function ChatPage() {
   // Room-switch side effects (mark-read, focus, clear live-tail).
   useEffect(() => {
     setLiveMessages([]);
+    setTypingUsers({});
     if (activeRoom) {
       markRead(activeRoom).unwrap().then(() => refetchUnread()).catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [activeRoom, markRead, refetchUnread]);
+
+  // Expire stale typing indicators (~3.5s after the sender's last keystroke).
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTypingUsers((prev) => {
+        if (Object.keys(prev).length === 0) return prev;
+        const now = Date.now();
+        const next: Record<string, number> = {};
+        let changed = false;
+        for (const [uid, ts] of Object.entries(prev)) {
+          if (now - ts < 3500) next[uid] = ts; else changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1200);
+    return () => clearInterval(t);
+  }, []);
 
   // Join the SignalR group for the active room — runs ONLY once both the
   // connection is ready and we have a room.  Previously this was tucked into
@@ -285,6 +311,24 @@ export function ChatPage() {
     }
     return min;
   }, [activeRoom, otherMembers, roomReads]);
+
+  // Tell the room I'm typing — throttled to at most once every 2s so we don't spam the hub.
+  function handleTyping() {
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2000) return;
+    lastTypingSentRef.current = now;
+    const room = activeRoomRef.current;
+    if (room && connRef.current) connRef.current.invoke("Typing", room).catch(() => {});
+  }
+
+  const typingNames = useMemo(
+    () => Object.keys(typingUsers).filter((uid) => uid !== auth.user?.id).map((uid) => userMap.get(uid) ?? "Someone"),
+    [typingUsers, userMap, auth.user?.id],
+  );
+  const typingText = typingNames.length === 0 ? ""
+    : typingNames.length === 1 ? `${typingNames[0]} is typing…`
+    : typingNames.length === 2 ? `${typingNames[0]} and ${typingNames[1]} are typing…`
+    : "Several people are typing…";
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -417,7 +461,12 @@ export function ChatPage() {
                       )}
                     >
                       {r.isDirect
-                        ? <Avatar name={roomLabel(r.name, true)} size={36} />
+                        ? <span className="relative shrink-0">
+                            <Avatar name={roomLabel(r.name, true)} size={36} />
+                            {r.memberUserIds.some((id) => id !== auth.user?.id && onlineUsers.has(id)) && (
+                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" title="Online" />
+                            )}
+                          </span>
                         : <span className="h-9 w-9 shrink-0 grid place-items-center rounded-full bg-brand-100 text-brand-700 text-sm font-semibold">#</span>}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
@@ -587,6 +636,18 @@ export function ChatPage() {
               )}
             </div>
 
+            {/* Live typing indicator */}
+            {typingText && (
+              <div className="px-5 py-2 bg-white flex items-center gap-2 text-xs text-ink-500 shrink-0">
+                <span className="flex gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink-400 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink-400 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink-400 animate-bounce" />
+                </span>
+                <span>{typingText}</span>
+              </div>
+            )}
+
             {/* Composer */}
             <Composer
               inputRef={inputRef}
@@ -597,6 +658,7 @@ export function ChatPage() {
               maxBytes={MAX_BYTES}
               onSend={handleSend}
               onAttach={handleAttach}
+              onTyping={handleTyping}
             />
           </>
         )}
@@ -796,7 +858,7 @@ const EMOJIS = [
 ];
 
 function Composer({
-  inputRef, body, setBody, sending, uploading, maxBytes, onSend, onAttach,
+  inputRef, body, setBody, sending, uploading, maxBytes, onSend, onAttach, onTyping,
 }: {
   inputRef: React.RefObject<HTMLInputElement | null>;
   body: string;
@@ -806,6 +868,7 @@ function Composer({
   maxBytes: number;
   onSend: (e: React.FormEvent) => void;
   onAttach: (file: File) => void;
+  onTyping?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -869,9 +932,9 @@ function Composer({
       <input
         ref={inputRef}
         className="input-base h-11 flex-1"
-        placeholder="Type a message…"
+        placeholder="Type a message…  (Enter to send)"
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => { setBody(e.target.value); onTyping?.(); }}
       />
       <Button
         type="submit" size="lg" loading={sending}
