@@ -9,7 +9,12 @@ public interface ISmsProvider
     Task<SmsResult> SendAsync(SmsMessage message, CancellationToken ct = default);
 }
 
-public record EmailMessage(string To, string Subject, string Body, bool IsHtml = false, string? FromName = null);
+/// <summary>A file attached to an email (e.g. an .ics calendar invite).</summary>
+public record EmailAttachment(string FileName, string ContentType, byte[] Content);
+
+public record EmailMessage(
+    string To, string Subject, string Body, bool IsHtml = false, string? FromName = null,
+    IReadOnlyList<EmailAttachment>? Attachments = null);
 public record EmailResult(bool Sent, string? ProviderMessageId, string? Reason);
 
 public interface IEmailProvider

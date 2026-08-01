@@ -953,6 +953,7 @@ const eventStyle: Record<string, { icon: IconName; tile: string }> = {
   callback: { icon: "phone",     tile: "bg-brand-50 text-brand-600 ring-brand-100" },
   training: { icon: "userCheck", tile: "bg-accent-50 text-accent-600 ring-accent-100" },
   birthday: { icon: "sparkles",  tile: "bg-emerald-50 text-emerald-600 ring-emerald-100" },
+  meeting:  { icon: "users",     tile: "bg-sky-50 text-sky-600 ring-sky-100" },
 };
 const fallbackEventStyle = { icon: "calendar" as IconName, tile: "bg-ink-100 text-ink-500 ring-ink-200" };
 
@@ -984,6 +985,7 @@ function eventHref(type: string): string {
   switch (type) {
     case "training": return "/hr/interviews";
     case "birthday": return "/hr/employees";
+    case "meeting": return "/calendar";
     case "callback": default: return "/callbacks";
   }
 }
@@ -999,12 +1001,12 @@ function UpcomingEventsCard() {
           <span className="inline-flex items-center gap-1">
             Upcoming events
             <InfoHint title="Upcoming events" side="bottom">
-              The next 14 days at a glance — your scheduled callbacks, plus staff birthdays and
-              candidate trainings (for HR &amp; managers). Reminders for these are also sent automatically.
+              The next 14 days at a glance — your scheduled callbacks and meetings, plus staff birthdays
+              and candidate trainings (for HR &amp; managers). Reminders for these are also sent automatically.
             </InfoHint>
           </span>
         }
-        subtitle="Callbacks, birthdays and trainings coming up"
+        subtitle="Callbacks, meetings, birthdays and trainings coming up"
         action={
           <Link to="/callbacks">
             <Button variant="ghost" size="sm" rightIcon={<Icon name="arrowRight" size={14} />}>Callbacks</Button>
@@ -1021,7 +1023,7 @@ function UpcomingEventsCard() {
           <EmptyState
             icon={<Icon name="calendar" size={20} />}
             title="Nothing scheduled"
-            description="No callbacks, birthdays or trainings in the next 14 days."
+            description="No callbacks, meetings, birthdays or trainings in the next 14 days."
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">

@@ -51,9 +51,20 @@ public class SmtpEmailProvider : IEmailProvider
             msg.From.Add(new MailboxAddress(message.FromName ?? _opts.FromName, _opts.FromAddress));
             msg.To.Add(MailboxAddress.Parse(message.To));
             msg.Subject = message.Subject;
-            msg.Body = message.IsHtml
-                ? new TextPart("html") { Text = message.Body }
-                : new TextPart("plain") { Text = message.Body };
+            if (message.Attachments is { Count: > 0 })
+            {
+                var builder = new BodyBuilder();
+                if (message.IsHtml) builder.HtmlBody = message.Body; else builder.TextBody = message.Body;
+                foreach (var a in message.Attachments)
+                    builder.Attachments.Add(a.FileName, a.Content, ContentType.Parse(a.ContentType));
+                msg.Body = builder.ToMessageBody();
+            }
+            else
+            {
+                msg.Body = message.IsHtml
+                    ? new TextPart("html") { Text = message.Body }
+                    : new TextPart("plain") { Text = message.Body };
+            }
 
             using var client = new SmtpClient();
             // Skip cert-revocation check — common dev networks block the OCSP endpoint and

@@ -20,6 +20,7 @@ public static class UpcomingEventTypes
     public const string Callback = "callback";
     public const string Training = "training";
     public const string Birthday = "birthday";
+    public const string Meeting = "meeting";
 }
 
 /// <summary>
@@ -54,6 +55,7 @@ public class UpcomingEventsHandler : IRequestHandler<UpcomingEventsQuery, IReadO
         var events = new List<UpcomingEventDto>();
 
         await AddCallbacksAsync(events, now, until, ct);
+        await AddMeetingsAsync(events, now, until, ct);
         if (HrAccess.IsHr(_user))
         {
             await AddTrainingsAsync(events, now, until, ct);
@@ -86,6 +88,29 @@ public class UpcomingEventsHandler : IRequestHandler<UpcomingEventsQuery, IReadO
         {
             var name = leadNames.TryGetValue(c.LeadId, out var n) && !string.IsNullOrWhiteSpace(n) ? n : "a lead";
             events.Add(new UpcomingEventDto(UpcomingEventTypes.Callback, $"Callback · {name}", c.Reason, c.ScheduledFor));
+        }
+    }
+
+    /// <summary>The caller's own upcoming meetings — ones they organize or are invited to (tenant-scoped).</summary>
+    private async Task AddMeetingsAsync(List<UpcomingEventDto> events, DateTime now, DateTime until, CancellationToken ct)
+    {
+        if (_user.UserId is not { } uid) return;
+
+        var meetings = await _db.Meetings.AsNoTracking()
+            .Where(m => m.Status == Domain.Enums.MeetingStatus.Scheduled
+                     && m.StartsAt >= now && m.StartsAt <= until
+                     && (m.OrganizerUserId == uid || m.Attendees.Any(a => a.UserId == uid)))
+            .OrderBy(m => m.StartsAt)
+            .Take(PerSourceCap)
+            .Select(m => new { m.Title, m.Location, m.OnlineUrl, m.StartsAt })
+            .ToListAsync(ct);
+
+        foreach (var m in meetings)
+        {
+            var where = !string.IsNullOrWhiteSpace(m.OnlineUrl) ? "Online meeting"
+                : !string.IsNullOrWhiteSpace(m.Location) ? m.Location
+                : "Meeting";
+            events.Add(new UpcomingEventDto(UpcomingEventTypes.Meeting, m.Title, where, m.StartsAt));
         }
     }
 

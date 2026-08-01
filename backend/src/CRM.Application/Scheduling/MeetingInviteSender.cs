@@ -51,13 +51,23 @@ public class MeetingInviteSender : IMeetingInviteSender
             + meeting.Title;
         var body = BuildHtml(meeting, organizerName, cancelled);
 
+        // A real iCalendar (.ics) attachment so the invite lands in the recipient's calendar app
+        // ("Add to calendar" in Gmail/Outlook/Apple Mail). METHOD:REQUEST for a new invite,
+        // METHOD:CANCEL for a cancellation — same UID so clients update the existing event.
+        var ics = BuildIcs(meeting, organizerName, cancelled);
+        var attachment = new EmailAttachment(
+            cancelled ? "cancelled.ics" : "invite.ics",
+            $"text/calendar; method={(cancelled ? "CANCEL" : "REQUEST")}; charset=utf-8",
+            System.Text.Encoding.UTF8.GetBytes(ics));
+
         foreach (var attendee in meeting.Attendees)
         {
             if (string.IsNullOrWhiteSpace(attendee?.Email)) continue;
             try
             {
                 var result = await _email.SendAsync(
-                    new EmailMessage(attendee!.Email, subject, body, IsHtml: true, FromName: SchedulingDefaults.ProductName), ct);
+                    new EmailMessage(attendee!.Email, subject, body, IsHtml: true,
+                        FromName: SchedulingDefaults.ProductName, Attachments: new[] { attachment }), ct);
                 if (!result.Sent)
                     _logger.LogWarning("Meeting {Kind} email to {To} for meeting {MeetingId} was not sent: {Reason}",
                         cancelled ? "cancellation" : "invite", attendee.Email, meeting.Id, result.Reason);
@@ -152,4 +162,41 @@ public class MeetingInviteSender : IMeetingInviteSender
     }
 
     private static string Encode(string s) => WebUtility.HtmlEncode(s);
+
+    // ── iCalendar (.ics) builder ──────────────────────────────────────────────────
+
+    /// <summary>Builds an RFC-5545 VEVENT (METHOD:REQUEST, or CANCEL when cancelled) for the meeting.</summary>
+    private static string BuildIcs(Meeting m, string organizerName, bool cancelled)
+    {
+        static string Stamp(DateTime utc) => utc.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
+        // RFC-5545 text escaping: backslash, semicolon, comma, and newlines.
+        static string Esc(string s) => s.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,")
+            .Replace("\r\n", "\\n").Replace("\n", "\\n").Replace("\r", "\\n");
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("BEGIN:VCALENDAR\r\n");
+        sb.Append("VERSION:2.0\r\n");
+        sb.Append($"PRODID:-//{Esc(SchedulingDefaults.ProductName)}//Scheduler//EN\r\n");
+        sb.Append($"METHOD:{(cancelled ? "CANCEL" : "REQUEST")}\r\n");
+        sb.Append("BEGIN:VEVENT\r\n");
+        sb.Append($"UID:meeting-{m.Id}@rockcommunication\r\n");
+        sb.Append($"DTSTAMP:{Stamp(DateTime.UtcNow)}\r\n");
+        sb.Append($"DTSTART:{Stamp(m.StartsAt)}\r\n");
+        sb.Append($"DTEND:{Stamp(m.EndsAt)}\r\n");
+        sb.Append($"SUMMARY:{Esc(m.Title)}\r\n");
+        if (!string.IsNullOrWhiteSpace(m.Description))
+            sb.Append($"DESCRIPTION:{Esc(m.Description!)}\r\n");
+        var location = !string.IsNullOrWhiteSpace(m.OnlineUrl) ? m.OnlineUrl! : (m.Location ?? "");
+        if (!string.IsNullOrWhiteSpace(location))
+            sb.Append($"LOCATION:{Esc(location)}\r\n");
+        sb.Append($"ORGANIZER;CN={Esc(organizerName)}:mailto:noreply@meetings.local\r\n");
+        foreach (var a in m.Attendees)
+            if (!string.IsNullOrWhiteSpace(a?.Email))
+                sb.Append($"ATTENDEE;CN={Esc(a!.Email)};RSVP=TRUE:mailto:{a.Email}\r\n");
+        sb.Append($"STATUS:{(cancelled ? "CANCELLED" : "CONFIRMED")}\r\n");
+        sb.Append($"SEQUENCE:{(cancelled ? 1 : 0)}\r\n");
+        sb.Append("END:VEVENT\r\n");
+        sb.Append("END:VCALENDAR\r\n");
+        return sb.ToString();
+    }
 }
