@@ -17,103 +17,206 @@ import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { AgentStatusBar } from "./AgentStatusBar";
 import { usePersistentState } from "../hooks/usePersistentState";
 
-interface NavItem {
-  to: string;
+/**
+ * A node in the multi-level navigation tree. A node is either a LEAF (has `to`, links to a page)
+ * or a BRANCH (has `children`, expands to reveal them). Top-level nodes are sections. Visibility
+ * gates (module / roles / superAdminOnly) apply to leaves; a branch is shown when any descendant is.
+ */
+interface NavNode {
+  /** Stable id — drives expand-state persistence and breadcrumbs. */
+  key: string;
   label: string;
-  icon: IconName;
+  icon?: IconName;
+  /** Target route for a leaf (or a navigable branch). */
+  to?: string;
+  children?: NavNode[];
   /** Module code from the backend ModuleCatalog. Visibility is driven by user.modules. */
   module?: string;
-  /** When true, the item is hidden unless the user holds the SuperAdmin role. */
+  /** When true, hidden unless the user holds the SuperAdmin role. */
   superAdminOnly?: boolean;
-  /** When set, the item is shown only to these roles (plus Admin / SuperAdmin). */
+  /** When set, shown only to these roles (plus Admin / SuperAdmin). */
   roles?: string[];
   badge?: string;
   /** When set, shows a live "N waiting" count from /api/work-queues/counts. */
   countKey?: keyof QueueCounts;
 }
-interface NavGroup { label: string; items: NavItem[] }
 
-const groups: NavGroup[] = [
+const NAV: NavNode[] = [
   {
-    label: "Workspace",
-    items: [
-      { to: "/dashboard", label: "Dashboard",   icon: "dashboard", module: "dashboard" },
-      { to: "/calendar",  label: "Calendar",    icon: "calendar" },
-      { to: "/guide",     label: "Guide",       icon: "book" },
-      // No module gate — Team is visible to everyone as a read-only org view; editing is
-      // still gated by the team.write permission inside the page + on the API mutations.
-      { to: "/team",      label: "Team",        icon: "users" },
-      { to: "/agent",     label: "Agent Panel", icon: "phone",     module: "agent" },
-      { to: "/queue",     label: "My Queue",    icon: "inbox",     module: "queue", countKey: "myQueue" },
-      { to: "/intake",       label: "Lead Intake",    icon: "plus",  roles: ["Fronter"] },
-      { to: "/verify-queue", label: "Verifier Queue", icon: "check", roles: ["Verifier"], countKey: "verifierQueue" },
-      { to: "/close-queue",  label: "Closer Queue",   icon: "briefcase", roles: ["Closer"], countKey: "closerQueue" },
-      { to: "/validate-queue", label: "Submission Queue", icon: "shield", roles: ["Validator"], countKey: "submissionQueue" },
-      { to: "/my-sales", label: "My Sales", icon: "briefcase", roles: ["LicenseAgent"] },
-      { to: "/callbacks", label: "Callbacks",   icon: "calendar",  module: "callbacks", countKey: "callbacks" },
-      { to: "/chat",      label: "Chat",        icon: "chat",      module: "chat" },
+    key: "workspace", label: "Workspace",
+    children: [
+      { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: "dashboard", module: "dashboard" },
+      { key: "calendar",  to: "/calendar",  label: "Calendar",  icon: "calendar" },
+      { key: "queue",     to: "/queue",     label: "My Queue",  icon: "inbox", module: "queue", countKey: "myQueue" },
+      { key: "chat",      to: "/chat",      label: "Chat",      icon: "chat",  module: "chat" },
+      { key: "callbacks", to: "/callbacks", label: "Callbacks", icon: "calendar", module: "callbacks", countKey: "callbacks" },
+      {
+        key: "intake", label: "Intake Pipeline", icon: "filter",
+        children: [
+          { key: "intake-form",   to: "/intake",          label: "Lead Intake",      icon: "plus",      roles: ["Fronter"] },
+          { key: "verify-queue",  to: "/verify-queue",    label: "Verifier Queue",   icon: "check",     roles: ["Verifier"], countKey: "verifierQueue" },
+          { key: "close-queue",   to: "/close-queue",     label: "Closer Queue",     icon: "briefcase", roles: ["Closer"], countKey: "closerQueue" },
+          { key: "validate-queue", to: "/validate-queue", label: "Submission Queue", icon: "shield",    roles: ["Validator"], countKey: "submissionQueue" },
+          { key: "my-sales",      to: "/my-sales",        label: "My Sales",         icon: "briefcase", roles: ["LicenseAgent"] },
+        ],
+      },
+      { key: "agent", to: "/agent", label: "Agent Panel", icon: "phone", module: "agent" },
+      { key: "team",  to: "/team",  label: "Team",        icon: "users" },
+      { key: "guide", to: "/guide", label: "Guide",       icon: "book" },
     ],
   },
   {
-    label: "Pipeline",
-    items: [
-      { to: "/leads",        label: "Leads",          icon: "list",      module: "leads" },
-      { to: "/leads/search", label: "Search & Dedup", icon: "search",    module: "leads.search" },
-      { to: "/leads/troubleshoot", label: "Troubleshoot", icon: "shield", module: "supervisor" },
-      { to: "/lists",        label: "Lead Lists",     icon: "inbox",     module: "campaigns" },
-      { to: "/cadences",     label: "Cadences",       icon: "filter",    module: "campaigns" },
-      { to: "/sales",        label: "Sales",          icon: "briefcase", module: "sales" },
-      { to: "/calls",        label: "Call History",   icon: "phone",     module: "callcenter" },
-      { to: "/commissions",  label: "Commissions",    icon: "doc",       module: "commissions" },
+    key: "pipeline", label: "Pipeline",
+    children: [
+      { key: "leads", to: "/leads", label: "Leads", icon: "list", module: "leads" },
+      {
+        key: "outreach", label: "Lists & Outreach", icon: "filter",
+        children: [
+          { key: "leads-search",       to: "/leads/search",       label: "Search & Dedup", icon: "search", module: "leads.search" },
+          { key: "lists",              to: "/lists",              label: "Lead Lists",     icon: "inbox",  module: "campaigns" },
+          { key: "cadences",           to: "/cadences",           label: "Cadences",       icon: "filter", module: "campaigns" },
+          { key: "campaigns",          to: "/campaigns",          label: "Campaigns",      icon: "target", module: "campaigns" },
+          { key: "leads-troubleshoot", to: "/leads/troubleshoot", label: "Troubleshoot",   icon: "shield", module: "supervisor" },
+        ],
+      },
+      { key: "sales",       to: "/sales",       label: "Sales",       icon: "briefcase", module: "sales" },
+      { key: "commissions", to: "/commissions", label: "Commissions", icon: "doc",       module: "commissions" },
+      { key: "calls",       to: "/calls",       label: "Call History", icon: "phone",    module: "callcenter" },
     ],
   },
   {
-    label: "Operations",
-    items: [
-      { to: "/supervisor", label: "Supervisor", icon: "shield", module: "supervisor" },
-      { to: "/attendance", label: "Attendance", icon: "clock",  module: "attendance" },
-      { to: "/wallboard",  label: "Wallboard",  icon: "chart",  module: "supervisor" },
-      { to: "/kpis",       label: "KPIs",       icon: "chart",  module: "reports" },
-      { to: "/queues",     label: "Queues + IVR", icon: "phone", module: "callcenter" },
-      { to: "/kb",         label: "Knowledge",  icon: "doc",    module: "knowledge" },
-      { to: "/documents",  label: "Documents",  icon: "doc",    module: "documents" },
-      { to: "/qa",         label: "QA Reviews", icon: "star",   module: "qa" },
-      { to: "/qa/browser", label: "QA Browser", icon: "doc",    module: "qa" },
-      { to: "/dnc",        label: "DNC List",   icon: "flag",   module: "dnc" },
-      { to: "/campaigns",  label: "Campaigns",  icon: "target", module: "campaigns" },
-      { to: "/scripts",    label: "Scripts",    icon: "doc",    module: "scripts" },
-      { to: "/workflows",  label: "Workflows",  icon: "filter", module: "workflows" },
+    key: "operations", label: "Operations",
+    children: [
+      {
+        key: "supervision", label: "Supervision", icon: "chart",
+        children: [
+          { key: "supervisor", to: "/supervisor", label: "Supervisor", icon: "shield", module: "supervisor" },
+          { key: "wallboard",  to: "/wallboard",  label: "Wallboard",  icon: "chart",  module: "supervisor" },
+          { key: "kpis",       to: "/kpis",       label: "KPIs",       icon: "chart",  module: "reports" },
+          { key: "attendance", to: "/attendance", label: "Attendance", icon: "clock",  module: "attendance" },
+        ],
+      },
+      {
+        key: "telephony", label: "Call Center", icon: "phone",
+        children: [
+          { key: "queues",  to: "/queues",  label: "Queues + IVR", icon: "phone", module: "callcenter" },
+          { key: "scripts", to: "/scripts", label: "Scripts",      icon: "doc",   module: "scripts" },
+          { key: "dnc",     to: "/dnc",     label: "DNC List",     icon: "flag",  module: "dnc" },
+        ],
+      },
+      {
+        key: "quality", label: "Quality & Content", icon: "star",
+        children: [
+          { key: "qa",         to: "/qa",         label: "QA Reviews", icon: "star", module: "qa" },
+          { key: "qa-browser", to: "/qa/browser", label: "QA Browser", icon: "doc",  module: "qa" },
+          { key: "kb",         to: "/kb",         label: "Knowledge",  icon: "book", module: "knowledge" },
+          { key: "documents",  to: "/documents",  label: "Documents",  icon: "doc",  module: "documents" },
+        ],
+      },
+      { key: "workflows", to: "/workflows", label: "Workflows", icon: "filter", module: "workflows" },
     ],
   },
   {
-    label: "Human Resources",
-    items: [
-      { to: "/hr/employees", label: "Employees", icon: "users", roles: ["HR"] },
-      { to: "/hr/attendance", label: "Attendance", icon: "clock", roles: ["HR"] },
-      { to: "/hr/interviews", label: "Interviews", icon: "userPlus", roles: ["HR"] },
-      { to: "/hr/payroll", label: "Payroll", icon: "doc", roles: ["HR"] },
-      { to: "/hr/social", label: "Social Media", icon: "chat", roles: ["HR"] },
-      { to: "/kb", label: "Knowledge", icon: "book", roles: ["HR"] },
+    key: "hr", label: "Human Resources",
+    children: [
+      { key: "hr-employees",  to: "/hr/employees",  label: "Employees",    icon: "users",    roles: ["HR"] },
+      { key: "hr-attendance", to: "/hr/attendance", label: "Attendance",   icon: "clock",    roles: ["HR"] },
+      { key: "hr-interviews", to: "/hr/interviews", label: "Interviews",   icon: "userPlus", roles: ["HR"] },
+      { key: "hr-payroll",    to: "/hr/payroll",    label: "Payroll",      icon: "doc",      roles: ["HR"] },
+      { key: "hr-social",     to: "/hr/social",     label: "Social Media", icon: "chat",     roles: ["HR"] },
     ],
   },
   {
-    label: "Administration",
-    items: [
-      { to: "/admin/agencies",     label: "Agencies",         icon: "building", superAdminOnly: true },
-      { to: "/admin/submission-agents", label: "Submission Agents", icon: "shield", superAdminOnly: true },
-      { to: "/admin/chat-oversight", label: "Chat Oversight",  icon: "chat", superAdminOnly: true },
-      { to: "/admin/call-centers", label: "Call Centers",     icon: "building", module: "admin" },
-      { to: "/admin/users",    label: "User Mgmt",        icon: "users",    module: "users.manage" },
-      { to: "/admin/roles",    label: "Role Management",  icon: "shield",   module: "roles.manage" },
-      { to: "/admin/security", label: "Security Center",  icon: "shield",   module: "roles.manage" },
-      { to: "/confidential",   label: "Confidential",     icon: "lock",     roles: ["Admin"] },
-      { to: "/admin/register", label: "Register User",    icon: "plus",     module: "users.manage" },
-      { to: "/admin",              label: "Admin",            icon: "cog",      module: "admin" },
-      { to: "/admin/integrations", label: "Integrations",     icon: "filter",   module: "admin" },
-      { to: "/admin/audit",        label: "Audit Log",        icon: "doc",      module: "admin" },
+    key: "administration", label: "Administration",
+    children: [
+      {
+        key: "org", label: "Organization", icon: "building",
+        children: [
+          { key: "agencies",          to: "/admin/agencies",          label: "Agencies",          icon: "building", superAdminOnly: true },
+          { key: "call-centers",      to: "/admin/call-centers",      label: "Call Centers",      icon: "building", module: "admin" },
+          { key: "submission-agents", to: "/admin/submission-agents", label: "Submission Agents", icon: "shield",   superAdminOnly: true },
+        ],
+      },
+      {
+        key: "access", label: "Users & Access", icon: "users",
+        children: [
+          { key: "users",    to: "/admin/users",    label: "User Mgmt",       icon: "users",  module: "users.manage" },
+          { key: "roles",    to: "/admin/roles",    label: "Role Management", icon: "shield", module: "roles.manage" },
+          { key: "register", to: "/admin/register", label: "Register User",   icon: "plus",   module: "users.manage" },
+          { key: "security", to: "/admin/security", label: "Security Center", icon: "shield", module: "roles.manage" },
+        ],
+      },
+      {
+        key: "platform", label: "Platform", icon: "cog",
+        children: [
+          { key: "admin",         to: "/admin",              label: "Admin",         icon: "cog",    module: "admin" },
+          { key: "integrations",  to: "/admin/integrations", label: "Integrations",  icon: "filter", module: "admin" },
+          { key: "audit",         to: "/admin/audit",        label: "Audit Log",     icon: "doc",    module: "admin" },
+          { key: "chat-oversight", to: "/admin/chat-oversight", label: "Chat Oversight", icon: "chat", superAdminOnly: true },
+        ],
+      },
+      { key: "confidential", to: "/confidential", label: "Confidential", icon: "lock", roles: ["Admin"] },
     ],
   },
 ];
+
+interface NavCtx { modules: string[]; roles: string[]; isAdmin: boolean; isSuperAdmin: boolean }
+
+function leafAllowed(n: NavNode, c: NavCtx): boolean {
+  if (n.superAdminOnly) return c.isSuperAdmin;
+  if (n.roles) return c.isAdmin || c.isSuperAdmin || n.roles.some((r) => c.roles.includes(r));
+  return !n.module || c.isAdmin || c.isSuperAdmin || c.modules.includes(n.module);
+}
+
+/** Prune the tree to what the user may see (a branch survives if any descendant does). */
+function visibleTree(nodes: NavNode[], c: NavCtx): NavNode[] {
+  const out: NavNode[] = [];
+  for (const n of nodes) {
+    if (n.children) {
+      const kids = visibleTree(n.children, c);
+      if (kids.length > 0 || (n.to && leafAllowed(n, c))) out.push({ ...n, children: kids.length ? kids : undefined });
+    } else if (leafAllowed(n, c)) {
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+/** All leaf descendants, in order — used by the collapsed icon rail. */
+function flattenLeaves(nodes: NavNode[]): NavNode[] {
+  return nodes.flatMap((n) => (n.children ? flattenLeaves(n.children) : [n]));
+}
+
+/** Keys from root to the deepest node whose `to` best-matches the current path (longest prefix wins). */
+function findActivePath(nodes: NavNode[], pathname: string): string[] {
+  let best: string[] = [];
+  let bestLen = -1;
+  const walk = (list: NavNode[], trail: string[]) => {
+    for (const n of list) {
+      const path = [...trail, n.key];
+      if (n.to && (pathname === n.to || pathname.startsWith(n.to + "/")) && n.to.length > bestLen) {
+        best = path; bestLen = n.to.length;
+      }
+      if (n.children) walk(n.children, path);
+    }
+  };
+  walk(nodes, []);
+  return best;
+}
+
+/** Labels + optional route for the active trail, for the breadcrumb bar. */
+function breadcrumbTrail(nodes: NavNode[], pathname: string): { label: string; to?: string }[] {
+  const keys = findActivePath(nodes, pathname);
+  const trail: { label: string; to?: string }[] = [];
+  let level = nodes;
+  for (const k of keys) {
+    const node = level.find((n) => n.key === k);
+    if (!node) break;
+    trail.push({ label: node.label, to: node.to });
+    level = node.children ?? [];
+  }
+  return trail;
+}
 
 export function Layout() {
   return (
@@ -134,21 +237,14 @@ function LayoutInner() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const visibleGroups = useMemo(() => {
-    const userModules = auth.user?.modules ?? [];
-    const userRoles = auth.user?.roles ?? [];
-    const isSuperAdmin = userRoles.includes("SuperAdmin");
-    const isAdmin = userRoles.includes("Admin");
-    return groups
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((i) => {
-          if (i.superAdminOnly) return isSuperAdmin;
-          if (i.roles) return isAdmin || isSuperAdmin || i.roles.some((r) => userRoles.includes(r));
-          return !i.module || isAdmin || isSuperAdmin || userModules.includes(i.module);
-        }),
-      }))
-      .filter((g) => g.items.length > 0);
+  const visibleNav = useMemo(() => {
+    const roles = auth.user?.roles ?? [];
+    return visibleTree(NAV, {
+      modules: auth.user?.modules ?? [],
+      roles,
+      isSuperAdmin: roles.includes("SuperAdmin"),
+      isAdmin: roles.includes("Admin"),
+    });
   }, [auth.user?.modules, auth.user?.roles]);
 
   useEffect(() => {
@@ -203,7 +299,7 @@ function LayoutInner() {
         )}
       >
         <SidebarContent
-          groups={visibleGroups}
+          nav={visibleNav}
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((c) => !c)}
         />
@@ -235,7 +331,7 @@ function LayoutInner() {
         aria-label="Navigation menu"
       >
         <SidebarContent
-          groups={visibleGroups}
+          nav={visibleNav}
           collapsed={false}
           mobile
           onClose={() => setMobileNavOpen(false)}
@@ -319,6 +415,7 @@ function LayoutInner() {
 
         <main className="flex-1 overflow-auto">
           <div className="max-w-[1920px] 2xl:max-w-[2200px] mx-auto p-4 sm:p-6 lg:p-8 xl:p-10 2xl:p-12">
+            <Breadcrumbs />
             {/* Per-page error boundary keeps a single crashing page from taking
                 down the whole shell — the nav stays usable. Wraps the Suspense
                 boundary for the route-split (React.lazy) pages. See router.tsx. */}
@@ -341,15 +438,26 @@ function LayoutInner() {
  * (always expanded, with a close button). The parent `<aside>` owns width /
  * position / slide animation; this component only paints the interior.
  */
+const DEFAULT_EXPANDED = NAV.map((n) => n.key);
+
 function SidebarContent({
-  groups: visibleGroups, collapsed, onToggleCollapse, mobile = false, onClose,
+  nav: visibleNav, collapsed, onToggleCollapse, mobile = false, onClose,
 }: {
-  groups: NavGroup[];
+  nav: NavNode[];
   collapsed: boolean;
   onToggleCollapse?: () => void;
   mobile?: boolean;
   onClose?: () => void;
 }) {
+  const location = useLocation();
+  // Which branches are expanded (persisted). The active route's ancestors are always treated as
+  // open (union below), so the section you're in is never collapsed out from under you.
+  const [expandedArr, setExpandedArr] = usePersistentState<string[]>("ui.sidebar.expanded.v2", DEFAULT_EXPANDED);
+  const activePath = useMemo(() => findActivePath(visibleNav, location.pathname), [visibleNav, location.pathname]);
+  const activeKeys = useMemo(() => new Set(activePath), [activePath]);
+  const expanded = useMemo(() => new Set([...expandedArr, ...activePath]), [expandedArr, activePath]);
+  const toggle = (key: string) =>
+    setExpandedArr((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   // Show which agency the signed-in user belongs to (SuperAdmin/central users
   // have no agency and see the platform label instead).
   const agencyName = useSelector((s: RootState) => s.auth.user?.agencyName);
@@ -399,71 +507,15 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className="relative flex-1 overflow-y-auto py-4 px-2.5 space-y-5">
-        {visibleGroups.map((g, gi) => (
-          <div key={g.label}>
-            {!collapsed && (
-              <div className="px-2 pb-2 flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
-                  {g.label}
-                </span>
-                <span className="flex-1 h-px bg-gradient-to-r from-ink-200/80 via-ink-100 to-transparent" />
-              </div>
-            )}
-            {collapsed && gi > 0 && (
-              <div className="mx-3 mb-3 h-px bg-ink-200/60" aria-hidden />
-            )}
-            <div className="space-y-0.5">
-              {g.items.map((i) => (
-                <NavLink
-                  key={i.to} to={i.to} title={collapsed ? i.label : undefined}
-                  className={({ isActive }) =>
-                    cn(
-                      "group relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium",
-                      "transition-all duration-150",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
-                      isActive
-                        ? "text-brand-700 bg-brand-50 ring-1 ring-brand-100 shadow-[0_1px_2px_0_rgba(60,114,105,0.06)]"
-                        : "text-ink-600 hover:bg-ink-100/80 hover:text-ink-900",
-                      collapsed && "justify-center",
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {/* Active accent bar */}
-                      {isActive && !collapsed && (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-gradient-to-b from-brand-400 to-brand-600 shadow-[0_0_8px_rgba(60,114,105,0.45)]" />
-                      )}
-                      <Icon
-                        name={i.icon}
-                        size={18}
-                        className={cn(
-                          "shrink-0 transition-colors",
-                          isActive ? "text-brand-600" : "text-ink-500 group-hover:text-ink-900",
-                        )}
-                      />
-                      {!collapsed && <span className="flex-1 truncate">{i.label}</span>}
-                      {!collapsed && (
-                        i.countKey && (counts?.[i.countKey] ?? 0) > 0
-                          ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm tabular-nums">
-                              {(counts![i.countKey] > 99) ? "99+" : counts![i.countKey]}
-                            </span>
-                          : i.badge
-                            ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm">{i.badge}</span>
-                            : null
-                      )}
-                      {/* Collapsed rail: a small dot when there's waiting work. */}
-                      {collapsed && i.countKey && (counts?.[i.countKey] ?? 0) > 0 && (
-                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white" aria-hidden />
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        ))}
+      <nav className="relative flex-1 overflow-y-auto py-4 px-2.5 space-y-2">
+        {collapsed
+          ? <CollapsedRail nav={visibleNav} counts={counts} />
+          : visibleNav.map((section) => (
+              <SidebarSection
+                key={section.key} section={section}
+                expanded={expanded} activeKeys={activeKeys} toggle={toggle} counts={counts}
+              />
+            ))}
       </nav>
 
       <div className="relative border-t border-ink-200/70 p-2.5 space-y-2">
@@ -492,6 +544,164 @@ function SidebarContent({
         )}
       </div>
     </>
+  );
+}
+
+interface NavRenderProps {
+  expanded: Set<string>;
+  activeKeys: Set<string>;
+  toggle: (key: string) => void;
+  counts?: QueueCounts;
+}
+
+/** A live queue-count pill / static badge for a leaf. */
+function CountBadge({ node, counts }: { node: NavNode; counts?: QueueCounts }) {
+  const c = node.countKey ? (counts?.[node.countKey] ?? 0) : 0;
+  if (node.countKey && c > 0)
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm tabular-nums">{c > 99 ? "99+" : c}</span>;
+  if (node.badge)
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-500 text-white shadow-sm">{node.badge}</span>;
+  return null;
+}
+
+/** A top-level, collapsible section (uppercase header + chevron). */
+function SidebarSection({ section, expanded, activeKeys, toggle, counts }: { section: NavNode } & NavRenderProps) {
+  const open = expanded.has(section.key);
+  return (
+    <div>
+      <button
+        type="button" onClick={() => toggle(section.key)} aria-expanded={open}
+        className="group w-full px-2 pb-1.5 pt-1 flex items-center gap-2 focus-visible:outline-none"
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500 group-hover:text-ink-700 transition-colors">
+          {section.label}
+        </span>
+        <span className="flex-1 h-px bg-gradient-to-r from-ink-200/80 via-ink-100 to-transparent" />
+        <Icon name="chevronDown" size={12} className={cn("text-ink-400 transition-transform duration-200", !open && "-rotate-90")} />
+      </button>
+      {open && (
+        <div className="space-y-0.5 pb-1">
+          {(section.children ?? []).map((child) => (
+            <NavRow key={child.key} node={child} expanded={expanded} activeKeys={activeKeys} toggle={toggle} counts={counts} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A nested row — a collapsible parent (icon + label + chevron) or a leaf link. Recurses. */
+function NavRow({ node, expanded, activeKeys, toggle, counts }: { node: NavNode } & NavRenderProps) {
+  if (node.children) {
+    const open = expanded.has(node.key);
+    const active = activeKeys.has(node.key);
+    return (
+      <div>
+        <button
+          type="button" onClick={() => toggle(node.key)} aria-expanded={open}
+          className={cn(
+            "group w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
+            active ? "text-brand-700" : "text-ink-600 hover:bg-ink-100/80 hover:text-ink-900",
+          )}
+        >
+          {node.icon && <Icon name={node.icon} size={18} className={cn("shrink-0 transition-colors", active ? "text-brand-600" : "text-ink-500 group-hover:text-ink-900")} />}
+          <span className="flex-1 truncate text-left">{node.label}</span>
+          <Icon name="chevronDown" size={14} className={cn("shrink-0 text-ink-400 transition-transform duration-200", !open && "-rotate-90")} />
+        </button>
+        {open && (
+          <div className="mt-0.5 ml-[18px] pl-2 border-l border-ink-200/60 space-y-0.5">
+            {node.children.map((child) => (
+              <NavRow key={child.key} node={child} expanded={expanded} activeKeys={activeKeys} toggle={toggle} counts={counts} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <NavLink
+      to={node.to!}
+      className={({ isActive }) =>
+        cn(
+          "group relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
+          isActive
+            ? "text-brand-700 bg-brand-50 ring-1 ring-brand-100 shadow-[0_1px_2px_0_rgba(60,114,105,0.06)]"
+            : "text-ink-600 hover:bg-ink-100/80 hover:text-ink-900",
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-gradient-to-b from-brand-400 to-brand-600 shadow-[0_0_8px_rgba(60,114,105,0.45)]" />}
+          {node.icon && <Icon name={node.icon} size={17} className={cn("shrink-0 transition-colors", isActive ? "text-brand-600" : "text-ink-500 group-hover:text-ink-900")} />}
+          <span className="flex-1 truncate">{node.label}</span>
+          <CountBadge node={node} counts={counts} />
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+/** Collapsed sidebar: an icon rail of every leaf, grouped by section with a divider + count dots. */
+function CollapsedRail({ nav, counts }: { nav: NavNode[]; counts?: QueueCounts }) {
+  return (
+    <div className="space-y-1">
+      {nav.map((section, si) => (
+        <div key={section.key}>
+          {si > 0 && <div className="mx-3 my-2 h-px bg-ink-200/60" aria-hidden />}
+          <div className="space-y-0.5">
+            {flattenLeaves(section.children ?? [section]).map((leaf) => (
+              <NavLink
+                key={leaf.key} to={leaf.to!} title={leaf.label}
+                className={({ isActive }) =>
+                  cn(
+                    "group relative flex items-center justify-center py-2 rounded-lg transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
+                    isActive ? "bg-brand-50 ring-1 ring-brand-100" : "hover:bg-ink-100/80",
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon name={leaf.icon ?? "dashboard"} size={18} className={cn("transition-colors", isActive ? "text-brand-600" : "text-ink-500 group-hover:text-ink-900")} />
+                    {leaf.countKey && (counts?.[leaf.countKey] ?? 0) > 0 && (
+                      <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white" aria-hidden />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Enterprise breadcrumb trail (Section › Group › Page), derived from the nav tree + current route. */
+function Breadcrumbs() {
+  const location = useLocation();
+  const trail = useMemo(() => breadcrumbTrail(NAV, location.pathname), [location.pathname]);
+  if (trail.length <= 1) return null; // top-level pages (Dashboard, etc.) don't need a crumb trail
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-xs text-ink-500 flex-wrap">
+      <NavLink to="/dashboard" className="hover:text-ink-800 transition-colors inline-flex items-center" aria-label="Home">
+        <Icon name="home" size={13} />
+      </NavLink>
+      {trail.map((c, i) => {
+        const last = i === trail.length - 1;
+        return (
+          <span key={i} className="inline-flex items-center gap-1.5">
+            <Icon name="chevronRight" size={12} className="text-ink-300" />
+            {c.to && !last
+              ? <NavLink to={c.to} className="hover:text-ink-800 transition-colors">{c.label}</NavLink>
+              : <span className={cn(last && "text-ink-800 font-medium")}>{c.label}</span>}
+          </span>
+        );
+      })}
+    </nav>
   );
 }
 
