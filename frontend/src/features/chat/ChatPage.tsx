@@ -112,6 +112,10 @@ export function ChatPage() {
   const [editMsg] = useEditChatMessageMutation();
   const [deleteMsg] = useDeleteChatMessageMutation();
   const confirm = useConfirm();
+  const [msgSearch, setMsgSearch] = useState("");
+  const [showMsgSearch, setShowMsgSearch] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -236,6 +240,8 @@ export function ChatPage() {
     setTypingUsers({});
     setOverrides({});
     setEditingId(null);
+    setMsgSearch("");
+    setShowMsgSearch(false);
     if (activeRoom) {
       markRead(activeRoom).unwrap().then(() => refetchUnread()).catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -292,8 +298,18 @@ export function ChatPage() {
     return out;
   }, [serverMessages, liveMessages, activeRoom, overrides]);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
+    // Don't yank the view down while the user is reading history or searching.
+    if (atBottom && !msgSearch) messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, atBottom, msgSearch]);
+
+  function jumpToLatest() {
+    setMsgSearch("");
+    requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }));
+  }
+  function onMessagesScroll() {
+    const el = scrollRef.current;
+    if (el) setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  }
 
   const filteredRooms = useMemo(() => {
     if (!rooms) return [];
@@ -450,15 +466,17 @@ export function ChatPage() {
   // Group messages by day for date separators
   type Group = { day: string; items: typeof messages };
   const grouped = useMemo<Group[]>(() => {
+    const q = msgSearch.trim().toLowerCase();
+    const src = q ? messages.filter((m) => (m.body ?? "").toLowerCase().includes(q)) : messages;
     const groups: Group[] = [];
-    for (const m of messages) {
+    for (const m of src) {
       const day = dayLabel(m.sentAt);
       const last = groups[groups.length - 1];
       if (last && last.day === day) last.items.push(m);
       else groups.push({ day, items: [m] });
     }
     return groups;
-  }, [messages]);
+  }, [messages, msgSearch]);
 
   return (
     <div className="flex h-[calc(100vh-9rem)] surface overflow-hidden -m-1">
@@ -566,7 +584,7 @@ export function ChatPage() {
       {/* Main — on mobile this replaces the list once a room is open; the empty
           state only ever shows on desktop (mobile shows the list instead). */}
       <main className={cn(
-        "flex-1 flex-col bg-white min-w-0",
+        "relative flex-1 flex-col bg-white min-w-0",
         activeRoom ? "flex" : "hidden md:flex",
       )}>
         {!activeRoom ? (
@@ -615,13 +633,21 @@ export function ChatPage() {
                   )}
                 </div>
               </div>
+              {showMsgSearch && (
+                <Input autoFocus leftIcon={<Icon name="search" size={14} />} placeholder="Search in conversation…"
+                  value={msgSearch} onChange={(e) => setMsgSearch(e.target.value)} className="h-9 w-40 sm:w-56" />
+              )}
+              <Button variant="ghost" size="icon" aria-label="Search messages"
+                onClick={() => setShowMsgSearch((v) => { if (v) setMsgSearch(""); return !v; })}>
+                <Icon name="search" size={18} />
+              </Button>
               <Button variant="ghost" size="icon" aria-label="Refresh" onClick={() => refetch()}>
                 <Icon name="refresh" size={18} />
               </Button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 bg-ink-50/30">
+            <div ref={scrollRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto px-5 py-4 bg-ink-50/30">
               {msgsLoading ? (
                 <div className="space-y-3">
                   {[0, 1, 2].map((i) => (
@@ -754,6 +780,14 @@ export function ChatPage() {
                 </div>
               )}
             </div>
+
+            {/* Jump to latest — shown when the user has scrolled up */}
+            {!atBottom && (
+              <button onClick={jumpToLatest} aria-label="Jump to latest messages"
+                className="absolute bottom-24 right-6 z-10 h-10 w-10 rounded-full bg-white border hairline shadow-card grid place-items-center text-ink-600 hover:text-brand-600 hover:shadow-card-hover transition-all">
+                <Icon name="chevronDown" size={18} />
+              </button>
+            )}
 
             {/* Live typing indicator */}
             {typingText && (
