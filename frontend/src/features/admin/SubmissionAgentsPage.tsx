@@ -26,7 +26,7 @@ export function SubmissionAgentsPage() {
   const [resetting, setResetting] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
 
-  const [setActive] = useSetUserActiveMutation();
+  const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
 
@@ -156,6 +156,7 @@ export function SubmissionAgentsPage() {
             <Button variant="ghost" onClick={() => setConfirmDeactivate(null)}>Cancel</Button>
             <Button
               variant="danger"
+              loading={settingActive}
               onClick={async () => {
                 if (!confirmDeactivate) return;
                 try {

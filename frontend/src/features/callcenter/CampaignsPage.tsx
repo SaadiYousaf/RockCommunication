@@ -10,6 +10,7 @@ import {
   Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
 type TabKey = "campaigns" | "sources" | "skills" | "wrapup";
@@ -55,6 +56,8 @@ function CampaignsSection() {
   const { data: list, isLoading } = useListCampaignsQuery();
   const [upsert, { isLoading: saving }] = useUpsertCampaignMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -75,9 +78,16 @@ function CampaignsSection() {
   }
 
   async function toggle(c: Campaign) {
+    if (c.isActive && !(await confirm({
+      title: `Disable ${c.name}?`,
+      description: "The dialer will stop pulling leads from this campaign until you re-enable it.",
+      confirmLabel: "Disable", danger: true,
+    }))) return;
+    setBusyId(c.id);
     try { await upsert({ ...c, isActive: !c.isActive }).unwrap();
       toast.success(c.isActive ? "Campaign disabled" : "Campaign enabled");
     } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+    finally { setBusyId(null); }
   }
 
   return (
@@ -124,7 +134,9 @@ function CampaignsSection() {
                   <TD>
                     <div className="flex justify-end">
                       <Can permission={Perm.CampaignsManage}>
-                        <Button variant="ghost" size="sm" onClick={() => toggle(c)}>
+                        <Button variant="ghost" size="sm" loading={busyId === c.id}
+                          title={c.isActive ? "Pause this campaign — stops feeding the dialer" : "Resume feeding leads to the dialer"}
+                          onClick={() => toggle(c)}>
                           {c.isActive ? "Disable" : "Enable"}
                         </Button>
                       </Can>
@@ -242,6 +254,8 @@ function SkillsSection() {
   const { data: list, isLoading } = useListSkillsQuery();
   const [upsert, { isLoading: saving }] = useUpsertSkillMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -256,8 +270,16 @@ function SkillsSection() {
   }
 
   async function toggle(s: Skill) {
-    try { await upsert({ ...s, isActive: !s.isActive }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+    if (s.isActive && !(await confirm({
+      title: `Disable ${s.name}?`,
+      description: "This skill will stop being used for skill-based call routing until you re-enable it.",
+      confirmLabel: "Disable", danger: true,
+    }))) return;
+    setBusyId(s.id);
+    try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
+      toast.success(s.isActive ? "Skill disabled" : "Skill enabled");
+    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+    finally { setBusyId(null); }
   }
 
   return (
@@ -280,7 +302,9 @@ function SkillsSection() {
                   ? <Badge tone="success" variant="soft" dot>Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
                 <Can permission={Perm.CampaignsManage}>
-                  <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
+                  <Button variant="ghost" size="sm" loading={busyId === s.id}
+                    title={s.isActive ? "Stop using this skill for routing" : "Use this skill for routing again"}
+                    onClick={() => toggle(s)}>
                     {s.isActive ? "Disable" : "Enable"}
                   </Button>
                 </Can>

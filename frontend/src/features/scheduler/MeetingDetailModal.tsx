@@ -7,7 +7,7 @@ import type { Meeting } from "./types";
 import { RESPONSE_LABEL, RESPONSE_TONE, RSVP_CHOICES, STATUS_TONE } from "./types";
 import { formatRange } from "./calendarUtils";
 import {
-  Badge, Button, Icon, Modal, Skeleton, useToast,
+  Badge, Button, Icon, InfoHint, Modal, Skeleton, useToast,
 } from "../../shared/ui";
 
 /**
@@ -62,7 +62,15 @@ export function MeetingDetailModal({
         isLoading ? "Meeting" : (
           <span className="flex items-center gap-2.5 flex-wrap">
             <span className={cancelled ? "line-through text-ink-400" : ""}>{meeting?.title}</span>
-            {meeting && <Badge tone={STATUS_TONE[meeting.status]} variant="soft">{meeting.status}</Badge>}
+            {meeting && (
+              <span className="inline-flex items-center gap-1">
+                <Badge tone={STATUS_TONE[meeting.status]} variant="soft">{meeting.status}</Badge>
+                <InfoHint title="Meeting status" side="bottom">
+                  <b>Scheduled</b> — still on the calendar. <b>Completed</b> — the end time has passed.
+                  <b>Cancelled</b> — called off; every invitee was emailed.
+                </InfoHint>
+              </span>
+            )}
           </span>
         )
       }
@@ -93,7 +101,7 @@ export function MeetingDetailModal({
             {meeting.location && <DetailRow icon="mapPin" label="Where">{meeting.location}</DetailRow>}
             {meeting.onlineUrl && (
               <DetailRow icon="globe" label="Online">
-                <a href={meeting.onlineUrl} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline break-all">
+                <a href={meeting.onlineUrl} target="_blank" rel="noreferrer" title="Opens in a new tab" className="text-brand-600 hover:underline break-all">
                   {meeting.onlineUrl}
                 </a>
               </DetailRow>
@@ -113,7 +121,15 @@ export function MeetingDetailModal({
           {/* RSVP actions for an invited user */}
           {canRespond && (
             <div>
-              <div className="section-title mb-2">Your response</div>
+              <div className="section-title mb-2">
+                <span className="inline-flex items-center gap-1">
+                  Your response
+                  <InfoHint title="Your RSVP" side="right">
+                    Let the organizer know if you'll attend. <b>Tentative</b> means "maybe". You can change
+                    your answer any time before the meeting.
+                  </InfoHint>
+                </span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {RSVP_CHOICES.map((c) => {
                   const active = meeting.myResponse === c.value;
@@ -136,7 +152,13 @@ export function MeetingDetailModal({
           {/* Attendee roster */}
           <div>
             <div className="section-title mb-2">
-              Attendees <span className="text-ink-400">· {meeting.attendees.length}</span>
+              <span className="inline-flex items-center gap-1">
+                Attendees <span className="text-ink-400">· {meeting.attendees.length}</span>
+                <InfoHint title="RSVP status" side="top">
+                  The tag beside each name is their reply — Accepted, Declined, Tentative (maybe), or
+                  "No response" if they haven't answered yet.
+                </InfoHint>
+              </span>
             </div>
             {meeting.attendees.length === 0 ? (
               <p className="text-sm text-ink-400">No attendees invited.</p>

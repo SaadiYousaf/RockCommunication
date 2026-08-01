@@ -102,7 +102,7 @@ export function LeadTroubleshootPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [manualId, setManualId] = useState(id ?? "");
-  const { data, isLoading, isError, refetch } = useLeadDiagnosticsQuery(id!, { skip: !id });
+  const { data, isLoading, isFetching, isError, refetch } = useLeadDiagnosticsQuery(id!, { skip: !id });
 
   if (!id) {
     return (
@@ -128,7 +128,10 @@ export function LeadTroubleshootPage() {
                   onChange={(e) => setManualId(e.target.value)}
                   containerClassName="flex-1"
                 />
-                <Button type="submit" disabled={!manualId.trim()}>Diagnose</Button>
+                <Button type="submit" disabled={!manualId.trim()}
+                  title={!manualId.trim() ? "Enter a lead ID to diagnose" : "Run diagnostics for this lead"}>
+                  Diagnose
+                </Button>
               </form>
             }
           />
@@ -150,7 +153,8 @@ export function LeadTroubleshootPage() {
                 Open lead
               </Button>
             </Link>
-            <Button variant="outline" leftIcon={<Icon name="refresh" size={16} />} onClick={() => refetch()}>
+            <Button variant="outline" leftIcon={<Icon name="refresh" size={16} />} onClick={() => refetch()}
+              loading={isFetching} title="Re-run the diagnostics for this lead">
               Refresh
             </Button>
           </>

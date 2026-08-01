@@ -11,7 +11,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 export function DncPage() {
   const { data: list, isLoading } = useListDncQuery();
   const [add, { isLoading: adding }] = useAddDncMutation();
-  const [remove] = useRemoveDncMutation();
+  const [remove, { isLoading: removing }] = useRemoveDncMutation();
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
@@ -189,7 +189,7 @@ export function DncPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmRemove(null)}>Cancel</Button>
-            <Button variant="danger" onClick={() => confirmRemove && doRemove(confirmRemove.id)}>Remove</Button>
+            <Button variant="danger" loading={removing} onClick={() => confirmRemove && doRemove(confirmRemove.id)}>Remove</Button>
           </>
         }
       >

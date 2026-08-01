@@ -9,6 +9,7 @@ import {
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
 export function LeadListsPage() {
@@ -16,8 +17,10 @@ export function LeadListsPage() {
   const [upsert, { isLoading: saving }] = useUpsertLeadListMutation();
   const [importCsv, { isLoading: importing }] = useImportLeadsCsvMutation();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [search, setSearch] = useState("");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [activeListId, setActiveListId] = useState<string | null>(null);
@@ -60,11 +63,20 @@ export function LeadListsPage() {
   }
 
   async function toggle(l: LeadList) {
+    if (l.isActive && !(await confirm({
+      title: `Disable "${l.name}"?`,
+      description: "Disabling hides this list from new campaign setup and stops it being used until you turn it back on. Nothing is deleted.",
+      confirmLabel: "Disable",
+      danger: true,
+    }))) return;
+    setTogglingId(l.id);
     try {
       await upsert({ id: l.id, name: l.name, isActive: !l.isActive }).unwrap();
       toast.success(l.isActive ? "List disabled" : "List enabled");
     } catch (err: unknown) {
       toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -158,7 +170,9 @@ export function LeadListsPage() {
                         {isActive ? "Selected" : "Select"}
                       </Button>
                       <Can permission={Perm.CampaignsManage}>
-                        <Button variant="ghost" size="sm" onClick={() => toggle(l)}>
+                        <Button variant="ghost" size="sm" loading={togglingId === l.id}
+                          title={l.isActive ? "Hide this list from new campaigns" : "Make this list available again"}
+                          onClick={() => toggle(l)}>
                           {l.isActive ? "Disable" : "Enable"}
                         </Button>
                       </Can>
@@ -182,11 +196,12 @@ export function LeadListsPage() {
               </span>
             }
             subtitle={
-              <span>
+              <span className="inline-flex flex-wrap items-center gap-1">
                 Columns:{" "}
                 <code className="bg-ink-100 text-ink-800 px-1.5 py-0.5 rounded text-[11px] font-mono">
                   firstname,lastname,phone,email,state,postal,source,jornaya
-                </code>{" "}
+                </code>
+                <InfoHint title="CSV columns" side="right">The first row must be these headers. <strong>source</strong> is where the lead came from (e.g. a vendor or campaign); <strong>jornaya</strong> is the Jornaya LeadiD — a consent-tracking token that proves the lead agreed to be contacted. Any extra columns are ignored.</InfoHint>{" "}
                 — DNC numbers are scrubbed automatically.
               </span>
             }

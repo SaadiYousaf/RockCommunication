@@ -139,8 +139,8 @@ export function EmployeesPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <Stat label="Employees" value={rows.length} icon={<Icon name="users" size={16} />} tone="brand" />
-        <Stat label="Permanent" value={rows.filter((r) => r.employmentStatus === "Permanent").length} icon={<Icon name="userCheck" size={16} />} tone="success" />
-        <Stat label="Probation" value={rows.filter((r) => r.employmentStatus === "Probation").length} icon={<Icon name="clock" size={16} />} tone="warning" />
+        <Stat label="Permanent" value={rows.filter((r) => r.employmentStatus === "Permanent").length} hint="Confirmed staff who have passed probation" icon={<Icon name="userCheck" size={16} />} tone="success" />
+        <Stat label="Probation" value={rows.filter((r) => r.employmentStatus === "Probation").length} hint="New hires still under review before being confirmed" icon={<Icon name="clock" size={16} />} tone="warning" />
         <Stat label="Call centres" value={callCenters?.length ?? 0} icon={<Icon name="building" size={16} />} tone="accent" />
       </div>
 
@@ -223,7 +223,7 @@ export function EmployeesPage() {
                   <TD>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(e.id)}>Edit</Button>
-                      <Button variant="ghost" size="sm" aria-label="Remove" onClick={() => onDelete(e.id, e.fullName)}>
+                      <Button variant="ghost" size="sm" aria-label={`Remove ${e.fullName}`} title="Remove employee" onClick={() => onDelete(e.id, e.fullName)}>
                         <Icon name="trash" size={14} className="text-rose-500" />
                       </Button>
                     </div>
@@ -257,7 +257,7 @@ export function EmployeesPage() {
           </Section>
 
           <Section title={<>Personal<InfoHint title="CNIC" side="right">The national ID number, encrypted at rest and visible only to authorised HR.</InfoHint></>}>
-            <Input label="CNIC" value={form.cnic ?? ""} onChange={set("cnic")} secure />
+            <Input label="CNIC" value={form.cnic ?? ""} onChange={set("cnic")} secure placeholder="e.g. 35202-1234567-1" />
             <Select label="Gender" value={form.gender} onChange={set("gender")}>{opts(GENDERS)}</Select>
             <Select label="Marital status" value={form.maritalStatus} onChange={set("maritalStatus")}>{opts(MARITAL_STATUSES)}</Select>
             <Input label="Date of birth" type="date" value={dateOnly(form.dateOfBirth)} onChange={setDate("dateOfBirth")} />

@@ -164,7 +164,15 @@ export function SaleDetailPage() {
             <Field label="Banking code" value={<Badge tone={b.tone} variant="soft" dot>{b.label}</Badge>} />
             <Field label="Bank" value={sale.bankName ?? "—"} />
             <Field label="Routing #" value={sale.bankRoutingNumber ?? "—"} mono />
-            <Field label="Account" value={sale.bankAccountLast4 ? `••••${sale.bankAccountLast4}` : "—"} mono />
+            <Field label="Account" mono value={
+              <span className="inline-flex items-center gap-1">
+                {sale.bankAccountLast4 ? `••••${sale.bankAccountLast4}` : "—"}
+                <InfoHint title="Bank account" side="left">
+                  For security, only the last four digits of the account number are shown here — the full
+                  number is not retained after Lyons validates it.
+                </InfoHint>
+              </span>
+            } />
             <Field label="Lyons reference" value={sale.lyonsReference ?? "—"} mono />
             <Field label="Verification recording" value={
               sale.hasRecording
@@ -296,6 +304,7 @@ function LicenseAgentRow({ sale }: { sale: SaleDetail }) {
           <Skeleton className="h-9" />
         ) : agents && agents.length > 0 ? (
           <Select value={sale.licenseAgentUserId ?? ""} disabled={saving}
+            title={saving ? "Saving your change…" : undefined}
             onChange={(e) => pick(e.target.value)} className="text-sm">
             <option value="">— unassigned —</option>
             {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -315,7 +324,10 @@ function LicenseAgentRow({ sale }: { sale: SaleDetail }) {
 
 function TimelineItem({ icon, label, at, done }: { icon: string; label: string; at: string; done?: boolean }) {
   return (
-    <div className={`rounded-lg border hairline p-3 ${done ? "bg-ink-50/50" : "opacity-60"}`}>
+    <div
+      className={`rounded-lg border hairline p-3 ${done ? "bg-ink-50/50" : "opacity-60"}`}
+      title={done ? undefined : `Not ${label.toLowerCase()} yet`}
+    >
       <div className="flex items-center gap-1.5 text-xs font-medium text-ink-700 mb-1">
         <Icon name={icon} size={13} className={done ? "text-brand-600" : "text-ink-400"} /> {label}
       </div>

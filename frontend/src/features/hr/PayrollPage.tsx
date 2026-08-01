@@ -46,6 +46,7 @@ export function PayrollPage() {
 
   const [editing, setEditing] = useState<PayrollRow | null>(null);
   const [form, setForm] = useState<SavePayrollInput | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   useEffect(() => { setForm(editing ? toInput(editing) : null); }, [editing]);
 
   const num = (k: keyof SavePayrollInput) =>
@@ -65,19 +66,23 @@ export function PayrollPage() {
   }
 
   async function downloadSlip(row: PayrollRow) {
+    setDownloadingId(row.employeeId);
     try {
       const res = await fetch(`${API_URL}/api/hr/payroll/slip?employeeId=${row.employeeId}&year=${year}&month=${month}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { toast.error("Couldn't generate slip"); return; }
+      if (!res.ok) { toast.error("Couldn't generate slip", "Try again in a moment."); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = `salary-slip-${row.agentCode}-${monthValue}.pdf`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
+      toast.success("Slip downloaded", `${row.fullName} — ${monthValue}`);
     } catch {
-      toast.error("Couldn't download the slip");
+      toast.error("Couldn't download the slip", "Check your connection and try again.");
+    } finally {
+      setDownloadingId(null);
     }
   }
 
@@ -92,7 +97,7 @@ export function PayrollPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         <Stat label="Employees" value={list.length} icon={<Icon name="users" size={16} />} tone="brand" />
         <Stat label="Total net pay" value={money(totalNet)} hint="Earnings − deductions, summed across employees" icon={<Icon name="dollar" size={16} />} tone="success" />
-        <Stat label="Finalized" value={list.filter((r) => r.finalized).length} icon={<Icon name="check" size={16} />} tone="accent" />
+        <Stat label="Finalized" value={list.filter((r) => r.finalized).length} hint="Rows locked for the month and no longer auto-recalculated" icon={<Icon name="check" size={16} />} tone="accent" />
       </div>
 
       <Card className="mb-4">
@@ -104,7 +109,7 @@ export function PayrollPage() {
             <option value="">All call centres</option>
             {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
-          <span className="text-sm text-ink-500 ml-auto">{list.length} employees</span>
+          <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "employee" : "employees"}</span>
         </CardBody>
       </Card>
 
@@ -165,7 +170,7 @@ export function PayrollPage() {
                   <TD>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditing(r)}>Edit</Button>
-                      <Button variant="ghost" size="sm" leftIcon={<Icon name="download" size={14} />} onClick={() => downloadSlip(r)}>Slip</Button>
+                      <Button variant="ghost" size="sm" leftIcon={<Icon name="download" size={14} />} loading={downloadingId === r.employeeId} onClick={() => downloadSlip(r)}>Slip</Button>
                     </div>
                   </TD>
                 </TR>
@@ -206,7 +211,7 @@ export function PayrollPage() {
               <Num label="Present days" v={form.presentDays} on={num("presentDays")} />
               <Num label="Leaves approved" v={form.leavesApproved} on={num("leavesApproved")} />
             </Section>
-            <Textarea label="Notes" value={form.notes ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, notes: e.target.value } : f))} />
+            <Textarea label="Notes" value={form.notes ?? ""} onChange={(e) => setForm((f) => (f ? { ...f, notes: e.target.value } : f))} placeholder="Any adjustments or context for this month's pay…" />
             <label className="inline-flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
               <input type="checkbox" checked={form.finalized} onChange={(e) => setForm((f) => (f ? { ...f, finalized: e.target.checked } : f))}
                 className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />

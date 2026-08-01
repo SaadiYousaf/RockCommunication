@@ -222,7 +222,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
         <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
           checked={!!cadence.isActive}
           onChange={(e) => setCadence({ ...cadence, isActive: e.target.checked })} />
-        Active
+        <span className="inline-flex items-center gap-1">Active<InfoHint title="Active" side="top">Only active cadences enroll leads and advance their steps. Turn this off to pause the sequence without deleting it.</InfoHint></span>
       </label>
 
       <div>
@@ -268,6 +268,7 @@ function CadenceForm({ cadence, setCadence }: { cadence: Cadence; setCadence: (c
                   <span className="inline-flex items-center gap-1">stop if contacted<InfoHint title="Stop if contacted" side="top">Ends the whole sequence for this lead as soon as they reply or are reached, so later steps don't fire.</InfoHint></span>
                 </label>
                 <Button type="button" variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50"
+                  aria-label="Remove step" title="Remove this step"
                   onClick={() => setCadence({ ...cadence, steps: cadence.steps.filter((_, j: number) => j !== i) })}>
                   <Icon name="x" size={14} />
                 </Button>

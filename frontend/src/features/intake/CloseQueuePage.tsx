@@ -1,6 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
@@ -19,6 +19,7 @@ export function CloseQueuePage() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const toast = useToast();
+  const navigate = useNavigate();
   const filtered = (queue ?? []).filter((l) =>
     !q.trim() || `${l.firstName} ${l.lastName} ${l.phoneNumber} ${l.city ?? ""} ${l.state ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
@@ -95,7 +96,7 @@ export function CloseQueuePage() {
               </THead>
               <TBody>
                 {sorted.map((l) => (
-                  <TR key={l.id}>
+                  <TR key={l.id} className="cursor-pointer" onClick={() => navigate(`/close-queue/${l.id}`)}>
                     <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
                     <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{l.phoneNumber}</TD>
                     <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
@@ -108,8 +109,8 @@ export function CloseQueuePage() {
                     <TD className="text-sm tabular-nums font-medium text-ink-800">{Math.round(l.score)}</TD>
                     <TD>{l.hasApplication ? <Badge tone="info" variant="soft">Started</Badge> : <Badge tone="neutral" variant="soft">New</Badge>}</TD>
                     <TD className="text-right whitespace-nowrap">
-                      <Link to={`/close-queue/${l.id}`}>
-                        <Button size="sm" leftIcon={<Icon name="briefcase" size={14} />}>Open</Button>
+                      <Link to={`/close-queue/${l.id}`} onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" leftIcon={<Icon name="briefcase" size={14} />} title="Open the closing application for this lead">Open</Button>
                       </Link>
                     </TD>
                   </TR>

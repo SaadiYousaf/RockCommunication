@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, type IconName, Input, PageHeader, Skeleton, Textarea, useToast,
+  Badge, Button, Card, CardBody, EmptyState, Icon, type IconName, InfoHint, Input, PageHeader, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { useMyProfileQuery, useUpdateMyProfileMutation, useUserProfileQuery } from "./baseApi";
 import { AvatarImage, ProfileAvatarUploader } from "./ProfileAvatar";
@@ -123,13 +123,16 @@ export function ProfilePage() {
               <SectionTitle icon="building" title="Organization" note="Managed by your organization" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <LockedField label="Name" value={profile.displayName} />
-                <LockedField label="Code" value={profile.userName} />
+                <LockedField label="Code" value={profile.userName}
+                  hint="Your agent code — also your sign-in username. Admins assign it, and it identifies you across leads, sales and reports." />
                 <LockedField label="Email" value={profile.email} />
-                <LockedField label="Designation" value={profile.designation} />
+                <LockedField label="Designation" value={profile.designation}
+                  hint="Your job title within the organization. It's for display only and doesn't affect what you can access." />
                 <LockedField label="Team" value={profile.teamName} />
                 <LockedField label="Call centre" value={profile.callCenterName} />
                 <LockedField label="Agency" value={profile.agencyName} />
-                <LockedField label="Roles" value={profile.roles.map(roleLabel).join(", ")} />
+                <LockedField label="Roles" value={profile.roles.map(roleLabel).join(", ")}
+                  hint="Roles control what you can see and do in the CRM (for example Closer, Validator or Admin). Only an administrator can change them." />
               </div>
             </CardBody>
           </Card>
@@ -183,11 +186,12 @@ function SectionTitle({ icon, title, note }: { icon: IconName; title: string; no
 }
 
 /** A read-only org-owned field with a subtle lock affordance — the user cannot edit these. */
-function LockedField({ label, value }: { label: string; value?: string | null }) {
+function LockedField({ label, value, hint }: { label: string; value?: string | null; hint?: string }) {
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-1 mb-1">
         <span className="text-[12px] font-medium text-ink-700">{label}</span>
+        {hint && <InfoHint title={label} side="top" size={12}>{hint}</InfoHint>}
         <Icon name="lock" size={11} className="text-ink-400" />
       </div>
       <div className="px-3 py-2 rounded-lg bg-ink-50 border hairline text-sm text-ink-800 truncate" title={value ?? undefined}>

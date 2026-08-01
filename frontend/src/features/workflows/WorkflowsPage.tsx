@@ -307,7 +307,10 @@ function RuleCard({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-semibold text-ink-900 text-base">{rule.name}</span>
             <Badge tone={tone} variant="soft" dot>{rule.eventType}</Badge>
-            <Badge tone="neutral" variant="soft" size="sm" className="tabular-nums">priority {rule.priority}</Badge>
+            <span className="inline-flex items-center gap-1">
+              <Badge tone="neutral" variant="soft" size="sm" className="tabular-nums">priority {rule.priority}</Badge>
+              <InfoHint title="Priority" side="top">When several rules match the same event, lower numbers run first.</InfoHint>
+            </span>
             {!rule.isActive && <Badge tone="danger" variant="soft" size="sm">Disabled</Badge>}
           </div>
           {rule.description && (
@@ -327,7 +330,10 @@ function RuleCard({
               </span>
             ))}
             {rule.continueOnError && (
-              <Badge tone="neutral" variant="outline" size="sm" className="ml-1">continue on error</Badge>
+              <span className="inline-flex items-center gap-1 ml-1">
+                <Badge tone="neutral" variant="outline" size="sm">continue on error</Badge>
+                <InfoHint title="Continue on error" side="top">When on, an error while this rule runs is logged and swallowed instead of interrupting the rest of the workflow. When off, the failure is raised and stops processing.</InfoHint>
+              </span>
             )}
           </div>
 
@@ -449,7 +455,7 @@ function RuleEditor({
               <div className="col-span-1 flex justify-end">
                 <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50"
                   onClick={() => setRule({ ...rule, actions: rule.actions.filter((_, j) => j !== i) })}
-                  aria-label="Remove action">
+                  aria-label="Remove action" title="Remove this action">
                   <Icon name="trash" size={14} />
                 </Button>
               </div>

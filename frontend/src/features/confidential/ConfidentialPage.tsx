@@ -128,7 +128,7 @@ export function ConfidentialPage() {
                   <TD>
                     <div className="font-medium text-ink-900">{c.portalName}</div>
                     {c.url && (
-                      <a href={c.url} target="_blank" rel="noreferrer"
+                      <a href={c.url} target="_blank" rel="noreferrer" title="Open the portal in a new tab"
                         className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1 max-w-[240px] truncate">
                         <Icon name="externalLink" size={11} className="shrink-0" />{c.url}
                       </a>
@@ -159,7 +159,7 @@ export function ConfidentialPage() {
                   <TD>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>Edit</Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(c)} aria-label="Delete login">
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(c)} aria-label="Delete login" title="Delete login">
                         <Icon name="trash" size={14} className="text-rose-500" />
                       </Button>
                     </div>

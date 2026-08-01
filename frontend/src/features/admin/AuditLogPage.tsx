@@ -126,6 +126,7 @@ export function AuditLogPage() {
         description="Every change to entities in this CRM. Filter by entity, action, user, or date range."
         actions={
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data?.items.length}
+            title={data?.items.length ? "Download the entries on this page as a CSV file" : "Nothing to export with the current filters"}
             leftIcon={<Icon name="download" size={14} />}>
             Export CSV
           </Button>
@@ -151,6 +152,7 @@ export function AuditLogPage() {
             />
           </div>
           <Select
+            aria-label="Filter by record type"
             value={filters.entityName ?? ""}
             onChange={(e) => update("entityName", e.target.value || undefined)}
           >
@@ -158,6 +160,7 @@ export function AuditLogPage() {
             {filterOpts?.entityNames.map((n) => <option key={n} value={n}>{n}</option>)}
           </Select>
           <Select
+            aria-label="Filter by action"
             value={filters.action ?? ""}
             onChange={(e) => update("action", e.target.value || undefined)}
           >
@@ -166,12 +169,16 @@ export function AuditLogPage() {
           </Select>
           <Input
             type="date"
+            aria-label="Show changes on or after this date"
+            title="From date — show changes on or after this day"
             value={filters.after?.slice(0, 10) ?? ""}
             onChange={(e) => update("after", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
             placeholder="From"
           />
           <Input
             type="date"
+            aria-label="Show changes on or before this date"
+            title="To date — show changes up to and including this day"
             value={filters.before?.slice(0, 10) ?? ""}
             onChange={(e) => update("before", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
             placeholder="To"

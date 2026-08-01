@@ -202,7 +202,8 @@ function VoicemailSection() {
       >
         <form id="vm-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
           <Input label="Name" required value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Audio URL" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+          <Input label="Audio URL" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..."
+            hint="A publicly reachable link to the recording (.mp3 or .wav)." />
           <Input label="Duration (seconds)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
         </form>
       </Modal>
@@ -255,7 +256,9 @@ function PublicEndpointsSection() {
                 <div className="font-mono text-xs break-all mt-1.5 bg-white/70 rounded p-2 text-amber-950">{revealedSecret}</div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" variant="outline"
-                    onClick={() => navigator.clipboard.writeText(revealedSecret).then(() => toast.success("Copied"))}>
+                    onClick={() => navigator.clipboard.writeText(revealedSecret)
+                      .then(() => toast.success("Copied", "Secret copied to your clipboard."))
+                      .catch(() => toast.error("Couldn't copy", "Your browser blocked clipboard access."))}>
                     Copy secret
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRevealedSecret(null)}>Dismiss</Button>

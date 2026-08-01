@@ -83,7 +83,8 @@ export function AgencyDetailPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <Stat label="Sales" value={total} icon={<Icon name="chart" size={18} />} tone="brand" />
-        <Stat label="Premium (total)" value={formatUsd(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success" />
+        <Stat label="Premium (total)" value={formatUsd(sales?.totalPremium)} icon={<Icon name="dollar" size={18} />} tone="success"
+          hint="Sum of the monthly premiums across these sales (the customer's monthly payment)" />
         <Stat label="Funded" value={sales?.fundedCount ?? 0} icon={<Icon name="check" size={18} />} tone="success"
           hint="First payment cleared" />
         <Stat label="License agents" value={agents?.length ?? 0} icon={<Icon name="userCheck" size={18} />} tone="accent" />

@@ -14,6 +14,7 @@ import {
   Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "brand"> = {
   funded: "success", validated: "info", pending: "warning", internal: "brand",
@@ -30,6 +31,7 @@ export function SalesPage() {
   const [fundSale, { isLoading: funding }] = useFundSaleMutation();
   const [uploadRecording, { isLoading: uploadingRec }] = useUploadSaleRecordingMutation();
   const toast = useToast();
+  const confirm = useConfirm();
 
   // Sales to pick from for the Validate / Fund actions (instead of pasting a Sale ID).
   // SuperAdmin listing needs an explicit agency, so skip for them — the field falls back to input.
@@ -312,6 +314,15 @@ export function SalesPage() {
   }
 
   async function doValidate(id: string, approve: boolean) {
+    if (!approve) {
+      const ok = await confirm({
+        title: "Reject this sale?",
+        description: "The sale will be marked rejected in QA and won't move on to funding. Reject only if it fails validation.",
+        confirmLabel: "Reject sale",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     try {
       await validateSale({ id, approve }).unwrap();
       toast.success(approve ? "Sale approved" : "Sale rejected");
@@ -355,15 +366,15 @@ function SalesList() {
     <>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
         <Stat label="Total sales"   value={total}                                                                                   icon={<Icon name="briefcase" size={16} />} tone="brand"
-              onClick={() => update("status", undefined)} />
+              onClick={() => update("status", undefined)} hint="All sales matching the filters. Click to clear the status filter." />
         <Stat label="Total premium" value={`$${(data?.totalPremium ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}  icon={<Icon name="dollar" size={16} />}    tone="success"
-              hint="Combined premium across every sale matching the current filters." />
+              hint="Combined monthly premium across every sale matching the current filters." />
         <Stat label="Funded"        value={data?.fundedCount ?? 0}                                                                  icon={<Icon name="success" size={16} />}   tone="success"
-              onClick={() => update("status", "Funded")} />
+              onClick={() => update("status", "Funded")} hint="First premium draft cleared. Click to show only these." />
         <Stat label="Validated"     value={data?.validatedCount ?? 0}                                                               icon={<Icon name="shield" size={16} />}    tone="brand"
-              onClick={() => update("status", "Validated")} />
+              onClick={() => update("status", "Validated")} hint="Passed QA validation, awaiting funding. Click to filter." />
         <Stat label="Pending"       value={data?.pendingCount ?? 0}                                                                 icon={<Icon name="clock" size={16} />}     tone="warning"
-              onClick={() => update("status", "Pending")} />
+              onClick={() => update("status", "Pending")} hint="Recorded, not yet validated. Click to filter." />
       </div>
 
       <Card className="mb-4">
@@ -393,10 +404,12 @@ function SalesList() {
             <option value="internal">Internal</option>
           </Select>
           <Input type="date" leftIcon={<Icon name="calendar" size={14} />}
+            title="Sold on or after this date" aria-label="Sold from date"
             value={filters.from?.slice(0, 10) ?? ""}
             onChange={(e) => update("from", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
           />
           <Input type="date" leftIcon={<Icon name="calendar" size={14} />}
+            title="Sold on or before this date" aria-label="Sold to date"
             value={filters.to?.slice(0, 10) ?? ""}
             onChange={(e) => update("to", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
           />
@@ -508,11 +521,13 @@ function SalesList() {
             <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>
             <div className="flex gap-1.5">
               <Button variant="outline" size="sm" disabled={skip === 0}
+                title={skip === 0 ? "You're on the first page" : "Go to the previous page"}
                 leftIcon={<Icon name="chevronLeft" size={13} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: Math.max(0, (f.skip ?? 0) - take) }))}>
                 Prev
               </Button>
               <Button variant="outline" size="sm" disabled={skip + take >= total}
+                title={skip + take >= total ? "No more pages" : "Go to the next page"}
                 rightIcon={<Icon name="chevronRight" size={13} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: (f.skip ?? 0) + take }))}>
                 Next

@@ -9,6 +9,7 @@ import {
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 const STAGES = ["New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost"];
 const ROLES  = ["Fronter", "Verifier", "JrCloser", "Closer", "Validator", "Followups", "Winbacks"];
@@ -19,8 +20,10 @@ export function ScriptsPage() {
   const { data: campaigns } = useListCampaignsQuery();
   const [upsert, { isLoading: saving }] = useUpsertScriptMutation();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
 
   function openNew() {
@@ -65,9 +68,16 @@ export function ScriptsPage() {
   }
 
   async function toggle(s: Script) {
+    if (s.isActive && !(await confirm({
+      title: `Disable "${s.name}"?`,
+      description: "Agents will no longer see this script in the dialer until you re-enable it.",
+      confirmLabel: "Disable", danger: true,
+    }))) return;
+    setBusyId(s.id);
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
       toast.success(s.isActive ? "Script disabled" : "Script enabled");
     } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+    finally { setBusyId(null); }
   }
 
   return (
@@ -137,7 +147,9 @@ export function ScriptsPage() {
                       <div className="flex gap-1.5">
                         <Button variant="ghost" size="sm" leftIcon={<Icon name="cog" size={14} />}
                           onClick={() => setEditing(s)}>Edit</Button>
-                        <Button variant="ghost" size="sm" onClick={() => toggle(s)}>
+                        <Button variant="ghost" size="sm" loading={busyId === s.id}
+                          title={s.isActive ? "Hide this script from agents in the dialer" : "Show this script to agents again"}
+                          onClick={() => toggle(s)}>
                           {s.isActive ? "Disable" : "Enable"}
                         </Button>
                       </div>

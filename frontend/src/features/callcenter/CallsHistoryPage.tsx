@@ -49,6 +49,7 @@ export function CallsHistoryPage() {
       <Card className="mb-4">
         <CardBody className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Select
+            aria-label="Filter by agent"
             value={filters.agentUserId ?? ""}
             onChange={(e) => update("agentUserId", e.target.value || undefined)}
           >
@@ -56,6 +57,7 @@ export function CallsHistoryPage() {
             {users?.map((u) => <option key={u.id} value={u.id}>{u.userName}</option>)}
           </Select>
           <Select
+            aria-label="Filter by direction"
             value={filters.direction ?? ""}
             onChange={(e) => update("direction", e.target.value || undefined)}
           >
@@ -64,6 +66,7 @@ export function CallsHistoryPage() {
             <option value="Outbound">Outbound</option>
           </Select>
           <Select
+            aria-label="Filter by call status"
             value={filters.status ?? ""}
             onChange={(e) => update("status", e.target.value || undefined)}
           >
@@ -75,14 +78,17 @@ export function CallsHistoryPage() {
             <option value="failed">Failed</option>
           </Select>
           <Input type="date" leftIcon={<Icon name="calendar" size={14} />}
+            aria-label="From date" title="Show calls on or after this date"
             value={filters.from?.slice(0, 10) ?? ""}
             onChange={(e) => update("from", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
           />
           <Input type="date" leftIcon={<Icon name="calendar" size={14} />}
+            aria-label="To date" title="Show calls on or before this date"
             value={filters.to?.slice(0, 10) ?? ""}
             onChange={(e) => update("to", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
           />
           <Select
+            aria-label="Sort order"
             value={filters.sort ?? "initiatedAt-desc"}
             onChange={(e) => update("sort", e.target.value)}
           >
@@ -177,6 +183,8 @@ export function CallsHistoryPage() {
                   <TD>
                     {c.recordingUrl && (
                       <a href={c.recordingUrl} target="_blank" rel="noreferrer"
+                        aria-label="Play call recording"
+                        title="Play recording (opens in a new tab)"
                         className="text-brand-600 hover:underline text-xs inline-flex items-center gap-1">
                         <Icon name="play" size={12} /> Play
                       </a>
@@ -191,11 +199,13 @@ export function CallsHistoryPage() {
             <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={skip === 0}
+                title={skip === 0 ? "You're on the first page" : "Go to the previous page"}
                 leftIcon={<Icon name="chevronLeft" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: Math.max(0, (f.skip ?? 0) - take) }))}>
                 Previous
               </Button>
               <Button variant="outline" size="sm" disabled={skip + take >= total}
+                title={skip + take >= total ? "You're on the last page" : "Go to the next page"}
                 rightIcon={<Icon name="chevronRight" size={14} />}
                 onClick={() => setFilters((f) => ({ ...f, skip: (f.skip ?? 0) + take }))}>
                 Next

@@ -180,9 +180,25 @@ export function ClosingApplicationPage() {
             </div>
             <Input type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.faceAmount} onChange={set("faceAmount")} />
           </div>
-          <Input label="Premium" type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.premium} onChange={set("premium")} />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] font-medium text-ink-700 leading-none">Premium{sold && <span className="text-rose-500 ml-0.5" aria-hidden>*</span>}</span>
+              <InfoHint title="Monthly premium" side="right">
+                The amount the customer pays each month for this policy — this is the payment, separate from the face amount (the payout).
+              </InfoHint>
+            </div>
+            <Input type="number" required={sold} min={0} step="0.01" leftIcon={<Icon name="dollar" size={14} />} value={f.premium} onChange={set("premium")} />
+          </div>
           <Input label="Email" type="email" required={sold} secure value={f.email} onChange={set("email")} />
-          <Input label="Beneficiary" required={sold} secure value={f.beneficiary} onChange={set("beneficiary")} />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[12px] font-medium text-ink-700 leading-none">Beneficiary{sold && <span className="text-rose-500 ml-0.5" aria-hidden>*</span>}</span>
+              <InfoHint title="Beneficiary" side="right">
+                The person who receives the policy's payout (the face amount) when the insured passes away. The second beneficiary is the backup, paid only if the first can't be.
+              </InfoHint>
+            </div>
+            <Input required={sold} secure value={f.beneficiary} onChange={set("beneficiary")} />
+          </div>
           <Input label="Second beneficiary" secure value={f.secondBeneficiary} onChange={set("secondBeneficiary")} />
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1">
@@ -200,11 +216,11 @@ export function ClosingApplicationPage() {
           <Input label="Phone number" required={sold} secure value={f.phoneNumber} onChange={set("phoneNumber")} />
           <Input label="Alt phone" secure value={f.altPhone} onChange={set("altPhone")} />
           <Input label="Primary doctor" required={sold} secure value={f.primaryDoctor} onChange={set("primaryDoctor")} />
-          <Input label="Social (SSN)" required={sold} secure value={f.social} onChange={set("social")} />
-          <Input label="Born in" required={sold} secure value={f.bornIn} onChange={set("bornIn")} />
+          <Input label="Social (SSN)" required={sold} secure placeholder="000-00-0000" value={f.social} onChange={set("social")} />
+          <Input label="Born in" required={sold} secure placeholder="Place of birth" value={f.bornIn} onChange={set("bornIn")} />
           <Input label="Driver's licence / State ID" required={sold} secure value={f.driversLicense} onChange={set("driversLicense")} />
-          <Input label="Height" required={sold} secure value={f.height} onChange={set("height")} />
-          <Input label="Weight" required={sold} secure value={f.weight} onChange={set("weight")} />
+          <Input label="Height" required={sold} secure placeholder="e.g. 5 ft 10 in" value={f.height} onChange={set("height")} />
+          <Input label="Weight" required={sold} secure placeholder="e.g. 180 lbs" value={f.weight} onChange={set("weight")} />
         </Section>
 
         <Section title={
@@ -221,7 +237,7 @@ export function ClosingApplicationPage() {
           </Select>
           <Input label="Bank name" required={sold} secure value={f.bankName} onChange={set("bankName")} />
           <Input label="Account number" required={sold} secure inputMode="numeric" value={f.accountNumber} onChange={set("accountNumber")} />
-          <Input label="Routing number" required={sold} secure inputMode="numeric" value={f.routingNumber} onChange={set("routingNumber")} />
+          <Input label="Routing number" required={sold} secure inputMode="numeric" placeholder="9-digit routing number" value={f.routingNumber} onChange={set("routingNumber")} />
           <Input label="Reason (only if Lyons flags the account — code 198)" secure containerClassName="sm:col-span-2"
             placeholder="Why proceed on a flagged account?" value={f.banking198Reason} onChange={set("banking198Reason")} />
         </Section>

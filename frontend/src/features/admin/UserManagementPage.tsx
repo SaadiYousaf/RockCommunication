@@ -24,8 +24,8 @@ export function UserManagementPage() {
   const { data: users, isLoading } = useListUsersQuery();
   const { data: callCenters } = useListCallCentersQuery();
   const [updateRoles] = useUpdateUserRolesMutation();
-  const [setActive] = useSetUserActiveMutation();
-  const [resetPw] = useResetUserPasswordMutation();
+  const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
+  const [resetPw, { isLoading: resettingPw }] = useResetUserPasswordMutation();
   const [setUserCc] = useSetUserCallCenterMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
@@ -299,6 +299,8 @@ export function UserManagementPage() {
             <Button variant="ghost" onClick={() => setResetting(null)}>Cancel</Button>
             <Button
               disabled={newPwd.length < 8}
+              loading={resettingPw}
+              title={newPwd.length < 8 ? "Enter at least 8 characters first" : undefined}
               onClick={async () => {
                 if (!resetting) return;
                 try {
@@ -338,6 +340,7 @@ export function UserManagementPage() {
             <Button variant="ghost" onClick={() => setConfirmDeactivate(null)}>Cancel</Button>
             <Button
               variant="danger"
+              loading={settingActive}
               onClick={async () => {
                 if (!confirmDeactivate) return;
                 try {

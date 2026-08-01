@@ -2,6 +2,7 @@ import { Can, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
@@ -37,7 +38,11 @@ export function SupervisorPage() {
   const [forceStatus] = useForceAgentStatusMutation();
   const [coach] = useCoachAgentMutation();
   const toast = useToast();
+  const confirm = useConfirm();
 
+  // `${userId}:${action}` of the in-flight supervisor action, so only the
+  // clicked button spins (mutation isLoading is shared across every row).
+  const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -64,21 +69,27 @@ export function SupervisorPage() {
   });
 
   async function force(userId: string, status: string, label: string, reason: string) {
+    setBusy(`${userId}:${label}`);
     try {
       await forceStatus({ id: userId, status, reason }).unwrap();
       await refetch();
       toast.success(`${label} applied`, `Agent moved to ${status}.`);
     } catch (err: unknown) {
       toast.error(`Couldn't ${label.toLowerCase()}`, getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setBusy(null);
     }
   }
 
   async function doCoach(userId: string, mode: "monitor" | "whisper" | "barge", agentName: string) {
+    setBusy(`${userId}:${mode}`);
     try {
       await coach({ id: userId, mode }).unwrap();
       toast.success(`${mode[0].toUpperCase() + mode.slice(1)} started`, `Connected to ${agentName}.`);
     } catch (err: unknown) {
       toast.error("Couldn't start coaching", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -198,17 +209,34 @@ export function SupervisorPage() {
                   <Can permission={Perm.SupervisorControl}>
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       <Button variant="ghost" size="sm" leftIcon={<Icon name="clock" size={14} />}
+                        loading={busy === `${a.userId}:Break`}
+                        title="Move this agent to Break"
                         onClick={() => force(a.userId, "Break", "Break", "Supervisor break")}>Break</Button>
                       <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
                         leftIcon={<Icon name="logout" size={14} />}
-                        onClick={() => force(a.userId, "Offline", "Logout", "Forced logout")}>Logout</Button>
+                        loading={busy === `${a.userId}:Logout`}
+                        title="Force this agent off the clock — ends their shift"
+                        onClick={async () => {
+                          if (!(await confirm({
+                            title: `Log ${a.userName} out?`,
+                            description: "This ends their shift and forces them Offline. They'll have to clock in again before they can take calls.",
+                            confirmLabel: "Force logout", danger: true,
+                          }))) return;
+                          force(a.userId, "Offline", "Logout", "Forced logout");
+                        }}>Logout</Button>
                       <div className="h-5 w-px bg-ink-200 mx-1" />
                       <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        loading={busy === `${a.userId}:monitor`}
+                        title={a.currentCallStatus ? "Silently listen in on this call — nobody hears you" : "Available only while the agent is on a live call"}
                         onClick={() => doCoach(a.userId, "monitor", a.userName)}>Listen</Button>
                       <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        loading={busy === `${a.userId}:whisper`}
+                        title={a.currentCallStatus ? "Coach the agent privately — only they hear you, not the customer" : "Available only while the agent is on a live call"}
                         onClick={() => doCoach(a.userId, "whisper", a.userName)}>Whisper</Button>
                       <Button variant="ghost" size="sm" disabled={!a.currentCallStatus}
+                        loading={busy === `${a.userId}:barge`}
                         className="text-emerald-700 hover:bg-emerald-50"
+                        title={a.currentCallStatus ? "Join the live call — both the agent and the customer hear you" : "Available only while the agent is on a live call"}
                         onClick={() => doCoach(a.userId, "barge", a.userName)}>Barge</Button>
                     </div>
                   </Can>

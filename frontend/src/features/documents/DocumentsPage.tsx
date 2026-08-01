@@ -85,6 +85,7 @@ export function DocumentsPage() {
                 </div>
               </div>
               <Button onClick={doUpload} loading={uploading} disabled={!pending}
+                title={!pending ? "Choose a file to upload first" : undefined}
                 leftIcon={<Icon name="plus" size={16} />}>
                 Upload
               </Button>
@@ -131,6 +132,8 @@ export function DocumentsPage() {
                         <span
                           role="button"
                           tabIndex={0}
+                          title="Delete document"
+                          aria-label={`Delete ${d.name}`}
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (!(await confirm({
@@ -143,7 +146,7 @@ export function DocumentsPage() {
                               await deleteDoc(d.id).unwrap();
                               if (active?.id === d.id) setActive(null);
                               toast.success("Deleted", d.name);
-                            } catch { toast.error("Delete failed", ""); }
+                            } catch (err: unknown) { toast.error("Delete failed", getErrorDetail(err) ?? "Try again."); }
                           }}
                           className="text-ink-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md transition-colors shrink-0"
                         >

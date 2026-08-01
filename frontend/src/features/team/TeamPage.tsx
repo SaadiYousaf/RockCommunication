@@ -12,6 +12,7 @@ import {
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 /**
  * Org-chart view of the agency: CEO → leadership → teams → members.
@@ -246,6 +247,7 @@ function TeamCard({
   disabled?: boolean;
   canEdit: boolean;
 }) {
+  const confirm = useConfirm();
   const total = (team.lead ? 1 : 0) + team.members.length;
   // Candidates for lead: lead can come from any user — but we filter to people on this
   // team or unassigned to avoid pulling someone away from another team via the dropdown.
@@ -271,8 +273,17 @@ function TeamCard({
             <span>Team Lead</span>
             {team.lead && canEdit && (
               <button
-                onClick={() => onMakeLead(team.id, null, team.name)}
+                onClick={async () => {
+                  if (!(await confirm({
+                    title: "Remove team lead?",
+                    description: `Clear the team lead for ${team.name}? You can assign a new one at any time.`,
+                    confirmLabel: "Remove",
+                    danger: true,
+                  }))) return;
+                  onMakeLead(team.id, null, team.name);
+                }}
                 disabled={disabled}
+                title={disabled ? "Finishing the last change…" : "Remove this person as team lead"}
                 className="text-[10px] font-medium uppercase tracking-wider text-rose-600 hover:underline disabled:opacity-50"
               >
                 Clear
@@ -282,6 +293,8 @@ function TeamCard({
           {team.lead && <div className="mb-2"><PersonRow person={team.lead} /></div>}
           {canEdit && <Select
             value={team.lead?.id ?? ""}
+            aria-label={`Set the team lead for ${team.name}`}
+            title={disabled ? "Finishing the last change…" : "Choose who leads this team"}
             onChange={(e) => {
               const id = e.target.value;
               if (id && id !== team.lead?.id) onMakeLead(team.id, id, team.name);
@@ -354,7 +367,8 @@ function MovePicker({
       }}
       disabled={disabled}
       className="text-xs h-7 px-2 rounded-md border border-ink-200 bg-white text-ink-600 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer transition-colors"
-      title="Move to another team"
+      aria-label={`Move ${person.userName} to another team`}
+      title={disabled ? "Finishing the last change…" : "Move to another team"}
     >
       <option value="">Move…</option>
       {teams.length > 0 && <optgroup label="Move to team">
@@ -393,6 +407,8 @@ function UnassignedList({
               e.currentTarget.value = "";
             }}
             disabled={disabled || teams.length === 0}
+            aria-label={`Assign ${p.userName} to a team`}
+            title={teams.length === 0 ? "Create a team first before assigning people" : disabled ? "Finishing the last change…" : "Assign this person to a team"}
             className="text-xs h-8 px-2 rounded-md border border-brand-200 bg-brand-50 text-brand-700 font-medium hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-400 cursor-pointer disabled:opacity-50 transition-colors"
           >
             <option value="">Assign to team…</option>

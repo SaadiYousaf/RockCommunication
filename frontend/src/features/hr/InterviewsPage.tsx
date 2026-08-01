@@ -104,7 +104,7 @@ export function InterviewsPage() {
         <Stat label="Candidates" value={rows.length} icon={<Icon name="users" size={16} />} tone="brand" />
         <Stat label="Offered" value={offered} icon={<Icon name="mail" size={16} />} tone="accent" />
         <Stat label="Hired" value={hired} icon={<Icon name="userCheck" size={16} />} tone="success" />
-        <Stat label="In pipeline" value={rows.filter((r) => !["Hired", "Rejected", "Declined"].includes(r.status)).length} icon={<Icon name="clock" size={16} />} tone="warning" />
+        <Stat label="In pipeline" value={rows.filter((r) => !["Hired", "Rejected", "Declined"].includes(r.status)).length} hint="Candidates still active — not yet hired, rejected, or declined" icon={<Icon name="clock" size={16} />} tone="warning" />
       </div>
 
       {trainings && trainings.length > 0 && (
@@ -190,7 +190,7 @@ export function InterviewsPage() {
                   <TD>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(i)}>Edit</Button>
-                      <Button variant="ghost" size="sm" aria-label="Delete" onClick={() => onDelete(i)}><Icon name="trash" size={14} className="text-rose-500" /></Button>
+                      <Button variant="ghost" size="sm" aria-label={`Delete ${i.candidateName}`} title="Delete interview" onClick={() => onDelete(i)}><Icon name="trash" size={14} className="text-rose-500" /></Button>
                     </div>
                   </TD>
                 </TR>
@@ -211,7 +211,7 @@ export function InterviewsPage() {
         <form id="int-form" onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Candidate name" required value={form.candidateName} onChange={set("candidateName")} />
           <Input label="Phone number" value={form.phoneNumber ?? ""} onChange={set("phoneNumber")} />
-          <Input label="CNIC" value={form.cnic ?? ""} onChange={set("cnic")} secure />
+          <Input label="CNIC" value={form.cnic ?? ""} onChange={set("cnic")} secure placeholder="e.g. 35202-1234567-1" />
           <Input label="Interview date" type="date" value={dateOnly(form.interviewDate)} onChange={setDate("interviewDate")} />
           <Input label="Position applied for" value={form.positionAppliedFor ?? ""} onChange={set("positionAppliedFor")} />
           <Input label="Experience" value={form.experience ?? ""} onChange={set("experience")} placeholder="e.g. 3 years — outbound sales" />
@@ -223,7 +223,7 @@ export function InterviewsPage() {
           <Input label="Position offered" value={form.positionOffered ?? ""} onChange={set("positionOffered")} />
           <Input label="Salary offered" type="number" min={0} value={form.salaryOffered ?? ""} onChange={setNum("salaryOffered")} />
           <Input label="Training scheduled at" type="datetime-local" value={dateTimeLocal(form.trainingScheduledAt)} onChange={setDate("trainingScheduledAt")} />
-          <Textarea label="Remarks" containerClassName="sm:col-span-2" value={form.remarks ?? ""} onChange={set("remarks")} />
+          <Textarea label="Remarks" containerClassName="sm:col-span-2" value={form.remarks ?? ""} onChange={set("remarks")} placeholder="Interview notes — strengths, concerns, next steps…" />
         </form>
       </Modal>
     </>

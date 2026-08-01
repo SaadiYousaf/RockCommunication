@@ -164,14 +164,14 @@ export function SocialReportsPage() {
                   <TD numeric className="tabular-nums font-medium text-ink-900">{r.queriesAnswered}</TD>
                   <TD>
                     {r.link
-                      ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline inline-flex items-center gap-1"><Icon name="externalLink" size={12} />Open</a>
+                      ? <a href={r.link} target="_blank" rel="noopener noreferrer" title="Open the post in a new tab" className="text-brand-600 hover:underline inline-flex items-center gap-1"><Icon name="externalLink" size={12} />Open</a>
                       : <span className="text-ink-400">—</span>}
                   </TD>
                   <TD className="text-ink-600 max-w-[220px]"><span className="line-clamp-2">{r.notes || <span className="text-ink-400">—</span>}</span></TD>
                   <TD>
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                      <Button variant="ghost" size="sm" aria-label="Delete" onClick={() => onDelete(r)}><Icon name="trash" size={14} className="text-rose-500" /></Button>
+                      <Button variant="ghost" size="sm" aria-label={`Delete ${dateOnly(r.date)} report`} title="Delete report" onClick={() => onDelete(r)}><Icon name="trash" size={14} className="text-rose-500" /></Button>
                     </div>
                   </TD>
                 </TR>
@@ -199,7 +199,7 @@ export function SocialReportsPage() {
           <Input label="Posts made" type="number" min={0} value={form.postsMade} onChange={(e) => setForm((f) => ({ ...f, postsMade: e.target.value === "" ? 0 : Number(e.target.value) }))} />
           <Input label="Queries answered" type="number" min={0} value={form.queriesAnswered} onChange={(e) => setForm((f) => ({ ...f, queriesAnswered: e.target.value === "" ? 0 : Number(e.target.value) }))} />
           <Input label="Post link" type="url" containerClassName="sm:col-span-2" value={form.link ?? ""} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} placeholder="https://facebook.com/… (link to the post/campaign)" />
-          <Textarea label="Notes" containerClassName="sm:col-span-2" value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+          <Textarea label="Notes" containerClassName="sm:col-span-2" value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Anything notable about the day's posts or replies…" />
         </form>
       </Modal>
     </>

@@ -59,6 +59,7 @@ export function AgentPanelPage() {
   const toast = useToast();
 
   const [reason, setReason] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [, setNow] = useState(Date.now()); // tick for live timer
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export function AgentPanelPage() {
   }, [recentCalls, codes]);
 
   async function changeStatus(status: string) {
+    setPendingStatus(status);
     try {
       await setStatus({ status, reason: reason || undefined }).unwrap();
       toast.success("Status updated", `You're now ${status}.`);
@@ -99,6 +101,8 @@ export function AgentPanelPage() {
       } else {
         toast.error("Couldn't update status", detail);
       }
+    } finally {
+      setPendingStatus(null);
     }
   }
 
@@ -214,7 +218,8 @@ export function AgentPanelPage() {
                     variant={active ? "primary" : "outline"}
                     size="sm"
                     leftIcon={<Icon name={opt.icon} size={14} />}
-                    loading={changingStatus && active}
+                    loading={changingStatus && pendingStatus === opt.key}
+                    title={active ? `You're already ${opt.key}` : `Set your status to ${opt.key}`}
                     onClick={() => changeStatus(opt.key)}
                   >{opt.key}</Button>
                 );
@@ -342,6 +347,8 @@ export function AgentPanelPage() {
                       {c.recordingUrl ? (
                         <a
                           href={c.recordingUrl} target="_blank" rel="noreferrer"
+                          aria-label="Play call recording"
+                          title="Play call recording (opens in a new tab)"
                           className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium"
                         >
                           <Icon name="play" size={14} /> Listen

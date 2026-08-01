@@ -146,7 +146,7 @@ function LeadDetailModal({ leadId, title, onClose }: { leadId: string; title: st
       footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>Close</Button>
-          <Button type="button" leftIcon={<Icon name="copy" size={15} />} onClick={copyAll} disabled={!data}>Copy all</Button>
+          <Button type="button" leftIcon={<Icon name="copy" size={15} />} onClick={copyAll} disabled={!data} title={!data ? "Loading lead details…" : "Copy every field to the clipboard to paste into the carrier portal"}>Copy all</Button>
         </div>
       }>
       {isLoading || !data ? <Skeleton className="h-64" /> : (
@@ -293,6 +293,7 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
               </div>
               <Select label="License Agent" value={licenseAgentUserId}
                 disabled={!agencyId || agentsLoading}
+                title={agentsLoading ? "Loading agents for this agency…" : !agencyId ? "Choose an agency first to list its agents" : undefined}
                 onChange={(e) => setLicenseAgentUserId(e.target.value)}>
                 <option value="">{agentsLoading ? "Loading…" : "Unassigned"}</option>
                 {(licenseAgents ?? []).map((a) => (

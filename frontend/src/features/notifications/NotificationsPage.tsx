@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
+import { getErrorDetail } from "../../shared/api/apiError";
 import {
   useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
 } from "../../shared/api/baseApi";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader, Skeleton, Stat, cn } from "../../shared/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader, Skeleton, Stat, useToast, cn } from "../../shared/ui";
 
 /**
  * Full notification inbox — every work-assignment / pipeline alert for the signed-in user,
@@ -11,8 +12,9 @@ import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader
 export function NotificationsPage() {
   const { data: notifs = [], isLoading } = useNotificationsQuery({ take: 100 });
   const [markRead] = useMarkNotificationReadMutation();
-  const [markAll] = useMarkAllNotificationsReadMutation();
+  const [markAll, { isLoading: markingAll }] = useMarkAllNotificationsReadMutation();
   const navigate = useNavigate();
+  const toast = useToast();
   const unread = notifs.filter((n) => !n.isRead).length;
 
   async function open(id: string, url: string | null, isRead: boolean) {
@@ -41,8 +43,11 @@ export function NotificationsPage() {
           title="All notifications"
           subtitle={notifs.length ? `${unread} unread · ${notifs.length} total` : undefined}
           action={unread > 0 ? (
-            <Button size="sm" variant="outline" leftIcon={<Icon name="check" size={14} />}
-              onClick={async () => { try { await markAll().unwrap(); } catch { /* best-effort */ } }}>
+            <Button size="sm" variant="outline" loading={markingAll} leftIcon={<Icon name="check" size={14} />}
+              onClick={async () => {
+                try { await markAll().unwrap(); toast.success("All caught up", "Every notification marked read."); }
+                catch (err: unknown) { toast.error("Couldn't mark all read", getErrorDetail(err) ?? "Try again."); }
+              }}>
               Mark all read
             </Button>
           ) : undefined}
@@ -77,6 +82,7 @@ export function NotificationsPage() {
                     <div className="text-xs text-ink-400 mt-0.5 tabular-nums">{new Date(n.createdAt).toLocaleString()}</div>
                   </div>
                   {!n.isRead && <Badge tone="brand" variant="soft" size="sm">New</Badge>}
+                  {n.url && <Icon name="chevronRight" size={16} className="text-ink-300 self-center shrink-0" />}
                 </button>
               ))}
             </div>

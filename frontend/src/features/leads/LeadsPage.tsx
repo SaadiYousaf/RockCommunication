@@ -114,9 +114,10 @@ export function LeadsPage() {
   const [createLead, { isLoading: creating }] = useCreateLeadMutation();
   const [transitionLead] = useTransitionLeadMutation();
   const [dialLead] = useDialLeadMutation();
-  const [bulkAssign] = useBulkAssignLeadsMutation();
-  const [bulkStage] = useBulkSetStageMutation();
-  const [bulkEnroll] = useBulkEnrollCadenceMutation();
+  const [bulkAssign, { isLoading: assigning }] = useBulkAssignLeadsMutation();
+  const [bulkStage, { isLoading: settingStage }] = useBulkSetStageMutation();
+  const [bulkEnroll, { isLoading: enrolling }] = useBulkEnrollCadenceMutation();
+  const applying = assigning || settingStage || enrolling;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", phoneNumber: "", email: "" });
@@ -125,6 +126,7 @@ export function LeadsPage() {
   const [bulkAssignee, setBulkAssignee] = useState("");
   const [bulkStageVal, setBulkStageVal] = useState<WorkflowStage>("Fronted");
   const [bulkCadence, setBulkCadence] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   async function transition(id: string, toStage: string, name: string) {
     try {
@@ -174,6 +176,7 @@ export function LeadsPage() {
     let token: string | null = null;
     try { token = JSON.parse(localStorage.getItem("auth") ?? "null")?.accessToken ?? null; } catch { /* malformed */ }
     if (!token) { toast.error("Not authenticated"); return; }
+    setExporting(true);
     fetch(`${API_URL}/api/leads/export.csv?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -185,8 +188,10 @@ export function LeadsPage() {
         a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
+        toast.success("Export ready", "Your CSV has downloaded.");
       })
-      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"));
+      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"))
+      .finally(() => setExporting(false));
   }
 
   async function submitCreate(e: React.FormEvent) {
@@ -216,7 +221,8 @@ export function LeadsPage() {
         actions={
           <div className="flex gap-2">
             <Can permission={Perm.LeadsExport}>
-              <Button variant="outline" leftIcon={<Icon name="download" size={15} />} onClick={exportCsv}>
+              <Button variant="outline" leftIcon={<Icon name="download" size={15} />} onClick={exportCsv}
+                loading={exporting} title="Download the current stage filter as a CSV spreadsheet">
                 Export CSV
               </Button>
             </Can>
@@ -316,7 +322,9 @@ export function LeadsPage() {
 
             <div className="ml-auto flex gap-2">
               <Button size="sm" variant="ghost" onClick={clearSelection} leftIcon={<Icon name="x" size={13} />}>Clear</Button>
-              <Button size="sm" disabled={bulkAction === "none"} onClick={applyBulk} leftIcon={<Icon name="zap" size={13} />}>
+              <Button size="sm" disabled={bulkAction === "none"} loading={applying} onClick={applyBulk}
+                leftIcon={<Icon name="zap" size={13} />}
+                title={bulkAction === "none" ? "Pick a bulk action first" : `Apply to ${selected.size} selected lead${selected.size === 1 ? "" : "s"}`}>
                 Apply
               </Button>
             </div>
@@ -356,6 +364,7 @@ export function LeadsPage() {
             <TR>
               <TH className="w-8">
                 <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll}
+                  aria-label="Select all leads on this page" title="Select all leads on this page"
                   className="h-4 w-4 rounded border-ink-300 text-brand-600 cursor-pointer accent-brand-600 focus:ring-2 focus:ring-brand-400" />
               </TH>
               <TH>Lead</TH>
@@ -386,6 +395,7 @@ export function LeadsPage() {
                 <TR key={l.id} className={selected.has(l.id) ? "bg-brand-50/50" : ""}>
                   <TD>
                     <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleOne(l.id)}
+                      aria-label={`Select ${name}`} title={`Select ${name} for bulk actions`}
                       className="h-4 w-4 rounded border-ink-300 text-brand-600 cursor-pointer accent-brand-600 focus:ring-2 focus:ring-brand-400" />
                   </TD>
                   <TD>
@@ -477,6 +487,10 @@ export function LeadsPage() {
           <Input label="Email" type="email" secure value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </form>
+        <p className="mt-3 text-xs text-ink-500 flex items-center gap-1.5">
+          <Icon name="shield" size={12} className="text-ink-400 shrink-0" />
+          These are secured fields — type the details in rather than pasting. Copy/paste is blocked for typing-only roles as a data-integrity control.
+        </p>
       </Modal>
     </>
   );

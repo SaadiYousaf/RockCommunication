@@ -239,10 +239,13 @@ function IntegrationCard({
               label={f.label}
               value={
                 f.value
-                  ? <span className={cn("text-sm", f.masked ? "font-mono text-ink-700" : "text-ink-700")}>
+                  ? <span
+                      className={cn("text-sm", f.masked ? "font-mono text-ink-700" : "text-ink-700")}
+                      title={f.masked ? "Partially hidden for security — the full secret lives in appsettings.json, never in the browser" : undefined}
+                    >
                       {f.value}
                     </span>
-                  : <span className="text-ink-400 text-xs">— not set —</span>
+                  : <span className="text-ink-400 text-xs" title="Not configured in appsettings.json">— not set —</span>
               }
             />
           ))}

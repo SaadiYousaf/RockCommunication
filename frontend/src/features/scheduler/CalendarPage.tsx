@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import { useListMeetingsQuery } from "../../shared/api/baseApi";
 import type { Meeting } from "./types";
 import {
-  addDays, addMonths, buildGrid, dayKey, formatMonthYear, formatTime,
+  addDays, addMonths, buildGrid, dayKey, formatDayLong, formatMonthYear, formatTime,
   isoDayKey, startOfCalendarGrid, startOfMonth,
 } from "./calendarUtils";
 import { ScheduleMeetingModal } from "./ScheduleMeetingModal";
 import { MeetingDetailModal } from "./MeetingDetailModal";
 import {
-  Badge, Button, Card, CardBody, Icon, PageHeader, Skeleton, cn,
+  Badge, Button, Card, CardBody, Icon, InfoHint, PageHeader, Skeleton, cn,
 } from "../../shared/ui";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -77,18 +77,26 @@ export function CalendarPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" aria-label="Previous month" onClick={() => setViewMonth((m) => addMonths(m, -1))}>
+            <Button variant="ghost" size="icon" aria-label="Previous month" title="Previous month" onClick={() => setViewMonth((m) => addMonths(m, -1))}>
               <Icon name="chevronLeft" size={18} />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Next month" onClick={() => setViewMonth((m) => addMonths(m, 1))}>
+            <Button variant="ghost" size="icon" aria-label="Next month" title="Next month" onClick={() => setViewMonth((m) => addMonths(m, 1))}>
               <Icon name="chevronRight" size={18} />
             </Button>
           </div>
           <h2 className="text-lg font-semibold text-ink-900 tabular-nums min-w-[168px]">{formatMonthYear(viewMonth)}</h2>
-          <Button variant="outline" size="sm" onClick={() => setViewMonth(startOfMonth(new Date()))}>Today</Button>
-          {isFetching && !isLoading && <Icon name="spinner" size={15} className="text-ink-400 animate-spin" />}
-          <div className="ml-auto text-xs text-ink-500">
+          <Button variant="outline" size="sm" title="Jump back to the current month" onClick={() => setViewMonth(startOfMonth(new Date()))}>Today</Button>
+          {isFetching && !isLoading && (
+            <span title="Refreshing meetings…" role="status" aria-label="Refreshing meetings" className="inline-flex">
+              <Icon name="spinner" size={15} className="text-ink-400 animate-spin" />
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1 text-xs text-ink-500">
             {(meetings?.length ?? 0)} meeting{(meetings?.length ?? 0) === 1 ? "" : "s"} this view
+            <InfoHint title="Meetings in this view" side="left">
+              Counts every meeting across the six weeks currently shown. You only see meetings you
+              organize or were invited to — colleagues' other meetings never appear here.
+            </InfoHint>
           </div>
         </CardBody>
       </Card>
@@ -125,6 +133,10 @@ export function CalendarPage() {
                 const expanded = expandedDays.has(key);
                 const shown = expanded ? dayMeetings : dayMeetings.slice(0, CHIP_LIMIT);
                 const hidden = dayMeetings.length - shown.length;
+                const dayLabel = formatDayLong(day);
+                const countLabel = dayMeetings.length
+                  ? `${dayMeetings.length} meeting${dayMeetings.length === 1 ? "" : "s"}. `
+                  : "";
 
                 return (
                   <div
@@ -132,6 +144,8 @@ export function CalendarPage() {
                     onClick={() => openScheduleFor(day)}
                     role="button"
                     tabIndex={0}
+                    title={`Schedule a meeting on ${dayLabel}`}
+                    aria-label={`${dayLabel}. ${countLabel}Click to schedule a meeting.`}
                     onKeyDown={(e) => { if (e.key === "Enter") openScheduleFor(day); }}
                     className={cn(
                       "min-h-[96px] sm:min-h-[112px] border-r border-b hairline p-1.5 text-left align-top",
@@ -159,7 +173,8 @@ export function CalendarPage() {
                             key={m.id}
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setDetailId(m.id); }}
-                            title={m.title}
+                            title={`${formatTime(m.startsAt)} · ${m.title}${cancelled ? " (cancelled)" : ""} — open details`}
+                            aria-label={`${formatTime(m.startsAt)} ${m.title}${cancelled ? ", cancelled" : ""}. Open meeting details.`}
                             className={cn(
                               "w-full flex items-center gap-1 px-1.5 py-1 rounded-md text-left text-[11px] leading-tight transition-colors",
                               cancelled

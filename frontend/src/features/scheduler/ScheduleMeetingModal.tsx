@@ -10,7 +10,7 @@ import {
   addMinutesToLocalInput, fromLocalInput, localInputAt, toLocalInput,
 } from "./calendarUtils";
 import {
-  Badge, Button, Icon, Input, Modal, Select, Textarea, useToast,
+  Badge, Button, Icon, InfoHint, Input, Modal, Select, Textarea, useToast,
 } from "../../shared/ui";
 
 const DEFAULT_HOUR = 9;
@@ -214,7 +214,13 @@ export function ScheduleMeetingModal({
         {/* Attendees */}
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 pb-1 border-b hairline">
-            Attendees {attendeeCount > 0 && <span className="text-ink-400 normal-case tracking-normal font-normal">· {attendeeCount}</span>}
+            Attendees
+            <InfoHint title="Attendees" side="top">
+              Invite colleagues from your agency or add outside guests by email address. Everyone
+              invited gets an email with a calendar invite; colleagues also see the meeting on their
+              own calendar here. All invitees can RSVP.
+            </InfoHint>
+            {attendeeCount > 0 && <span className="text-ink-400 normal-case tracking-normal font-normal">· {attendeeCount}</span>}
           </div>
 
           {attendeeCount > 0 && (
@@ -223,7 +229,7 @@ export function ScheduleMeetingModal({
                 <Badge key={id} tone="brand" variant="soft" className="gap-1">
                   <Icon name="user" size={11} />
                   {userById.get(id) ?? "User"}
-                  <button type="button" aria-label="Remove" onClick={() => removeUser(id)} className="ml-0.5 hover:text-brand-900">
+                  <button type="button" aria-label={`Remove ${userById.get(id) ?? "colleague"}`} title="Remove attendee" onClick={() => removeUser(id)} className="ml-0.5 hover:text-brand-900">
                     <Icon name="x" size={11} />
                   </button>
                 </Badge>
@@ -232,7 +238,7 @@ export function ScheduleMeetingModal({
                 <Badge key={email} tone="neutral" variant="soft" className="gap-1">
                   <Icon name="mail" size={11} />
                   {email}
-                  <button type="button" aria-label="Remove" onClick={() => removeEmail(email)} className="ml-0.5 hover:text-ink-900">
+                  <button type="button" aria-label={`Remove ${email}`} title="Remove guest" onClick={() => removeEmail(email)} className="ml-0.5 hover:text-ink-900">
                     <Icon name="x" size={11} />
                   </button>
                 </Badge>

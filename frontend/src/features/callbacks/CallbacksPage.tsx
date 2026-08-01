@@ -43,6 +43,7 @@ export function CallbacksPage() {
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState("");
   const { data: myLeads = [] } = useMyLeadsQuery();
   const [when, setWhen] = useState(() => {
@@ -92,11 +93,14 @@ export function CallbacksPage() {
   }
 
   async function markDone(id: string) {
+    setCompletingId(id);
     try {
       await complete(id).unwrap();
       toast.success("Callback completed");
     } catch (err: unknown) {
       toast.error("Couldn't mark complete", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setCompletingId(null);
     }
   }
 
@@ -196,6 +200,7 @@ export function CallbacksPage() {
                       {!c.completed && (
                         <Button
                           variant="outline" size="sm"
+                          loading={completingId === c.id}
                           leftIcon={<Icon name="check" size={14} />}
                           onClick={() => markDone(c.id)}
                         >Mark done</Button>

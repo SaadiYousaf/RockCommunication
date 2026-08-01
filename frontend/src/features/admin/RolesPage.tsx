@@ -22,9 +22,9 @@ export function RolesPage() {
   const { data: roles, isLoading: rolesLoading } = useListRolesQuery();
   const { data: modules, isLoading: modulesLoading } = useListModulesQuery();
   const [createRole, { isLoading: creating }] = useCreateRoleMutation();
-  const [renameRole] = useRenameRoleMutation();
+  const [renameRole, { isLoading: renaming }] = useRenameRoleMutation();
   const [setRoleModules, { isLoading: saving }] = useSetRoleModulesMutation();
-  const [deleteRole] = useDeleteRoleMutation();
+  const [deleteRole, { isLoading: deleting }] = useDeleteRoleMutation();
   const toast = useToast();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -315,6 +315,7 @@ export function RolesPage() {
                       leftIcon={<Icon name="trash" size={15} />}
                       onClick={() => setConfirmDelete(selected)}
                       disabled={!canEditModules}
+                      title={canEditModules ? "Delete this custom role" : "You need roles.manage to delete roles"}
                       className="text-rose-600 hover:bg-rose-50"
                     >
                       Delete role
@@ -334,6 +335,8 @@ export function RolesPage() {
                     <Button
                       variant="outline"
                       onClick={handleRename}
+                      loading={renaming}
+                      title={!canEditModules ? "You need roles.manage to rename roles" : editingName.trim() === selected.name ? "Change the name first" : undefined}
                       disabled={!canEditModules || selected.isSystem || editingName.trim() === selected.name || !editingName.trim()}
                     >
                       Save name
@@ -510,7 +513,7 @@ export function RolesPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-            <Button variant="danger" onClick={handleDelete} leftIcon={<Icon name="trash" size={15} />}>
+            <Button variant="danger" onClick={handleDelete} loading={deleting} leftIcon={<Icon name="trash" size={15} />}>
               Delete role
             </Button>
           </div>

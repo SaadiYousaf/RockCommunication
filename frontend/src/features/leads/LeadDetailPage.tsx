@@ -42,13 +42,13 @@ export function LeadDetailPage() {
 
   const [transition] = useTransitionLeadMutation();
   const [setDisposition] = useSetLeadDispositionMutation();
-  const [verifyJornaya] = useVerifyJornayaMutation();
-  const [dial] = useDialLeadMutation();
-  const [checkCompliance] = useCheckComplianceMutation();
+  const [verifyJornaya, { isLoading: verifying }] = useVerifyJornayaMutation();
+  const [dial, { isLoading: dialing }] = useDialLeadMutation();
+  const [checkCompliance, { isLoading: checkingCompliance }] = useCheckComplianceMutation();
   const [updateNotes] = useUpdateLeadNotesMutation();
   const { handlers: secureNotes } = useSecureEntry();
-  const [sendSms] = useSendQuickSmsMutation();
-  const [scheduleCallback] = useScheduleCallbackMutation();
+  const [sendSms, { isLoading: sendingSms }] = useSendQuickSmsMutation();
+  const [scheduleCallback, { isLoading: schedulingCallback }] = useScheduleCallbackMutation();
   const [dropVm] = useDropVoicemailMutation();
   const canEditNotes = usePermission(Perm.LeadsWrite);
   const toast = useToast();
@@ -123,6 +123,16 @@ export function LeadDetailPage() {
       refetchLead();
     } catch (err: unknown) {
       toast.error("Couldn't move stage", getErrorDetail(err) ?? "That transition isn't allowed.");
+    }
+  }
+
+  async function doVerifyJornaya() {
+    try {
+      await verifyJornaya(id).unwrap();
+      toast.success("Jornaya verified", "The lead's consent token is now on file.");
+      refetchLead();
+    } catch (err: unknown) {
+      toast.error("Couldn't verify Jornaya", getErrorDetail(err) ?? "Try again.");
     }
   }
 
@@ -227,7 +237,7 @@ export function LeadDetailPage() {
         <Stepper current={lead.stage as WorkflowStage} />
 
         <div className="flex flex-wrap gap-2 mt-4">
-          <Button onClick={safeDial} leftIcon={<Icon name="phone" size={16} />}>Dial</Button>
+          <Button onClick={safeDial} loading={checkingCompliance || dialing} leftIcon={<Icon name="phone" size={16} />}>Dial</Button>
           <Button variant="secondary" onClick={() => setShowSms(s => !s)} leftIcon={<Icon name="chat" size={16} />}>SMS</Button>
           <Button variant="secondary" onClick={() => setShowCallback(s => !s)} leftIcon={<Icon name="calendar" size={16} />}>Schedule callback</Button>
           {voicemails && voicemails.length > 0 && (
@@ -260,7 +270,7 @@ export function LeadDetailPage() {
               Verified{lead.jornayaVerifiedBy ? ` by ${lead.jornayaVerifiedBy}` : ""}
             </Button>
           ) : (
-            <Button variant="success" onClick={async () => { await verifyJornaya(id); refetchLead(); }} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
+            <Button variant="success" onClick={doVerifyJornaya} loading={verifying} leftIcon={<Icon name="shield" size={16} />}>Verify Jornaya</Button>
           )}
           <div className="flex-1" />
           <Can permission={Perm.LeadsTransition}>
@@ -292,14 +302,14 @@ export function LeadDetailPage() {
           <form onSubmit={submitSms} className="mt-3 flex gap-2 surface-muted p-2">
             <input className="input-base flex-1" placeholder="Quick SMS…"
               value={smsBody} onChange={e => setSmsBody(e.target.value)} autoFocus />
-            <Button type="submit" size="sm" leftIcon={<Icon name="send" size={14} />}>Send</Button>
+            <Button type="submit" size="sm" loading={sendingSms} leftIcon={<Icon name="send" size={14} />}>Send</Button>
           </form>
         )}
         {showCallback && (
           <form onSubmit={submitCallback} className="mt-3 flex flex-wrap gap-2 surface-muted p-2">
             <input type="datetime-local" className="input-base w-auto" value={callbackAt} onChange={e => setCallbackAt(e.target.value)} required />
             <input className="input-base flex-1 min-w-[8rem]" placeholder="Reason (optional)" value={callbackReason} onChange={e => setCallbackReason(e.target.value)} />
-            <Button type="submit" size="sm" leftIcon={<Icon name="calendar" size={14} />}>Schedule</Button>
+            <Button type="submit" size="sm" loading={schedulingCallback} leftIcon={<Icon name="calendar" size={14} />}>Schedule</Button>
           </form>
         )}
 
@@ -348,10 +358,11 @@ export function LeadDetailPage() {
             </div>
             <textarea
               className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition-shadow"
-              rows={5} placeholder="Type call notes here…"
+              rows={5} placeholder={canEditNotes ? "Type call notes here…" : "You have read-only access to notes"}
               value={notes} onChange={e => setNotes(e.target.value)}
               onBlur={saveNotes}
               readOnly={!canEditNotes}
+              title={!canEditNotes ? "You don't have permission to edit notes on this lead" : undefined}
               {...secureNotes}
             />
             <div className="text-xs text-ink-500 mt-1">Notes auto-save when you click out.</div>
@@ -526,7 +537,16 @@ export function LeadDetailPage() {
                   <Icon name="copy" size={11} />
                 </button>
               } />
-              <Row label="Source" value={lead.source} />
+              <Row
+                label={
+                  <span className="inline-flex items-center gap-1">Source
+                    <InfoHint title="Lead source" side="left">
+                      Where this lead came from — the vendor, campaign, or channel that generated it. Used for cost-per-lead and conversion reporting.
+                    </InfoHint>
+                  </span>
+                }
+                value={lead.source}
+              />
               <Row label="Created" value={new Date(lead.createdAt).toLocaleString()} />
               {lead.updatedAt && <Row label="Updated" value={new Date(lead.updatedAt).toLocaleString()} />}
               <Row label="DOB" value={lead.dateOfBirth ? new Date(lead.dateOfBirth).toLocaleDateString() : null} />

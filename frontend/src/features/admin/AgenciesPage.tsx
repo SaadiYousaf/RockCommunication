@@ -14,6 +14,7 @@ import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, useToast,
 } from "../../shared/ui";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 /**
  * SuperAdmin-only agency (call-center) management. Lists every tenant in the system,
@@ -24,9 +25,13 @@ import {
 export function AgenciesPage() {
   const { data: agencies, isLoading } = useListAgenciesQuery({ includeInactive: true });
   const [createAgency, { isLoading: creating }] = useCreateAgencyMutation();
-  const [updateAgency] = useUpdateAgencyMutation();
+  const [updateAgency, { isLoading: updating }] = useUpdateAgencyMutation();
   const [assignCeo] = useAssignAgencyCeoMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+
+  // Which agency's enable/disable is in flight — scopes the spinner to that one row.
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -88,6 +93,17 @@ export function AgenciesPage() {
   }
 
   async function toggleActive(a: AgencyDto) {
+    // Disabling a tenant locks everyone in it out — confirm before doing it.
+    if (a.isActive) {
+      const ok = await confirm({
+        title: `Disable ${a.name}?`,
+        description: "Everyone in this agency is signed out and blocked from signing in until you re-enable it. Its leads, sales, and users are preserved.",
+        danger: true,
+        confirmLabel: "Disable agency",
+      });
+      if (!ok) return;
+    }
+    setTogglingId(a.id);
     try {
       await updateAgency({
         id: a.id,
@@ -98,6 +114,8 @@ export function AgenciesPage() {
       toast.success(a.isActive ? "Disabled" : "Enabled", a.name);
     } catch (err: unknown) {
       toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -290,6 +308,8 @@ export function AgenciesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      loading={togglingId === a.id}
+                      title={a.isActive ? "Disable this agency — signs out and blocks all its users" : "Re-enable this agency so its users can sign in again"}
                       className={a.isActive ? "text-rose-600 hover:bg-rose-50" : "text-emerald-600 hover:bg-emerald-50"}
                       onClick={() => toggleActive(a)}
                     >
@@ -319,7 +339,7 @@ export function AgenciesPage() {
           </label>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleUpdate} disabled={!editName.trim()}>Save</Button>
+            <Button onClick={handleUpdate} loading={updating} disabled={!editName.trim()}>Save</Button>
           </div>
         </div>
       </Modal>

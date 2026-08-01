@@ -114,7 +114,7 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
       <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" leftIcon={<Icon name="edit" size={14} />} onClick={onEdit}>Open</Button>
-          <Select className="h-9 w-40 text-sm" value={status} onChange={(e) => setStatusVal(e.target.value as VerifierStatusValue)}>
+          <Select aria-label={`Set verifier status for ${lead.firstName} ${lead.lastName}`} title="Set the verification outcome for this lead" className="h-9 w-40 text-sm" value={status} onChange={(e) => setStatusVal(e.target.value as VerifierStatusValue)}>
             <option value="">Select…</option>
             {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </Select>

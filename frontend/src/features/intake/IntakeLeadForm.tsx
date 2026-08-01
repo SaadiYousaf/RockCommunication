@@ -52,12 +52,12 @@ export function IntakeLeadForm({
       <Input label="Created date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.createdDate} onChange={set("createdDate")} />
       <Input label="Street address" required secure containerClassName="sm:col-span-2" value={f.streetAddress} onChange={set("streetAddress")} />
       <Input label="City" required secure value={f.city} onChange={set("city")} />
-      <Input label="State" required secure value={f.state} onChange={set("state")} />
-      <Input label="Zipcode" required secure inputMode="numeric" className="tabular-nums" value={f.zipcode} onChange={set("zipcode")} />
-      <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} className="tabular-nums" value={f.phoneNumber} onChange={set("phoneNumber")} />
+      <Input label="State" required secure placeholder="e.g. TX" value={f.state} onChange={set("state")} />
+      <Input label="Zipcode" required secure inputMode="numeric" placeholder="5-digit ZIP" className="tabular-nums" value={f.zipcode} onChange={set("zipcode")} />
+      <Input label="Phone number" required secure leftIcon={<Icon name="phone" size={14} />} placeholder="(555) 123-4567" className="tabular-nums" value={f.phoneNumber} onChange={set("phoneNumber")} />
       <Input label="Birth date" type="date" required leftIcon={<Icon name="calendar" size={14} />} value={f.birthDate} onChange={set("birthDate")} />
       <Input label="Age (years)" type="number" required min={1} max={129} className="tabular-nums" value={f.ageYears} onChange={set("ageYears")} />
-      <Input label="Email" type="email" required secure leftIcon={<Icon name="mail" size={14} />} containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
+      <Input label="Email" type="email" required secure leftIcon={<Icon name="mail" size={14} />} placeholder="name@example.com" containerClassName="sm:col-span-2" value={f.email} onChange={set("email")} />
       <div className="sm:col-span-2 flex flex-col gap-1.5">
         <div className="flex items-center gap-1">
           <span className="text-[12px] font-medium text-ink-700 leading-none">Jornaya LeadiD</span>

@@ -45,12 +45,14 @@ export function LicenseAgentQueuePage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-          <Stat label="Assigned"          value={items.length}                 icon={<Icon name="briefcase" size={16} />} tone="brand" />
+          <Stat label="Assigned"          value={items.length}                 icon={<Icon name="briefcase" size={16} />} tone="brand"
+                hint="Sales where you're the licensed agent of record." />
           <Stat label="Funded"            value={fundedCount}                  icon={<Icon name="success" size={16} />}   tone="success"
                 hint="First premium draft cleared — commission payable." />
           <Stat label="In review"         value={inReviewCount}                icon={<Icon name="clock" size={16} />}     tone="warning"
                 hint="Pending or approved, not yet funded." />
-          <Stat label="Commission earned" value={formatUsd(totalCommission)}   icon={<Icon name="card" size={16} />}      tone="accent" />
+          <Stat label="Commission earned" value={formatUsd(totalCommission)}   icon={<Icon name="card" size={16} />}      tone="accent"
+                hint="Total approval commission across your assigned sales." />
         </div>
       )}
 

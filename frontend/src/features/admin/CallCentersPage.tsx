@@ -216,7 +216,7 @@ export function CallCentersPage() {
             <Input label="Code" value={editing.code ?? ""} onChange={(e) => setEditing({ ...editing, code: e.target.value })} />
             <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer select-none">
               <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-2 focus:ring-brand-500/40" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
-              Active
+              Active {!editing.isActive && <span className="text-amber-700">— every agent pinned to this centre will be locked out</span>}
             </label>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>

@@ -5,10 +5,14 @@ import { useCreatePayrollRunMutation, useMyCommissionsQuery, usePayrollRunsQuery
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+
+/** Key used to track the in-flight period export (vs a per-run export keyed by run id). */
+const PERIOD_EXPORT = "__period__";
 
 
 function todayStr(offset = 0) {
@@ -26,6 +30,9 @@ export function CommissionsPage() {
   const { data: runs } = usePayrollRunsQuery(undefined, { skip: !isManager });
   const [createRun, { isLoading: creating }] = useCreatePayrollRunMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+  // Which export is currently downloading — PERIOD_EXPORT for the range button, or a run id for a row.
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   const total = commissions?.reduce((s, c) => s + c.amount, 0) ?? 0;
   const paid  = commissions?.filter((c) => c.paid).reduce((s, c) => s + c.amount, 0) ?? 0;
@@ -53,7 +60,7 @@ export function CommissionsPage() {
     setTo(todayStr(0));
   }
 
-  function exportPayrollCsv(runId?: string) {
+  async function exportPayrollCsv(runId?: string) {
     const params = new URLSearchParams();
     if (runId) params.set("runId", runId);
     else { params.set("from", from); params.set("to", to); }
@@ -61,28 +68,37 @@ export function CommissionsPage() {
     // may hold a different logged-in account, causing a 403 "Export failed" on a valid session.
     const token = auth.accessToken;
     if (!token) { toast.error("Not authenticated"); return; }
-    fetch(`${API_URL}/api/sales/payroll-export?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (r) => {
-        if (!r.ok) {
-          if (r.status === 403) throw new Error("You don't have permission to export payroll (need Payroll access).");
-          throw new Error(`Export failed (${r.status}).`);
-        }
-        return r.blob();
-      })
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `payroll-${runId ?? `${from}-to-${to}`}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"));
+    setExportingKey(runId ?? PERIOD_EXPORT);
+    try {
+      const r = await fetch(`${API_URL}/api/sales/payroll-export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) {
+        if (r.status === 403) throw new Error("You don't have permission to export payroll (need Payroll access).");
+        throw new Error(`Export failed (${r.status}).`);
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payroll-${runId ?? `${from}-to-${to}`}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Export ready", "The payroll CSV has started downloading.");
+    } catch (err) {
+      toast.error("Export failed", getErrorDetail(err) ?? "Export failed");
+    } finally {
+      setExportingKey(null);
+    }
   }
 
   async function makeRun() {
+    const ok = await confirm({
+      title: "Run payroll for this period?",
+      description: `This finalizes commissions earned between ${from} and ${to} and freezes them as paid. Make sure the date range is right before continuing.`,
+      confirmLabel: "Run payroll",
+    });
+    if (!ok) return;
     try {
       await createRun({ periodStart: new Date(from).toISOString(), periodEnd: new Date(to).toISOString() }).unwrap();
       toast.success("Payroll run created", `Period ${from} → ${to}`);
@@ -100,9 +116,12 @@ export function CommissionsPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-        <Stat label="Total"  value={`$${total.toFixed(2)}`}  icon={<Icon name="dollar" size={16} />}  tone="brand" />
-        <Stat label="Paid"   value={`$${paid.toFixed(2)}`}   icon={<Icon name="success" size={16} />} tone="success" />
-        <Stat label="Unpaid" value={`$${unpaid.toFixed(2)}`} icon={<Icon name="clock" size={16} />}   tone="warning" />
+        <Stat label="Total"  value={`$${total.toFixed(2)}`}  icon={<Icon name="dollar" size={16} />}  tone="brand"
+              hint="Everything you earned in the selected date range (paid + unpaid)." />
+        <Stat label="Paid"   value={`$${paid.toFixed(2)}`}   icon={<Icon name="success" size={16} />} tone="success"
+              hint="Included in a processed payroll run." />
+        <Stat label="Unpaid" value={`$${unpaid.toFixed(2)}`} icon={<Icon name="clock" size={16} />}   tone="warning"
+              hint="Accrued but not yet in a payroll run." />
       </div>
 
       <Card className="mb-6">
@@ -110,9 +129,9 @@ export function CommissionsPage() {
           <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} containerClassName="w-44" />
           <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} containerClassName="w-44" />
           <div className="flex gap-1">
-            <Button size="sm" variant="ghost" onClick={() => setRange(7)}>7d</Button>
-            <Button size="sm" variant="ghost" onClick={() => setRange(30)}>30d</Button>
-            <Button size="sm" variant="ghost" onClick={() => setRange(90)}>90d</Button>
+            <Button size="sm" variant="ghost" title="Last 7 days" onClick={() => setRange(7)}>7d</Button>
+            <Button size="sm" variant="ghost" title="Last 30 days" onClick={() => setRange(30)}>30d</Button>
+            <Button size="sm" variant="ghost" title="Last 90 days" onClick={() => setRange(90)}>90d</Button>
           </div>
         </CardBody>
       </Card>
@@ -208,7 +227,10 @@ export function CommissionsPage() {
             subtitle="Generate payroll for the selected period."
             action={
               <div className="flex gap-2">
-                <Button variant="ghost" leftIcon={<Icon name="download" size={16} />} onClick={() => exportPayrollCsv()}>
+                <Button variant="ghost" leftIcon={<Icon name="download" size={16} />}
+                  loading={exportingKey === PERIOD_EXPORT}
+                  title="Download a CSV of all commissions in the selected date range"
+                  onClick={() => exportPayrollCsv()}>
                   Export period CSV
                 </Button>
                 <Button onClick={makeRun} loading={creating} leftIcon={<Icon name="plus" size={16} />}>
@@ -257,6 +279,8 @@ export function CommissionsPage() {
                       <TD>
                         <div className="flex justify-end">
                           <Button variant="ghost" size="sm" leftIcon={<Icon name="download" size={14} />}
+                            loading={exportingKey === r.id}
+                            title="Download this payroll run as CSV"
                             onClick={() => exportPayrollCsv(r.id)}>CSV</Button>
                         </div>
                       </TD>

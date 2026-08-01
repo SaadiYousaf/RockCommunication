@@ -145,6 +145,8 @@ function PersonRow({ row }: { row: AttendanceRow }) {
   return (
     <Card>
       <button type="button" onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        title={open ? "Hide session timeline" : "Show session timeline"}
         className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg hover:bg-brand-50/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset">
         <Avatar name={row.userName} size={36} />
         <div className="min-w-0 flex-1">
