@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import type { RootState } from "../app/store";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton, cn,
-  type IconName, type BadgeTone,
+  usePagination, Pager, type IconName, type BadgeTone,
 } from "../shared/ui";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery, useTeamStatusQuery } from "../shared/api/baseApi";
 import { useDashboardLayout } from "./useDashboardLayout";
@@ -795,6 +795,7 @@ function MiniStat({ icon, label, value }: { icon: IconName; label: string; value
 // =============================================================================
 
 function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boolean }) {
+  const { page, setPage, pageItems, pageCount, total, from, to } = usePagination(data?.recentActivity, 10);
   return (
     <Card className="xl:col-span-2 overflow-hidden">
       <CardHeader
@@ -825,7 +826,7 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
           </div>
         ) : (
           <ul className="divide-y divide-ink-100/70">
-            {data.recentActivity.map((a) => {
+            {pageItems.map((a) => {
               const tone = stageTone[a.toStage];
               return (
                 <li key={`${a.leadId}-${a.occurredAt}`}>
@@ -860,6 +861,7 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
             })}
           </ul>
         )}
+        <Pager page={page} pageCount={pageCount} total={total} from={from} to={to} onPage={setPage} unit="updates" />
       </CardBody>
     </Card>
   );
@@ -993,6 +995,7 @@ function eventHref(type: string): string {
 function UpcomingEventsCard() {
   // Poll so newly-scheduled callbacks/trainings surface without a refresh.
   const { data: events, isLoading } = useUpcomingEventsQuery(14, { pollingInterval: 60_000 });
+  const { page, setPage, pageItems, pageCount, total, from, to } = usePagination(events, 10);
 
   return (
     <Card className="mb-5 overflow-hidden">
@@ -1027,11 +1030,11 @@ function UpcomingEventsCard() {
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
-            {events.map((e, i) => {
+            {pageItems.map((e, i) => {
               const st = eventStyle[e.type] ?? fallbackEventStyle;
               const w = whenBadge(e.whenUtc);
               return (
-                <Link key={i} to={eventHref(e.type)}
+                <Link key={`${e.type}-${e.whenUtc}-${i}`} to={eventHref(e.type)}
                   className="group flex items-center gap-3 py-2.5 -mx-2 px-2 rounded-lg hover:bg-ink-50/70 transition-colors">
                   <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 ring-inset shrink-0 ${st.tile}`}>
                     <Icon name={st.icon} size={16} />
@@ -1047,6 +1050,7 @@ function UpcomingEventsCard() {
             })}
           </div>
         )}
+        <Pager page={page} pageCount={pageCount} total={total} from={from} to={to} onPage={setPage} unit="events" />
         <RefreshNote>Birthday &amp; training reminders are sent once a day; callbacks appear as they're scheduled.</RefreshNote>
       </CardBody>
     </Card>
@@ -1088,19 +1092,29 @@ function TeamStatusCard() {
   // Refresh hourly so attendance/status stays current without hammering the endpoint.
   // 60s so the live work-state column (On call/Available/On break) tracks the floor, not an hour behind.
   const { data, isLoading, isError } = useTeamStatusQuery(undefined, { pollingInterval: 60_000 });
+  // Cap the widget at 10 people per page; group the current page by call centre for display.
+  const { page, setPage, pageItems, pageCount, total, from, to } = usePagination(data, 10);
 
-  // Group by call centre so a multi-centre viewer (agency-level) sees clear sections.
+  // Group ONLY the current page's rows.
   const groups = useMemo(() => {
     const map = new Map<string, TeamStatusRow[]>();
-    for (const r of data ?? []) {
+    for (const r of pageItems) {
       const key = r.callCenterName ?? "Unassigned";
       const arr = map.get(key);
       if (arr) arr.push(r);
       else map.set(key, [r]);
     }
     return Array.from(map, ([name, rows]) => ({ name, rows }));
+  }, [pageItems]);
+
+  // Full per-centre totals + whether the viewer spans multiple centres — from the WHOLE roster so
+  // section headers and their counts stay stable across pages.
+  const centreTotals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of data ?? []) { const k = r.callCenterName ?? "Unassigned"; m.set(k, (m.get(k) ?? 0) + 1); }
+    return m;
   }, [data]);
-  const multi = groups.length > 1;
+  const multi = centreTotals.size > 1;
 
   return (
     <Card className="mb-5 overflow-hidden">
@@ -1151,7 +1165,7 @@ function TeamStatusCard() {
                 {multi && (
                   <div className="section-title mb-2 flex items-center gap-1.5">
                     <Icon name="building" size={13} /> {g.name}
-                    <span className="text-ink-400 font-normal">· {g.rows.length}</span>
+                    <span className="text-ink-400 font-normal">· {centreTotals.get(g.name) ?? g.rows.length}</span>
                   </div>
                 )}
                 <ul className="divide-y divide-ink-100/70">
@@ -1161,6 +1175,7 @@ function TeamStatusCard() {
             ))}
           </div>
         )}
+        <Pager page={page} pageCount={pageCount} total={total} from={from} to={to} onPage={setPage} unit="people" />
         <RefreshNote>Updates every minute. Attendance comes from today's HR marks; live status reflects the floor in near real time.</RefreshNote>
       </CardBody>
     </Card>

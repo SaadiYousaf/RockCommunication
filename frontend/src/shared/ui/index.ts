@@ -18,3 +18,4 @@ export { Icon, type IconName } from "./Icon";
 export { ToastProvider, useToast, type ToastTone } from "./Toast";
 export { Tooltip } from "./Tooltip";
 export { InfoHint } from "./InfoHint";
+export { usePagination, Pager } from "./Pagination";

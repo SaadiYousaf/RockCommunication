@@ -52,6 +52,9 @@ public enum OfferStatus
     Rejected = 5,
     OnHold = 6,
     Hired = 7,
+    // Candidate accepted the offer and is now in onboarding/training, before being confirmed as Hired.
+    // Appended (not reordered) so existing stored values keep their meaning.
+    Training = 8,
 }
 
 /// <summary>An employee's attendance for a single day. Drives payroll present/absent/late counts.</summary>

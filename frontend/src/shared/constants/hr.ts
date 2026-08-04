@@ -16,10 +16,10 @@ export const GUARDIAN_RELATIONSHIPS = [
 ] as const;
 
 export const OFFER_STATUSES = [
-  "Applied", "Interviewed", "Offered", "Accepted", "Declined", "Rejected", "OnHold", "Hired",
+  "Applied", "Interviewed", "Offered", "Accepted", "Training", "Declined", "Rejected", "OnHold", "Hired",
 ] as const;
 export const OFFER_TONE: Record<string, "success" | "warning" | "info" | "danger" | "neutral"> = {
-  Applied: "neutral", Interviewed: "info", Offered: "info", Accepted: "success", Hired: "success",
+  Applied: "neutral", Interviewed: "info", Offered: "info", Accepted: "success", Training: "info", Hired: "success",
   OnHold: "warning", Declined: "danger", Rejected: "danger",
 };
 
