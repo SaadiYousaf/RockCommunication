@@ -4,6 +4,7 @@ using CRM.Api.Authorization;
 using CRM.Api.BackgroundJobs;
 using CRM.Infrastructure.BackgroundJobs;
 using CRM.Api.Middleware;
+using CRM.Api.HealthChecks;
 using CRM.Api.Services;
 using CRM.Application;
 using CRM.Application.Common.Interfaces;
@@ -20,7 +21,10 @@ var builder = WebApplication.CreateBuilder(args);
 // QuestPDF community licence (free for our use) — required before generating any PDF.
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
-builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration).WriteTo.Console());
+builder.Host.UseSerilog((ctx, lc) => lc
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()   // flow CorrelationId (+ per-request enrichers) into every log line
+    .WriteTo.Console());
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
@@ -85,7 +89,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: new[] { "ready" });
 
 // ────────────────────────────────────────────────────────────────────────────
 // Rate limiting — protects login from brute force, API from runaway clients,
@@ -183,7 +188,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging();
+// Correlation id first, so even a failure inside the pipeline is traceable and stamped on the response.
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging(opts =>
+{
+    // Enrich the per-request completion log with who/which-tenant (available post-auth). CorrelationId
+    // is already carried via LogContext, so it lands on this line too.
+    opts.EnrichDiagnosticContext = (diag, ctx) =>
+    {
+        var user = ctx.RequestServices.GetService<ICurrentUser>();
+        if (user?.UserId is { } uid) diag.Set("UserId", uid);
+        if (user?.AgencyId is { } aid) diag.Set("AgencyId", aid);
+    };
+});
 app.UseMiddleware<ExceptionMiddleware>();
 
 // Baseline security response headers on every API response. (CSP + frame-ancestors for
@@ -234,7 +251,17 @@ if (builder.Configuration.GetValue("BackgroundJobs:Provider", "InProcess")
     Hangfire.RecurringJob.AddOrUpdate<CadenceRunnerJob>(
         "cadence-runner", j => j.RunAsync(CancellationToken.None), Hangfire.Cron.Minutely());
 }
-app.MapHealthChecks("/health");
+// Liveness: is the process up? No dependency checks, so a transient DB blip never triggers a restart loop.
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false,
+});
+// Readiness: are dependencies (the database) reachable? For load-balancer traffic gating / uptime monitors.
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready"),
+    ResponseWriter = HealthResponseWriter.WriteAsync,
+});
 
 using (var scope = app.Services.CreateScope())
 {
