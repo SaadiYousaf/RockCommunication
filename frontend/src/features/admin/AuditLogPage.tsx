@@ -180,7 +180,7 @@ export function AuditLogPage() {
             aria-label="Show changes on or before this date"
             title="To date — show changes up to and including this day"
             value={filters.before?.slice(0, 10) ?? ""}
-            onChange={(e) => update("before", e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+            onChange={(e) => update("before", e.target.value ? new Date(e.target.value + "T23:59:59.999Z").toISOString() : undefined)}
             placeholder="To"
           />
           <div className="md:col-span-3 lg:col-span-6 flex items-center justify-between text-xs text-ink-500">

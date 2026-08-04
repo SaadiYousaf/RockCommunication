@@ -43,6 +43,7 @@ public class DialerEventHandler : IRequestHandler<DialerEventCommand, Unit>
         Guard.AgainstNull(request);
         var record = await _db.CallRecords
             .FirstOrDefaultAsync(c => c.Provider == request.Provider && c.ProviderCallId == request.ProviderCallId, ct);
+        var isInsert = record is null;
 
         if (record is null)
         {
@@ -89,7 +90,17 @@ public class DialerEventHandler : IRequestHandler<DialerEventCommand, Unit>
         if (!string.IsNullOrEmpty(request.RecordingUrl))
             record.RecordingUrl = request.RecordingUrl;
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (isInsert)
+        {
+            // A concurrent first-event for the same (Provider, ProviderCallId) won the race and
+            // inserted the row — blocked here by the unique index. The winner already persisted this
+            // event's data, so treat the duplicate as a no-op instead of 500-ing the dialer webhook
+            // (which would otherwise retry endlessly). Subsequent events update the winning row.
+        }
         return Unit.Value;
     }
 }

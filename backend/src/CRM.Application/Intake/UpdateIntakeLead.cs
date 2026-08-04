@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
+using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,13 @@ public class UpdateIntakeLeadHandler : IRequestHandler<UpdateIntakeLeadCommand, 
         // The global filter already scopes to the caller's agency + call center.
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == request.LeadId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
+
+        // Only a lead still awaiting verification may have its identity PII rewritten here. Without
+        // this, any Verifier could overwrite the name/phone/DOB of an already-closed/validated/funded
+        // lead, diverging the record from the application already bound with the carrier.
+        // Mirrors SetVerifierStatusHandler (Fronted-only, no role exemption).
+        if (lead.Stage != WorkflowStage.Fronted)
+            throw new ConflictException("Only fronted leads awaiting verification can be edited here.");
 
         var d = request.Input;
         lead.FirstName = d.FirstName.Trim();

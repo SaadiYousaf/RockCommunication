@@ -304,7 +304,7 @@ public class RoomMessagesHandler : IRequestHandler<RoomMessagesQuery, IReadOnlyL
         if (!member) throw new ForbiddenAccessException();
         var msgs = await _db.ChatMessages
             .Where(m => m.RoomId == request.RoomId)
-            .OrderByDescending(m => m.SentAt).Take(Math.Min(request.Take, 200))
+            .OrderByDescending(m => m.SentAt).Take(Math.Clamp(request.Take, 1, 200))   // negative Take => LIMIT -1 (unbounded) on SQLite
             .OrderBy(m => m.SentAt)
             .Select(m => new
             {

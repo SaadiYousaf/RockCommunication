@@ -27,6 +27,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Hangfire;
@@ -193,20 +194,25 @@ public static class DependencyInjection
         var dialerProvider = integration.Dialer.Provider ?? "Vici";
         if (dialerProvider.Equals("Zoom", StringComparison.OrdinalIgnoreCase) ||
             dialerProvider.Equals("ZoomPhone", StringComparison.OrdinalIgnoreCase))
-            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpZoomPhoneDialerProvider>().AddStandardResilienceHandler();
+            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpZoomPhoneDialerProvider>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());   // don't retry the POST that originates a call
         else if (dialerProvider.Equals("RingCentral", StringComparison.OrdinalIgnoreCase))
-            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpRingCentralDialerProvider>().AddStandardResilienceHandler();
+            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpRingCentralDialerProvider>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());   // don't retry the POST that originates a call
         else if (dialerProvider.Equals("Http", StringComparison.OrdinalIgnoreCase) ||
             dialerProvider.Equals("Vici", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(integration.Dialer.BaseUrl))
-            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpViciDialerProvider>().AddStandardResilienceHandler();
+            services.AddHttpClient<IDialerProvider, Integrations.Dialer.HttpViciDialerProvider>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.MaxRetryAttempts = 0);   // Vici dials via GET, so disable retries entirely to avoid re-dialing
         else
             services.AddScoped<IDialerProvider, ViciDialerProvider>();
 
         if (integration.Sms.Provider.Equals("Twilio", StringComparison.OrdinalIgnoreCase))
-            services.AddHttpClient<ISmsProvider, Integrations.Sms.HttpTwilioSmsProvider>().AddStandardResilienceHandler();
+            services.AddHttpClient<ISmsProvider, Integrations.Sms.HttpTwilioSmsProvider>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());   // don't retry the POST that sends (and bills) an SMS
         else if (integration.Sms.Provider.Equals("Http", StringComparison.OrdinalIgnoreCase) ||
                  (integration.Sms.Provider.Equals("GHL", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(integration.Sms.BaseUrl)))
-            services.AddHttpClient<ISmsProvider, Integrations.Sms.HttpGhlSmsProvider>().AddStandardResilienceHandler();
+            services.AddHttpClient<ISmsProvider, Integrations.Sms.HttpGhlSmsProvider>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());   // don't retry the POST that sends (and bills) an SMS
         else
             services.AddScoped<ISmsProvider, StubSmsProvider>();
 
@@ -223,8 +229,12 @@ public static class DependencyInjection
 
         if (integration.Carriers.Endpoints.Count > 0)
         {
-            services.AddHttpClient<Integrations.Carrier.HttpCarrierAetna>().AddStandardResilienceHandler();
-            services.AddHttpClient<Integrations.Carrier.HttpCarrierUhc>().AddStandardResilienceHandler();
+            // Keep GET (status) retries but drop POST retries so a delayed/failed application submit
+            // isn't re-POSTed into duplicate carrier applications.
+            services.AddHttpClient<Integrations.Carrier.HttpCarrierAetna>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());
+            services.AddHttpClient<Integrations.Carrier.HttpCarrierUhc>()
+                .AddStandardResilienceHandler().Configure(o => o.Retry.DisableForUnsafeHttpMethods());
             services.AddScoped<ICarrierProvider>(sp => sp.GetRequiredService<Integrations.Carrier.HttpCarrierAetna>());
             services.AddScoped<ICarrierProvider>(sp => sp.GetRequiredService<Integrations.Carrier.HttpCarrierUhc>());
         }
@@ -367,6 +377,17 @@ public static class DependencyInjection
         //                                     (defaults to ConnectionStrings:Default)
         // ─────────────────────────────────────────────────────────────────────
         var useHangfire = config.GetValue("BackgroundJobs:Provider", "InProcess").Equals("Hangfire", StringComparison.OrdinalIgnoreCase);
+
+        // These four have NO Hangfire RecurringJob equivalent (only CallbackReminderJob and
+        // CadenceRunnerJob do — see Program.cs), so register them as hosted services under BOTH
+        // providers. Each has its own internal timer loop and is idempotent, so running once per
+        // box is safe regardless of BackgroundJobs:Provider. (Previously, Hangfire mode silently
+        // dropped attendance-autofill — which feeds payroll — plus birthday/invite/training jobs.)
+        services.AddHostedService<BirthdayNotificationService>();
+        services.AddHostedService<InvitationExpiryNotificationService>();
+        services.AddHostedService<TrainingReminderService>();
+        services.AddHostedService<AttendanceAutofillService>();
+
         if (useHangfire)
         {
             var hangfireStorage = config.GetValue("BackgroundJobs:Storage", "Memory");
@@ -413,11 +434,9 @@ public static class DependencyInjection
         else
         {
             services.AddSingleton<Workflow.IBackgroundJobScheduler, BackgroundJobs.InProcessJobScheduler>();
+            // These two DO have Hangfire RecurringJob equivalents (CallbackReminderJob / CadenceRunnerJob),
+            // so they run as hosted services ONLY under the InProcess provider to avoid double execution.
             services.AddHostedService<CallbackReminderService>();
-            services.AddHostedService<BirthdayNotificationService>();
-            services.AddHostedService<InvitationExpiryNotificationService>();
-            services.AddHostedService<TrainingReminderService>();
-            services.AddHostedService<AttendanceAutofillService>();
             services.AddHostedService<CadenceRunnerService>();
         }
         services.AddScoped<BackgroundJobs.WorkflowJobRunner>();

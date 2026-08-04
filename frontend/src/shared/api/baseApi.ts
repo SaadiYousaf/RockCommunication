@@ -166,7 +166,7 @@ export const baseApi = createApi({
     }),
     bulkEnrollCadence: b.mutation<BulkResult, { leadIds: string[]; cadenceId: string }>({
       query: (body) => ({ url: "/api/leads/bulk/enroll-cadence", method: "POST", body }),
-      invalidatesTags: ["Leads"],
+      invalidatesTags: ["Leads", "CadenceEnrollments"],   // new enrollments must show in the enrollments list
     }),
     myLeads: b.query<Lead[], { stage?: WorkflowStage; take?: number } | void>({
       query: (params) => ({ url: "/api/leads/mine", params: params ?? undefined }),
@@ -213,7 +213,8 @@ export const baseApi = createApi({
 
     recordSale: b.mutation<Sale, { leadId: string; carrier: string; policyNumber?: string; monthlyPremium: number; routingNumber: string; accountNumber: string; accountType?: string; recordingKey?: string | null }>({
       query: (body) => ({ url: "/api/sales", method: "POST", body }),
-      invalidatesTags: ["Leads", "Sales", "Commissions"],   // a recorded sale mints a commission entry
+      // Also refresh THIS lead's detail (its Sale card), not just the Leads list. Recorded sale mints a commission entry.
+      invalidatesTags: (_r, _e, arg) => ["Leads", "Sales", "Commissions", { type: "Lead", id: arg.leadId }],
     }),
     uploadSaleRecording: b.mutation<{ key: string; fileName: string; size: number }, File>({
       query: (file) => {
@@ -224,11 +225,12 @@ export const baseApi = createApi({
     }),
     validateSale: b.mutation<Sale, { id: string; approve: boolean; notes?: string }>({
       query: ({ id, ...body }) => ({ url: `/api/sales/${id}/validate`, method: "POST", body }),
-      invalidatesTags: ["Leads", "Sales", "Commissions"],   // approve/reject creates or voids commission lines
+      // approve/reject creates or voids commission lines and updates the lead's Sale card
+      invalidatesTags: (r) => ["Leads", "Sales", "Commissions", ...(r?.leadId ? [{ type: "Lead", id: r.leadId } as const] : [])],
     }),
     fundSale: b.mutation<Sale, string>({
       query: (id) => ({ url: `/api/sales/${id}/fund`, method: "POST" }),
-      invalidatesTags: ["Leads", "Sales"],
+      invalidatesTags: (r) => ["Leads", "Sales", ...(r?.leadId ? [{ type: "Lead", id: r.leadId } as const] : [])],
     }),
     myCommissions: b.query<CommissionEntry[], { from?: string; to?: string; paid?: boolean } | void>({
       query: (params) => ({ url: "/api/sales/commissions", params: params ?? undefined }),
@@ -544,7 +546,7 @@ export const baseApi = createApi({
     // Self-validate
     selfValidateSale: b.mutation<Sale, { id: string; notes?: string }>({
       query: ({ id, notes }) => ({ url: `/api/sales/${id}/self-validate`, method: "POST", body: { notes } }),
-      invalidatesTags: ["Sales", "Leads"],
+      invalidatesTags: (r) => ["Sales", "Leads", ...(r?.leadId ? [{ type: "Lead", id: r.leadId } as const] : [])],
     }),
 
     // QA browser
@@ -955,6 +957,7 @@ export const baseApi = createApi({
     }),
     getKbArticle: b.query<any, string>({
       query: (slug) => `/api/kb/articles/${slug}`,
+      providesTags: ["KbArticles"],   // so upsertKbArticle's invalidation refreshes the open reader pane
     }),
     upsertKbArticle: b.mutation<any, any>({
       query: (body) => ({ url: "/api/kb/articles", method: "PUT", body }),

@@ -205,7 +205,10 @@ function HorizontalsSection() {
 }
 
 function CommissionConfigSection() {
-  const { data: rules } = useListCommissionConfigQuery();
+  // Gate the rows on load: RuleRow seeds its inputs from `initial` on FIRST mount only, so if a row
+  // mounts before the override data arrives it shows a blank "default" and a Save would wipe the real
+  // stored override to null. Rendering rows only after data loads makes the seed read the real values.
+  const { data: rules, isLoading } = useListCommissionConfigQuery();
   const [upsert] = useUpsertCommissionConfigMutation();
   const ruleByName = (n: string) => rules?.find((r) => r.ruleName === n);
 
@@ -213,6 +216,9 @@ function CommissionConfigSection() {
     <Card>
       <CardHeader eyebrow="Payouts" bordered title="Commission rules" subtitle="Per-agency overrides for each rule. Empty = use system default." />
       <CardBody className="px-0 pt-0">
+        {isLoading ? (
+          <div className="px-5 py-4"><Skeleton className="h-24" /></div>
+        ) : (
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-ink-50/60 text-left">
@@ -237,6 +243,7 @@ function CommissionConfigSection() {
           </tbody>
         </table>
         </div>
+        )}
       </CardBody>
     </Card>
   );

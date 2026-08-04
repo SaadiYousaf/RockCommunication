@@ -51,8 +51,12 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
         // date-only UTC midnight, so a raw `< PeriodEnd` would drop everything earned that last
         // day and never pay it (matches the CSV-export / MyCommissions rollover).
         var periodEndExclusive = request.PeriodEnd.Date.AddDays(1);
-        await _db.CommissionEntries
-            .Where(c => c.AgencyId == _user.AgencyId && !c.Paid
+        // Payroll is an AGENCY-WIDE operation. CommissionEntry is a CallCenterEntity, so the global
+        // call-center query filter would scope this claim to the processor's OWN call center whenever
+        // they are call-center-pinned — silently leaving every other call center's commissions unpaid.
+        // Bypass the filter and re-add the tenant + soft-delete predicates explicitly.
+        await _db.CommissionEntries.IgnoreQueryFilters()
+            .Where(c => c.AgencyId == _user.AgencyId && !c.IsDeleted && !c.Paid
                         && c.EarnedAt >= request.PeriodStart && c.EarnedAt < periodEndExclusive)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.Paid, true)
@@ -60,8 +64,10 @@ public class CreatePayrollRunHandler : IRequestHandler<CreatePayrollRunCommand, 
                 .SetProperty(c => c.PayrollRunId, run.Id), ct);
 
         // Total = exactly the entries this run claimed (summed in memory — SQLite has no decimal SUM).
-        var claimed = await _db.CommissionEntries
-            .Where(c => c.PayrollRunId == run.Id).Select(c => c.Amount).ToListAsync(ct);
+        // Same filter-bypass so the total covers every call center this run just claimed.
+        var claimed = await _db.CommissionEntries.IgnoreQueryFilters()
+            .Where(c => c.AgencyId == _user.AgencyId && !c.IsDeleted && c.PayrollRunId == run.Id)
+            .Select(c => c.Amount).ToListAsync(ct);
         run.TotalAmount = claimed.Sum();
         await _db.SaveChangesAsync(ct);
 

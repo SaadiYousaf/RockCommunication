@@ -67,6 +67,7 @@ public class SmtpEmailProvider : IEmailProvider
             }
 
             using var client = new SmtpClient();
+            client.Timeout = 15000; // 15s per socket op — a wedged/black-holed host fails fast instead of stalling the reminder pipeline (~2min MailKit default)
             // Skip cert-revocation check — common dev networks block the OCSP endpoint and
             // MailKit hard-fails on incomplete revocation status. Mandi does the same.
             client.CheckCertificateRevocation = false;

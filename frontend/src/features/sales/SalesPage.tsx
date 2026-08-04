@@ -476,7 +476,10 @@ function SalesList() {
               {data.items.map((s) => (
                 <TR key={s.id} className="cursor-pointer" onClick={() => navigate(`/sales/${s.id}`)}>
                   <TD className="text-ink-600 whitespace-nowrap text-xs tabular-nums">
-                    {new Date(s.soldAt).toLocaleString()}
+                    {/* Keyboard-reachable link to the sale (the row onClick is mouse-only). */}
+                    <Link to={`/sales/${s.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                      {new Date(s.soldAt).toLocaleString()}
+                    </Link>
                   </TD>
                   <TD>
                     {/* Clicking the name jumps to the LEAD; clicking anywhere else opens the SALE. */}

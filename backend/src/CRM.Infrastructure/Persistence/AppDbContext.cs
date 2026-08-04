@@ -179,12 +179,36 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             e.HasIndex(x => new { x.AgencyId, x.PhoneNumber });
             e.HasIndex(x => new { x.AgencyId, x.Stage });
+            // Serves MyQueue, the QueueCounts sidebar badge, and agent-scoped ListLeads — the app's
+            // most frequent, latency-sensitive query (all filter AgencyId + AssignedUserId).
+            e.HasIndex(x => new { x.AgencyId, x.AssignedUserId });
             e.Property(x => x.FirstName).HasMaxLength(80).IsRequired();
             e.Property(x => x.LastName).HasMaxLength(80).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(20).IsRequired();
             e.HasMany(x => x.Activities).WithOne().HasForeignKey(a => a.LeadId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Callbacks).WithOne().HasForeignKey(c => c.LeadId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Sale).WithOne().HasForeignKey<Sale>(s => s.LeadId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<LeadActivity>(e =>
+        {
+            // Dashboard/wallboard metrics scan the activity log by agency over a date window
+            // (Metrics.cs, Wallboard.cs). Without this only the FK(LeadId) index exists.
+            e.HasIndex(x => new { x.AgencyId, x.OccurredAt });
+        });
+
+        b.Entity<ScheduledCallback>(e =>
+        {
+            // QueueCounts badge poll + My Callbacks filter by AssignedUserId within the tenant;
+            // the global tenant filter supplies the leading AgencyId equality.
+            e.HasIndex(x => new { x.AgencyId, x.AssignedUserId, x.Completed });
+        });
+
+        b.Entity<Notification>(e =>
+        {
+            // Bell unread-count polls seek by (user, unread); the inbox orders by recency per user.
+            e.HasIndex(x => new { x.UserId, x.IsRead });
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
         });
 
         b.Entity<Sale>(e =>
@@ -658,6 +682,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             e.HasIndex(x => new { x.AgencyId, x.LeadId });
             e.HasIndex(x => x.ProviderCallId);
+            // Per-agent Call History seek/sort + per-agent AHT/AnswerRate range (CallsList, CallCenterMetrics).
+            e.HasIndex(x => new { x.AgencyId, x.AgentUserId, x.InitiatedAt });
+            // Whole-agency leaderboard date-range scan grouped by agent (Wallboard).
+            e.HasIndex(x => new { x.AgencyId, x.InitiatedAt });
+            // One physical call == one row. Blocks a concurrent duplicate first-insert from the
+            // anonymous dialer webhook (DialerEventHandler). Filtered on IsDeleted per convention.
+            e.HasIndex(x => new { x.Provider, x.ProviderCallId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
             e.Property(x => x.Provider).HasMaxLength(40);
             e.Property(x => x.ProviderCallId).HasMaxLength(120);
             e.Property(x => x.Status).HasMaxLength(40);

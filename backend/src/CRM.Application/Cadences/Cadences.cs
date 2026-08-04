@@ -167,7 +167,7 @@ public class CadenceHandler :
         if (!_user.IsSuperAdmin) q = q.Where(e => e.AgencyId == _user.AgencyId);
         if (request.CadenceId is { } cid) q = q.Where(e => e.CadenceId == cid);
         if (!string.IsNullOrEmpty(request.Status)) q = q.Where(e => e.Status == request.Status);
-        return await q.OrderByDescending(e => e.EnrolledAt).Take(request.Take)
+        return await q.OrderByDescending(e => e.EnrolledAt).Take(Math.Clamp(request.Take, 1, 500))   // negative Take => LIMIT -1 (unbounded) on SQLite
             .Select(e => new CadenceEnrollmentDto(e.Id, e.CadenceId, e.LeadId, e.CurrentStepOrder,
                 e.EnrolledAt, e.NextRunAt, e.Status, e.CompletedAt, e.StopReason))
             .ToListAsync(ct);

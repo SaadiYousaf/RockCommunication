@@ -159,7 +159,7 @@ public class WorkflowAdminHandler :
         EnsureManager();
         var q = _db.WorkflowExecutions.Where(e => e.AgencyId == _user.AgencyId);
         if (request.RuleId is { } rid) q = q.Where(e => e.RuleId == rid);
-        return await q.OrderByDescending(e => e.StartedAt).Take(Math.Min(request.Take, 200))
+        return await q.OrderByDescending(e => e.StartedAt).Take(Math.Clamp(request.Take, 1, 200))   // negative Take => LIMIT -1 (unbounded) on SQLite
             .Select(e => new WorkflowExecutionDto(e.Id, e.RuleId, e.EventType, e.Status,
                 e.StartedAt, e.CompletedAt, e.Error))
             .ToListAsync(ct);

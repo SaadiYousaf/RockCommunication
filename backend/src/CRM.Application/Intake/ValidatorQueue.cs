@@ -213,6 +213,47 @@ public class ValidatorQueueHandler :
             _db.CommissionEntries.RemoveRange(unpaid);
         }
 
+        // A POSITIVE terminal outcome means the sale is now validated (ValidatorUserId is set above),
+        // so recompute the full participant set to (a) pay the ValidatorBonus that wasn't computable
+        // at sale time (ValidatorUserId was null then) and (b) revive closer/jr/team-lead/kicker lines
+        // a prior Decline soft-deleted. IgnoreQueryFilters + explicit sale.AgencyId: central agents have
+        // Guid.Empty as their tenant, so the filtered read would never match the real-agency rows.
+        // Include soft-deleted rows so they can be revived; skip already-paid rows (no double pay).
+        // CalculateForSaleAsync never emits the LicenseAgent line, so this can't collide with the
+        // AssignLicenseAgentAsync line created above.
+        if (request.Status is ValidatorStatus.Approved or ValidatorStatus.ActivePaid)
+        {
+            var recomputed = await _commission.CalculateForSaleAsync(sale, ct);
+            var existingLines = await _db.CommissionEntries.IgnoreQueryFilters()
+                .Where(c => c.SaleId == sale.Id && c.AgencyId == sale.AgencyId)
+                .ToListAsync(ct);
+            foreach (var line in recomputed)
+            {
+                var row = existingLines.FirstOrDefault(c => c.RuleName == line.RuleName);
+                if (row is null)
+                {
+                    _db.CommissionEntries.Add(new CommissionEntry
+                    {
+                        AgencyId = sale.AgencyId,
+                        CallCenterId = sale.CallCenterId,
+                        SaleId = sale.Id,
+                        AgentUserId = line.AgentId,
+                        RuleName = line.RuleName,
+                        Amount = line.Amount,
+                        Note = line.Note,
+                    });
+                }
+                else if (!row.Paid)
+                {
+                    row.IsDeleted = false;      // revive a line a prior decline soft-deleted
+                    row.AgentUserId = line.AgentId;
+                    row.Amount = line.Amount;
+                    row.Note = line.Note;
+                }
+                // else: already paid — leave the historical entry untouched.
+            }
+        }
+
         // Reflect the outcome on the lead's stage so the rest of the pipeline stays consistent.
         // Central agents act cross-agency, so the lead lookup must bypass the tenant filter too.
         var lead = central

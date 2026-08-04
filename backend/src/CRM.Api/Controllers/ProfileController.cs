@@ -44,7 +44,7 @@ public class ProfileController : ControllerBase
     /// <summary>Upload / replace the caller's avatar. Rejects non-images and files over 5 MB,
     /// stores the bytes via <see cref="IFileStorage"/>, then points the profile at the key.</summary>
     [HttpPost("me/avatar")]
-    [RequestSizeLimit(ProfileConstants.MaxAvatarBytes)]
+    [RequestSizeLimit(ProfileConstants.MaxAvatarBytes + 1024 * 1024)]   // slack for the multipart envelope; the byte cap is enforced on file.Length below
     public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
     {
         Guard.AgainstNull(file);

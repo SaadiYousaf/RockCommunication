@@ -1,4 +1,4 @@
-import type { ReactNode, ThHTMLAttributes, TdHTMLAttributes, HTMLAttributes } from "react";
+import type { ReactNode, ThHTMLAttributes, TdHTMLAttributes, HTMLAttributes, MouseEvent as ReactMouseEvent } from "react";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 
@@ -58,15 +58,34 @@ export interface ThProps extends ThHTMLAttributes<HTMLTableCellElement> {
   numeric?: boolean;
 }
 
-export function TH({ className, children, sortDir, numeric, ...rest }: ThProps) {
+export function TH({ className, children, sortDir, numeric, onClick, onKeyDown, ...rest }: ThProps) {
+  // A sortable header (sortDir provided) must be keyboard-operable and announce its sort state.
+  // Keep <th> semantics (not a button) since some headers embed an InfoHint that renders its own button.
+  const interactive = sortDir !== undefined;
   return (
     <th
       className={cn(
         "group font-semibold px-4 py-2.5 select-none whitespace-nowrap",
         numeric ? "text-right" : "text-left",
-        sortDir !== undefined && "cursor-pointer hover:text-ink-800 transition-colors",
+        interactive &&
+          "cursor-pointer hover:text-ink-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500",
         className,
       )}
+      tabIndex={interactive ? 0 : undefined}
+      aria-sort={
+        interactive
+          ? sortDir === "asc" ? "ascending" : sortDir === "desc" ? "descending" : "none"
+          : undefined
+      }
+      onClick={onClick}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+        // Only the header itself toggles sort — the guard stops an inner InfoHint button's Enter/Space from firing it too.
+        if (interactive && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick?.(e as unknown as ReactMouseEvent<HTMLTableCellElement>);
+        }
+      }}
       {...rest}
     >
       <span className={cn("inline-flex items-center gap-1.5 align-middle", numeric && "flex-row-reverse")}>

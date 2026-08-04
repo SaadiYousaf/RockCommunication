@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cn } from "./cn";
 
 export function Modal({
@@ -18,6 +18,7 @@ export function Modal({
   hideAccentBar?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   // Keep onClose in a ref so the open/lifecycle effect below has stable deps.
   // Without this, every parent render creates a new `onClose` arrow, the effect
@@ -27,7 +28,22 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onCloseRef.current(); return; }
+      // Trap Tab within the dialog so focus can't move to the blurred, still-interactive background.
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const nodes = dialogRef.current.querySelectorAll<HTMLElement>(
+        "input, select, textarea, button, [href], [tabindex]:not([tabindex='-1'])"
+      );
+      const list = Array.from(nodes).filter((n) => !n.hasAttribute("disabled") && n.offsetParent !== null);
+      if (list.length === 0) { e.preventDefault(); return; }
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      const inside = dialogRef.current.contains(active);
+      if (e.shiftKey && (active === first || !inside)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (active === last || !inside)) { e.preventDefault(); first.focus(); }
+    };
     window.addEventListener("keydown", onKey);
     // Lock scroll on body, but pad to avoid layout shift from disappearing scrollbar
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -74,6 +90,7 @@ export function Modal({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={cn(
           "relative w-full bg-white rounded-2xl shadow-pop border border-ink-200/70 overflow-hidden",
           "animate-rise",
@@ -95,7 +112,7 @@ export function Modal({
 
         {(title || description) && (
           <div className="px-6 pt-7 pb-3 shrink-0">
-            {title && <h2 className="text-[18px] font-semibold text-ink-900 leading-tight tracking-tight">{title}</h2>}
+            {title && <h2 id={titleId} className="text-[18px] font-semibold text-ink-900 leading-tight tracking-tight">{title}</h2>}
             {description && <p className="text-sm text-ink-500 mt-1.5 leading-relaxed">{description}</p>}
           </div>
         )}

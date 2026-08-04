@@ -131,6 +131,20 @@ public class PublicLeadCaptureHandler :
         if (await _dnc.IsBlockedAsync(endpoint.AgencyId, normalized, ct))
             throw new ConflictException("Phone is on the DNC list.");
 
+        // Replay/idempotency guard: the HMAC is deterministic over the body, so an identical signed
+        // request stays valid forever and could be replayed to mint unlimited duplicate leads (each
+        // re-enrolled into the cadence → re-dialed/emailed the same person). Dedup on the natural key
+        // (agency + normalized phone) within a short window and return the existing lead instead.
+        // Anonymous requests bypass the tenant filter, so scope AgencyId explicitly (the global
+        // filter still applies !IsDeleted).
+        var dedupCutoff = DateTime.UtcNow.AddHours(-24);
+        var existingLeadId = await _db.Leads
+            .Where(l => l.AgencyId == endpoint.AgencyId && l.PhoneNumber == normalized && l.CreatedAt >= dedupCutoff)
+            .OrderByDescending(l => l.CreatedAt)
+            .Select(l => (Guid?)l.Id)
+            .FirstOrDefaultAsync(ct);
+        if (existingLeadId is Guid dup) return dup;
+
         var lead = new Lead
         {
             AgencyId = endpoint.AgencyId,

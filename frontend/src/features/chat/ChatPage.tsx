@@ -128,6 +128,9 @@ export function ChatPage() {
   activeRoomRef.current = activeRoom;
   const refetchUnreadRef = useRef(refetchUnread);
   refetchUnreadRef.current = refetchUnread;
+  const markReadRef = useRef(markRead);
+  markReadRef.current = markRead;
+  const lastActiveMarkReadRef = useRef(0);
 
   // SignalR setup — runs only when the access token actually changes.
   useEffect(() => {
@@ -145,7 +148,16 @@ export function ChatPage() {
 
     conn.on("MessageReceived", (msg: ChatMessage) => {
       setLiveMessages((prev) => [...prev, msg]);
-      if (msg.roomId !== activeRoomRef.current) refetchUnreadRef.current();
+      if (msg.roomId !== activeRoomRef.current) {
+        refetchUnreadRef.current();
+      } else if (document.hasFocus() && Date.now() - lastActiveMarkReadRef.current > 2000) {
+        // A message landed in the room we're actively viewing — re-mark it read so its unread
+        // badge doesn't reappear on the next poll (and others see it as seen). Throttled so a
+        // busy channel doesn't spam the hub.
+        lastActiveMarkReadRef.current = Date.now();
+        const room = activeRoomRef.current;
+        if (room) markReadRef.current(room).unwrap().then(() => refetchUnreadRef.current()).catch(() => {});
+      }
     });
     // Other members' read receipts. Server fires this whenever any member calls
     // markRead — we use it to upgrade our own messages from "delivered" to "seen".

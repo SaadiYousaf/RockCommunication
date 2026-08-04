@@ -138,6 +138,7 @@ export function QaPage() {
                   />
                   {items.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 mb-0.5"
+                      aria-label="Remove item" title="Remove this item"
                       onClick={() => removeItem(idx)}>
                       <Icon name="x" size={14} />
                     </Button>

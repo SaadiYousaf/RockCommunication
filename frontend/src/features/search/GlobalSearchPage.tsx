@@ -47,6 +47,15 @@ export function GlobalSearchPage() {
   const navigate = useNavigate();
   const toast = useToast();
 
+  // Adopt a fresh query pushed by the always-present header search while this page is already
+  // mounted. Compare against `debounced` (what this page writes to the URL) so in-progress typing
+  // is never clobbered — only a genuinely external navigation drives setQuery.
+  useEffect(() => {
+    const urlQ = params.get("q") ?? "";
+    if (urlQ !== debounced) setQuery(urlQ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
   // Keep URL in sync so the result is shareable / bookmarkable / refresh-safe.
   useEffect(() => {
     const next = new URLSearchParams();

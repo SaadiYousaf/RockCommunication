@@ -52,7 +52,7 @@ public class KbHandler :
                              a.Body.ToLower().Contains(qq) ||
                              (a.Tags != null && a.Tags.ToLower().Contains(qq)));
         }
-        return await q.OrderByDescending(a => a.PublishedAt ?? a.CreatedAt).Take(request.Take)
+        return await q.OrderByDescending(a => a.PublishedAt ?? a.CreatedAt).Take(Math.Clamp(request.Take, 1, 100))   // negative Take => LIMIT -1 (unbounded) on SQLite
             .Select(a => Map(a)).ToListAsync(ct);
     }
 

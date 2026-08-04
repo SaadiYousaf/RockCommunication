@@ -61,16 +61,27 @@ public class DuplicateScanHandler : IRequestHandler<DuplicateScanQuery, IReadOnl
         Guard.AgainstNull(request);
         if (_user.AgencyId is null) throw new ForbiddenAccessException();
 
+        // Find the colliding phone numbers entirely in SQL (COUNT is int → safe on SQLite), then load
+        // ONLY the duplicate leads. Materialising every agency lead here OOM'd large tenants and threw
+        // most of the DTOs away immediately.
+        var dupPhones = await _db.Leads
+            .Where(l => l.AgencyId == _user.AgencyId && l.PhoneNumber != null && l.PhoneNumber != "")
+            .GroupBy(l => l.PhoneNumber)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToListAsync(ct);
+
+        if (dupPhones.Count == 0)
+            return Array.Empty<DuplicateGroup>();
+
         var leads = await _db.Leads
-            .Where(l => l.AgencyId == _user.AgencyId)
+            .Where(l => l.AgencyId == _user.AgencyId && dupPhones.Contains(l.PhoneNumber))
             .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State,
                 l.Stage, l.Disposition, l.AssignedUserId, l.TeamId, l.JornayaVerified, l.CreatedAt))
             .ToListAsync(ct);
 
         var groups = leads
-            .Where(l => !string.IsNullOrEmpty(l.PhoneNumber))
             .GroupBy(l => l.PhoneNumber)
-            .Where(g => g.Count() > 1)
             .Select(g => new DuplicateGroup($"phone:{g.Key}", g.ToList()))
             .ToList();
 
