@@ -1060,3 +1060,24 @@ export interface AttendanceRow {
 
 /** Payload for an upsert mutation: any subset of the entity; `id` absent/null means "create". */
 export type Upsert<T> = Partial<Omit<T, "id">> & { id?: string | null };
+
+// ── Pulse feed (team social timeline) ─────────────────────────────────────────
+export interface FeedReactionSummary { emoji: string; count: number; mine: boolean; }
+export interface FeedComment {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  canDelete: boolean;
+}
+export interface FeedPost {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  reactions: FeedReactionSummary[];
+  comments: FeedComment[];
+  canDelete: boolean;
+}

@@ -34,6 +34,9 @@ public interface IApplicationDbContext
     DbSet<ChatRoom> ChatRooms { get; }
     DbSet<ChatRoomMember> ChatRoomMembers { get; }
     DbSet<ChatMessage> ChatMessages { get; }
+    DbSet<FeedPost> FeedPosts { get; }
+    DbSet<FeedComment> FeedComments { get; }
+    DbSet<FeedReaction> FeedReactions { get; }
     DbSet<ChatMessageReaction> ChatMessageReactions { get; }
     DbSet<CallRecord> CallRecords { get; }
     DbSet<AgencyCommissionConfig> AgencyCommissionConfigs { get; }

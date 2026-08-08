@@ -16,6 +16,7 @@ import type {
   PortalCredential, PortalCredentialInput,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput,
+  FeedPost, FeedComment,
   SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
@@ -95,7 +96,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1164,6 +1165,32 @@ export const baseApi = createApi({
       query: ({ employeeId, year, month, input }) => ({ url: `/api/hr/payroll/${employeeId}`, method: "PUT", body: { year, month, input } }),
       invalidatesTags: ["Payroll"],
     }),
+    // ── Pulse feed ────────────────────────────────────────────────────────────
+    listFeed: b.query<FeedPost[], { skip?: number; take?: number } | void>({
+      query: (p) => ({ url: "/api/feed", params: p ?? undefined }),
+      providesTags: ["Feed"],
+    }),
+    createPost: b.mutation<FeedPost, { body: string }>({
+      query: (body) => ({ url: "/api/feed", method: "POST", body }),
+      invalidatesTags: ["Feed"],
+    }),
+    deletePost: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/feed/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Feed"],
+    }),
+    reactPost: b.mutation<void, { postId: string; emoji: string }>({
+      query: ({ postId, emoji }) => ({ url: `/api/feed/${postId}/react`, method: "POST", body: { emoji } }),
+      invalidatesTags: ["Feed"],
+    }),
+    commentPost: b.mutation<FeedComment, { postId: string; body: string }>({
+      query: ({ postId, body }) => ({ url: `/api/feed/${postId}/comments`, method: "POST", body: { body } }),
+      invalidatesTags: ["Feed"],
+    }),
+    deleteFeedComment: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/feed/comments/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Feed"],
+    }),
+
     getPayrollConfig: b.query<PayrollConfig, string>({
       query: (callCenterId) => `/api/hr/payroll/config/${callCenterId}`,
       providesTags: ["PayrollConfig"],
@@ -1430,6 +1457,8 @@ export const {
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
   useUpcomingTrainingsQuery,
   useListPayrollQuery, useSavePayrollMutation, useGetPayrollConfigQuery, useSavePayrollConfigMutation,
+  useListFeedQuery, useCreatePostMutation, useDeletePostMutation, useReactPostMutation,
+  useCommentPostMutation, useDeleteFeedCommentMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
   useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,

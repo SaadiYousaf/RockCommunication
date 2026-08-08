@@ -49,6 +49,7 @@ const NAV: NavNode[] = [
       { key: "calendar",  to: "/calendar",  label: "Calendar",  icon: "calendar" },
       { key: "queue",     to: "/queue",     label: "My Queue",  icon: "inbox", module: "queue", countKey: "myQueue" },
       { key: "chat",      to: "/chat",      label: "Chat",      icon: "chat",  module: "chat" },
+      { key: "pulse",     to: "/pulse",     label: "Pulse",     icon: "activity" },
       { key: "callbacks", to: "/callbacks", label: "Callbacks", icon: "calendar", module: "callbacks", countKey: "callbacks" },
       {
         key: "intake", label: "Intake Pipeline", icon: "filter",

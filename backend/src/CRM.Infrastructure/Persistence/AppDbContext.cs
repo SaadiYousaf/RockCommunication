@@ -85,6 +85,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ChatRoom> ChatRooms => Set<ChatRoom>();
     public DbSet<ChatRoomMember> ChatRoomMembers => Set<ChatRoomMember>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<FeedPost> FeedPosts => Set<FeedPost>();
+    public DbSet<FeedComment> FeedComments => Set<FeedComment>();
+    public DbSet<FeedReaction> FeedReactions => Set<FeedReaction>();
     public DbSet<ChatMessageReaction> ChatMessageReactions => Set<ChatMessageReaction>();
     public DbSet<CallRecord> CallRecords => Set<CallRecord>();
     public DbSet<AgencyCommissionConfig> AgencyCommissionConfigs => Set<AgencyCommissionConfig>();
@@ -297,6 +300,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             // One deduction-rule set per call centre.
             e.HasIndex(x => x.CallCenterId).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+
+        b.Entity<FeedPost>(e =>
+        {
+            e.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            e.HasIndex(x => new { x.AgencyId, x.CreatedAt });   // feed is ordered by recency per agency
+        });
+        b.Entity<FeedComment>(e =>
+        {
+            e.Property(x => x.Body).HasMaxLength(2000).IsRequired();
+            e.HasIndex(x => x.PostId);
+        });
+        b.Entity<FeedReaction>(e =>
+        {
+            e.Property(x => x.Emoji).HasMaxLength(16).IsRequired();
+            e.HasIndex(x => x.PostId);
+            // One of each emoji per user per post (a soft-deleted un-react must not block re-reacting).
+            e.HasIndex(x => new { x.PostId, x.UserId, x.Emoji }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<Interview>(e =>
