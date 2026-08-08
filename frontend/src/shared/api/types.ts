@@ -1071,7 +1071,14 @@ export interface FeedComment {
   createdAt: string;
   canDelete: boolean;
 }
-export type FeedPostKind = "Update" | "Announcement" | "Praise" | "Question";
+export type FeedPostKind = "Update" | "Announcement" | "Praise" | "Question" | "Poll";
+export interface FeedPollOption { id: string; text: string; votes: number; }
+export interface FeedPoll {
+  options: FeedPollOption[];
+  totalVotes: number;
+  /** The option the current user voted for, if any. */
+  myOptionId: string | null;
+}
 export interface FeedPost {
   id: string;
   authorUserId: string;
@@ -1084,5 +1091,7 @@ export interface FeedPost {
   createdAt: string;
   reactions: FeedReactionSummary[];
   comments: FeedComment[];
+  /** Present only when kind === "Poll". */
+  poll: FeedPoll | null;
   canDelete: boolean;
 }

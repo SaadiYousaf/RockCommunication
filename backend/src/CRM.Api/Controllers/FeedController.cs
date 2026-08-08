@@ -31,13 +31,13 @@ public class FeedController : ControllerBase
     public async Task<IActionResult> List([FromQuery] int skip = 0, [FromQuery] int take = 20, CancellationToken ct = default)
         => Ok(await _mediator.Send(new ListFeedQuery(skip, take), ct));
 
-    public record PostBody(string? Body, FeedPostKind Kind = FeedPostKind.Update, string? ImageKey = null);
+    public record PostBody(string? Body, FeedPostKind Kind = FeedPostKind.Update, string? ImageKey = null, IReadOnlyList<string>? Options = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] PostBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new CreatePostCommand(body.Body ?? "", body.Kind, body.ImageKey), ct));
+        return Ok(await _mediator.Send(new CreatePostCommand(body.Body ?? "", body.Kind, body.ImageKey, body.Options), ct));
     }
 
     /// <summary>Upload an image to attach to a post. Returns the opaque storage key to pass to POST /api/feed.</summary>
@@ -69,6 +69,17 @@ public class FeedController : ControllerBase
     public async Task<IActionResult> Delete(Guid postId, CancellationToken ct)
     {
         await _mediator.Send(new DeletePostCommand(postId), ct);
+        return NoContent();
+    }
+
+    public record VoteBody(Guid OptionId);
+
+    /// <summary>Cast (or move / clear) the caller's vote on a poll post. One vote per user per poll.</summary>
+    [HttpPost("{postId:guid}/vote")]
+    public async Task<IActionResult> Vote(Guid postId, [FromBody] VoteBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(new VotePollCommand(postId, body.OptionId), ct);
         return NoContent();
     }
 

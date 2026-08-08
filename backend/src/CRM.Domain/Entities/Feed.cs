@@ -9,6 +9,7 @@ public enum FeedPostKind
     Announcement = 1,
     Praise = 2,
     Question = 3,
+    Poll = 4,
 }
 
 /// <summary>
@@ -38,4 +39,20 @@ public class FeedReaction : TenantEntity
     public Guid PostId { get; set; }
     public Guid UserId { get; set; }
     public string Emoji { get; set; } = string.Empty;
+}
+
+/// <summary>An answer option on a Poll post.</summary>
+public class FeedPollOption : TenantEntity
+{
+    public Guid PostId { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public int Order { get; set; }
+}
+
+/// <summary>One user's vote on a poll. Unique per (post, user) — voting again moves the vote.</summary>
+public class FeedPollVote : TenantEntity
+{
+    public Guid PostId { get; set; }
+    public Guid OptionId { get; set; }
+    public Guid UserId { get; set; }
 }

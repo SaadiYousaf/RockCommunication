@@ -88,6 +88,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<FeedPost> FeedPosts => Set<FeedPost>();
     public DbSet<FeedComment> FeedComments => Set<FeedComment>();
     public DbSet<FeedReaction> FeedReactions => Set<FeedReaction>();
+    public DbSet<FeedPollOption> FeedPollOptions => Set<FeedPollOption>();
+    public DbSet<FeedPollVote> FeedPollVotes => Set<FeedPollVote>();
     public DbSet<ChatMessageReaction> ChatMessageReactions => Set<ChatMessageReaction>();
     public DbSet<CallRecord> CallRecords => Set<CallRecord>();
     public DbSet<AgencyCommissionConfig> AgencyCommissionConfigs => Set<AgencyCommissionConfig>();
@@ -320,6 +322,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.HasIndex(x => x.PostId);
             // One of each emoji per user per post (a soft-deleted un-react must not block re-reacting).
             e.HasIndex(x => new { x.PostId, x.UserId, x.Emoji }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+        b.Entity<FeedPollOption>(e =>
+        {
+            e.Property(x => x.Text).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => x.PostId);
+        });
+        b.Entity<FeedPollVote>(e =>
+        {
+            e.HasIndex(x => x.PostId);
+            // One vote per user per poll (re-voting updates the existing row).
+            e.HasIndex(x => new { x.PostId, x.UserId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<Interview>(e =>

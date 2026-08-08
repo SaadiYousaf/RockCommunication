@@ -108,6 +108,9 @@ export default {
         "pulse-ring":{ "0%": { boxShadow: "0 0 0 0 rgba(60,114,105,0.50)" }, "70%": { boxShadow: "0 0 0 10px rgba(60,114,105,0)" }, "100%": { boxShadow: "0 0 0 0 rgba(60,114,105,0)" } },
         "fade-up":   { "0%": { opacity: "0", transform: "translateY(8px)" },  "100%": { opacity: "1", transform: "translateY(0)" } },
         "rise":      { "0%": { opacity: "0", transform: "translateY(16px) scale(0.98)" }, "100%": { opacity: "1", transform: "translateY(0) scale(1)" } },
+        // "Boomerang" pop — overshoots then settles, for reactions/votes landing.
+        "pop":       { "0%": { transform: "scale(0.7)" }, "55%": { transform: "scale(1.18)" }, "100%": { transform: "scale(1)" } },
+        "boomerang": { "0%,100%": { transform: "translateY(0) rotate(0)" }, "40%": { transform: "translateY(-3px) rotate(-8deg)" }, "70%": { transform: "translateY(1px) rotate(5deg)" } },
       },
       animation: {
         "fade-in":  "fade-in 0.18s ease-out",
@@ -118,6 +121,8 @@ export default {
         "scale-in": "scale-in 0.16s ease-out",
         shimmer:    "shimmer 1.4s linear infinite",
         "pulse-ring": "pulse-ring 2s cubic-bezier(0.66,0,0,1) infinite",
+        "pop":      "pop 0.32s cubic-bezier(0.5, 1.4, 0.4, 1) both",
+        "boomerang": "boomerang 0.6s cubic-bezier(0.5, 1.4, 0.4, 1)",
       },
     },
   },

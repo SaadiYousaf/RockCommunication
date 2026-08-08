@@ -37,6 +37,8 @@ public interface IApplicationDbContext
     DbSet<FeedPost> FeedPosts { get; }
     DbSet<FeedComment> FeedComments { get; }
     DbSet<FeedReaction> FeedReactions { get; }
+    DbSet<FeedPollOption> FeedPollOptions { get; }
+    DbSet<FeedPollVote> FeedPollVotes { get; }
     DbSet<ChatMessageReaction> ChatMessageReactions { get; }
     DbSet<CallRecord> CallRecords { get; }
     DbSet<AgencyCommissionConfig> AgencyCommissionConfigs { get; }
