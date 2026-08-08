@@ -43,7 +43,11 @@ echo "▸ [2/5] Building frontend (VITE_BUILD_ID=$SHORT)…"
 ( cd frontend && VITE_API_URL="$API_URL" VITE_BUILD_ID="$SHA" npm run build >/dev/null )
 
 echo "▸ [3/5] Syncing artifacts to the box…"
-rsync -az --delete --exclude 'appsettings.Production.json' \
+# App_Data holds user UPLOADS (Pulse images, employee documents, avatars). It lives under
+# the app dir but is NOT in the publish output, so without excluding it the --delete below
+# would erase every uploaded file on each deploy (the SQLite DB survives only because it's at
+# /data/crm.db, outside this dir). Exclude ⇒ uploads are preserved across deploys.
+rsync -az --delete --exclude 'appsettings.Production.json' --exclude 'App_Data' \
   -e "ssh ${SSH_OPTS[*]}" "$ROOT/api-publish/" "$SSH_HOST:$BOX_REPO/api-publish/"
 # Frontend: NO --delete. index.html (stable name) is overwritten with the new
 # build's chunk references, but the previous build's hashed assets/*.js are KEPT.

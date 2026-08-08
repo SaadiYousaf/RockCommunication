@@ -68,9 +68,12 @@ jobs:
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       # ---- Deploy: rsync artifacts, preserving the box's prod config + DB ----
+      # App_Data holds user UPLOADS (Pulse images, employee documents, avatars). It lives
+      # under the app dir but is NOT part of the publish output, so without this exclude the
+      # --delete below would wipe every uploaded file on each deploy. Exclude ⇒ preserved.
       - name: Sync backend
         run: |
-          rsync -az --delete --exclude 'appsettings.Production.json' \
+          rsync -az --delete --exclude 'appsettings.Production.json' --exclude 'App_Data' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             api-publish/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/api-publish/"
 
