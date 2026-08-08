@@ -86,7 +86,7 @@ public class CallControlHandler :
             Provider = _dialer.Name,
             ProviderCallId = string.IsNullOrEmpty(dial.CallId) ? providerCallId : dial.CallId,
             Status = "ringing",
-            Direction = "Outbound",
+            Direction = CRM.Domain.Constants.AppConstants.CallDirection.Outbound,
             InitiatedAt = DateTime.UtcNow
         };
         _db.CallRecords.Add(call);

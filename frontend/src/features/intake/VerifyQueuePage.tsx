@@ -1,5 +1,6 @@
 import { VERIFIER_STATUSES as STATUSES, MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
 import { getErrorDetail } from "../../shared/api/apiError";
+import { formatPhone } from "../../shared/lib/format";
 import { useEffect, useState } from "react";
 import {
   useVerifierQueueQuery, useSetVerifierStatusMutation,
@@ -102,7 +103,7 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
   return (
     <TR>
       <TD className="font-medium text-ink-900 whitespace-nowrap">{lead.firstName} {lead.lastName}</TD>
-      <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{lead.phoneNumber}</TD>
+      <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{formatPhone(lead.phoneNumber)}</TD>
       <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>
       <TD className="text-sm tabular-nums">{lead.ageYears ?? "—"}</TD>
       <TD className="whitespace-nowrap">

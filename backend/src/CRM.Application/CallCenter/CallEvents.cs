@@ -65,7 +65,7 @@ public class DialerEventHandler : IRequestHandler<DialerEventCommand, Unit>
                 Provider = request.Provider,
                 ProviderCallId = request.ProviderCallId,
                 Status = request.EventType,
-                Direction = "Inbound",
+                Direction = CRM.Domain.Constants.AppConstants.CallDirection.Inbound,
                 InitiatedAt = request.OccurredAt
             };
             _db.CallRecords.Add(record);

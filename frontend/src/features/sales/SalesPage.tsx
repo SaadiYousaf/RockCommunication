@@ -1,5 +1,6 @@
 import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
+import { formatPhone } from "../../shared/lib/format";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -283,7 +284,7 @@ export function SalesPage() {
                           </div>
                         </div>
                       </TD>
-                      <TD className="text-ink-600 tabular-nums whitespace-nowrap">{l.phoneNumber}</TD>
+                      <TD className="text-ink-600 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
                       <TD><Badge tone="warning" variant="soft" dot>{String(l.stage)}</Badge></TD>
                       <TD>
                         <div className="flex justify-end">
@@ -485,7 +486,7 @@ function SalesList() {
                     {/* Clicking the name jumps to the LEAD; clicking anywhere else opens the SALE. */}
                     <Link to={`/leads/${s.leadId}`} onClick={(e) => e.stopPropagation()} className="block min-w-0 hover:underline">
                       <div className="font-medium text-ink-900 truncate">{s.leadName}</div>
-                      <div className="text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</div>
+                      <div className="text-xs text-ink-500 tabular-nums whitespace-nowrap">{formatPhone(s.leadPhone)}</div>
                     </Link>
                   </TD>
                   <TD>

@@ -58,12 +58,12 @@ public class AbandonRateMetric : MetricBase
     public override async Task<MetricValue> CalculateAsync(MetricFilter f, CancellationToken ct = default)
     {
         var inbound = await Db.CallRecords
-            .Where(c => c.AgencyId == f.AgencyId && c.Direction == "Inbound"
+            .Where(c => c.AgencyId == f.AgencyId && c.Direction == CRM.Domain.Constants.AppConstants.CallDirection.Inbound
                 && c.InitiatedAt >= f.From && c.InitiatedAt < f.To)
             .CountAsync(ct);
         if (inbound == 0) return Result(0, "%");
         var abandoned = await Db.CallRecords
-            .Where(c => c.AgencyId == f.AgencyId && c.Direction == "Inbound"
+            .Where(c => c.AgencyId == f.AgencyId && c.Direction == CRM.Domain.Constants.AppConstants.CallDirection.Inbound
                 && c.Status == "abandoned"
                 && c.InitiatedAt >= f.From && c.InitiatedAt < f.To)
             .CountAsync(ct);
@@ -83,7 +83,7 @@ public class ServiceLevelMetric : MetricBase
     public override async Task<MetricValue> CalculateAsync(MetricFilter f, CancellationToken ct = default)
     {
         var calls = await Db.CallRecords
-            .Where(c => c.AgencyId == f.AgencyId && c.Direction == "Inbound" && c.AnsweredAt != null
+            .Where(c => c.AgencyId == f.AgencyId && c.Direction == CRM.Domain.Constants.AppConstants.CallDirection.Inbound && c.AnsweredAt != null
                 && c.InitiatedAt >= f.From && c.InitiatedAt < f.To)
             .Select(c => new { c.InitiatedAt, c.AnsweredAt })
             .ToListAsync(ct);

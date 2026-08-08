@@ -5,6 +5,7 @@ import { useCreatePayrollRunMutation, useMyCommissionsQuery, usePayrollRunsQuery
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { isManager } from "../../shared/constants/roles";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
@@ -26,8 +27,8 @@ export function CommissionsPage() {
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const { data: commissions, isLoading } = useMyCommissionsQuery({ from, to });
-  const isManager = auth.user?.roles.some((r) => ["Admin", "ProgramManager"].includes(r)) ?? false;
-  const { data: runs } = usePayrollRunsQuery(undefined, { skip: !isManager });
+  const manager = isManager(auth.user?.roles ?? []);
+  const { data: runs } = usePayrollRunsQuery(undefined, { skip: !manager });
   const [createRun, { isLoading: creating }] = useCreatePayrollRunMutation();
   const toast = useToast();
   const confirm = useConfirm();
@@ -189,7 +190,7 @@ export function CommissionsPage() {
             <TR>
               <TH sortDir={dirFor("earnedAt")} onClick={() => toggle("earnedAt")}>Earned</TH>
               <TH sortDir={dirFor("ruleName")} onClick={() => toggle("ruleName")}>Rule</TH>
-              <TH sortDir={dirFor("amount")} onClick={() => toggle("amount")}>Amount</TH>
+              <TH numeric sortDir={dirFor("amount")} onClick={() => toggle("amount")}>Amount</TH>
               <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                 <span className="inline-flex items-center gap-1">
                   Status
@@ -207,7 +208,7 @@ export function CommissionsPage() {
               <TR key={c.id}>
                 <TD className="text-ink-600 whitespace-nowrap tabular-nums">{new Date(c.earnedAt).toLocaleString()}</TD>
                 <TD className="font-mono text-xs text-ink-700">{c.ruleName}</TD>
-                <TD className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${c.amount.toFixed(2)}</TD>
+                <TD numeric className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${c.amount.toFixed(2)}</TD>
                 <TD>
                   {c.paid
                     ? <Badge tone="success" variant="soft" dot>Paid</Badge>
@@ -220,7 +221,7 @@ export function CommissionsPage() {
         </Table>
       )}
 
-      {isManager && (
+      {manager && (
         <Card className="mt-6">
           <CardHeader
             title="Payroll runs"
@@ -253,7 +254,7 @@ export function CommissionsPage() {
                 <THead>
                   <TR>
                     <TH>Period</TH>
-                    <TH>Total</TH>
+                    <TH numeric>Total</TH>
                     <TH>
                       <span className="inline-flex items-center gap-1">
                         Status
@@ -271,7 +272,7 @@ export function CommissionsPage() {
                   {runs.map((r) => (
                     <TR key={r.id}>
                       <TD className="text-ink-700 whitespace-nowrap tabular-nums">{r.periodStart.slice(0, 10)} → {r.periodEnd.slice(0, 10)}</TD>
-                      <TD className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${r.totalAmount.toFixed(2)}</TD>
+                      <TD numeric className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${r.totalAmount.toFixed(2)}</TD>
                       <TD><Badge tone={r.status === "Processed" ? "success" : "neutral"} variant="soft">{r.status}</Badge></TD>
                       <TD className="text-ink-500 text-xs whitespace-nowrap tabular-nums">
                         {r.processedAt ? new Date(r.processedAt).toLocaleString() : "—"}

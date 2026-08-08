@@ -99,7 +99,7 @@ public class RouteInboundCallHandler : IRequestHandler<RouteInboundCallCommand, 
             Provider = request.Provider,
             ProviderCallId = request.ProviderCallId,
             Status = "ringing",
-            Direction = "Inbound",
+            Direction = CRM.Domain.Constants.AppConstants.CallDirection.Inbound,
             InitiatedAt = queuedCall.EnteredAt,
             AnsweredAt = queuedCall.AnsweredAt
         };

@@ -49,6 +49,9 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
 builder.Services.AddControllers().AddJsonOptions(opts =>
 {
     opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    // Emit every DateTime as UTC with a 'Z' so the browser never mis-parses a SQLite-read
+    // (Kind=Unspecified) timestamp as local time (which showed a just-posted item as "5h ago").
+    opts.JsonSerializerOptions.Converters.Add(new CRM.Api.Serialization.UtcDateTimeConverter());
 });
 // SignalR — optional Redis backplane lets us run multiple API replicas behind
 // a load balancer. Without it, hub messages stay within a single process.

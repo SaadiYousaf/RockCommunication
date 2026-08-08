@@ -1,4 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { formatPhone } from "../../shared/lib/format";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
@@ -98,7 +99,7 @@ export function CloseQueuePage() {
                 {sorted.map((l) => (
                   <TR key={l.id} className="cursor-pointer" onClick={() => navigate(`/close-queue/${l.id}`)}>
                     <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
-                    <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{l.phoneNumber}</TD>
+                    <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{formatPhone(l.phoneNumber)}</TD>
                     <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
                     <TD className="text-sm tabular-nums">{l.ageYears ?? "—"}</TD>
                     <TD className="whitespace-nowrap">

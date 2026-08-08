@@ -62,4 +62,17 @@ public class FeedTests : IClassFixture<CrmWebAppFactory>
         Assert.Equal("Announcement", post.GetProperty("kind").GetString());
         Assert.False(post.GetProperty("hasImage").GetBoolean());
     }
+
+    [Fact]
+    public async Task Timestamps_are_serialized_as_utc_with_a_z()
+    {
+        // Without the UTC converter, a SQLite-read timestamp serializes WITHOUT a zone and the browser
+        // parses it as local time (a just-posted item showed "5h ago"). Every timestamp must end with 'Z'.
+        var admin = await _factory.LoginAdminAsync();
+        await admin.PostJsonAsync("/api/feed", new { body = "tz check" });
+        var feed = await admin.GetJsonAsync("/api/feed?take=5");
+        var createdAt = feed.EnumerateArray().First().GetProperty("createdAt").GetString();
+        Assert.NotNull(createdAt);
+        Assert.EndsWith("Z", createdAt);
+    }
 }

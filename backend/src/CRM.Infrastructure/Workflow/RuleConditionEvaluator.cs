@@ -15,8 +15,13 @@ public class RuleConditionEvaluator
     public static bool Evaluate(string? json, IReadOnlyDictionary<string, object?> facts)
     {
         if (string.IsNullOrWhiteSpace(json)) return true;
-        using var doc = JsonDocument.Parse(json);
-        return EvaluateNode(doc.RootElement, facts);
+        // A malformed condition must never crash the pipeline that raised the event — a broken
+        // rule simply never matches (it's also rejected at the save boundary, see UpsertWorkflowRuleValidator).
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(json); }
+        catch (JsonException) { return false; }
+        using (doc)
+            return EvaluateNode(doc.RootElement, facts);
     }
 
     private static bool EvaluateNode(JsonElement node, IReadOnlyDictionary<string, object?> facts)

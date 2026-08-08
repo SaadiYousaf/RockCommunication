@@ -67,8 +67,10 @@ public class ListCallsHandler : IRequestHandler<ListCallsQuery, PagedCallsResult
 
         var total = await q.CountAsync(ct);
         var answered = await q.CountAsync(c => c.AnsweredAt != null, ct);
-        var voicemail = await q.CountAsync(c => c.Status == "voicemail", ct);
-        var abandoned = await q.CountAsync(c => c.Status == "abandoned", ct);
+        // Case-insensitive: statuses are stored lowercase at runtime but PascalCase by the seeder /
+        // some dialer webhooks — a case-sensitive match silently under-counts those rows.
+        var voicemail = await q.CountAsync(c => c.Status != null && c.Status.ToLower() == "voicemail", ct);
+        var abandoned = await q.CountAsync(c => c.Status != null && c.Status.ToLower() == "abandoned", ct);
 
         var talkData = await q.Where(c => c.AnsweredAt != null && c.EndedAt != null)
             .Select(c => new { c.AnsweredAt, c.EndedAt }).ToListAsync(ct);

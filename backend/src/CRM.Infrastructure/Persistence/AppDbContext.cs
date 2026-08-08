@@ -277,10 +277,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.BankName).HasMaxLength(200);
             e.Property(x => x.BankAccountTitle).HasMaxLength(200);
             e.Property(x => x.BankIban).HasMaxLength(60);
-            // Sensitive PII — encrypted at rest like SSN.
+            // Sensitive PII — encrypted at rest like SSN (also auto-redacts from the audit log).
             var empEnc = new Security.EncryptedStringConverter();
             e.Property(x => x.Cnic).HasConversion(empEnc);
             e.Property(x => x.BankAccountNumber).HasConversion(empEnc);
+            // IBAN embeds the full account number — encrypt it too (was plaintext at rest + in audit Changes).
+            e.Property(x => x.BankIban).HasConversion(empEnc);
             // Agent ID is unique within an agency (ignore soft-deleted rows).
             e.HasIndex(x => new { x.AgencyId, x.AgentCode })
                 .IsUnique()

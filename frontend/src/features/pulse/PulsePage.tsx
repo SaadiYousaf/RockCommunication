@@ -100,6 +100,8 @@ export function PulsePage() {
   const [imageKey, setImageKey] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Revoke a staged preview object URL on unmount/replace (the manual revokes cover the other paths).
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
 
   function resetComposer() {
     setDraft(""); setKind("Update"); setImageKey(null);

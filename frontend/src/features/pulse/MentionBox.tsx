@@ -72,7 +72,7 @@ export function MentionBox({
     }
     if (!onSubmit) return;
     if (multiline && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); onSubmit(); }
-    else if (!multiline && e.key === "Enter" && !e.shiftKey && !open) { e.preventDefault(); onSubmit(); }
+    else if (!multiline && e.key === "Enter" && !e.shiftKey && !(open && matches.length)) { e.preventDefault(); onSubmit(); }
   }
 
   const menu = open && matches.length > 0 && (

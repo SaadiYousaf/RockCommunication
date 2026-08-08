@@ -36,6 +36,18 @@ public class UpsertWorkflowRuleValidator : AbstractValidator<UpsertWorkflowRuleC
     {
         RuleFor(x => x.Input.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Input.EventType).NotEmpty().MaximumLength(60);
+        // Reject malformed JSON at the save boundary (a 400) rather than persisting a landmine that
+        // would throw when the rule is later evaluated against a live event.
+        RuleFor(x => x.Input.ConditionJson).Must(BeValidJsonOrEmpty).WithMessage("Condition must be valid JSON.");
+        RuleForEach(x => x.Input.Actions).Must(a => BeValidJsonOrEmpty(a.ParametersJson))
+            .WithMessage("Action parameters must be valid JSON.");
+    }
+
+    private static bool BeValidJsonOrEmpty(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return true;
+        try { using var _ = System.Text.Json.JsonDocument.Parse(json); return true; }
+        catch (System.Text.Json.JsonException) { return false; }
     }
 }
 

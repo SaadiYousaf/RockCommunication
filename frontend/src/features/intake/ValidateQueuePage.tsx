@@ -16,7 +16,7 @@ import {
   VALIDATOR_STATUS_TONE as TONE,
 } from "../../shared/constants/intake";
 import { useTableSort } from "../../shared/hooks/useTableSort";
-import { formatUsd } from "../../shared/lib/format";
+import { formatUsd, formatPhone } from "../../shared/lib/format";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
@@ -86,7 +86,7 @@ export function ValidateQueuePage() {
                   <TR key={s.saleId}>
                     <TD>
                       <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
-                      <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{s.leadPhone}</div>
+                      <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{formatPhone(s.leadPhone)}</div>
                     </TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
                     <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>

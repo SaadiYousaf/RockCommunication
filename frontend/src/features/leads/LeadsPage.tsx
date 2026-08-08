@@ -119,6 +119,7 @@ export function LeadsPage() {
   const [createLead, { isLoading: creating }] = useCreateLeadMutation();
   const [transitionLead] = useTransitionLeadMutation();
   const [dialLead] = useDialLeadMutation();
+  const [dialingId, setDialingId] = useState<string | null>(null);
   const [bulkAssign, { isLoading: assigning }] = useBulkAssignLeadsMutation();
   const [bulkStage, { isLoading: settingStage }] = useBulkSetStageMutation();
   const [bulkEnroll, { isLoading: enrolling }] = useBulkEnrollCadenceMutation();
@@ -143,12 +144,15 @@ export function LeadsPage() {
   }
 
   async function dialFromRow(id: string) {
+    setDialingId(id);
     try {
       await dialLead({ leadId: id }).unwrap();
       toast.success("Calling…");
       navigate(`/leads/${id}`);
     } catch (err: unknown) {
       toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setDialingId(null);
     }
   }
 
@@ -420,6 +424,7 @@ export function LeadsPage() {
                   <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                     <div className="flex items-center justify-end gap-1.5">
                       <Button variant="outline" size="sm" leftIcon={<Icon name="phoneCall" size={13} />}
+                        loading={dialingId === l.id} disabled={dialingId === l.id}
                         onClick={() => dialFromRow(l.id)}>Dial</Button>
                       <Select
                         defaultValue=""

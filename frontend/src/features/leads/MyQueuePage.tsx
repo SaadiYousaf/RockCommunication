@@ -40,8 +40,9 @@ export function MyQueuePage() {
   const toast = useToast();
   // Poll: managers/round-robin can assign leads to me while I'm on this page.
   const { data: leads, isLoading, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000 });
-  const [transition] = useTransitionLeadMutation();
-  const [dial] = useDialLeadMutation();
+  const [transition, { isLoading: transitioning }] = useTransitionLeadMutation();
+  const [dial, { isLoading: dialing }] = useDialLeadMutation();
+  const [busyId, setBusyId] = useState<string | null>(null);   // the row whose action is in flight
 
   const [filter, setFilter] = useState<WorkflowStage | "All" | "Active">("Active");
   const [search, setSearch] = useState("");
@@ -77,22 +78,28 @@ export function MyQueuePage() {
   });
 
   async function dialFromRow(id: string, name: string) {
+    setBusyId(id);
     try {
       await dial({ leadId: id }).unwrap();
       toast.success("Calling…", name);
       navigate(`/leads/${id}`);
     } catch (err: unknown) {
       toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setBusyId(null);
     }
   }
 
   async function quick(id: string, toStage: WorkflowStage, disposition: LeadDisposition, name: string) {
+    setBusyId(id);
     try {
       await transition({ id, toStage, disposition }).unwrap();
       toast.success("Disposition saved", `${name} → ${disposition}`);
       refetch();
     } catch (err: unknown) {
       toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -206,17 +213,21 @@ export function MyQueuePage() {
                   <TD>
                     <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       <Button size="sm" leftIcon={<Icon name="phoneCall" size={13} />}
+                        loading={dialing && busyId === l.id} disabled={busyId === l.id}
                         onClick={() => dialFromRow(l.id, name)}>Dial</Button>
                       {next.includes("Verified") && (
                         <Button size="sm" variant="outline"
+                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
                           onClick={() => quick(l.id, "Verified", "Interested", name)}>Verified</Button>
                       )}
                       {next.includes("Closed") && (
                         <Button size="sm" variant="outline"
+                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
                           onClick={() => quick(l.id, "Closed", "Sold", name)}>Closed</Button>
                       )}
                       {QUICK_DISPOSITIONS.filter(q => next.includes(q.kind)).slice(0, 2).map(q => (
                         <Button key={q.label} size="sm" variant="ghost"
+                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
                           onClick={() => quick(l.id, q.kind, q.disp, name)}>{q.label}</Button>
                       ))}
                       <Link to={`/leads/${l.id}`}>

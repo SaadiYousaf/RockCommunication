@@ -145,9 +145,9 @@ public class FeedHandlers :
         _db.FeedPosts.Add(post);
         await _db.SaveChangesAsync(ct);
 
-        // Notify EVERYONE in the agency (except the author) about the new post — bulk-inserted in one
-        // save rather than N dispatcher round-trips. Best-effort: the post already succeeded.
-        await BroadcastNewPostAsync(aid, uid, post, ct);
+        // Notify the whole agency about the new post; anyone @mentioned gets a specific "you were
+        // mentioned" notification instead of the generic one. Best-effort: the post already succeeded.
+        await NotifyPostAsync(aid, uid, post, ct);
 
         return new FeedPostDto(post.Id, uid, _user.UserName ?? "You", post.Body, post.Kind.ToString(), post.ImageKey != null,
             post.CreatedAt, Array.Empty<FeedReactionDto>(), Array.Empty<FeedCommentDto>(), true);
@@ -263,21 +263,36 @@ public class FeedHandlers :
         catch { /* best-effort — the write already succeeded */ }
     }
 
-    // Everyone in the agency is notified of a new post. One bulk insert (not N dispatcher round-trips);
-    // the in-app bell poll surfaces it. Best-effort — the post is already persisted.
-    private async Task BroadcastNewPostAsync(Guid agencyId, Guid authorId, FeedPost post, CancellationToken ct)
+    // Everyone in the agency is notified of a new post (one bulk insert, not N dispatcher round-trips;
+    // the in-app bell poll surfaces it). @mentioned teammates get a specific mention notification
+    // instead of the generic one. Best-effort — the post is already persisted.
+    private async Task NotifyPostAsync(Guid agencyId, Guid authorId, FeedPost post, CancellationToken ct)
     {
         try
         {
-            var names = await _identity.ListUserNamesAsync(agencyId, ct);
-            var isAnnouncement = post.Kind == FeedPostKind.Announcement;
+            var names = await _identity.ListUserNamesAsync(agencyId, ct);   // id -> username
             var author = _user.UserName ?? "A teammate";
+
+            // Resolve @mentions in the body to user ids (excluding the author).
+            var byHandle = names.GroupBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Key, StringComparer.OrdinalIgnoreCase);
+            var mentioned = FeedConstants.MentionPattern.Matches(post.Body)
+                .Select(m => m.Groups[1].Value)
+                .Select(h => byHandle.TryGetValue(h, out var id) ? id : (Guid?)null)
+                .Where(id => id is { } g && g != authorId)
+                .Select(id => id!.Value)
+                .ToHashSet();
+
+            var isAnnouncement = post.Kind == FeedPostKind.Announcement;
             var title = isAnnouncement ? "📣 New announcement" : "New post on Pulse";
             var body = isAnnouncement ? $"{author} posted an announcement." : $"{author} shared a post on Pulse.";
-            var rows = names.Keys
-                .Where(id => id != authorId)
-                .Select(id => new Notification { AgencyId = agencyId, UserId = id, Title = title, Body = body, Url = "/pulse" })
-                .ToList();
+
+            var rows = new List<Notification>();
+            foreach (var id in mentioned)
+                rows.Add(new Notification { AgencyId = agencyId, UserId = id, Title = "You were mentioned", Body = $"{author} mentioned you in a post.", Url = "/pulse" });
+            foreach (var id in names.Keys.Where(id => id != authorId && !mentioned.Contains(id)))
+                rows.Add(new Notification { AgencyId = agencyId, UserId = id, Title = title, Body = body, Url = "/pulse" });
+
             if (rows.Count == 0) return;
             _db.Notifications.AddRange(rows);
             await _db.SaveChangesAsync(ct);
