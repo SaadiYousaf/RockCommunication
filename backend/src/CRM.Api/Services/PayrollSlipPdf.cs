@@ -15,6 +15,9 @@ public static class PayrollSlipPdf
     public static byte[] Build(PayrollRowDto p, string companyName)
     {
         var monthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(p.Month);
+        // Daily wage drives the attendance-based deductions: basic salary ÷ working days.
+        var dailyWage = p.WorkingDays > 0 ? p.BasicSalary / p.WorkingDays : 0m;
+        var payableDays = p.PresentDays + p.LeavesApproved;
 
         var document = Document.Create(container =>
         {
@@ -43,14 +46,19 @@ public static class PayrollSlipPdf
                         r.RelativeItem().AlignRight().Text(t => { t.Span("Agent ID: ").SemiBold(); t.Span(p.AgentCode); });
                     });
 
-                    // Attendance summary (the "number" against each line)
+                    // Attendance summary (the "number" against each line) + the pay basis.
                     col.Item().Background(Colors.Grey.Lighten4).Padding(8).Column(a =>
                     {
                         a.Item().Text("Attendance").SemiBold();
                         a.Item().PaddingTop(2).Text(
-                            $"Working {p.WorkingDays}   ·   Present {p.PresentDays}   ·   Late {p.LateComing}   ·   " +
+                            $"Working {p.WorkingDays}   ·   Present {p.PresentDays}   ·   Payable {payableDays}   ·   Late {p.LateComing}   ·   " +
                             $"Half {p.HalfDays}   ·   Leave {p.LeavesApproved}   ·   Absent {p.AbsentDays}   ·   NCNS {p.Ncns}")
                             .FontColor(Colors.Grey.Darken1);
+                        a.Item().PaddingTop(2).Text(t =>
+                        {
+                            t.Span("Daily wage: ").SemiBold();
+                            t.Span($"{Money(dailyWage)}  (basic {Money(p.BasicSalary)} ÷ {p.WorkingDays} working days)").FontColor(Colors.Grey.Darken1);
+                        });
                     });
 
                     col.Item().Row(r =>

@@ -5,13 +5,14 @@ import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import {
   useListFeedQuery, useCreatePostMutation, useDeletePostMutation, useReactPostMutation,
-  useCommentPostMutation, useDeleteFeedCommentMutation, useUploadFeedImageMutation,
+  useCommentPostMutation, useDeleteFeedCommentMutation, useUploadFeedImageMutation, useUserDirectoryQuery,
 } from "../../shared/api/baseApi";
 import type { FeedPost, FeedComment, FeedPostKind } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Avatar, Button, Card, CardBody, EmptyState, Icon, PageHeader, Skeleton, Textarea, cn, useToast,
+  Avatar, Button, Card, CardBody, EmptyState, Icon, PageHeader, Skeleton, cn, useToast,
 } from "../../shared/ui";
+import { MentionBox, type MentionUser } from "./MentionBox";
 
 const QUICK_EMOJIS = ["👍", "❤️", "🎉", "🔥", "👏", "😄", "🙌", "💯"];
 
@@ -74,6 +75,7 @@ function AuthImage({ postId }: { postId: string }) {
  */
 export function PulsePage() {
   const me = useSelector((s: RootState) => s.auth.user);
+  const { data: users } = useUserDirectoryQuery();
   const { data: posts, isLoading } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000 });
   const [createPost, { isLoading: posting }] = useCreatePostMutation();
   const [uploadImage, { isLoading: uploading }] = useUploadFeedImageMutation();
@@ -140,13 +142,9 @@ export function PulsePage() {
                 </button>
               ))}
             </div>
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); } }}
-              placeholder={kind === "Announcement" ? "Write an announcement for the team…" : "Share something with the team…  @name to mention."}
+            <MentionBox multiline value={draft} onChange={setDraft} onSubmit={submit} users={users ?? []}
               rows={draft ? 3 : 2}
-            />
+              placeholder={kind === "Announcement" ? "Write an announcement for the team…" : "Share something with the team…  @name to mention."} />
             {imagePreview && (
               <div className="relative mt-2 inline-block">
                 <img src={imagePreview} alt="Preview" className="max-h-40 rounded-lg border hairline" />
@@ -181,14 +179,14 @@ export function PulsePage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-4">
-          {posts.map((p) => <PostCard key={p.id} post={p} meName={me?.userName ?? ""} />)}
+          {posts.map((p) => <PostCard key={p.id} post={p} meName={me?.userName ?? ""} users={users ?? []} />)}
         </div>
       )}
     </>
   );
 }
 
-function PostCard({ post, meName }: { post: FeedPost; meName: string }) {
+function PostCard({ post, meName, users }: { post: FeedPost; meName: string; users: MentionUser[] }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [react] = useReactPostMutation();
@@ -267,7 +265,7 @@ function PostCard({ post, meName }: { post: FeedPost; meName: string }) {
             {(showComment || post.comments.length > 0) && (
               <div className="mt-3 pt-3 border-t hairline space-y-3">
                 {post.comments.map((c) => <CommentRow key={c.id} comment={c} />)}
-                <CommentComposer postId={post.id} meName={meName} />
+                <CommentComposer postId={post.id} meName={meName} users={users} />
               </div>
             )}
           </div>
@@ -301,7 +299,7 @@ function CommentRow({ comment }: { comment: FeedComment }) {
   );
 }
 
-function CommentComposer({ postId, meName }: { postId: string; meName: string }) {
+function CommentComposer({ postId, meName, users }: { postId: string; meName: string; users: MentionUser[] }) {
   const [body, setBody] = useState("");
   const [comment, { isLoading }] = useCommentPostMutation();
   const toast = useToast();
@@ -316,14 +314,11 @@ function CommentComposer({ postId, meName }: { postId: string; meName: string })
   return (
     <div className="flex items-center gap-2.5">
       <Avatar name={meName || "You"} size={28} />
-      <input
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-        placeholder="Write a comment…  @name to mention"
-        aria-label="Write a comment"
-        className="flex-1 h-9 rounded-full border border-ink-200 px-3.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20"
-      />
+      <div className="flex-1">
+        <MentionBox value={body} onChange={setBody} onSubmit={send} users={users} ariaLabel="Write a comment"
+          placeholder="Write a comment…  @name to mention"
+          inputClassName="w-full h-9 rounded-full border border-ink-200 px-3.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20" />
+      </div>
       <Button size="sm" variant="ghost" loading={isLoading} disabled={!body.trim()} onClick={send}>Send</Button>
     </div>
   );

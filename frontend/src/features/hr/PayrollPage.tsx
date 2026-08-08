@@ -109,6 +109,7 @@ export function PayrollPage() {
   const gross = form ? form.basicSalary + form.punctuality + form.dailyBonus + form.monthlyCommissions + form.transportAllowance + form.specialAllowance : 0;
   const totalDeductions = form ? form.advanceSalary + form.docks + form.lateComingAmount + form.halfDaysAmount + form.absentDaysAmount + form.ncnsAmount : 0;
   const netPay = gross - totalDeductions;
+  const dailyWage = form && form.workingDays > 0 ? form.basicSalary / form.workingDays : 0;
 
   async function downloadSlip(row: PayrollRow) {
     setDownloadingId(row.employeeId);
@@ -247,6 +248,10 @@ export function PayrollPage() {
               <Num label="Transport allowance" v={form.transportAllowance} on={num("transportAllowance")} />
               <Num label="Special allowance" v={form.specialAllowance} on={num("specialAllowance")} />
             </Section>
+            <div className="text-xs text-ink-500 -mb-1">
+              Daily wage <span className="font-semibold text-ink-700 tabular-nums">{money(dailyWage)}</span>
+              {" "}— basic {money(form.basicSalary)} ÷ {form.workingDays} working days. Day-based deductions (half/absent/NCNS) are computed from this.
+            </div>
             <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Amounts auto-calculate from this call centre's deduction rules (Number × rate) — edit an Amount to override it. Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
               <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} onAmount={numOverride("lateComingAmount")} />
               <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} onAmount={numOverride("halfDaysAmount")} />
