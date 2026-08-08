@@ -83,6 +83,14 @@ export function ChatPage() {
     const r = searchParams.get("room");
     if (r) setActiveRoom(r);
   }, [searchParams]);
+
+  // Deep-link: /chat?dm={userId} starts (or opens) a direct message with that user — lets any
+  // "Chat" button / @mention across the app jump straight into a conversation with someone.
+  const dmParam = searchParams.get("dm");
+  useEffect(() => {
+    if (dmParam) handleStartDm(dmParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dmParam]);
   const { data: serverMessages, refetch, isLoading: msgsLoading } = useRoomMessagesQuery(
     { roomId: activeRoom! }, { skip: !activeRoom },
   );

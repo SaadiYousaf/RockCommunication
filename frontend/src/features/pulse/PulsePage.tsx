@@ -1,6 +1,7 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import {
@@ -38,12 +39,19 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-/** Render body text with @mentions highlighted (plain text — never dangerouslySetInnerHTML). */
-function withMentions(body: string): ReactNode[] {
-  return body.split(/(@[A-Za-z0-9._-]{2,32})/g).map((part, i) =>
-    part.startsWith("@")
-      ? <span key={i} className="text-brand-600 font-medium">{part}</span>
-      : <span key={i}>{part}</span>);
+/**
+ * Render body text with @mentions highlighted (plain text — never dangerouslySetInnerHTML).
+ * When onMention is given, a mention is a button that opens a DM with that teammate.
+ */
+function withMentions(body: string, onMention?: (username: string) => void): ReactNode[] {
+  return body.split(/(@[A-Za-z0-9._-]{2,32})/g).map((part, i) => {
+    if (!part.startsWith("@")) return <span key={i}>{part}</span>;
+    const name = part.slice(1);
+    return onMention
+      ? <button key={i} type="button" onClick={() => onMention(name)} title={`Message ${name}`}
+          className="text-brand-600 font-medium hover:underline">{part}</button>
+      : <span key={i} className="text-brand-600 font-medium">{part}</span>;
+  });
 }
 
 /** An image that requires the bearer token — fetched as a blob (same pattern as ProfileAvatar). */
@@ -75,8 +83,14 @@ function AuthImage({ postId }: { postId: string }) {
  */
 export function PulsePage() {
   const me = useSelector((s: RootState) => s.auth.user);
+  const navigate = useNavigate();
   const { data: users } = useUserDirectoryQuery();
   const { data: posts, isLoading } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000 });
+
+  // Clicking a @mention or an author opens a direct message with that person.
+  const usersByName = useMemo(() => new Map((users ?? []).map((u) => [u.userName.toLowerCase(), u.id])), [users]);
+  const openDmById = (userId: string) => { if (userId && userId !== me?.id) navigate(`/chat?dm=${userId}`); };
+  const openDmByName = (username: string) => { const id = usersByName.get(username.toLowerCase()); if (id) openDmById(id); };
   const [createPost, { isLoading: posting }] = useCreatePostMutation();
   const [uploadImage, { isLoading: uploading }] = useUploadFeedImageMutation();
   const toast = useToast();
@@ -179,14 +193,18 @@ export function PulsePage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-4">
-          {posts.map((p) => <PostCard key={p.id} post={p} meName={me?.userName ?? ""} users={users ?? []} />)}
+          {posts.map((p) => <PostCard key={p.id} post={p} meName={me?.userName ?? ""} users={users ?? []}
+            onMention={openDmByName} onOpenDm={openDmById} />)}
         </div>
       )}
     </>
   );
 }
 
-function PostCard({ post, meName, users }: { post: FeedPost; meName: string; users: MentionUser[] }) {
+function PostCard({ post, meName, users, onMention, onOpenDm }: {
+  post: FeedPost; meName: string; users: MentionUser[];
+  onMention: (username: string) => void; onOpenDm: (userId: string) => void;
+}) {
   const toast = useToast();
   const confirm = useConfirm();
   const [react] = useReactPostMutation();
@@ -211,10 +229,13 @@ function PostCard({ post, meName, users }: { post: FeedPost; meName: string; use
     <Card className={cn("hover:shadow-card-hover transition-shadow", meta.accent)}>
       <CardBody>
         <div className="flex items-start gap-3">
-          <Avatar name={post.authorName} size={40} />
+          <button type="button" onClick={() => onOpenDm(post.authorUserId)} title={`Message ${post.authorName}`} className="shrink-0">
+            <Avatar name={post.authorName} size={40} />
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-ink-900">{post.authorName}</span>
+              <button type="button" onClick={() => onOpenDm(post.authorUserId)} title={`Message ${post.authorName}`}
+                className="font-semibold text-ink-900 hover:text-brand-600 transition-colors">{post.authorName}</button>
               {meta.label && (
                 <span className={cn("inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full border", meta.chip)}>
                   {meta.emoji} {meta.label}
@@ -228,7 +249,7 @@ function PostCard({ post, meName, users }: { post: FeedPost; meName: string; use
                 </button>
               )}
             </div>
-            {post.body && <p className="text-sm text-ink-800 mt-1 whitespace-pre-wrap break-words leading-relaxed">{withMentions(post.body)}</p>}
+            {post.body && <p className="text-sm text-ink-800 mt-1 whitespace-pre-wrap break-words leading-relaxed">{withMentions(post.body, onMention)}</p>}
             {post.hasImage && <AuthImage postId={post.id} />}
 
             {/* Reactions */}
@@ -264,7 +285,7 @@ function PostCard({ post, meName, users }: { post: FeedPost; meName: string; use
             {/* Comments */}
             {(showComment || post.comments.length > 0) && (
               <div className="mt-3 pt-3 border-t hairline space-y-3">
-                {post.comments.map((c) => <CommentRow key={c.id} comment={c} />)}
+                {post.comments.map((c) => <CommentRow key={c.id} comment={c} onMention={onMention} onOpenDm={onOpenDm} />)}
                 <CommentComposer postId={post.id} meName={meName} users={users} />
               </div>
             )}
@@ -275,15 +296,20 @@ function PostCard({ post, meName, users }: { post: FeedPost; meName: string; use
   );
 }
 
-function CommentRow({ comment }: { comment: FeedComment }) {
+function CommentRow({ comment, onMention, onOpenDm }: {
+  comment: FeedComment; onMention: (username: string) => void; onOpenDm: (userId: string) => void;
+}) {
   const toast = useToast();
   const [del] = useDeleteFeedCommentMutation();
   return (
     <div className="flex items-start gap-2.5 group">
-      <Avatar name={comment.authorName} size={28} />
+      <button type="button" onClick={() => onOpenDm(comment.authorUserId)} title={`Message ${comment.authorName}`} className="shrink-0">
+        <Avatar name={comment.authorName} size={28} />
+      </button>
       <div className="flex-1 min-w-0 rounded-xl bg-ink-50 px-3 py-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-ink-900">{comment.authorName}</span>
+          <button type="button" onClick={() => onOpenDm(comment.authorUserId)} title={`Message ${comment.authorName}`}
+            className="text-sm font-medium text-ink-900 hover:text-brand-600 transition-colors">{comment.authorName}</button>
           <span className="text-[11px] text-ink-400 tabular-nums">· {timeAgo(comment.createdAt)}</span>
           {comment.canDelete && (
             <button onClick={async () => { try { await del(comment.id).unwrap(); } catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); } }}
@@ -293,7 +319,7 @@ function CommentRow({ comment }: { comment: FeedComment }) {
             </button>
           )}
         </div>
-        <p className="text-sm text-ink-700 mt-0.5 whitespace-pre-wrap break-words">{withMentions(comment.body)}</p>
+        <p className="text-sm text-ink-700 mt-0.5 whitespace-pre-wrap break-words">{withMentions(comment.body, onMention)}</p>
       </div>
     </div>
   );

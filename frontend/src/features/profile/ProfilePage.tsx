@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { roleLabel } from "../../shared/constants/roles";
 import {
@@ -18,6 +18,7 @@ import type { UpdateProfileInput } from "./types";
  */
 export function ProfilePage() {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const isSelf = !userId;
 
   const myProfileQ = useMyProfileQuery(undefined, { skip: !isSelf });
@@ -90,6 +91,9 @@ export function ProfilePage() {
         description={isSelf
           ? "Manage your photo and personal details. Your organization information is managed by your admins."
           : "Viewing a colleague's profile — read only."}
+        actions={!isSelf
+          ? <Button leftIcon={<Icon name="chat" size={15} />} onClick={() => navigate(`/chat?dm=${profile.id}`)}>Message</Button>
+          : undefined}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
