@@ -7,9 +7,11 @@ import {
 } from "../../shared/api/baseApi";
 import { ATTENDANCE_STATUSES, hrLabel } from "../../shared/constants/hr";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton,
   Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 type Tab = "daily" | "summary";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -59,9 +61,45 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
   const confirm = useConfirm();
   const [bulkStatus, setBulkStatus] = useState("Present");
 
+  const list = rows ?? [];
+  const sel = useRowSelection(list.map((r) => r.employeeId));
+  const [applying, setApplying] = useState(false);
+
   async function setStatus(employeeId: string, status: string) {
     try { await mark({ employeeId, date, status }).unwrap(); }
     catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+  }
+
+  // Bulk-set the chosen status on ONLY the ticked employees (the "Apply to all" button above
+  // still covers everyone). Reuses the per-row mutation so there's no new endpoint to trust.
+  async function applyToSelected() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    const label = hrLabel(bulkStatus);
+    if (!(await confirm({
+      title: `Set ${ids.length} to "${label}"?`,
+      description: `This sets the ${ids.length} selected ${ids.length === 1 ? "employee" : "employees"} to "${label}" for ${date}.`,
+      confirmLabel: `Set to ${label}`,
+    }))) return;
+    setApplying(true);
+    try {
+      await Promise.all(ids.map((employeeId) => mark({ employeeId, date, status: bulkStatus }).unwrap()));
+      toast.success(`Set ${ids.length} to ${label}`);
+      sel.clear();
+    } catch (err: unknown) { toast.error("Couldn't apply", getErrorDetail(err) ?? "Try again."); }
+    finally { setApplying(false); }
+  }
+
+  function exportSelected() {
+    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    exportRowsToCsv(chosen, [
+      { header: "Employee", value: (r) => r.fullName },
+      { header: "Agent ID", value: (r) => r.agentCode },
+      { header: "Designation", value: (r) => hrLabel(r.designation) },
+      { header: "Call centre", value: (r) => r.callCenterName ?? "Agency-wide" },
+      { header: "Status", value: (r) => (r.status ? hrLabel(r.status) : "") },
+    ], `attendance-${date}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
   }
   async function applyToAll() {
     const label = hrLabel(bulkStatus);
@@ -112,6 +150,9 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
+              <TH className="w-10">
+                <Checkbox aria-label="Select all employees" {...sel.allCheckboxProps} />
+              </TH>
               <TH>Employee</TH>
               <TH><span className="inline-flex items-center gap-1">Agent ID<InfoHint title="Agent ID" side="top">The employee's unique agent code, shared across the dialer, sales, and payroll systems.</InfoHint></span></TH>
               <TH>Designation</TH>
@@ -119,8 +160,11 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
               <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Attendance status" side="left">Late = arrived after start; Half day = half a shift worked; Leave = pre-approved time off; NCNS = no call, no show (an unexcused absence).</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {(rows ?? []).map((r) => (
-                <TR key={r.employeeId}>
+              {list.map((r) => (
+                <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />
+                  </TD>
                   <TD className="font-medium text-ink-900">{r.fullName}</TD>
                   <TD className="font-mono text-xs text-ink-600">{r.agentCode}</TD>
                   <TD className="text-ink-600">{hrLabel(r.designation)}</TD>
@@ -135,6 +179,21 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="employee" onClear={sel.clear}
+            extra={
+              <div className="flex items-center gap-1.5 pl-1">
+                <Select aria-label="Status to apply to selected" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
+                  className="h-8 w-32 !bg-white/10 !border-white/20 !text-white text-sm">
+                  {ATTENDANCE_STATUSES.map((s) => <option key={s} value={s} className="text-ink-900">{hrLabel(s)}</option>)}
+                </Select>
+              </div>
+            }
+            actions={[
+              { key: "apply", label: "Set status", icon: "check", onClick: applyToSelected, loading: applying },
+              { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+            ]}
+          />
         </div>
       )}
     </>
