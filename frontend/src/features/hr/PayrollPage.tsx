@@ -63,7 +63,9 @@ export function PayrollPage() {
   const [form, setForm] = useState<SavePayrollInput | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
-  useEffect(() => { setForm(editing ? toInput(editing) : null); }, [editing]);
+  // Deduction-amount fields HR has manually overridden — auto-calc must never overwrite these.
+  const [overridden, setOverridden] = useState<Set<keyof SavePayrollInput>>(new Set());
+  useEffect(() => { setForm(editing ? toInput(editing) : null); setOverridden(new Set()); }, [editing]);
 
   // The editing employee's call-centre deduction rules, so the modal can auto-calculate amounts live.
   const { data: editConfig } = useGetPayrollConfigQuery(editing?.callCenterId ?? "", { skip: !editing?.callCenterId });
@@ -72,14 +74,23 @@ export function PayrollPage() {
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => (f ? { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) } : f));
 
-  // A field whose change re-derives the auto deduction amounts (day counts + the basic/working-days basis).
+  // Editing a deduction Amount directly marks it overridden so auto-calc leaves it alone thereafter.
+  const numOverride = (k: keyof SavePayrollInput) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => { setOverridden((s) => new Set(s).add(k)); num(k)(e); };
+
+  // A field whose change re-derives the auto deduction amounts (day counts + the basic/working-days basis),
+  // but NEVER touches an amount HR has manually overridden.
   const numAuto = (k: keyof SavePayrollInput) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => {
         if (!f) return f;
         const next = { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) };
         const auto = autoDeductions(next, editConfig);
-        return auto ? { ...next, ...auto } : next;
+        if (!auto) return next;
+        const merged = Object.fromEntries(
+          Object.entries(auto).filter(([ak]) => !overridden.has(ak as keyof SavePayrollInput)),
+        );
+        return { ...next, ...merged };
       });
 
   async function submit(e: React.FormEvent) {
@@ -93,6 +104,11 @@ export function PayrollPage() {
       toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
     }
   }
+
+  // Live totals for the edit modal: net = gross earnings − all deductions, recomputed as HR edits.
+  const gross = form ? form.basicSalary + form.punctuality + form.dailyBonus + form.monthlyCommissions + form.transportAllowance + form.specialAllowance : 0;
+  const totalDeductions = form ? form.advanceSalary + form.docks + form.lateComingAmount + form.halfDaysAmount + form.absentDaysAmount + form.ncnsAmount : 0;
+  const netPay = gross - totalDeductions;
 
   async function downloadSlip(row: PayrollRow) {
     setDownloadingId(row.employeeId);
@@ -232,13 +248,28 @@ export function PayrollPage() {
               <Num label="Special allowance" v={form.specialAllowance} on={num("specialAllowance")} />
             </Section>
             <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Amounts auto-calculate from this call centre's deduction rules (Number × rate) — edit an Amount to override it. Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
-              <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} onAmount={num("lateComingAmount")} />
-              <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} onAmount={num("halfDaysAmount")} />
-              <LedgerLine label="Absent days" count={form.absentDays} onCount={numAuto("absentDays")} amount={form.absentDaysAmount} onAmount={num("absentDaysAmount")} />
-              <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} onAmount={num("ncnsAmount")} />
+              <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} onAmount={numOverride("lateComingAmount")} />
+              <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} onAmount={numOverride("halfDaysAmount")} />
+              <LedgerLine label="Absent days" count={form.absentDays} onCount={numAuto("absentDays")} amount={form.absentDaysAmount} onAmount={numOverride("absentDaysAmount")} />
+              <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} onAmount={numOverride("ncnsAmount")} />
               <LedgerLine label="Advance salary" amount={form.advanceSalary} onAmount={num("advanceSalary")} />
               <LedgerLine label="Docks" amount={form.docks} onAmount={num("docks")} />
             </Ledger>
+            {/* Live net-salary summary — recomputed automatically after every deduction. */}
+            <div className="rounded-xl border border-ink-200 bg-ink-50/60 p-3 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-ink-400">Gross</div>
+                <div className="text-sm font-semibold text-ink-800 tabular-nums">{money(gross)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-ink-400">Deductions</div>
+                <div className="text-sm font-semibold text-rose-600 tabular-nums">−{money(totalDeductions)}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-ink-400">Net pay</div>
+                <div className="text-base font-bold text-emerald-600 tabular-nums">{money(netPay)}</div>
+              </div>
+            </div>
             <Section title={<span className="inline-flex items-center gap-1">Attendance summary<InfoHint title="Attendance summary" side="right">Informational day counts for the month. The deduction lines above carry the money; these are for reference and feed the slip's attendance line.</InfoHint></span>}>
               <Num label="Working days" v={form.workingDays} on={numAuto("workingDays")} />
               <Num label="Present days" v={form.presentDays} on={num("presentDays")} />
@@ -309,7 +340,7 @@ function DeductionRulesModal({ open, onClose, callCenters, initialCallCenterId }
       size="lg"
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button form="ded-form" type="submit" loading={saving} disabled={!ccId || !form}>Save rules</Button>
+        <Button form="ded-form" type="submit" loading={saving} disabled={!ccId || !form || isFetching}>Save rules</Button>
       </>}>
       <form id="ded-form" onSubmit={submit} className="space-y-4">
         <Select label="Call centre" value={ccId} onChange={(e) => setCcId(e.target.value)}>

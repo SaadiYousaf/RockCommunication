@@ -268,11 +268,16 @@ public class PayrollHandlers :
         var userIds = employees.Where(e => e.UserId is { } && e.UserId != Guid.Empty)
             .Select(e => e.UserId!.Value).Distinct().ToList();
         if (userIds.Count == 0) return new();
+        var agencyIds = employees.Select(e => e.AgencyId).Distinct().ToList();
         var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(1);
-        var rows = await _db.CommissionEntries.AsNoTracking()
-            .Where(c => userIds.Contains(c.AgentUserId)
-                        && c.EarnedAt >= start && c.EarnedAt < end && !c.IsDeleted)
+        // Payroll spans the WHOLE agency (Employee is agency-scoped), but CommissionEntry is a
+        // CallCenterEntity — without bypassing the filter, a call-centre-pinned HR/processor would see
+        // 0 commission for agents in OTHER centres and under-pay them. Re-add tenant + soft-delete.
+        var rows = await _db.CommissionEntries.AsNoTracking().IgnoreQueryFilters()
+            .Where(c => agencyIds.Contains(c.AgencyId) && !c.IsDeleted
+                        && userIds.Contains(c.AgentUserId)
+                        && c.EarnedAt >= start && c.EarnedAt < end)
             .Select(c => new { c.AgentUserId, c.Amount }).ToListAsync(ct);
         return rows.GroupBy(r => r.AgentUserId).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
     }

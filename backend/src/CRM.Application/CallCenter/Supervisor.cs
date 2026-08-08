@@ -97,6 +97,7 @@ public class ForceAgentStatusHandler : IRequestHandler<ForceAgentStatusCommand, 
         _db.AgentStatusLogs.Add(new Domain.Entities.AgentStatusLog
         {
             AgencyId = session.AgencyId,
+            CallCenterId = session.CallCenterId,   // share the session's centre so it isn't hidden from centre-scoped attendance/wallboard
             UserId = session.UserId,
             SessionId = session.Id,
             Status = request.Status,

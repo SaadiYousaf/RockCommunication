@@ -29,7 +29,11 @@ public class ExportPayrollHandler : IRequestHandler<ExportPayrollQuery, IReadOnl
         // Authorization is the controller's [HasPermission(PayrollProcess)] gate — don't re-gate on a
         // hard-coded role list here (it wrongly 403'd a CEO, who holds PayrollProcess).
 
-        var q = _db.CommissionEntries.Where(c => c.AgencyId == _user.AgencyId);
+        // Agency-wide export (mirrors CreatePayrollRun's agency-wide claim): bypass the call-centre
+        // filter so a call-centre-pinned processor's CSV isn't silently missing other centres' entries
+        // (making the row-sum disagree with PayrollRun.TotalAmount). Re-add tenant + soft-delete.
+        var q = _db.CommissionEntries.IgnoreQueryFilters()
+            .Where(c => c.AgencyId == _user.AgencyId && !c.IsDeleted);
         if (request.RunId is { } r) q = q.Where(c => c.PayrollRunId == r);
         if (request.From is { } f) q = q.Where(c => c.EarnedAt >= f);
         if (request.To is { } t) q = q.Where(c => c.EarnedAt < t);

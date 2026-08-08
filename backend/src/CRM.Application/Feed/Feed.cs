@@ -102,6 +102,7 @@ public class FeedHandlers :
         var posts = await _db.FeedPosts.AsNoTracking()
             .Where(p => p.AgencyId == aid)
             .OrderByDescending(p => p.CreatedAt)
+            .ThenByDescending(p => p.Id)   // deterministic tiebreaker so equal timestamps don't dup/skip across pages
             .Skip(skip).Take(take)
             .ToListAsync(ct);
         if (posts.Count == 0) return Array.Empty<FeedPostDto>();
@@ -193,7 +194,16 @@ public class FeedHandlers :
             _db.FeedReactions.Remove(existing);   // toggle off
         else
             _db.FeedReactions.Add(new FeedReaction { AgencyId = aid, PostId = request.PostId, UserId = uid, Emoji = emoji });
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (existing is null)
+        {
+            // A concurrent identical react (double-tap / two tabs) already inserted this
+            // (PostId,UserId,Emoji) row, tripping the unique index. The reaction now exists —
+            // treat the toggle-on as an idempotent success rather than a 500.
+        }
         return Unit.Value;
     }
 
@@ -235,16 +245,22 @@ public class FeedHandlers :
             .Select(m => m.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (handles.Count == 0) return;
 
-        var names = await _identity.ListUserNamesAsync(agencyId, ct);   // id -> username (agency-scoped)
-        var byHandle = names.GroupBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().Key, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var handle in handles)
+        // Best-effort — the post/comment is already committed; a name-lookup/dispatch hiccup must
+        // never bubble a 500 (which would prompt a client retry and duplicate the post/comment).
+        try
         {
-            if (!byHandle.TryGetValue(handle, out var targetId)) continue;
-            if (targetId == authorId || targetId == excludeUserId) continue;
-            await BestEffortNotifyAsync(agencyId, targetId, "You were mentioned", $"{_user.UserName} {what}.", ct);
+            var names = await _identity.ListUserNamesAsync(agencyId, ct);   // id -> username (agency-scoped)
+            var byHandle = names.GroupBy(kv => kv.Value, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Key, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var handle in handles)
+            {
+                if (!byHandle.TryGetValue(handle, out var targetId)) continue;
+                if (targetId == authorId || targetId == excludeUserId) continue;
+                await BestEffortNotifyAsync(agencyId, targetId, "You were mentioned", $"{_user.UserName} {what}.", ct);
+            }
         }
+        catch { /* best-effort — the write already succeeded */ }
     }
 
     // Everyone in the agency is notified of a new post. One bulk insert (not N dispatcher round-trips);

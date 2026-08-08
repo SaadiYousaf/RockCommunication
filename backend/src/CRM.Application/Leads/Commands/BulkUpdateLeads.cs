@@ -113,6 +113,7 @@ public class BulkLeadHandler :
             _db.LeadActivities.Add(new Domain.Entities.LeadActivity
             {
                 AgencyId = lead.AgencyId,
+                CallCenterId = lead.CallCenterId,   // inherit the lead's centre so it shows on centre-scoped timelines (matches TransitionLead)
                 LeadId = lead.Id,
                 UserId = _user.UserId!.Value,
                 FromStage = lead.Stage,
