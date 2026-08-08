@@ -153,10 +153,32 @@ export interface UpcomingBirthday {
 }
 
 /** One employee's payroll for a month, with computed totals. */
+export interface PayrollConfig {
+  callCenterId: string;
+  callCenterName: string;
+  /** Flat amount deducted per late-coming (PKR). */
+  lateComingFine: number;
+  /** Fraction of a day's pay deducted per half-day / absent / NCNS (a day's pay = basic / working days). */
+  halfDayFactor: number;
+  absentDayFactor: number;
+  ncnsFactor: number;
+  /** false = the defaults are shown (this centre hasn't saved its own rules yet). */
+  saved: boolean;
+}
+
+export interface SavePayrollConfigInput {
+  lateComingFine: number;
+  halfDayFactor: number;
+  absentDayFactor: number;
+  ncnsFactor: number;
+}
+
 export interface PayrollRow {
   employeeId: string;
   fullName: string;
   agentCode: string;
+  callCenterId?: string | null;
+  callCenterName?: string | null;
   year: number;
   month: number;
   basicSalary: number;

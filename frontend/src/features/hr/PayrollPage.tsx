@@ -5,15 +5,30 @@ import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import {
   useListPayrollQuery, useSavePayrollMutation, useListCallCentersQuery,
+  useGetPayrollConfigQuery, useSavePayrollConfigMutation,
 } from "../../shared/api/baseApi";
-import type { PayrollRow, SavePayrollInput } from "../../shared/api/types";
+import type { PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 
+// Salaries are paid in PKR.
 const money = (n: number | null | undefined) =>
-  n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  n == null ? "—" : "PKR " + Math.round(n).toLocaleString();
+
+/** Auto-derive the four attendance-driven deduction amounts from a call centre's rules. Mirrors the backend. */
+function autoDeductions(f: SavePayrollInput, cfg: PayrollConfig | undefined) {
+  if (!cfg) return null;
+  const perDay = f.workingDays > 0 ? f.basicSalary / f.workingDays : 0;
+  const r = (v: number) => Math.round(v);
+  return {
+    lateComingAmount: r(f.lateComing * cfg.lateComingFine),
+    halfDaysAmount: r(f.halfDays * perDay * cfg.halfDayFactor),
+    absentDaysAmount: r(f.absentDays * perDay * cfg.absentDayFactor),
+    ncnsAmount: r(f.ncns * perDay * cfg.ncnsFactor),
+  };
+}
 
 const toInput = (r: PayrollRow): SavePayrollInput => ({
   basicSalary: r.basicSalary, punctuality: r.punctuality, dailyBonus: r.dailyBonus,
@@ -47,11 +62,25 @@ export function PayrollPage() {
   const [editing, setEditing] = useState<PayrollRow | null>(null);
   const [form, setForm] = useState<SavePayrollInput | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
   useEffect(() => { setForm(editing ? toInput(editing) : null); }, [editing]);
+
+  // The editing employee's call-centre deduction rules, so the modal can auto-calculate amounts live.
+  const { data: editConfig } = useGetPayrollConfigQuery(editing?.callCenterId ?? "", { skip: !editing?.callCenterId });
 
   const num = (k: keyof SavePayrollInput) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => (f ? { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) } : f));
+
+  // A field whose change re-derives the auto deduction amounts (day counts + the basic/working-days basis).
+  const numAuto = (k: keyof SavePayrollInput) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => {
+        if (!f) return f;
+        const next = { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) };
+        const auto = autoDeductions(next, editConfig);
+        return auto ? { ...next, ...auto } : next;
+      });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,9 +138,13 @@ export function PayrollPage() {
             <option value="">All call centres</option>
             {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
+          <Button variant="outline" leftIcon={<Icon name="cog" size={15} />} onClick={() => setConfigOpen(true)}>Deduction rules</Button>
           <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "employee" : "employees"}</span>
         </CardBody>
       </Card>
+
+      <DeductionRulesModal open={configOpen} onClose={() => setConfigOpen(false)}
+        callCenters={callCenters ?? []} initialCallCenterId={callCenterId} />
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
@@ -191,23 +224,23 @@ export function PayrollPage() {
         {form && (
           <form id="pay-form" onSubmit={submit} className="space-y-5">
             <Section title={<span className="inline-flex items-center gap-1">Earnings<InfoHint title="Earnings" side="right">Monthly commission is auto-derived from approved sales; the other components are entered by HR.</InfoHint></span>}>
-              <Num label="Basic salary" v={form.basicSalary} on={num("basicSalary")} />
+              <Num label="Basic salary" v={form.basicSalary} on={numAuto("basicSalary")} />
               <Num label="Punctuality" v={form.punctuality} on={num("punctuality")} />
               <Num label="Daily bonus" v={form.dailyBonus} on={num("dailyBonus")} />
               <Num label="Monthly commissions" v={form.monthlyCommissions} on={num("monthlyCommissions")} />
               <Num label="Transport allowance" v={form.transportAllowance} on={num("transportAllowance")} />
               <Num label="Special allowance" v={form.specialAllowance} on={num("specialAllowance")} />
             </Section>
-            <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Each attendance-driven line shows its day count (Number) and the money withheld against it (Amount). Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
-              <LedgerLine label="Late coming" count={form.lateComing} onCount={num("lateComing")} amount={form.lateComingAmount} onAmount={num("lateComingAmount")} />
-              <LedgerLine label="Half days" count={form.halfDays} onCount={num("halfDays")} amount={form.halfDaysAmount} onAmount={num("halfDaysAmount")} />
-              <LedgerLine label="Absent days" count={form.absentDays} onCount={num("absentDays")} amount={form.absentDaysAmount} onAmount={num("absentDaysAmount")} />
-              <LedgerLine label="NCNS" count={form.ncns} onCount={num("ncns")} amount={form.ncnsAmount} onAmount={num("ncnsAmount")} />
+            <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Amounts auto-calculate from this call centre's deduction rules (Number × rate) — edit an Amount to override it. Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
+              <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} onAmount={num("lateComingAmount")} />
+              <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} onAmount={num("halfDaysAmount")} />
+              <LedgerLine label="Absent days" count={form.absentDays} onCount={numAuto("absentDays")} amount={form.absentDaysAmount} onAmount={num("absentDaysAmount")} />
+              <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} onAmount={num("ncnsAmount")} />
               <LedgerLine label="Advance salary" amount={form.advanceSalary} onAmount={num("advanceSalary")} />
               <LedgerLine label="Docks" amount={form.docks} onAmount={num("docks")} />
             </Ledger>
             <Section title={<span className="inline-flex items-center gap-1">Attendance summary<InfoHint title="Attendance summary" side="right">Informational day counts for the month. The deduction lines above carry the money; these are for reference and feed the slip's attendance line.</InfoHint></span>}>
-              <Num label="Working days" v={form.workingDays} on={num("workingDays")} />
+              <Num label="Working days" v={form.workingDays} on={numAuto("workingDays")} />
               <Num label="Present days" v={form.presentDays} on={num("presentDays")} />
               <Num label="Leaves approved" v={form.leavesApproved} on={num("leavesApproved")} />
             </Section>
@@ -226,6 +259,96 @@ export function PayrollPage() {
   );
 }
 
+/**
+ * Per-call-centre deduction rules. HR/Admin edit any centre; a CallCenterAdmin only their own
+ * (enforced server-side). A day's pay = basic ÷ working days; half/absent/NCNS are multiples of it,
+ * late-coming is a flat fine.
+ */
+function DeductionRulesModal({ open, onClose, callCenters, initialCallCenterId }: {
+  open: boolean;
+  onClose: () => void;
+  callCenters: { id: string; name: string }[];
+  initialCallCenterId: string;
+}) {
+  const toast = useToast();
+  const [ccId, setCcId] = useState(initialCallCenterId || callCenters[0]?.id || "");
+  useEffect(() => {
+    if (open) setCcId(initialCallCenterId || callCenters[0]?.id || "");
+  }, [open, initialCallCenterId, callCenters]);
+
+  const { data: config, isFetching } = useGetPayrollConfigQuery(ccId, { skip: !ccId });
+  const [saveConfig, { isLoading: saving }] = useSavePayrollConfigMutation();
+
+  const [form, setForm] = useState<SavePayrollConfigInput | null>(null);
+  useEffect(() => {
+    if (config) setForm({
+      lateComingFine: config.lateComingFine, halfDayFactor: config.halfDayFactor,
+      absentDayFactor: config.absentDayFactor, ncnsFactor: config.ncnsFactor,
+    });
+  }, [config]);
+
+  const setNum = (k: keyof SavePayrollConfigInput) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => (f ? { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) } : f));
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ccId || !form) return;
+    try {
+      await saveConfig({ callCenterId: ccId, input: form }).unwrap();
+      toast.success("Deduction rules saved", callCenters.find((c) => c.id === ccId)?.name);
+      onClose();
+    } catch (err: unknown) {
+      toast.error("Couldn't save rules", getErrorDetail(err) ?? "You may not have permission for this call centre.");
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Deduction rules"
+      description="How attendance-driven salary deductions are calculated for a call centre. A day's pay = basic salary ÷ working days."
+      size="lg"
+      footer={<>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button form="ded-form" type="submit" loading={saving} disabled={!ccId || !form}>Save rules</Button>
+      </>}>
+      <form id="ded-form" onSubmit={submit} className="space-y-4">
+        <Select label="Call centre" value={ccId} onChange={(e) => setCcId(e.target.value)}>
+          <option value="" disabled>Select a call centre…</option>
+          {callCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </Select>
+        {!ccId ? (
+          <p className="text-sm text-ink-500">Pick a call centre to edit its rules.</p>
+        ) : isFetching || !form ? (
+          <Skeleton className="h-40" />
+        ) : (
+          <>
+            {!config?.saved && (
+              <div className="text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2">
+                Showing the default rules — save to set this call centre's own.
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Late-coming fine (PKR each)" type="number" min={0} step="1"
+                value={form.lateComingFine === 0 ? "" : form.lateComingFine} placeholder="0" onChange={setNum("lateComingFine")} />
+              <Input label="Half-day factor (× a day's pay)" type="number" min={0} step="0.05"
+                value={form.halfDayFactor === 0 ? "" : form.halfDayFactor} placeholder="0.5" onChange={setNum("halfDayFactor")} />
+              <Input label="Absent-day factor (× a day's pay)" type="number" min={0} step="0.05"
+                value={form.absentDayFactor === 0 ? "" : form.absentDayFactor} placeholder="1" onChange={setNum("absentDayFactor")} />
+              <Input label="NCNS factor (× a day's pay)" type="number" min={0} step="0.05"
+                value={form.ncnsFactor === 0 ? "" : form.ncnsFactor} placeholder="2" onChange={setNum("ncnsFactor")} />
+            </div>
+            <p className="text-xs text-ink-500 leading-relaxed">
+              Example — on a PKR 60,000 basic over 24 working days (a day's pay is PKR 2,500): one absent day
+              deducts {money(2500 * form.absentDayFactor)}, a half day {money(2500 * form.halfDayFactor)},
+              an NCNS {money(2500 * form.ncnsFactor)}, and each late-coming {money(form.lateComingFine)}.
+            </p>
+          </>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
 function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
@@ -236,7 +359,8 @@ function Section({ title, children }: { title: React.ReactNode; children: React.
 }
 
 function Num({ label, v, on }: { label: string; v: number; on: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
-  return <Input label={label} type="number" min={0} step="0.01" value={v} onChange={on} />;
+  // Show empty (placeholder "0") when zero so a value can't be typed after a leading "0" (e.g. "060000").
+  return <Input label={label} type="number" min={0} step="0.01" value={v === 0 ? "" : v} placeholder="0" onChange={on} />;
 }
 
 /** A ledger block with explicit "Number" and "Amount" column headings (spec: number + amount against each line). */
@@ -268,9 +392,9 @@ function LedgerLine({ label, count, onCount, amount, onAmount }: {
     <>
       <span className="text-sm text-ink-700">{label}</span>
       {onCount
-        ? <input aria-label={`${label} number`} type="number" min={0} value={count ?? 0} onChange={onCount} className={cell} />
+        ? <input aria-label={`${label} number`} type="number" min={0} value={count ? count : ""} placeholder="0" onChange={onCount} className={cell} />
         : <span className="text-ink-300 text-right text-sm pr-2">—</span>}
-      <input aria-label={`${label} amount`} type="number" min={0} step="0.01" value={amount} onChange={onAmount} className={cell} />
+      <input aria-label={`${label} amount`} type="number" min={0} step="0.01" value={amount === 0 ? "" : amount} placeholder="0" onChange={onAmount} className={cell} />
     </>
   );
 }

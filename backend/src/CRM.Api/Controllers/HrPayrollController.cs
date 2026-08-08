@@ -36,6 +36,19 @@ public class HrPayrollController : ControllerBase
         return Ok(await _mediator.Send(new SavePayrollCommand(employeeId, body.Year, body.Month, body.Input), ct));
     }
 
+    // Per-call-centre deduction rules. Access is enforced in the handler: HR/Admin/SuperAdmin manage
+    // any centre; a CallCenterAdmin manages only their own.
+    [HttpGet("config/{callCenterId:guid}")]
+    public async Task<IActionResult> GetConfig(Guid callCenterId, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetPayrollConfigQuery(callCenterId), ct));
+
+    [HttpPut("config/{callCenterId:guid}")]
+    public async Task<IActionResult> SaveConfig(Guid callCenterId, [FromBody] SavePayrollConfigInput input, CancellationToken ct)
+    {
+        Guard.AgainstNull(input);
+        return Ok(await _mediator.Send(new SavePayrollConfigCommand(callCenterId, input), ct));
+    }
+
     [HttpGet("slip")]
     public async Task<IActionResult> Slip([FromQuery] Guid employeeId, [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
     {

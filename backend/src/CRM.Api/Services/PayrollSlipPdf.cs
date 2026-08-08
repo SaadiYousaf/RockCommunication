@@ -9,7 +9,8 @@ namespace CRM.Api.Services;
 /// <summary>Renders a one-page PDF salary slip from a computed <see cref="PayrollRowDto"/>.</summary>
 public static class PayrollSlipPdf
 {
-    private static string Money(decimal v) => v.ToString("C0", CultureInfo.GetCultureInfo("en-US"));
+    // Salaries are paid in PKR. Format as "PKR 60,000" (grouped, no decimals).
+    private static string Money(decimal v) => "PKR " + v.ToString("N0", CultureInfo.InvariantCulture);
 
     public static byte[] Build(PayrollRowDto p, string companyName)
     {
@@ -27,6 +28,8 @@ public static class PayrollSlipPdf
                 {
                     col.Item().Text(companyName).FontSize(16).SemiBold().FontColor(Colors.Green.Darken2);
                     col.Item().Text($"Salary Slip — {monthName} {p.Year}").FontSize(11).FontColor(Colors.Grey.Medium);
+                    if (!string.IsNullOrWhiteSpace(p.CallCenterName))
+                        col.Item().Text(p.CallCenterName).FontSize(10).FontColor(Colors.Grey.Darken1);
                     col.Item().PaddingTop(6).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                 });
 

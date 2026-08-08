@@ -70,6 +70,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<EmployeeAttendance> EmployeeAttendances => Set<EmployeeAttendance>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<EmployeePayroll> EmployeePayrolls => Set<EmployeePayroll>();
+    public DbSet<CallCenterPayrollConfig> CallCenterPayrollConfigs => Set<CallCenterPayrollConfig>();
     public DbSet<SocialMediaReport> SocialMediaReports => Set<SocialMediaReport>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -290,6 +291,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // One attendance mark per employee per day.
             e.HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique().HasFilter("\"IsDeleted\" = 0");
             e.HasIndex(x => new { x.AgencyId, x.Date });
+        });
+
+        b.Entity<CallCenterPayrollConfig>(e =>
+        {
+            // One deduction-rule set per call centre.
+            e.HasIndex(x => x.CallCenterId).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<Interview>(e =>
