@@ -150,6 +150,62 @@ export function PayrollPage() {
     toast.success("Export ready", `${chosen.length} rows downloaded.`);
   }
 
+  // ── Bulk "set pay" — write common fields (and/or mark present) across every selected row.
+  // A blank field keeps each employee's current value; finalized rows are locked and skipped.
+  const blankBulk = { basicSalary: "", transportAllowance: "", specialAllowance: "", workingDays: "", markPresent: false, finalize: false };
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState(blankBulk);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkField = (k: "basicSalary" | "transportAllowance" | "specialAllowance" | "workingDays") =>
+    (e: React.ChangeEvent<HTMLInputElement>) => setBulkForm((f) => ({ ...f, [k]: e.target.value }));
+
+  async function applyBulk() {
+    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    const editable = chosen.filter((r) => !r.finalized);
+    const skipped = chosen.length - editable.length;
+    const numOrUndef = (s: string) => (s.trim() === "" ? undefined : Number(s));
+    const basic = numOrUndef(bulkForm.basicSalary);
+    const transport = numOrUndef(bulkForm.transportAllowance);
+    const special = numOrUndef(bulkForm.specialAllowance);
+    const wdays = numOrUndef(bulkForm.workingDays);
+
+    if (basic === undefined && transport === undefined && special === undefined && wdays === undefined
+        && !bulkForm.markPresent && !bulkForm.finalize) {
+      toast.error("Nothing to apply", "Set at least one field or an option.");
+      return;
+    }
+    if (editable.length === 0) { toast.error("Nothing to update", "Every selected row is finalized (locked)."); return; }
+
+    setBulkBusy(true);
+    const results = await Promise.allSettled(editable.map((r) => {
+      const input = toInput(r);
+      if (basic !== undefined) input.basicSalary = basic;
+      if (transport !== undefined) input.transportAllowance = transport;
+      if (special !== undefined) input.specialAllowance = special;
+      if (wdays !== undefined) input.workingDays = wdays;
+      if (bulkForm.markPresent) {
+        // Full attendance: present = working days; clear every attendance-driven deduction
+        // (count 0 ⇒ amount 0 regardless of each centre's rates, so this stays config-independent).
+        input.presentDays = input.workingDays;
+        input.lateComing = 0; input.halfDays = 0; input.absentDays = 0; input.ncns = 0;
+        input.lateComingAmount = 0; input.halfDaysAmount = 0; input.absentDaysAmount = 0; input.ncnsAmount = 0;
+      }
+      if (bulkForm.finalize) input.finalized = true;
+      return save({ employeeId: r.employeeId, year, month, input }).unwrap();
+    }));
+    setBulkBusy(false);
+
+    const ok = results.filter((x) => x.status === "fulfilled").length;
+    const failed = results.length - ok;
+    if (ok > 0) {
+      const note = [bulkForm.markPresent ? "Marked present" : null, "pay saved"].filter(Boolean).join(" · ");
+      toast.success(`Updated ${ok} ${ok === 1 ? "employee" : "employees"}`,
+        skipped > 0 ? `${note}. ${skipped} finalized row${skipped === 1 ? "" : "s"} skipped.` : `${note}.`);
+      sel.clear(); setBulkOpen(false); setBulkForm(blankBulk);
+    }
+    if (failed > 0) toast.error(`${failed} couldn't be saved`, "Please try those again.");
+  }
+
   return (
     <>
       <PageHeader eyebrow="Human Resources" title="Payroll"
@@ -177,6 +233,42 @@ export function PayrollPage() {
 
       <DeductionRulesModal open={configOpen} onClose={() => setConfigOpen(false)}
         callCenters={callCenters ?? []} initialCallCenterId={callCenterId} />
+
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title="Set pay for selected"
+        description={`${sel.selectedCount} selected · ${monthValue}. Leave a field blank to keep each employee's current value.`}
+        size="lg"
+        footer={<>
+          <Button variant="ghost" onClick={() => setBulkOpen(false)}>Cancel</Button>
+          <Button loading={bulkBusy} onClick={applyBulk} leftIcon={<Icon name="check" size={15} />}>Apply to {sel.selectedCount}</Button>
+        </>}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Basic salary (PKR)" type="number" min={0} step="1" value={bulkForm.basicSalary} placeholder="Keep current" onChange={bulkField("basicSalary")} />
+            <Input label="Working days" type="number" min={0} step="1" value={bulkForm.workingDays} placeholder="Keep current" onChange={bulkField("workingDays")} />
+            <Input label="Transport allowance (PKR)" type="number" min={0} step="1" value={bulkForm.transportAllowance} placeholder="Keep current" onChange={bulkField("transportAllowance")} />
+            <Input label="Special allowance (PKR)" type="number" min={0} step="1" value={bulkForm.specialAllowance} placeholder="Keep current" onChange={bulkField("specialAllowance")} />
+          </div>
+          <div className="rounded-xl border border-ink-200 divide-y hairline">
+            <label className="flex items-start gap-2.5 p-3 cursor-pointer">
+              <input type="checkbox" checked={bulkForm.markPresent} onChange={(e) => setBulkForm((f) => ({ ...f, markPresent: e.target.checked }))}
+                className="mt-0.5 rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
+              <span>
+                <span className="text-sm font-medium text-ink-800">Mark present</span>
+                <span className="block text-xs text-ink-500">Sets present days = working days and clears all absent / half-day / NCNS / late-coming deductions.</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 p-3 cursor-pointer">
+              <input type="checkbox" checked={bulkForm.finalize} onChange={(e) => setBulkForm((f) => ({ ...f, finalize: e.target.checked }))}
+                className="mt-0.5 rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
+              <span>
+                <span className="text-sm font-medium text-ink-800">Finalize these rows</span>
+                <span className="block text-xs text-ink-500">Locks the month so it's no longer auto-recalculated.</span>
+              </span>
+            </label>
+          </div>
+          <p className="text-xs text-ink-500">Rows already finalized are locked and will be skipped.</p>
+        </div>
+      </Modal>
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
@@ -248,7 +340,10 @@ export function PayrollPage() {
           </Table>
           <BulkActionBar
             count={sel.selectedCount} itemNoun="employee" onClear={sel.clear}
-            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+            actions={[
+              { key: "pay", label: "Set pay", icon: "dollar", onClick: () => setBulkOpen(true) },
+              { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+            ]}
           />
         </div>
       )}

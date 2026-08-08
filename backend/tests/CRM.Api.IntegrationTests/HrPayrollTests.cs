@@ -111,6 +111,36 @@ public class HrPayrollTests : IClassFixture<CrmWebAppFactory>
     }
 
     [Fact]
+    public async Task Bulk_status_moves_every_selected_candidate()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        // Create three candidates in "Applied".
+        var ids = new List<Guid>();
+        for (var i = 0; i < 3; i++)
+        {
+            var c = await admin.PostJsonAsync("/api/hr/interviews", new
+            {
+                candidateName = $"Bulk-{Guid.NewGuid():N}".Substring(0, 16),
+                status = "Applied"
+            });
+            ids.Add(c.GetProperty("id").GetGuid());
+        }
+
+        // Bulk-move all three to Training in one call.
+        var resp = await admin.PatchAsJsonAsync("/api/hr/interviews/bulk-status", new { ids, status = "Training" });
+        resp.EnsureSuccessStatusCode();
+        var body = JsonDocument.Parse(await resp.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(3, body.GetProperty("updated").GetInt32());
+
+        foreach (var id in ids)
+        {
+            var fetched = await admin.GetJsonAsync($"/api/hr/interviews/{id}");
+            Assert.Equal("Training", fetched.GetProperty("status").GetString());
+        }
+    }
+
+    [Fact]
     public async Task Interview_can_be_transitioned_to_Training()
     {
         var admin = await _factory.LoginAdminAsync();

@@ -1151,6 +1151,10 @@ export const baseApi = createApi({
       query: (id) => ({ url: `/api/hr/interviews/${id}`, method: "DELETE" }),
       invalidatesTags: ["Interviews"],
     }),
+    bulkSetInterviewStatus: b.mutation<{ updated: number }, { ids: string[]; status: string }>({
+      query: (body) => ({ url: "/api/hr/interviews/bulk-status", method: "PATCH", body }),
+      invalidatesTags: ["Interviews"],
+    }),
     upcomingTrainings: b.query<UpcomingTraining[], number | void>({
       query: (days) => ({ url: "/api/hr/interviews/trainings", params: days ? { days } : undefined }),
       providesTags: ["Interviews"],
@@ -1466,6 +1470,7 @@ export const {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation,
   useBulkMarkAttendanceMutation, useFillAttendanceFromClockInsMutation,
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
+  useBulkSetInterviewStatusMutation,
   useUpcomingTrainingsQuery,
   useListPayrollQuery, useSavePayrollMutation, useGetPayrollConfigQuery, useSavePayrollConfigMutation,
   useListFeedQuery, useCreatePostMutation, useDeletePostMutation, useReactPostMutation,

@@ -49,4 +49,15 @@ public class HrInterviewsController : ControllerBase
         await _mediator.Send(new DeleteInterviewCommand(id), ct);
         return NoContent();
     }
+
+    public record BulkStatusBody(IReadOnlyList<Guid> Ids, OfferStatus Status);
+
+    /// <summary>Move several candidates to one offer status at once. Returns { updated }.</summary>
+    [HttpPatch("bulk-status")]
+    public async Task<IActionResult> BulkStatus([FromBody] BulkStatusBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        var updated = await _mediator.Send(new BulkSetInterviewStatusCommand(body.Ids, body.Status), ct);
+        return Ok(new { updated });
+    }
 }

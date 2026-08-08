@@ -35,6 +35,9 @@ public record GetInterviewQuery(Guid Id) : IRequest<InterviewDto>;
 public record CreateInterviewCommand(InterviewInput Input) : IRequest<InterviewDto>;
 public record UpdateInterviewCommand(Guid Id, InterviewInput Input) : IRequest<InterviewDto>;
 public record DeleteInterviewCommand(Guid Id) : IRequest<Unit>;
+/// <summary>Move several candidates to one offer status at once (only the status field is touched,
+/// so a concurrent edit to other fields is never clobbered). Returns the number updated.</summary>
+public record BulkSetInterviewStatusCommand(IReadOnlyList<Guid> Ids, OfferStatus Status) : IRequest<int>;
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -63,7 +66,8 @@ public class InterviewHandlers :
     IRequestHandler<GetInterviewQuery, InterviewDto>,
     IRequestHandler<CreateInterviewCommand, InterviewDto>,
     IRequestHandler<UpdateInterviewCommand, InterviewDto>,
-    IRequestHandler<DeleteInterviewCommand, Unit>
+    IRequestHandler<DeleteInterviewCommand, Unit>,
+    IRequestHandler<BulkSetInterviewStatusCommand, int>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -143,6 +147,20 @@ public class InterviewHandlers :
         i.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Unit.Value;
+    }
+
+    public async Task<int> Handle(BulkSetInterviewStatusCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        HrAccess.EnsureHr(_user);
+        if (request.Ids is null || request.Ids.Count == 0) return 0;
+        var ids = request.Ids.Distinct().ToList();
+        var rows = await _db.Interviews.Where(i => ids.Contains(i.Id)).ToListAsync(ct);
+        if (rows.Count == 0) return 0;
+        var now = DateTime.UtcNow;
+        foreach (var i in rows) { i.Status = request.Status; i.UpdatedAt = now; }
+        await _db.SaveChangesAsync(ct);
+        return rows.Count;
     }
 
     private static void Apply(Interview i, InterviewInput input)

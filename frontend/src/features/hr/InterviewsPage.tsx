@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useState } from "react";
 import {
   useListInterviewsQuery, useCreateInterviewMutation, useUpdateInterviewMutation, useDeleteInterviewMutation,
-  useUpcomingTrainingsQuery,
+  useUpcomingTrainingsQuery, useBulkSetInterviewStatusMutation,
 } from "../../shared/api/baseApi";
 import type { Interview, InterviewInput } from "../../shared/api/types";
 import { OFFER_STATUSES, OFFER_TONE, hrLabel } from "../../shared/constants/hr";
@@ -97,6 +97,18 @@ export function InterviewsPage() {
   const offered = rows.filter((r) => r.status === "Offered").length;
   const sel = useRowSelection(rows.map((r) => r.id));
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkSetStatus, { isLoading: settingStatus }] = useBulkSetInterviewStatusMutation();
+  const [bulkStatus, setBulkStatus] = useState<string>(OFFER_STATUSES[0]);
+
+  async function applyStatus() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    try {
+      const { updated } = await bulkSetStatus({ ids, status: bulkStatus }).unwrap();
+      toast.success(`Moved ${updated} to ${hrLabel(bulkStatus)}`);
+      sel.clear();
+    } catch (err: unknown) { toast.error("Couldn't update status", getErrorDetail(err) ?? "Try again."); }
+  }
 
   function exportSelected() {
     const chosen = rows.filter((r) => sel.isSelected(r.id));
@@ -236,7 +248,14 @@ export function InterviewsPage() {
           </Table>
           <BulkActionBar
             count={sel.selectedCount} itemNoun="interview" onClear={sel.clear}
+            extra={
+              <Select aria-label="Status to set" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
+                className="h-8 w-36 !bg-white/10 !border-white/20 !text-white text-sm">
+                {OFFER_STATUSES.map((s) => <option key={s} value={s} className="text-ink-900">{hrLabel(s)}</option>)}
+              </Select>
+            }
             actions={[
+              { key: "status", label: "Set status", icon: "check", onClick: applyStatus, loading: settingStatus },
               { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
               { key: "delete", label: "Delete", icon: "trash", onClick: bulkDelete, danger: true, loading: bulkDeleting },
             ]}
