@@ -5,12 +5,14 @@ import {
   useImportLeadsCsvMutation, useLeadListsQuery, useListImportBatchesQuery, useUpsertLeadListMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 export function LeadListsPage() {
   const { data: lists, isLoading } = useLeadListsQuery();
@@ -41,6 +43,18 @@ export function LeadListsPage() {
       status: (l) => (l.isActive ? "Active" : "Inactive"),
     },
   });
+
+  const sel = useRowSelection(sorted.map((l) => l.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => l.name },
+      { header: "Count", value: (l) => l.leadCount ?? 0 },
+      { header: "Created", value: (l) => (l.isActive ? "Active" : "Inactive") },
+    ], `lead-lists-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const activeList = lists?.find((l) => l.id === activeListId);
 
@@ -134,9 +148,11 @@ export function LeadListsPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all lists" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("name")} onClick={() => sortBy("name")}>Name</TH>
               <TH sortDir={dirFor("leadCount")} onClick={() => sortBy("leadCount")}>Leads</TH>
               <TH sortDir={dirFor("status")} onClick={() => sortBy("status")}>Status</TH>
@@ -147,7 +163,10 @@ export function LeadListsPage() {
             {sorted.map((l) => {
               const isActive = activeListId === l.id;
               return (
-                <TR key={l.id} className={cn(isActive && "bg-brand-50/40")}>
+                <TR key={l.id} className={cn((isActive || sel.isSelected(l.id)) && "bg-brand-50/40")}>
+                  <TD onClick={(ev) => ev.stopPropagation()}>
+                    <Checkbox aria-label={`Select ${l.name}`} {...sel.checkboxProps(l.id)} />
+                  </TD>
                   <TD>
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
@@ -183,6 +202,11 @@ export function LeadListsPage() {
             })}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="list" onClear={sel.clear}
+          actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+        />
+        </>
       )}
 
       {/* Import section — only when a list is selected */}

@@ -9,10 +9,12 @@ import {
 import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/types";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection, type RowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
@@ -32,6 +34,20 @@ export function VerifyQueuePage() {
   const total = queue?.length ?? 0;
   const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
   const topScore = total ? Math.max(...(queue ?? []).map((l) => l.score)) : 0;
+  const toast = useToast();
+  const sel = useRowSelection(sorted.map((l) => l.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
+      { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
+      { header: "Status", value: (l) => l.verifierStatus },
+      { header: "Date", value: (l) => new Date(l.createdAt).toLocaleDateString() },
+    ], `verifier-queue-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
   return (
     <>
       <PageHeader eyebrow="Verifier" title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
@@ -52,6 +68,7 @@ export function VerifyQueuePage() {
             <Table>
               <THead>
                 <TR>
+                  <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                   <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
                   <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>
                     <span className="inline-flex items-center gap-1">Waiting
@@ -74,10 +91,12 @@ export function VerifyQueuePage() {
                 </TR>
               </THead>
               <TBody>
-                {sorted.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} />)}
+                {sorted.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} selected={sel.isSelected(l.id)} checkboxProps={sel.checkboxProps(l.id)} />)}
               </TBody>
             </Table>
           )}
+          <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
         </CardBody>
       </Card>
       {editingId && <EditLeadModal leadId={editingId} onClose={() => setEditingId(null)} />}
@@ -85,7 +104,10 @@ export function VerifyQueuePage() {
   );
 }
 
-function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void }) {
+function VerifyRow({ lead, onEdit, selected, checkboxProps }: {
+  lead: IntakeQueueItem; onEdit: () => void;
+  selected: boolean; checkboxProps: ReturnType<RowSelection["checkboxProps"]>;
+}) {
   const [setStatus, { isLoading }] = useSetVerifierStatusMutation();
   const toast = useToast();
   const [status, setStatusVal] = useState<VerifierStatusValue | "">("");
@@ -101,7 +123,8 @@ function VerifyRow({ lead, onEdit }: { lead: IntakeQueueItem; onEdit: () => void
   }
 
   return (
-    <TR>
+    <TR className={selected ? "bg-brand-50/40" : undefined}>
+      <TD><Checkbox aria-label={`Select ${lead.firstName} ${lead.lastName}`} {...checkboxProps} /></TD>
       <TD className="font-medium text-ink-900 whitespace-nowrap">{lead.firstName} {lead.lastName}</TD>
       <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{formatPhone(lead.phoneNumber)}</TD>
       <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[lead.city, lead.state].filter(Boolean).join(", ") || "—"}</TD>

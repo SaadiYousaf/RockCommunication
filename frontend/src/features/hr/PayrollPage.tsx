@@ -9,9 +9,11 @@ import {
 } from "../../shared/api/baseApi";
 import type { PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 // Salaries are paid in PKR.
 const money = (n: number | null | undefined) =>
@@ -134,6 +136,19 @@ export function PayrollPage() {
 
   const list = rows ?? [];
   const totalNet = list.reduce((s, r) => s + r.netPay, 0);
+  const sel = useRowSelection(list.map((r) => r.employeeId));
+
+  function exportSelected() {
+    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (r) => r.fullName },
+      { header: "Agent ID", value: (r) => r.agentCode },
+      { header: "Basic", value: (r) => Math.round(r.basicSalary) },
+      { header: "Deductions", value: (r) => Math.round(r.deductions) },
+      { header: "Net", value: (r) => Math.round(r.netPay) },
+    ], `payroll-${monthValue}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   return (
     <>
@@ -171,6 +186,7 @@ export function PayrollPage() {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
+              <TH className="w-10"><Checkbox aria-label="Select all employees" {...sel.allCheckboxProps} /></TH>
               <TH>
                 <span className="inline-flex items-center gap-1">Employee
                   <InfoHint title="Agent ID" side="bottom">The mono code beneath each name is the employee's unique Agent ID.</InfoHint>
@@ -206,7 +222,10 @@ export function PayrollPage() {
             </TR></THead>
             <TBody>
               {list.map((r) => (
-                <TR key={r.employeeId}>
+                <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />
+                  </TD>
                   <TD>
                     <div className="font-medium text-ink-900">{r.fullName}</div>
                     <div className="font-mono text-xs text-ink-500">{r.agentCode}</div>
@@ -227,6 +246,10 @@ export function PayrollPage() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="employee" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+          />
         </div>
       )}
 

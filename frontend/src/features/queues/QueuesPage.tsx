@@ -7,10 +7,12 @@ import {
   useUpsertQueueMutation, useUpsertVoicemailMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 export function QueuesPage() {
   return (
@@ -38,6 +40,19 @@ function QueueSection() {
   const [phone, setPhone] = useState("");
   const [skill, setSkill] = useState("");
   const { sorted, dirFor, toggle } = useTableSort(queues);
+  const sel = useRowSelection(sorted.map((q) => q.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((q) => sel.isSelected(q.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (q) => q.name },
+      { header: "Type", value: (q) => q.strategy },
+      { header: "Skill", value: (q) => q.requiredSkillCode ?? "" },
+      { header: "Max wait (s)", value: (q) => q.maxWaitSeconds },
+      { header: "Status", value: (q) => (q.isActive ? "Active" : "Inactive") },
+    ], `queues-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,9 +91,11 @@ function QueueSection() {
             />
           </div>
         ) : (
+          <>
           <Table className="border-0 shadow-none rounded-none">
             <THead>
               <TR>
+                <TH className="w-10"><Checkbox aria-label="Select all queues" {...sel.allCheckboxProps} /></TH>
                 <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
                 <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
                 <TH sortDir={dirFor("requiredSkillCode")} onClick={() => toggle("requiredSkillCode")}><span className="inline-flex items-center gap-1">Skill<InfoHint title="Required skill" side="bottom">Only agents tagged with this skill code (e.g. ES for Spanish) receive this queue's calls. Blank means any available agent qualifies.</InfoHint></span></TH>
@@ -89,7 +106,10 @@ function QueueSection() {
             </THead>
             <TBody>
               {sorted.map((q) => (
-                <TR key={q.id}>
+                <TR key={q.id} className={sel.isSelected(q.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${q.name}`} {...sel.checkboxProps(q.id)} />
+                  </TD>
                   <TD className="font-medium text-ink-900">{q.name}</TD>
                   <TD className="font-mono text-ink-700 text-xs">{q.phoneNumber || <span className="text-ink-400">—</span>}</TD>
                   <TD>{q.requiredSkillCode ? <Badge tone="info" variant="soft">{q.requiredSkillCode}</Badge> : <span className="text-ink-400">—</span>}</TD>
@@ -104,6 +124,11 @@ function QueueSection() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="queue" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+          />
+          </>
         )}
       </CardBody>
 

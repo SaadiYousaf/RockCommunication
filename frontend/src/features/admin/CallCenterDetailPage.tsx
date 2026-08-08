@@ -5,8 +5,10 @@ import {
   useGetAgencyQuery, useAgencyCallCentersQuery, useListUsersQuery, useSetUserCallCenterMutation,
 } from "../../shared/api/baseApi";
 import { roleLabel } from "../../shared/constants/roles";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Avatar, Badge, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader, Select, Skeleton,
+  Avatar, Badge, BulkActionBar, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader, Select, Skeleton,
   Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -32,6 +34,18 @@ export function CallCenterDetailPage() {
   const staff = useMemo(
     () => (people ?? []).filter((u) => isAgencyWide ? !u.callCenterId : u.callCenterId === callCenterId),
     [people, callCenterId, isAgencyWide]);
+
+  const sel = useRowSelection(staff.map((u) => u.id));
+
+  function exportSelected() {
+    const chosen = staff.filter((u) => sel.isSelected(u.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (u) => u.userName },
+      { header: "Email", value: (u) => u.email },
+      { header: "Roles", value: (u) => u.roles.map((r) => roleLabel(r)).join("; ") },
+    ], `staff-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function assignCallCentre(userId: string, value: string) {
     try {
@@ -79,10 +93,11 @@ export function CallCenterDetailPage() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <THead><TR><TH>User</TH><TH><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">What the user is allowed to do in the system. A user can hold more than one role, and the roles together decide which pages and actions they see.</InfoHint></span></TH><TH><span className="inline-flex items-center gap-1">Call centre<InfoHint title="Call centre" side="left">Pin a user to one call centre to limit their pipeline to just that centre; set agency-wide to let them see the whole agency.</InfoHint></span></TH></TR></THead>
+                <THead><TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH>User</TH><TH><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">What the user is allowed to do in the system. A user can hold more than one role, and the roles together decide which pages and actions they see.</InfoHint></span></TH><TH><span className="inline-flex items-center gap-1">Call centre<InfoHint title="Call centre" side="left">Pin a user to one call centre to limit their pipeline to just that centre; set agency-wide to let them see the whole agency.</InfoHint></span></TH></TR></THead>
                 <TBody>
                   {staff.map((u) => (
-                    <TR key={u.id}>
+                    <TR key={u.id} className={sel.isSelected(u.id) ? "bg-brand-50/40" : undefined}>
+                      <TD><Checkbox aria-label={`Select ${u.userName}`} {...sel.checkboxProps(u.id)} /></TD>
                       <TD>
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Avatar name={u.userName} size={30} />
@@ -110,6 +125,12 @@ export function CallCenterDetailPage() {
                   ))}
                 </TBody>
               </Table>
+              <BulkActionBar
+                count={sel.selectedCount} itemNoun="staff" onClear={sel.clear}
+                actions={[
+                  { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+                ]}
+              />
             </div>
           )}
         </CardBody>

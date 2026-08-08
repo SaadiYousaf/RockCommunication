@@ -5,12 +5,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
@@ -33,6 +35,19 @@ export function CloseQueuePage() {
   const total = queue?.length ?? 0;
   const started = (queue ?? []).filter((l) => l.hasApplication).length;
   const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
+  const sel = useRowSelection(sorted.map((l) => l.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
+      { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
+      { header: "Stage", value: (l) => l.stage },
+      { header: "Assigned", value: (l) => (l.hasApplication ? "Started" : "New") },
+      { header: "Updated", value: (l) => new Date(l.createdAt).toLocaleDateString() },
+    ], `closer-queue-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function onAdd(input: IntakeLeadInput) {
     try {
@@ -75,7 +90,7 @@ export function CloseQueuePage() {
           ) : (
             <Table>
               <THead>
-                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
+                <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
                   <TH sortDir={dirFor("createdAt")} onClick={() => toggle("createdAt")}>
                     <span className="inline-flex items-center gap-1">Waiting
                       <InfoHint title="Waiting time" side="bottom">How long this verified lead has waited for a closer — red means it's going stale. Work the oldest first.</InfoHint>
@@ -97,7 +112,8 @@ export function CloseQueuePage() {
               </THead>
               <TBody>
                 {sorted.map((l) => (
-                  <TR key={l.id} className="cursor-pointer" onClick={() => navigate(`/close-queue/${l.id}`)}>
+                  <TR key={l.id} className={cn("cursor-pointer", sel.isSelected(l.id) && "bg-brand-50/40")} onClick={() => navigate(`/close-queue/${l.id}`)}>
+                    <TD><Checkbox aria-label={`Select ${l.firstName} ${l.lastName}`} {...sel.checkboxProps(l.id)} /></TD>
                     <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
                     <TD className="font-mono text-xs whitespace-nowrap tabular-nums">{formatPhone(l.phoneNumber)}</TD>
                     <TD className="text-sm text-ink-600 max-w-[14rem] truncate">{[l.city, l.state].filter(Boolean).join(", ") || "—"}</TD>
@@ -119,6 +135,8 @@ export function CloseQueuePage() {
               </TBody>
             </Table>
           )}
+          <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
         </CardBody>
       </Card>
 

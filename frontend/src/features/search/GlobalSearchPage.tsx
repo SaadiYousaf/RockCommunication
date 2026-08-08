@@ -9,11 +9,13 @@ import {
 } from "../../shared/api/baseApi";
 import type { Lead, UserSummary } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint,
   PageHeader, SearchInput, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import { formatPhone } from "../../shared/lib/format";
 
 
@@ -101,6 +103,18 @@ export function GlobalSearchPage() {
   const userCount = matchingUsers.length;
   const totalCount = leadCount + userCount;
   const loading = leadsLoading || usersLoading;
+
+  const sel = useRowSelection((leads ?? []).map((l) => l.id));
+
+  function exportSelected() {
+    const chosen = (leads ?? []).filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
+      { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
+      { header: "Stage", value: (l) => String(l.stage) },
+    ], `search-leads-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const [dialLead] = useDialLeadMutation();
   async function handleDial(id: string, name: string) {
@@ -200,6 +214,7 @@ export function GlobalSearchPage() {
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
+                      <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                       <TH>Name</TH>
                       <TH>Phone</TH>
                       <TH>Email</TH>
@@ -213,8 +228,9 @@ export function GlobalSearchPage() {
                       <TR
                         key={l.id}
                         onClick={() => navigate(`/leads/${l.id}`)}
-                        className="cursor-pointer"
+                        className={cn("cursor-pointer", sel.isSelected(l.id) && "bg-brand-50/40")}
                       >
+                        <TD><Checkbox aria-label={`Select ${l.firstName} ${l.lastName}`} {...sel.checkboxProps(l.id)} /></TD>
                         <TD>
                           <div className="flex items-center gap-2.5">
                             <Avatar name={`${l.firstName} ${l.lastName}`} size={28} />
@@ -253,6 +269,8 @@ export function GlobalSearchPage() {
                     ))}
                   </TBody>
                 </Table>
+                <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
+                  actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
                 </div>
               </CardBody>
             </Card>

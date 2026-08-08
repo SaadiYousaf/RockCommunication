@@ -6,9 +6,11 @@ import {
 } from "../../shared/api/baseApi";
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Select, SensitiveValue, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
   VALIDATOR_STATUSES as STATUSES,
   VALIDATOR_ERROR_REASONS as ERROR_REASONS,
@@ -33,6 +35,21 @@ export function ValidateQueuePage() {
   const total = queue?.length ?? 0;
   const approved = (queue ?? []).filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
   const premiumTotal = (queue ?? []).reduce((sum, s) => sum + (s.monthlyPremium ?? 0), 0);
+  const toast = useToast();
+  const sel = useRowSelection(sorted.map((s) => s.saleId));
+
+  function exportSelected() {
+    const chosen = sorted.filter((s) => sel.isSelected(s.saleId));
+    exportRowsToCsv(chosen, [
+      { header: "Customer", value: (s) => s.leadName },
+      { header: "Carrier", value: (s) => s.carrier },
+      { header: "Plan", value: (s) => s.planApproved ?? s.policyNumber ?? "" },
+      { header: "Premium", value: (s) => formatUsd(s.monthlyPremium) },
+      { header: "Status", value: (s) => LABEL[s.status] },
+      { header: "Agency", value: (s) => s.agencyName },
+    ], `submission-queue-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   return (
     <>
@@ -58,6 +75,7 @@ export function ValidateQueuePage() {
             <Table>
               <THead>
                 <TR>
+                  <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                   <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title="Monthly premium" side="bottom">The amount the customer pays each month for this policy.</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
                   <TH sortDir={dirFor("licenseAgentName")} onClick={() => toggle("licenseAgentName")}>
                     <span className="inline-flex items-center gap-1">
@@ -83,7 +101,8 @@ export function ValidateQueuePage() {
               </THead>
               <TBody>
                 {sorted.map((s) => (
-                  <TR key={s.saleId}>
+                  <TR key={s.saleId} className={sel.isSelected(s.saleId) ? "bg-brand-50/40" : undefined}>
+                    <TD><Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.saleId)} /></TD>
                     <TD>
                       <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
                       <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{formatPhone(s.leadPhone)}</div>
@@ -115,6 +134,8 @@ export function ValidateQueuePage() {
               </TBody>
             </Table>
           )}
+          <BulkActionBar count={sel.selectedCount} itemNoun="sale" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
         </CardBody>
       </Card>
 

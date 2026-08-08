@@ -3,10 +3,12 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 type Bucket = "overdue" | "today" | "upcoming" | "completed" | "all";
 
@@ -76,6 +78,19 @@ export function CallbacksPage() {
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (c) => (c.completed ? "Completed" : "Pending") },
   });
+
+  const sel = useRowSelection(sorted.map((c) => c.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((c) => sel.isSelected(c.id));
+    exportRowsToCsv(chosen, [
+      { header: "Lead name", value: (c) => c.leadName },
+      { header: "Phone", value: (c) => c.leadPhone },
+      { header: "Due at", value: (c) => new Date(c.scheduledFor).toLocaleString() },
+      { header: "Notes", value: (c) => c.reason ?? "" },
+    ], `callbacks-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -167,6 +182,7 @@ export function CallbacksPage() {
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all callbacks" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("scheduledFor")} onClick={() => toggle("scheduledFor")}><span className="inline-flex items-center gap-1">When<InfoHint title="When" side="bottom">The scheduled date and time. The coloured tag shows how soon it's due — amber is within the hour, red means it's already overdue.</InfoHint></span></TH>
               <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Lead</TH>
               <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
@@ -178,7 +194,10 @@ export function CallbacksPage() {
             {sorted.map((c) => {
               const w = formatWhen(c.scheduledFor);
               return (
-                <TR key={c.id}>
+                <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${c.leadName}`} {...sel.checkboxProps(c.id)} />
+                  </TD>
                   <TD>
                     <div className="text-ink-900">{w.abs}</div>
                     {!c.completed && <Badge tone={w.tone} variant="soft" className="mt-1">{w.rel}</Badge>}
@@ -212,6 +231,10 @@ export function CallbacksPage() {
             })}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="callback" onClear={sel.clear}
+          actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+        />
         </div>
       )}
 

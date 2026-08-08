@@ -7,8 +7,10 @@ import type { RootState } from "../../app/store";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { isManager } from "../../shared/constants/roles";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -55,6 +57,20 @@ export function CommissionsPage() {
   const { sorted, dirFor, toggle } = useTableSort(commissions, {
     accessors: { status: (c) => (c.paid ? "Paid" : "Unpaid") },
   });
+
+  const sel = useRowSelection(sorted.map((c) => c.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((c) => sel.isSelected(c.id));
+    exportRowsToCsv(chosen, [
+      { header: "Agent", value: (c) => c.agentUserId },
+      { header: "Sale/customer", value: (c) => c.saleId },
+      { header: "Amount", value: (c) => c.amount },
+      { header: "Status", value: (c) => (c.paid ? "Paid" : "Unpaid") },
+      { header: "Date", value: (c) => new Date(c.earnedAt).toLocaleString() },
+    ], `commissions-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   function setRange(days: number) {
     setFrom(todayStr(-days));
@@ -185,9 +201,11 @@ export function CommissionsPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all commissions" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("earnedAt")} onClick={() => toggle("earnedAt")}>Earned</TH>
               <TH sortDir={dirFor("ruleName")} onClick={() => toggle("ruleName")}>Rule</TH>
               <TH numeric sortDir={dirFor("amount")} onClick={() => toggle("amount")}>Amount</TH>
@@ -205,7 +223,10 @@ export function CommissionsPage() {
           </THead>
           <TBody>
             {sorted.map((c) => (
-              <TR key={c.id}>
+              <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
+                <TD>
+                  <Checkbox aria-label={`Select commission ${c.ruleName}`} {...sel.checkboxProps(c.id)} />
+                </TD>
                 <TD className="text-ink-600 whitespace-nowrap tabular-nums">{new Date(c.earnedAt).toLocaleString()}</TD>
                 <TD className="font-mono text-xs text-ink-700">{c.ruleName}</TD>
                 <TD numeric className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${c.amount.toFixed(2)}</TD>
@@ -219,6 +240,11 @@ export function CommissionsPage() {
             ))}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="commission" onClear={sel.clear}
+          actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+        />
+        </>
       )}
 
       {manager && (

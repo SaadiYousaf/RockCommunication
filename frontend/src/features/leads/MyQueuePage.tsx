@@ -6,13 +6,15 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatPhone } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   New: ["Fronted", "Lost"],
@@ -76,6 +78,19 @@ export function MyQueuePage() {
       stage: (l) => stageOf(l.stage),
     },
   });
+
+  const sel = useRowSelection(sorted.map((l) => l.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => `${l.firstName} ${l.lastName}`.trim() },
+      { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
+      { header: "Stage", value: (l) => stageOf(l.stage) },
+      { header: "Next action", value: (l) => String(l.disposition) },
+    ], `my-queue-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function dialFromRow(id: string, name: string) {
     setBusyId(id);
@@ -162,6 +177,7 @@ export function MyQueuePage() {
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Lead</TH>
               <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
               <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>
@@ -191,7 +207,8 @@ export function MyQueuePage() {
               const name = `${l.firstName} ${l.lastName}`.trim();
               const next = NEXT_STAGES[stage];
               return (
-                <TR key={l.id}>
+                <TR key={l.id} className={sel.isSelected(l.id) ? "bg-brand-50/40" : undefined}>
+                  <TD><Checkbox aria-label={`Select ${name}`} {...sel.checkboxProps(l.id)} /></TD>
                   <TD>
                     <div className="flex items-center gap-3">
                       <Avatar name={name} size={36} />
@@ -241,6 +258,8 @@ export function MyQueuePage() {
           </TBody>
         </Table>
       )}
+      <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
+        actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
     </>
   );
 }

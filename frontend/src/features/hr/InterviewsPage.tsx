@@ -8,9 +8,11 @@ import type { Interview, InterviewInput } from "../../shared/api/types";
 import { OFFER_STATUSES, OFFER_TONE, hrLabel } from "../../shared/constants/hr";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const BLANK: InterviewInput = {
   interviewDate: null, candidateName: "", cnic: "", phoneNumber: "",
@@ -93,6 +95,37 @@ export function InterviewsPage() {
   const rows = interviews ?? [];
   const hired = rows.filter((r) => r.status === "Hired").length;
   const offered = rows.filter((r) => r.status === "Offered").length;
+  const sel = useRowSelection(rows.map((r) => r.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  function exportSelected() {
+    const chosen = rows.filter((r) => sel.isSelected(r.id));
+    exportRowsToCsv(chosen, [
+      { header: "Candidate", value: (r) => r.candidateName },
+      { header: "Phone", value: (r) => r.phoneNumber ?? "" },
+      { header: "Position", value: (r) => r.positionAppliedFor ?? "" },
+      { header: "Status", value: (r) => hrLabel(r.status) },
+      { header: "Interview date", value: (r) => dateOnly(r.interviewDate) },
+    ], `interviews-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  async function bulkDelete() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    if (!(await confirm({
+      title: `Delete ${ids.length} ${ids.length === 1 ? "interview" : "interviews"}?`,
+      description: "This removes the selected candidate records. This can't be undone.",
+      confirmLabel: "Delete", danger: true,
+    }))) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(ids.map((id) => remove(id).unwrap()));
+      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "interview" : "interviews"}`);
+      sel.clear();
+    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    finally { setBulkDeleting(false); }
+  }
 
   return (
     <>
@@ -151,6 +184,7 @@ export function InterviewsPage() {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
+              <TH className="w-10"><Checkbox aria-label="Select all interviews" {...sel.allCheckboxProps} /></TH>
               <TH>Candidate</TH><TH>Position</TH><TH>Interview</TH>
               <TH numeric>
                 <span className="inline-flex items-center gap-1">Expected
@@ -176,7 +210,10 @@ export function InterviewsPage() {
             </TR></THead>
             <TBody>
               {rows.map((i) => (
-                <TR key={i.id}>
+                <TR key={i.id} className={sel.isSelected(i.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${i.candidateName}`} {...sel.checkboxProps(i.id)} />
+                  </TD>
                   <TD>
                     <div className="font-medium text-ink-900">{i.candidateName}</div>
                     <div className="text-xs text-ink-500">{i.phoneNumber || "—"}</div>
@@ -197,6 +234,13 @@ export function InterviewsPage() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="interview" onClear={sel.clear}
+            actions={[
+              { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+              { key: "delete", label: "Delete", icon: "trash", onClick: bulkDelete, danger: true, loading: bulkDeleting },
+            ]}
+          />
         </div>
       )}
 

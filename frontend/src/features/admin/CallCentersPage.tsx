@@ -9,8 +9,10 @@ import {
 } from "../../shared/api/baseApi";
 import type { CallCenterDto } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -38,6 +40,7 @@ export function CallCentersPage() {
     key: "name",
     accessors: { status: (c) => (c.isActive ? 1 : 0) },
   });
+  const sel = useRowSelection(sorted.map((c) => c.id));
   const isLoading = isSuperAdmin ? (scoped.isLoading || !agencyId) : own.isLoading;
 
   // At-a-glance totals for the currently-scoped agency (mirrors AgenciesPage).
@@ -55,6 +58,17 @@ export function CallCentersPage() {
   const [updateCc, { isLoading: saving }] = useUpdateCallCenterMutation();
   const [updateCcInAgency, { isLoading: savingSa }] = useUpdateCallCenterInAgencyMutation();
   const toast = useToast();
+
+  function exportSelected() {
+    const chosen = sorted.filter((c) => sel.isSelected(c.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (c) => c.name },
+      { header: "Code", value: (c) => c.code ?? "" },
+      { header: "Leads", value: (c) => c.leadCount ?? 0 },
+      { header: "Active", value: (c) => (c.isActive ? "Yes" : "No") },
+    ], `call-centres-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const [editing, setEditing] = useState<CallCenterDto | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -153,9 +167,11 @@ export function CallCentersPage() {
               description="Create one, then assign agents to it from User Management."
               action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNew(true)}>Add call center</Button>} />
           ) : (
+            <>
             <Table>
               <THead>
                 <TR>
+                  <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                   <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH>
                   <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>
                     <span className="inline-flex items-center gap-1">Code<InfoHint title="Short code" side="top">An optional short identifier for the call centre — it shows up in reports and logs so you can spot it at a glance.</InfoHint></span>
@@ -171,7 +187,8 @@ export function CallCentersPage() {
               </THead>
               <TBody>
                 {sorted.map((c) => (
-                  <TR key={c.id}>
+                  <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
+                    <TD><Checkbox aria-label={`Select ${c.name}`} {...sel.checkboxProps(c.id)} /></TD>
                     <TD className="font-medium text-ink-900 truncate max-w-[16rem]">{c.name}</TD>
                     <TD className="font-mono text-xs text-ink-600 whitespace-nowrap">{c.code || "—"}</TD>
                     <TD numeric className="text-sm tabular-nums">{c.leadCount}</TD>
@@ -185,6 +202,13 @@ export function CallCentersPage() {
                 ))}
               </TBody>
             </Table>
+            <BulkActionBar
+              count={sel.selectedCount} itemNoun="call centre" onClear={sel.clear}
+              actions={[
+                { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+              ]}
+            />
+            </>
           )}
         </CardBody>
       </Card>

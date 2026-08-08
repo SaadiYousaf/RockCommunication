@@ -11,11 +11,13 @@ import {
   useListSalesQuery, useListUsersQuery, type SalesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
   Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "brand"> = {
   funded: "success", validated: "info", pending: "warning", internal: "brand",
@@ -348,6 +350,23 @@ function SalesList() {
   const { data, isLoading, isFetching } = useListSalesQuery(filters);
   const { data: users } = useListUsersQuery();
   const { data: carriers } = useCarriersQuery();
+  const toast = useToast();
+
+  const rows = data?.items ?? [];
+  const sel = useRowSelection(rows.map((s) => s.id));
+
+  function exportSelected() {
+    const chosen = rows.filter((s) => sel.isSelected(s.id));
+    exportRowsToCsv(chosen, [
+      { header: "Customer", value: (s) => s.leadName },
+      { header: "Carrier", value: (s) => s.carrier },
+      { header: "Plan", value: (s) => s.planApproved ?? "" },
+      { header: "Premium", value: (s) => s.monthlyPremium },
+      { header: "Commission", value: (s) => s.commissionEarned ?? "" },
+      { header: "Status", value: (s) => s.status },
+    ], `sales-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const total = data?.total ?? 0;
   const skip = filters.skip ?? 0;
@@ -449,6 +468,7 @@ function SalesList() {
           <Table>
             <THead>
               <TR>
+                <TH className="w-10"><Checkbox aria-label="Select all sales" {...sel.allCheckboxProps} /></TH>
                 <TH>Sold</TH>
                 <TH>Lead</TH>
                 <TH>
@@ -475,7 +495,10 @@ function SalesList() {
             </THead>
             <TBody>
               {data.items.map((s) => (
-                <TR key={s.id} className="cursor-pointer" onClick={() => navigate(`/sales/${s.id}`)}>
+                <TR key={s.id} className={sel.isSelected(s.id) ? "cursor-pointer bg-brand-50/40" : "cursor-pointer"} onClick={() => navigate(`/sales/${s.id}`)}>
+                  <TD onClick={(e) => e.stopPropagation()}>
+                    <Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.id)} />
+                  </TD>
                   <TD className="text-ink-600 whitespace-nowrap text-xs tabular-nums">
                     {/* Keyboard-reachable link to the sale (the row onClick is mouse-only). */}
                     <Link to={`/sales/${s.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
@@ -520,6 +543,10 @@ function SalesList() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="sale" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+          />
 
           <div className="flex items-center justify-between mt-4">
             <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>

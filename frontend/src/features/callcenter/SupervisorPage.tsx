@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery } from "../../shared/api/baseApi";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "danger"> = {
   Available: "success", OnCall: "info", Break: "warning", Lunch: "warning",
@@ -67,6 +69,19 @@ export function SupervisorPage() {
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { duration: (a) => parseDuration(a.duration) },
   });
+
+  const sel = useRowSelection(sorted.map((a) => a.userId));
+
+  function exportSelected() {
+    const chosen = sorted.filter((a) => sel.isSelected(a.userId));
+    exportRowsToCsv(chosen, [
+      { header: "Agent", value: (a) => a.userName },
+      { header: "Status", value: (a) => a.status },
+      { header: "Extension/queue", value: (a) => a.currentCallStatus ?? "" },
+      { header: "Duration", value: (a) => formatDuration(a.duration) },
+    ], `agents-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   async function force(userId: string, status: string, label: string, reason: string) {
     setBusy(`${userId}:${label}`);
@@ -149,9 +164,11 @@ export function SupervisorPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all agents" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>Agent</TH>
               <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>Status</TH>
               <TH sortDir={dirFor("reason")} onClick={() => toggle("reason")}>Reason</TH>
@@ -183,7 +200,10 @@ export function SupervisorPage() {
           </THead>
           <TBody>
             {sorted.map((a) => (
-              <TR key={a.userId}>
+              <TR key={a.userId} className={sel.isSelected(a.userId) ? "bg-brand-50/40" : undefined}>
+                <TD>
+                  <Checkbox aria-label={`Select ${a.userName}`} {...sel.checkboxProps(a.userId)} />
+                </TD>
                 <TD>
                   <div className="flex items-center gap-3">
                     <Avatar name={a.userName ?? "?"} size={36} />
@@ -245,6 +265,11 @@ export function SupervisorPage() {
             ))}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="agent" onClear={sel.clear}
+          actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+        />
+        </>
       )}
     </>
   );

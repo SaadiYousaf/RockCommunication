@@ -13,9 +13,11 @@ import {
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { EmployeeImageField } from "./EmployeeImageField";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const BLANK: EmployeeInput = {
   fullName: "", agentCode: "", phoneNumber: "", officialEmail: "",
@@ -120,6 +122,38 @@ export function EmployeesPage() {
 
   const rows = employees ?? [];
   const managerOptions = rows.filter((r) => r.id !== editingId);
+  const sel = useRowSelection(rows.map((r) => r.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  function exportSelected() {
+    const chosen = rows.filter((r) => sel.isSelected(r.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (r) => r.fullName },
+      { header: "Agent ID", value: (r) => r.agentCode },
+      { header: "Designation", value: (r) => hrLabel(r.designation) },
+      { header: "Call centre", value: (r) => r.callCenterName ?? "Agency-wide" },
+      { header: "Phone", value: (r) => r.phoneNumber ?? "" },
+      { header: "Email", value: (r) => r.officialEmail ?? "" },
+    ], `employees-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  async function bulkDelete() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    if (!(await confirm({
+      title: `Remove ${ids.length} ${ids.length === 1 ? "employee" : "employees"}?`,
+      description: "This removes the selected employee records. This can't be undone.",
+      confirmLabel: "Remove", danger: true,
+    }))) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(ids.map((id) => remove(id).unwrap()));
+      toast.success(`Removed ${ids.length} ${ids.length === 1 ? "employee" : "employees"}`);
+      sel.clear();
+    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    finally { setBulkDeleting(false); }
+  }
 
   return (
     <>
@@ -194,6 +228,7 @@ export function EmployeesPage() {
           <Table>
             <THead>
               <TR>
+                <TH className="w-10"><Checkbox aria-label="Select all employees" {...sel.allCheckboxProps} /></TH>
                 <TH>Employee</TH>
                 <TH><span className="inline-flex items-center gap-1">Agent ID<InfoHint title="Agent ID" side="top">The employee's unique staff code (e.g. EMP-014), used to identify them across the CRM.</InfoHint></span></TH>
                 <TH>Designation</TH>
@@ -205,7 +240,10 @@ export function EmployeesPage() {
             </THead>
             <TBody>
               {rows.map((e) => (
-                <TR key={e.id}>
+                <TR key={e.id} className={sel.isSelected(e.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${e.fullName}`} {...sel.checkboxProps(e.id)} />
+                  </TD>
                   <TD>
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Avatar name={e.fullName} size={30} />
@@ -232,6 +270,13 @@ export function EmployeesPage() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="employee" onClear={sel.clear}
+            actions={[
+              { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+              { key: "delete", label: "Remove", icon: "trash", onClick: bulkDelete, danger: true, loading: bulkDeleting },
+            ]}
+          />
         </div>
       )}
 

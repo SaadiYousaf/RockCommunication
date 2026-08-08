@@ -2,9 +2,11 @@ import { roleLabel } from "../../shared/constants/roles";
 import { useMemo, useState } from "react";
 import { useListUsersQuery } from "../../shared/api/baseApi";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Avatar, Badge, Card, CardBody, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
+  Avatar, Badge, BulkActionBar, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
@@ -41,6 +43,19 @@ export function UsersPage() {
     key: "userName",
     accessors: { role: (u) => u.roles[0] ?? "" },
   });
+
+  const toast = useToast();
+  const sel = useRowSelection(sorted.map((u) => u.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((u) => sel.isSelected(u.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (u) => u.userName },
+      { header: "Email", value: (u) => u.email },
+      { header: "Roles", value: (u) => u.roles.map((r) => roleLabel(r)).join("; ") },
+    ], `users-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const stats = useMemo(() => {
     const items = users ?? [];
@@ -125,9 +140,11 @@ export function UsersPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
               <TH sortDir={dirFor("role")} onClick={() => toggle("role")}><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">A person's roles decide which modules they can open and what they're allowed to do. Someone with no roles can sign in but can't access anything.</InfoHint></span></TH>
@@ -135,7 +152,8 @@ export function UsersPage() {
           </THead>
           <TBody>
             {sorted.map((u) => (
-              <TR key={u.id}>
+              <TR key={u.id} className={sel.isSelected(u.id) ? "bg-brand-50/40" : undefined}>
+                <TD><Checkbox aria-label={`Select ${u.userName}`} {...sel.checkboxProps(u.id)} /></TD>
                 <TD>
                   <div className="flex items-center gap-3">
                     <Avatar name={u.userName} size={36} />
@@ -156,6 +174,13 @@ export function UsersPage() {
             ))}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="user" onClear={sel.clear}
+          actions={[
+            { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+          ]}
+        />
+        </>
       )}
     </>
   );

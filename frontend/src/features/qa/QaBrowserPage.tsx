@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useListQaReviewsQuery, useQaScorecardsQuery, useUserDirectoryQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR,
+  Avatar, Badge, BulkActionBar, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 function scoreTone(pct: number): "success" | "warning" | "danger" {
   if (pct >= 85) return "success";
@@ -34,6 +36,20 @@ export function QaBrowserPage() {
       when: (r) => Date.parse(r.reviewedAt),
     },
   });
+
+  const toast = useToast();
+  const sel = useRowSelection(sortedReviews.map((r) => r.id));
+
+  function exportSelected() {
+    const chosen = sortedReviews.filter((r) => sel.isSelected(r.id));
+    exportRowsToCsv(chosen, [
+      { header: "Agent", value: (r) => nameOf(r.agentUserId) },
+      { header: "Reviewer", value: (r) => nameOf(r.reviewerUserId) },
+      { header: "Score", value: (r) => `${r.totalScore} / ${r.maxScore}` },
+      { header: "Date", value: (r) => new Date(r.reviewedAt).toLocaleString() },
+    ], `qa-reviews-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   return (
     <>
@@ -136,6 +152,7 @@ export function QaBrowserPage() {
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
+                  <TH className="w-10"><Checkbox aria-label="Select all reviews" {...sel.allCheckboxProps} /></TH>
                   <TH sortDir={reviewDir("when")} onClick={() => sortReview("when")}>When</TH>
                   <TH sortDir={reviewDir("agent")} onClick={() => sortReview("agent")}>Agent</TH>
                   <TH sortDir={reviewDir("reviewer")} onClick={() => sortReview("reviewer")}>Reviewer</TH>
@@ -146,7 +163,10 @@ export function QaBrowserPage() {
               </THead>
               <TBody>
                 {sortedReviews.map((r) => (
-                  <TR key={r.id}>
+                  <TR key={r.id} className={sel.isSelected(r.id) ? "bg-brand-50/40" : undefined}>
+                    <TD>
+                      <Checkbox aria-label={`Select review by ${nameOf(r.agentUserId)}`} {...sel.checkboxProps(r.id)} />
+                    </TD>
                     <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(r.reviewedAt).toLocaleString()}</TD>
                     <TD className="text-xs text-ink-700 truncate">{nameOf(r.agentUserId)}</TD>
                     <TD className="text-xs text-ink-500 truncate">{nameOf(r.reviewerUserId)}</TD>
@@ -162,6 +182,11 @@ export function QaBrowserPage() {
           )}
         </CardBody>
       </Card>
+
+      <BulkActionBar
+        count={sel.selectedCount} itemNoun="review" onClear={sel.clear}
+        actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+      />
     </>
   );
 }

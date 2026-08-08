@@ -8,12 +8,14 @@ import {
   useSearchLeadsQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn,
   EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import { formatPhone } from "../../shared/lib/format";
 
 type Filters = { phone: string; email: string; name: string; state: string; stage: string };
@@ -61,6 +63,8 @@ export function LeadSearchPage() {
     },
   });
 
+  const sel = useRowSelection(sorted.map((l) => l.id));
+
   const { data: duplicates, isLoading: dupLoading, refetch: refetchDups } = useDuplicateLeadsQuery();
   const [dialLead] = useDialLeadMutation();
   const toast = useToast();
@@ -68,6 +72,17 @@ export function LeadSearchPage() {
 
   function clearAll() {
     setFilters({ phone: "", email: "", name: "", state: "", stage: "" });
+  }
+
+  function exportSelected() {
+    const chosen = sorted.filter((l) => sel.isSelected(l.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
+      { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
+      { header: "Email", value: (l) => l.email ?? "" },
+      { header: "Stage", value: (l) => String(l.stage) },
+    ], `lead-search-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
   }
 
   async function dialFromRow(leadId: string) {
@@ -193,6 +208,7 @@ export function LeadSearchPage() {
                 <Table className="border-0 shadow-none rounded-none">
                   <THead>
                     <TR>
+                      <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                       <TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Lead</TH>
                       <TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH>
                       <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
@@ -217,7 +233,8 @@ export function LeadSearchPage() {
                   </THead>
                   <TBody>
                     {sorted.map((l) => (
-                      <TR key={l.id}>
+                      <TR key={l.id} className={cn(sel.isSelected(l.id) && "bg-brand-50/40")}>
+                        <TD><Checkbox aria-label={`Select ${l.firstName} ${l.lastName}`} {...sel.checkboxProps(l.id)} /></TD>
                         <TD>
                           <Link to={`/leads/${l.id}`} className="flex items-center gap-3 group">
                             <Avatar name={`${l.firstName} ${l.lastName}`} size={32} />
@@ -255,6 +272,8 @@ export function LeadSearchPage() {
                     ))}
                   </TBody>
                 </Table>
+                <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
+                  actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
               </CardBody>
             </Card>
           )}

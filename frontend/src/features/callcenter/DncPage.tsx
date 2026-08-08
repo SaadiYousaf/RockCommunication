@@ -2,23 +2,28 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useAddDncMutation, useListDncQuery, useRemoveDncMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 export function DncPage() {
   const { data: list, isLoading } = useListDncQuery();
   const [add, { isLoading: adding }] = useAddDncMutation();
   const [remove, { isLoading: removing }] = useRemoveDncMutation();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
   const [search, setSearch] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<any | null>(null);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
 
   const filtered = useMemo(() => {
     if (!list) return [];
@@ -31,6 +36,39 @@ export function DncPage() {
   }, [list, search]);
 
   const { sorted, dirFor, toggle } = useTableSort(filtered);
+
+  const sel = useRowSelection(sorted.map((e) => e.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((e) => sel.isSelected(e.id));
+    exportRowsToCsv(chosen, [
+      { header: "Number", value: (e) => e.phoneNormalized },
+      { header: "Reason/note", value: (e) => e.reason ?? "" },
+      { header: "Added", value: (e) => e.source },
+    ], `dnc-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  async function removeSelected() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    if (!(await confirm({
+      title: `Remove ${ids.length} ${ids.length === 1 ? "number" : "numbers"} from DNC?`,
+      description: "These numbers will be eligible for outbound dialing again. You can always re-add them later.",
+      confirmLabel: "Remove",
+      danger: true,
+    }))) return;
+    setBulkRemoving(true);
+    try {
+      await Promise.all(ids.map((id) => remove(id).unwrap()));
+      toast.success(`Removed ${ids.length} from DNC`);
+      sel.clear();
+    } catch (err: unknown) {
+      toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setBulkRemoving(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,9 +132,11 @@ export function DncPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
+              <TH className="w-10"><Checkbox aria-label="Select all numbers" {...sel.allCheckboxProps} /></TH>
               <TH sortDir={dirFor("phoneNormalized")} onClick={() => toggle("phoneNormalized")}>
                 <span className="inline-flex items-center gap-1">
                   Phone
@@ -129,7 +169,10 @@ export function DncPage() {
             {sorted.map((e) => {
               const expired = e.expiresAt && new Date(e.expiresAt) <= new Date();
               return (
-                <TR key={e.id}>
+                <TR key={e.id} className={sel.isSelected(e.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${e.phoneNormalized}`} {...sel.checkboxProps(e.id)} />
+                  </TD>
                   <TD className="font-mono text-ink-900 tabular-nums whitespace-nowrap">{e.phoneNormalized}</TD>
                   <TD className="text-ink-600 max-w-[280px] truncate">{e.reason ?? <span className="text-ink-400">—</span>}</TD>
                   <TD>
@@ -158,6 +201,14 @@ export function DncPage() {
             })}
           </TBody>
         </Table>
+        <BulkActionBar
+          count={sel.selectedCount} itemNoun="number" onClear={sel.clear}
+          actions={[
+            { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+            { key: "remove", label: "Remove", icon: "trash", onClick: removeSelected, danger: true, loading: bulkRemoving },
+          ]}
+        />
+        </>
       )}
 
       <Modal

@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useListCallsQuery, useListUsersQuery, type CallsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const statusTone: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
   answered: "success", completed: "success",
@@ -16,6 +18,23 @@ export function CallsHistoryPage() {
   const [filters, setFilters] = useState<CallsQuery>({ skip: 0, take: 50, sort: "initiatedAt-desc" });
   const { data, isLoading, isFetching } = useListCallsQuery(filters);
   const { data: users } = useListUsersQuery();
+  const toast = useToast();
+
+  const rows = data?.items ?? [];
+  const sel = useRowSelection(rows.map((c) => c.id));
+
+  function exportSelected() {
+    const chosen = rows.filter((c) => sel.isSelected(c.id));
+    exportRowsToCsv(chosen, [
+      { header: "Time", value: (c) => new Date(c.initiatedAt).toLocaleString() },
+      { header: "Direction", value: (c) => c.direction },
+      { header: "From/To", value: (c) => c.leadPhone },
+      { header: "Duration", value: (c) => (c.talkSeconds != null ? formatSec(c.talkSeconds) : "") },
+      { header: "Disposition", value: (c) => c.wrapUpCode ?? "" },
+      { header: "Agent", value: (c) => c.agentName ?? "" },
+    ], `calls-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const total = data?.total ?? 0;
   const skip = filters.skip ?? 0;
@@ -121,6 +140,7 @@ export function CallsHistoryPage() {
           <Table>
             <THead>
               <TR>
+                <TH className="w-10"><Checkbox aria-label="Select all calls" {...sel.allCheckboxProps} /></TH>
                 <TH>When</TH>
                 <TH>Lead</TH>
                 <TH>Agent</TH>
@@ -154,7 +174,10 @@ export function CallsHistoryPage() {
             </THead>
             <TBody>
               {data.items.map((c) => (
-                <TR key={c.id}>
+                <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select call ${c.leadName}`} {...sel.checkboxProps(c.id)} />
+                  </TD>
                   <TD className="text-ink-600 whitespace-nowrap text-xs tabular-nums">
                     {new Date(c.initiatedAt).toLocaleString()}
                   </TD>
@@ -194,6 +217,10 @@ export function CallsHistoryPage() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="call" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
             <div className="text-xs text-ink-500 tabular-nums">{pageInfo}</div>

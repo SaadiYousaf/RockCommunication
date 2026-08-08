@@ -3,12 +3,14 @@ import { useListSalesQuery } from "../../shared/api/baseApi";
 import type { SaleListItem } from "../../shared/api/baseApi";
 import type { BadgeTone } from "../../shared/ui";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatUsd } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 function statusOf(s: SaleListItem): { label: string; tone: BadgeTone } {
   if (s.fundedAt) return { label: "Funded", tone: "success" };
@@ -30,6 +32,19 @@ export function LicenseAgentQueuePage() {
   const { sorted, dirFor, toggle } = useTableSort(items, {
     accessors: { status: (s) => statusOf(s).label },
   });
+  const toast = useToast();
+  const sel = useRowSelection(sorted.map((s) => s.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((s) => sel.isSelected(s.id));
+    exportRowsToCsv(chosen, [
+      { header: "Customer", value: (s) => s.leadName },
+      { header: "Carrier", value: (s) => s.carrier },
+      { header: "Premium", value: (s) => s.monthlyPremium },
+      { header: "Status", value: (s) => statusOf(s).label },
+    ], `my-sales-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   return (
     <>
@@ -71,7 +86,7 @@ export function LicenseAgentQueuePage() {
             <Table>
               <THead>
                 <TR>
-                  <TH sortDir={dirFor("saleNumber")} onClick={() => toggle("saleNumber")}>#</TH><TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH>
+                  <TH className="w-10"><Checkbox aria-label="Select all sales" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("saleNumber")} onClick={() => toggle("saleNumber")}>#</TH><TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH>
                   <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                     <span className="inline-flex items-center gap-1">Status
                       <InfoHint title="Sale status" side="bottom">Pending (awaiting approval), Approved (validated by the carrier), or Funded (first draft cleared — commission payable).</InfoHint>
@@ -94,7 +109,10 @@ export function LicenseAgentQueuePage() {
                 {sorted.map((s) => {
                   const st = statusOf(s);
                   return (
-                    <TR key={s.id}>
+                    <TR key={s.id} className={sel.isSelected(s.id) ? "bg-brand-50/40" : undefined}>
+                      <TD>
+                        <Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.id)} />
+                      </TD>
                       <TD className="tabular-nums text-ink-500">#{s.saleNumber}</TD>
                       <TD>
                         <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
@@ -120,6 +138,10 @@ export function LicenseAgentQueuePage() {
               </TBody>
             </Table>
           )}
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="sale" onClear={sel.clear}
+            actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
+          />
         </CardBody>
       </Card>
     </>

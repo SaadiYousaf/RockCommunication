@@ -1,4 +1,7 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import { useState } from "react";
 import {
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
@@ -6,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -29,11 +32,48 @@ export function SubmissionAgentsPage() {
   const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+  const [deactivating, setDeactivating] = useState(false);
 
   const { sorted, dirFor, toggle } = useTableSort(agents, {
     key: "name",
     accessors: { status: (a) => (a.isActive ? "Active" : "Inactive") },
   });
+
+  const sel = useRowSelection(sorted.map((a) => a.id));
+
+  function exportSelected() {
+    const chosen = sorted.filter((a) => sel.isSelected(a.id));
+    exportRowsToCsv(chosen, [
+      { header: "Name", value: (a) => a.name },
+      { header: "Email", value: (a) => a.email },
+      { header: "Status", value: (a) => (a.isActive ? (a.pendingInvite ? "Active — awaiting sign-in" : "Active") : "Inactive") },
+      { header: "Active", value: (a) => (a.isActive ? "Yes" : "No") },
+    ], `submission-agents-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  // Bulk deactivate loops the SAME per-row setActive mutation over the ticked agents — no new endpoint.
+  async function deactivateSelected() {
+    const n = sel.selectedCount;
+    if (n === 0) return;
+    if (!(await confirm({
+      title: `Deactivate ${n} ${n === 1 ? "agent" : "agents"}?`,
+      description: "They'll be signed out and can no longer validate or approve sales. You can reactivate them later.",
+      confirmLabel: "Deactivate",
+      danger: true,
+    }))) return;
+    setDeactivating(true);
+    try {
+      await Promise.all(sel.selectedIds.map((id) => setActive({ id, isActive: false }).unwrap()));
+      toast.success("Agents deactivated", `${n} can no longer sign in.`);
+      sel.clear();
+    } catch (err: unknown) {
+      toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
+    } finally {
+      setDeactivating(false);
+    }
+  }
 
   async function reactivate(a: SubmissionAgent) {
     try {
@@ -83,13 +123,15 @@ export function SubmissionAgentsPage() {
               description="Add one with the button above — they can approve sales for every agency."
               action={<Button size="sm" leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>} />
           ) : (
+            <>
             <Table>
               <THead>
-                <TR><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
+                <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
               </THead>
               <TBody>
                 {sorted.map((a) => (
-                  <TR key={a.id} className={a.isActive ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30"}>
+                  <TR key={a.id} className={sel.isSelected(a.id) ? "bg-brand-50/40" : (a.isActive ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30")}>
+                    <TD><Checkbox aria-label={`Select ${a.name}`} {...sel.checkboxProps(a.id)} /></TD>
                     <TD className={"font-medium truncate max-w-[16rem] " + (a.isActive ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")}>{a.name}</TD>
                     <TD className="text-sm text-ink-600">
                       <span className="inline-flex items-center gap-1.5 min-w-0">
@@ -136,6 +178,14 @@ export function SubmissionAgentsPage() {
                 ))}
               </TBody>
             </Table>
+            <BulkActionBar
+              count={sel.selectedCount} itemNoun="agent" onClear={sel.clear}
+              actions={[
+                { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+                { key: "deactivate", label: "Deactivate", icon: "userX", onClick: deactivateSelected, danger: true, loading: deactivating },
+              ]}
+            />
+            </>
           )}
         </CardBody>
       </Card>

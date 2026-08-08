@@ -1,7 +1,9 @@
 import { Fragment, useMemo, useState } from "react";
 import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQuery } from "../../shared/api/baseApi";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
 } from "../../shared/ui";
 
@@ -75,6 +77,22 @@ export function AuditLogPage() {
   const { data, isLoading, isFetching } = useListAuditQuery(filters);
   const [expanded, setExpanded] = useState<string | null>(null);
   const toast = useToast();
+  const sel = useRowSelection((data?.items ?? []).map((e) => e.id));
+
+  // Export ONLY the ticked rows — the header "Export CSV" button still exports the whole result set.
+  function exportSelected() {
+    const chosen = (data?.items ?? []).filter((e) => sel.isSelected(e.id));
+    exportRowsToCsv(chosen, [
+      { header: "Timestamp", value: (e) => new Date(e.occurredAt).toISOString() },
+      { header: "Entity", value: (e) => e.entityName },
+      { header: "Entity ID", value: (e) => e.entityId },
+      { header: "Action", value: (e) => e.action },
+      { header: "User", value: (e) => e.userName ?? "" },
+      { header: "IP", value: (e) => e.ipAddress ?? "" },
+      { header: "Changes", value: (e) => (e.changes ?? "").replace(/\s+/g, " ") },
+    ], `audit-log-selected-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
 
   const total = data?.total ?? 0;
   const skip = filters.skip ?? 0;
@@ -208,6 +226,7 @@ export function AuditLogPage() {
             <Table>
               <THead>
                 <TR>
+                  <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
                   <TH>When</TH>
                   <TH><span className="inline-flex items-center gap-1">Entity<InfoHint title="Entity" side="bottom">The record that was changed — a Lead, Sale, User, Campaign, etc. The short code beneath it is that record's unique ID.</InfoHint></span></TH>
                   <TH><span className="inline-flex items-center gap-1">Action<InfoHint title="Action" side="bottom">The type of change recorded — a "Transition" means a lead or sale moved between pipeline stages.</InfoHint></span></TH>
@@ -227,9 +246,12 @@ export function AuditLogPage() {
                   return (
                     <Fragment key={e.id}>
                       <TR
-                        className={hasChanges ? "cursor-pointer" : ""}
+                        className={(sel.isSelected(e.id) ? "bg-brand-50/40 " : "") + (hasChanges ? "cursor-pointer" : "")}
                         onClick={hasChanges ? () => setExpanded(isOpen ? null : e.id) : undefined}
                       >
+                        <TD onClick={(ev) => ev.stopPropagation()}>
+                          <Checkbox aria-label={`Select ${e.action} ${e.entityName}`} {...sel.checkboxProps(e.id)} />
+                        </TD>
                         <TD className="whitespace-nowrap">
                           <Tooltip content={new Date(e.occurredAt).toLocaleString()}>
                             <div>
@@ -279,7 +301,7 @@ export function AuditLogPage() {
                       </TR>
                       {isOpen && hasChanges && (
                         <TR>
-                          <TD colSpan={6} className="bg-ink-50 p-0">
+                          <TD colSpan={7} className="bg-ink-50 p-0">
                             {changes ? (
                               <div className="p-4 overflow-x-auto">
                                 <table className="w-full text-xs">
@@ -312,6 +334,12 @@ export function AuditLogPage() {
                 })}
               </TBody>
             </Table>
+            <BulkActionBar
+              count={sel.selectedCount} itemNoun="entry" onClear={sel.clear}
+              actions={[
+                { key: "csv", label: "Export selected CSV", icon: "download", onClick: exportSelected },
+              ]}
+            />
           </Card>
 
           <div className="flex items-center justify-between mt-4">

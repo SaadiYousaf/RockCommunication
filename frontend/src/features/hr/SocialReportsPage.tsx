@@ -7,9 +7,11 @@ import {
 import type { SocialMediaReport, SocialMediaInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
 
 const BLANK: SocialMediaInput = { date: new Date().toISOString(), employeeId: null, platform: "", postsMade: 0, queriesAnswered: 0, link: "", notes: "" };
 const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "");
@@ -63,6 +65,38 @@ export function SocialReportsPage() {
   const rows = platformFilter ? allRows.filter((r) => (r.platform ?? "") === platformFilter) : allRows;
   const totalPosts = rows.reduce((s, r) => s + r.postsMade, 0);
   const totalQueries = rows.reduce((s, r) => s + r.queriesAnswered, 0);
+  const sel = useRowSelection(rows.map((r) => r.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  function exportSelected() {
+    const chosen = rows.filter((r) => sel.isSelected(r.id));
+    exportRowsToCsv(chosen, [
+      { header: "Date", value: (r) => dateOnly(r.date) },
+      { header: "Handler", value: (r) => r.employeeName ?? "" },
+      { header: "Platform", value: (r) => r.platform ?? "" },
+      { header: "Posts", value: (r) => r.postsMade },
+      { header: "Queries answered", value: (r) => r.queriesAnswered },
+      { header: "Link", value: (r) => r.link ?? "" },
+    ], `social-reports-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  async function bulkDelete() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    if (!(await confirm({
+      title: `Delete ${ids.length} ${ids.length === 1 ? "report" : "reports"}?`,
+      description: "This removes the selected reports. This can't be undone.",
+      confirmLabel: "Delete", danger: true,
+    }))) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(ids.map((id) => remove(id).unwrap()));
+      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "report" : "reports"}`);
+      sel.clear();
+    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    finally { setBulkDeleting(false); }
+  }
 
   // Per-platform roll-up (posts + queries) so a "social media report" reads at a glance per channel.
   const byPlatform = Array.from(
@@ -129,6 +163,7 @@ export function SocialReportsPage() {
         <div className="overflow-x-auto">
           <Table>
             <THead><TR>
+              <TH className="w-10"><Checkbox aria-label="Select all reports" {...sel.allCheckboxProps} /></TH>
               <TH>Date</TH>
               <TH>
                 <span className="inline-flex items-center gap-1">Handler
@@ -156,7 +191,10 @@ export function SocialReportsPage() {
             </TR></THead>
             <TBody>
               {rows.map((r) => (
-                <TR key={r.id}>
+                <TR key={r.id} className={sel.isSelected(r.id) ? "bg-brand-50/40" : undefined}>
+                  <TD>
+                    <Checkbox aria-label={`Select ${dateOnly(r.date)} report`} {...sel.checkboxProps(r.id)} />
+                  </TD>
                   <TD className="tabular-nums text-ink-700">{dateOnly(r.date)}</TD>
                   <TD className="text-ink-600">{r.employeeName ?? <span className="text-ink-400">—</span>}</TD>
                   <TD>{r.platform ? <Badge tone="neutral" variant="soft">{r.platform}</Badge> : <span className="text-ink-400">—</span>}</TD>
@@ -178,6 +216,13 @@ export function SocialReportsPage() {
               ))}
             </TBody>
           </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="report" onClear={sel.clear}
+            actions={[
+              { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+              { key: "delete", label: "Delete", icon: "trash", onClick: bulkDelete, danger: true, loading: bulkDeleting },
+            ]}
+          />
         </div>
       )}
 
