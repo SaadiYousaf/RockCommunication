@@ -131,7 +131,10 @@ public class TeamLeadOverrideRule : ICommissionRule
         var closer = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == ctx.AgentId, ct);
         if (closer?.TeamId is null) return Array.Empty<CommissionLine>();
 
-        var team = await _db.Teams.AsNoTracking().FirstOrDefaultAsync(t => t.Id == closer.TeamId, ct);
+        // Explicit-agency read, filter-independent — a central Submission Agent (empty tenant) must
+        // still resolve the sale's real-agency team (re-add !IsDeleted since IgnoreQueryFilters drops it).
+        var team = await _db.Teams.AsNoTracking().IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => !t.IsDeleted && t.AgencyId == ctx.AgencyId && t.Id == closer.TeamId, ct);
         if (team?.TeamLeadUserId is null) return Array.Empty<CommissionLine>();
 
         var cfg = ctx.AgencyId is { } aid ? await _config.GetAsync(aid, Name, ct) : null;
@@ -194,8 +197,10 @@ public class CommissionEngine : ICommissionEngine
         var participants = new List<(Guid agentId, string role)> { (sale.CloserUserId, Roles.Closer) };
         if (sale.ValidatorUserId is { } vid) participants.Add((vid, Roles.Validator));
 
-        var jrCloser = await _db.LeadActivities.AsNoTracking()
-            .Where(a => a.LeadId == sale.LeadId && a.ToStage == WorkflowStage.JrClosed)
+        // Filter-independent + explicit agency: a central Submission Agent (empty tenant) must still
+        // find the sale's real-agency jr-closer activity (re-add !IsDeleted).
+        var jrCloser = await _db.LeadActivities.AsNoTracking().IgnoreQueryFilters()
+            .Where(a => !a.IsDeleted && a.AgencyId == sale.AgencyId && a.LeadId == sale.LeadId && a.ToStage == WorkflowStage.JrClosed)
             .Select(a => a.UserId).FirstOrDefaultAsync(ct);
         if (jrCloser != Guid.Empty) participants.Add((jrCloser, Roles.JrCloser));
 

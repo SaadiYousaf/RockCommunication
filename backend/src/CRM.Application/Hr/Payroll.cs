@@ -3,6 +3,7 @@ using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +36,33 @@ public record ListPayrollQuery(int Year, int Month, Guid? CallCenterId = null)
 public record GetPayrollSlipQuery(Guid EmployeeId, int Year, int Month) : IRequest<PayrollRowDto>;
 public record SavePayrollCommand(Guid EmployeeId, int Year, int Month, SavePayrollInput Input)
     : IRequest<PayrollRowDto>;
+
+// Reject an out-of-range year/month before the handler builds a DateTime from it — otherwise an
+// invalid month throws (HTTP 500) on read, and persists an unreachable junk row on save.
+public class ListPayrollValidator : AbstractValidator<ListPayrollQuery>
+{
+    public ListPayrollValidator()
+    {
+        RuleFor(x => x.Month).InclusiveBetween(1, 12);
+        RuleFor(x => x.Year).InclusiveBetween(2000, 9999);
+    }
+}
+public class GetPayrollSlipValidator : AbstractValidator<GetPayrollSlipQuery>
+{
+    public GetPayrollSlipValidator()
+    {
+        RuleFor(x => x.Month).InclusiveBetween(1, 12);
+        RuleFor(x => x.Year).InclusiveBetween(2000, 9999);
+    }
+}
+public class SavePayrollValidator : AbstractValidator<SavePayrollCommand>
+{
+    public SavePayrollValidator()
+    {
+        RuleFor(x => x.Month).InclusiveBetween(1, 12);
+        RuleFor(x => x.Year).InclusiveBetween(2000, 9999);
+    }
+}
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 

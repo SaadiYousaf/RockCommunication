@@ -13,16 +13,19 @@ public class AgencyCommissionConfigProvider : IAgencyCommissionConfigProvider
 
     public async Task<AgencyCommissionRule?> GetAsync(Guid agencyId, string ruleName, CancellationToken ct = default)
     {
+        // The agency to compute for is passed explicitly. Bypass the ambient tenant filter (re-adding
+        // !IsDeleted) so a CENTRAL Submission Agent (empty tenant) resolving another agency's config
+        // doesn't get filtered to Guid.Empty → null → wrong default amounts. See ValidatorQueue recompute.
         var entry = await _db.AgencyCommissionConfigs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.AgencyId == agencyId && c.RuleName == ruleName, ct);
+            .AsNoTracking().IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => !c.IsDeleted && c.AgencyId == agencyId && c.RuleName == ruleName, ct);
         return entry is null ? null : new(entry.RuleName, entry.Amount, entry.Threshold, entry.Enabled);
     }
 
     public async Task<IReadOnlyList<AgencyCommissionRule>> GetAllAsync(Guid agencyId, CancellationToken ct = default)
     {
-        return await _db.AgencyCommissionConfigs.AsNoTracking()
-            .Where(c => c.AgencyId == agencyId)
+        return await _db.AgencyCommissionConfigs.AsNoTracking().IgnoreQueryFilters()
+            .Where(c => !c.IsDeleted && c.AgencyId == agencyId)
             .Select(c => new AgencyCommissionRule(c.RuleName, c.Amount, c.Threshold, c.Enabled))
             .ToListAsync(ct);
     }

@@ -80,7 +80,9 @@ public class AttendanceAutofillService : BackgroundService
         if (clockedIn.Count == 0) return 0;
 
         var alreadyMarked = (await db.EmployeeAttendances.AsNoTracking().IgnoreQueryFilters()
-                .Where(a => a.Date == day && empIds.Contains(a.EmployeeId))
+                // Re-add !IsDeleted: a voided (soft-deleted) mark must NOT count as "already marked",
+                // else a clocked-in employee whose bad mark was voided never gets auto-marked Present.
+                .Where(a => !a.IsDeleted && a.Date == day && empIds.Contains(a.EmployeeId))
                 .Select(a => a.EmployeeId).ToListAsync(ct))
             .ToHashSet();
 

@@ -193,24 +193,18 @@ public class IdentityService : IIdentityService
             throw new ForbiddenAccessException(generic);
         }
 
+        // A locked account still early-returns (a locked user with the CORRECT password must not pass
+        // CheckPasswordAsync), but with the SAME generic 403 as every other failure — a distinct 429
+        // would reveal that the account exists / is locked, defeating the anti-enumeration invariant above.
         if (await _users.IsLockedOutAsync(user))
-        {
-            var retryAfter = (user.LockoutEnd ?? DateTimeOffset.UtcNow.AddMinutes(15)) - DateTimeOffset.UtcNow;
-            if (retryAfter < TimeSpan.Zero) retryAfter = TimeSpan.FromMinutes(1);
-            throw new TooManyRequestsException(
-                "Account temporarily locked due to repeated failed sign-in attempts. Try again later.",
-                retryAfter);
-        }
+            throw new ForbiddenAccessException(generic);
 
         if (!await _users.CheckPasswordAsync(user, password))
         {
-            // Identity tracks AccessFailedCount and locks the account when the configured
-            // threshold is hit. Surface a 429 the moment the lockout actually kicks in.
+            // Identity tracks AccessFailedCount and locks the account at the configured threshold.
+            // Even when THIS failure trips the lockout, return the generic 403 (not a 429) so the
+            // response never reveals the account exists or is now locked.
             await _users.AccessFailedAsync(user);
-            if (await _users.IsLockedOutAsync(user))
-                throw new TooManyRequestsException(
-                    "Account temporarily locked due to repeated failed sign-in attempts. Try again later.",
-                    TimeSpan.FromMinutes(15));
             throw new ForbiddenAccessException(generic);
         }
 
@@ -430,6 +424,13 @@ public class IdentityService : IIdentityService
 
     private async Task<LoginResponse> IssueLoginAsync(ApplicationUser user, CancellationToken ct)
     {
+        // Re-check IsActive before minting any token — covers the 2FA-completion path, where the
+        // account could have been deactivated during the pending-2FA window (after the password step).
+        // Mirrors LoginAsync's own deactivation gate so the two paths stay in lockstep.
+        if (!user.IsActive)
+            throw new ForbiddenAccessException(
+                "Your account has been deactivated. Please contact your administrator.");
+
         // Final tenant kill-switch check before any token is minted — also covers the
         // 2FA-completion path (VerifyTwoFactorAsync), which reaches token issuance here
         // without passing back through LoginAsync's earlier gate.
