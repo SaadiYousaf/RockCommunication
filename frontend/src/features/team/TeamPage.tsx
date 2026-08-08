@@ -1,5 +1,6 @@
 import { roleLabel } from "../../shared/constants/roles";
 import { getErrorDetail } from "../../shared/api/apiError";
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -480,10 +481,14 @@ function PersonCard({
 
 function PersonRow({ person, compact }: { person: OrgPersonDto; compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <Avatar name={person.userName} size={compact ? 28 : 32} />
+    <div className="flex items-center gap-3 group">
+      <Link to={`/profile/${person.id}`} className="shrink-0" title={`View ${person.userName}'s profile`}>
+        <Avatar name={person.userName} size={compact ? 28 : 32} />
+      </Link>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-ink-900 truncate">{person.userName}</div>
+        <Link to={`/profile/${person.id}`} className="text-sm font-medium text-ink-900 truncate hover:text-brand-600 transition-colors block">
+          {person.userName}
+        </Link>
         {!compact && <div className="text-[11px] text-ink-500 truncate">{person.email}</div>}
         {/* Always surface every role the person holds (or flag that they have none). */}
         <div className="flex flex-wrap gap-1 mt-1">
@@ -494,6 +499,10 @@ function PersonRow({ person, compact }: { person: OrgPersonDto; compact?: boolea
             : <Badge tone="warning" variant="soft" size="sm">No role assigned</Badge>}
         </div>
       </div>
+      <Link to={`/chat?dm=${person.id}`} title={`Message ${person.userName}`} aria-label={`Message ${person.userName}`}
+        className="shrink-0 text-ink-300 hover:text-brand-600 transition-colors p-1 sm:opacity-0 sm:group-hover:opacity-100">
+        <Icon name="chat" size={compact ? 15 : 16} />
+      </Link>
     </div>
   );
 }

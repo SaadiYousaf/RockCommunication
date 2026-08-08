@@ -19,3 +19,4 @@ export { ToastProvider, useToast, type ToastTone } from "./Toast";
 export { Tooltip } from "./Tooltip";
 export { InfoHint } from "./InfoHint";
 export { usePagination, Pager } from "./Pagination";
+export { SensitiveValue } from "./SensitiveValue";

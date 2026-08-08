@@ -7,7 +7,7 @@ import {
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, SensitiveValue, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import {
   VALIDATOR_STATUSES as STATUSES,
@@ -129,7 +129,8 @@ function LeadDetailModal({ leadId, title, onClose }: { leadId: string; title: st
   const { data, isLoading } = useGetValidateLeadQuery(leadId);
   const toast = useToast();
 
-  const text = data ? buildCopyText(data) : "";
+  const rows = data ? detailRows(data) : [];
+  const text = rowsToText(rows);
 
   async function copyAll() {
     try {
@@ -150,17 +151,30 @@ function LeadDetailModal({ leadId, title, onClose }: { leadId: string; title: st
         </div>
       }>
       {isLoading || !data ? <Skeleton className="h-64" /> : (
-        <pre className="whitespace-pre-wrap break-words text-xs text-ink-800 bg-ink-50 rounded-lg p-3 max-h-[60vh] overflow-auto font-mono">
-          {text}
-        </pre>
+        <div className="max-h-[60vh] overflow-auto pr-1 divide-y divide-ink-100">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex items-start justify-between gap-4 py-1.5 text-sm">
+              <span className="text-ink-500 shrink-0">{k}</span>
+              {SENSITIVE_LABELS.has(k)
+                ? <SensitiveValue value={String(v)} className="text-right" />
+                : <span className="text-ink-800 font-medium text-right break-words">{String(v)}</span>}
+            </div>
+          ))}
+        </div>
       )}
     </Modal>
   );
 }
 
-function buildCopyText(d: ClosingApplicationView): string {
+// Labels whose values are regulated PII — masked by default in the UI (eye to reveal), full value
+// still available via "Copy all" for the carrier portal.
+const SENSITIVE_LABELS = new Set(["SSN", "Driver's licence", "Account number", "Routing number"]);
+
+type DetailRow = [string, string | number | null | undefined];
+
+function detailRows(d: ClosingApplicationView): DetailRow[] {
   const a = d.application;
-  const rows: [string, string | number | null | undefined][] = [
+  const rows: DetailRow[] = [
     ["Name", a?.name ?? `${d.firstName} ${d.lastName}`],
     ["DOB", (a?.dateOfBirth ?? d.dateOfBirth)?.slice(0, 10)],
     ["Age", a?.age ?? d.ageYears],
@@ -181,10 +195,11 @@ function buildCopyText(d: ClosingApplicationView): string {
     ["Account number", a?.accountNumber], ["Routing number", a?.routingNumber],
     ["Jornaya LeadiD", d.jornayaLeadId],
   ];
-  return rows
-    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
-    .map(([k, v]) => `${k}: ${v}`)
-    .join("\n");
+  return rows.filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "");
+}
+
+function rowsToText(rows: DetailRow[]): string {
+  return rows.map(([k, v]) => `${k}: ${v}`).join("\n");
 }
 
 function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () => void }) {
