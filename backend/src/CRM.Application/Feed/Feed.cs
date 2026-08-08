@@ -16,21 +16,29 @@ namespace CRM.Application.Feed;
 public record FeedReactionDto(string Emoji, int Count, bool Mine);
 public record FeedCommentDto(Guid Id, Guid AuthorUserId, string AuthorName, string Body, DateTime CreatedAt, bool CanDelete);
 public record FeedPostDto(
-    Guid Id, Guid AuthorUserId, string AuthorName, string Body, DateTime CreatedAt,
+    Guid Id, Guid AuthorUserId, string AuthorName, string Body, string Kind, bool HasImage, DateTime CreatedAt,
     IReadOnlyList<FeedReactionDto> Reactions, IReadOnlyList<FeedCommentDto> Comments, bool CanDelete);
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 
 public record ListFeedQuery(int Skip = 0, int Take = 20) : IRequest<IReadOnlyList<FeedPostDto>>;
-public record CreatePostCommand(string Body) : IRequest<FeedPostDto>;
+public record CreatePostCommand(string Body, FeedPostKind Kind = FeedPostKind.Update, string? ImageKey = null) : IRequest<FeedPostDto>;
 public record DeletePostCommand(Guid PostId) : IRequest<Unit>;
+public record GetPostImageKeyQuery(Guid PostId) : IRequest<string?>;
 public record ToggleReactionCommand(Guid PostId, string Emoji) : IRequest<Unit>;
 public record AddCommentCommand(Guid PostId, string Body) : IRequest<FeedCommentDto>;
 public record DeleteCommentCommand(Guid CommentId) : IRequest<Unit>;
 
 public class CreatePostValidator : AbstractValidator<CreatePostCommand>
 {
-    public CreatePostValidator() => RuleFor(x => x.Body).NotEmpty().MaximumLength(FeedConstants.MaxPostLength);
+    public CreatePostValidator()
+    {
+        // Body may be empty when an image is attached (an image-only post is fine).
+        RuleFor(x => x.Body).MaximumLength(FeedConstants.MaxPostLength);
+        RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.Body) || !string.IsNullOrEmpty(x.ImageKey))
+            .WithMessage("Add some text or an image.");
+        RuleFor(x => x.Kind).IsInEnum();
+    }
 }
 public class AddCommentValidator : AbstractValidator<AddCommentCommand>
 {
@@ -47,6 +55,8 @@ public static class FeedConstants
     public const int MaxCommentLength = 2000;
     public const int MaxEmojiLength = 16;
     public const int MaxFeedPageSize = 50;
+    public const long MaxImageBytes = 8L * 1024 * 1024;   // 8 MB per attached image
+    public const string ImageContainer = "feed";
     // @mention token: 2–32 of letters/digits/dot/underscore/hyphen.
     public static readonly Regex MentionPattern = new(@"@([A-Za-z0-9._-]{2,32})", RegexOptions.Compiled);
 }
@@ -57,6 +67,7 @@ public class FeedHandlers :
     IRequestHandler<ListFeedQuery, IReadOnlyList<FeedPostDto>>,
     IRequestHandler<CreatePostCommand, FeedPostDto>,
     IRequestHandler<DeletePostCommand, Unit>,
+    IRequestHandler<GetPostImageKeyQuery, string?>,
     IRequestHandler<ToggleReactionCommand, Unit>,
     IRequestHandler<AddCommentCommand, FeedCommentDto>,
     IRequestHandler<DeleteCommentCommand, Unit>
@@ -116,7 +127,7 @@ public class FeedHandlers :
             var cm = (commentsByPost.GetValueOrDefault(p.Id) ?? new())
                 .Select(c => new FeedCommentDto(c.Id, c.AuthorUserId, Name(c.AuthorUserId), c.Body, c.CreatedAt,
                     c.AuthorUserId == uid || IsAdmin)).ToList();
-            return new FeedPostDto(p.Id, p.AuthorUserId, Name(p.AuthorUserId), p.Body, p.CreatedAt,
+            return new FeedPostDto(p.Id, p.AuthorUserId, Name(p.AuthorUserId), p.Body, p.Kind.ToString(), p.ImageKey != null, p.CreatedAt,
                 rx, cm, p.AuthorUserId == uid || IsAdmin);
         }).ToList();
     }
@@ -125,14 +136,30 @@ public class FeedHandlers :
     {
         Guard.AgainstNull(request);
         var (uid, aid) = Ctx();
-        var post = new FeedPost { AgencyId = aid, AuthorUserId = uid, Body = request.Body.Trim() };
+        var post = new FeedPost
+        {
+            AgencyId = aid, AuthorUserId = uid, Body = (request.Body ?? "").Trim(),
+            Kind = request.Kind, ImageKey = string.IsNullOrWhiteSpace(request.ImageKey) ? null : request.ImageKey.Trim(),
+        };
         _db.FeedPosts.Add(post);
         await _db.SaveChangesAsync(ct);
 
-        await NotifyMentionsAsync(aid, uid, post.Body, "mentioned you in a post", ct);
+        // Notify EVERYONE in the agency (except the author) about the new post — bulk-inserted in one
+        // save rather than N dispatcher round-trips. Best-effort: the post already succeeded.
+        await BroadcastNewPostAsync(aid, uid, post, ct);
 
-        return new FeedPostDto(post.Id, uid, _user.UserName ?? "You", post.Body, post.CreatedAt,
-            Array.Empty<FeedReactionDto>(), Array.Empty<FeedCommentDto>(), true);
+        return new FeedPostDto(post.Id, uid, _user.UserName ?? "You", post.Body, post.Kind.ToString(), post.ImageKey != null,
+            post.CreatedAt, Array.Empty<FeedReactionDto>(), Array.Empty<FeedCommentDto>(), true);
+    }
+
+    public async Task<string?> Handle(GetPostImageKeyQuery request, CancellationToken ct)
+    {
+        var (_, aid) = Ctx();
+        // Agency-scoped: a post id from another tenant simply isn't found, so its image can't be fetched.
+        var post = await _db.FeedPosts.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == request.PostId && p.AgencyId == aid, ct)
+            ?? throw new NotFoundException(nameof(FeedPost), request.PostId);
+        return post.ImageKey;
     }
 
     public async Task<Unit> Handle(DeletePostCommand request, CancellationToken ct)
@@ -218,6 +245,28 @@ public class FeedHandlers :
             if (targetId == authorId || targetId == excludeUserId) continue;
             await BestEffortNotifyAsync(agencyId, targetId, "You were mentioned", $"{_user.UserName} {what}.", ct);
         }
+    }
+
+    // Everyone in the agency is notified of a new post. One bulk insert (not N dispatcher round-trips);
+    // the in-app bell poll surfaces it. Best-effort — the post is already persisted.
+    private async Task BroadcastNewPostAsync(Guid agencyId, Guid authorId, FeedPost post, CancellationToken ct)
+    {
+        try
+        {
+            var names = await _identity.ListUserNamesAsync(agencyId, ct);
+            var isAnnouncement = post.Kind == FeedPostKind.Announcement;
+            var author = _user.UserName ?? "A teammate";
+            var title = isAnnouncement ? "📣 New announcement" : "New post on Pulse";
+            var body = isAnnouncement ? $"{author} posted an announcement." : $"{author} shared a post on Pulse.";
+            var rows = names.Keys
+                .Where(id => id != authorId)
+                .Select(id => new Notification { AgencyId = agencyId, UserId = id, Title = title, Body = body, Url = "/pulse" })
+                .ToList();
+            if (rows.Count == 0) return;
+            _db.Notifications.AddRange(rows);
+            await _db.SaveChangesAsync(ct);
+        }
+        catch { /* best-effort — the post already succeeded */ }
     }
 
     // Notifications are best-effort — a dispatch failure must never fail the post/comment write.

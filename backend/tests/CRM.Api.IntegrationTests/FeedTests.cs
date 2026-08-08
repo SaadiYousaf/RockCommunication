@@ -47,10 +47,19 @@ public class FeedTests : IClassFixture<CrmWebAppFactory>
     }
 
     [Fact]
-    public async Task Empty_post_body_is_rejected()
+    public async Task Empty_post_with_no_image_is_rejected()
     {
         var admin = await _factory.LoginAdminAsync();
         var resp = await admin.PostAsJsonAsync("/api/feed", new { body = "   " });
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Announcement_post_round_trips_its_kind()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var post = await admin.PostJsonAsync("/api/feed", new { body = "Big news team", kind = "Announcement" });
+        Assert.Equal("Announcement", post.GetProperty("kind").GetString());
+        Assert.False(post.GetProperty("hasImage").GetBoolean());
     }
 }

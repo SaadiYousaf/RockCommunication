@@ -1071,11 +1071,16 @@ export interface FeedComment {
   createdAt: string;
   canDelete: boolean;
 }
+export type FeedPostKind = "Update" | "Announcement" | "Praise" | "Question";
 export interface FeedPost {
   id: string;
   authorUserId: string;
   authorName: string;
   body: string;
+  /** MS-Teams-style post kind. */
+  kind: FeedPostKind;
+  /** True when the post has an attached image (fetch it from /api/feed/{id}/image). */
+  hasImage: boolean;
   createdAt: string;
   reactions: FeedReactionSummary[];
   comments: FeedComment[];

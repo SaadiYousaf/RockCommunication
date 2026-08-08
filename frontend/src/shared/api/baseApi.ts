@@ -1170,9 +1170,16 @@ export const baseApi = createApi({
       query: (p) => ({ url: "/api/feed", params: p ?? undefined }),
       providesTags: ["Feed"],
     }),
-    createPost: b.mutation<FeedPost, { body: string }>({
+    createPost: b.mutation<FeedPost, { body: string; kind?: string; imageKey?: string | null }>({
       query: (body) => ({ url: "/api/feed", method: "POST", body }),
       invalidatesTags: ["Feed"],
+    }),
+    uploadFeedImage: b.mutation<{ key: string }, File>({
+      query: (file) => {
+        const form = new FormData();
+        form.append("file", file);
+        return { url: "/api/feed/image", method: "POST", body: form };
+      },
     }),
     deletePost: b.mutation<void, string>({
       query: (id) => ({ url: `/api/feed/${id}`, method: "DELETE" }),
@@ -1458,7 +1465,7 @@ export const {
   useUpcomingTrainingsQuery,
   useListPayrollQuery, useSavePayrollMutation, useGetPayrollConfigQuery, useSavePayrollConfigMutation,
   useListFeedQuery, useCreatePostMutation, useDeletePostMutation, useReactPostMutation,
-  useCommentPostMutation, useDeleteFeedCommentMutation,
+  useCommentPostMutation, useDeleteFeedCommentMutation, useUploadFeedImageMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
   useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,
