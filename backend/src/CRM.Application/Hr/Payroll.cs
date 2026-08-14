@@ -134,12 +134,12 @@ public class PayrollHandlers :
             p = new EmployeePayroll { AgencyId = e.AgencyId, EmployeeId = e.Id, Year = request.Year, Month = request.Month };
             _db.EmployeePayrolls.Add(p);
         }
-        Apply(p, request.Input);
+        var (configs, names) = await LoadCallCenterInfoAsync(new[] { e.CallCenterId }, ct);
+        var cfg = CfgFor(e.CallCenterId, configs);
+        Apply(p, request.Input, cfg);
         p.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        var (configs, names) = await LoadCallCenterInfoAsync(new[] { e.CallCenterId }, ct);
-        return Build(e, request.Year, request.Month, p, null, null, 0m,
-            CfgFor(e.CallCenterId, configs), NameFor(e.CallCenterId, names));
+        return Build(e, request.Year, request.Month, p, null, null, 0m, cfg, NameFor(e.CallCenterId, names));
     }
 
     // ── Draft assembly ──────────────────────────────────────────────────────
@@ -168,13 +168,16 @@ public class PayrollHandlers :
         var special = saved?.SpecialAllowance ?? 0m;
         var docks = saved?.Docks ?? 0m;
 
-        // Per-line deduction amounts. A saved payroll keeps whatever HR chose (incl. an override);
-        // an unsaved draft AUTO-CALCULATES them from the call centre's configured deduction rules.
+        // Per-line deduction amounts are ALWAYS derived from a day's pay (basic ÷ working days) ×
+        // the count × the call centre's rule — so they track the daily wage no matter how basic or
+        // working-days changed (edit modal, bulk "Set pay", or a direct save). A FINALIZED row is a
+        // frozen snapshot and keeps its stored amounts; everything else recomputes (self-healing).
         var auto = PayrollDeductions.Auto(basic, working, late, half, absent, ncns, cfg);
-        var lateAmt = saved?.LateComingAmount ?? auto.Late;
-        var halfAmt = saved?.HalfDaysAmount ?? auto.Half;
-        var absentAmt = saved?.AbsentDaysAmount ?? auto.Absent;
-        var ncnsAmt = saved?.NcnsAmount ?? auto.Ncns;
+        var isFinal = saved?.Finalized ?? false;
+        var lateAmt = isFinal ? saved!.LateComingAmount : auto.Late;
+        var halfAmt = isFinal ? saved!.HalfDaysAmount : auto.Half;
+        var absentAmt = isFinal ? saved!.AbsentDaysAmount : auto.Absent;
+        var ncnsAmt = isFinal ? saved!.NcnsAmount : auto.Ncns;
 
         var gross = basic + punctuality + dailyBonus + commission + transport + special;
         var deductions = advance + docks + lateAmt + halfAmt + absentAmt + ncnsAmt;
@@ -187,15 +190,19 @@ public class PayrollHandlers :
             gross, deductions, net, saved?.Notes, saved?.Finalized ?? false, saved is not null);
     }
 
-    private static void Apply(EmployeePayroll p, SavePayrollInput i)
+    private static void Apply(EmployeePayroll p, SavePayrollInput i, CallCenterPayrollConfig cfg)
     {
         p.BasicSalary = i.BasicSalary; p.Punctuality = i.Punctuality; p.DailyBonus = i.DailyBonus;
         p.MonthlyCommissions = i.MonthlyCommissions; p.TransportAllowance = i.TransportAllowance;
         p.SpecialAllowance = i.SpecialAllowance; p.AdvanceSalary = i.AdvanceSalary; p.Docks = i.Docks;
         p.WorkingDays = i.WorkingDays; p.PresentDays = i.PresentDays; p.LeavesApproved = i.LeavesApproved;
         p.LateComing = i.LateComing; p.HalfDays = i.HalfDays; p.AbsentDays = i.AbsentDays; p.Ncns = i.Ncns;
-        p.LateComingAmount = i.LateComingAmount; p.HalfDaysAmount = i.HalfDaysAmount;
-        p.AbsentDaysAmount = i.AbsentDaysAmount; p.NcnsAmount = i.NcnsAmount;
+        // The attendance-driven deduction amounts are ALWAYS derived server-side from the daily wage
+        // (basic ÷ working days) × count × rule — never taken from the client — so they can never drift
+        // out of step with the basic/working-days that were just saved.
+        var auto = PayrollDeductions.Auto(i.BasicSalary, i.WorkingDays, i.LateComing, i.HalfDays, i.AbsentDays, i.Ncns, cfg);
+        p.LateComingAmount = auto.Late; p.HalfDaysAmount = auto.Half;
+        p.AbsentDaysAmount = auto.Absent; p.NcnsAmount = auto.Ncns;
         p.Notes = string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes.Trim();
         p.Finalized = i.Finalized;
     }

@@ -93,6 +93,50 @@ public class HrPayrollTests : IClassFixture<CrmWebAppFactory>
     }
 
     [Fact]
+    public async Task Absent_deduction_tracks_the_daily_wage_after_a_re_save()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        // Agency-wide employee ⇒ the default deduction rules apply (absentDayFactor = 1.0).
+        var emp = await admin.PostJsonAsync("/api/hr/employees", new
+        {
+            fullName = "Daily Wage Test",
+            agentCode = $"DW-{Guid.NewGuid():N}".Substring(0, 12),
+            designation = "Fronter",
+            gender = "Male",
+            maritalStatus = "Single",
+            employmentStatus = "Permanent",
+        });
+        var employeeId = emp.GetProperty("id").GetGuid();
+
+        const int year = 2031, month = 3;
+
+        // Save: basic 30,000 over 30 working days ⇒ a day's pay is 1,000; 3 absents ⇒ 3,000 deducted.
+        // The amount we send is deliberately wrong — the server must recompute it from the daily wage.
+        await admin.PutAsJsonAsync($"/api/hr/payroll/{employeeId}", new
+        {
+            year, month,
+            input = new { basicSalary = 30000m, workingDays = 30, absentDays = 3, absentDaysAmount = 999999m },
+        });
+        Assert.Equal(3000m, await AbsentAmount(admin, year, month, employeeId));
+
+        // Double the basic ⇒ a day's pay is 2,000 ⇒ the SAME 3 absents now deduct 6,000, automatically.
+        await admin.PutAsJsonAsync($"/api/hr/payroll/{employeeId}", new
+        {
+            year, month,
+            input = new { basicSalary = 60000m, workingDays = 30, absentDays = 3 },
+        });
+        Assert.Equal(6000m, await AbsentAmount(admin, year, month, employeeId));
+    }
+
+    private static async Task<decimal> AbsentAmount(System.Net.Http.HttpClient client, int year, int month, Guid employeeId)
+    {
+        var list = await client.GetJsonAsync($"/api/hr/payroll?year={year}&month={month}");
+        var row = list.EnumerateArray().First(r => r.GetProperty("employeeId").GetGuid() == employeeId);
+        return row.GetProperty("absentDaysAmount").GetDecimal();
+    }
+
+    [Fact]
     public async Task Interview_created_with_Training_status_persists()
     {
         var admin = await _factory.LoginAdminAsync();

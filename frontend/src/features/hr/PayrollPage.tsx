@@ -19,16 +19,25 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 const money = (n: number | null | undefined) =>
   n == null ? "—" : "PKR " + Math.round(n).toLocaleString();
 
-/** Auto-derive the four attendance-driven deduction amounts from a call centre's rules. Mirrors the backend. */
+// The deduction rates used when an employee isn't tied to a call centre (agency-wide) — mirrors
+// the backend's PayrollConfigDefaults so the modal preview matches what the server will compute.
+const DEFAULT_DEDUCTION_RATES = { lateComingFine: 0, halfDayFactor: 0.5, absentDayFactor: 1.0, ncnsFactor: 2.0 };
+
+/**
+ * Auto-derive the four attendance-driven deduction amounts from a call centre's rules (or the
+ * agency-wide defaults). A day's pay = basic ÷ working days; half/absent/NCNS are multiples of it,
+ * late is a flat fine. This mirrors the backend exactly — the server is the source of truth, so
+ * these amounts are always recomputed and never edited by hand.
+ */
 function autoDeductions(f: SavePayrollInput, cfg: PayrollConfig | undefined) {
-  if (!cfg) return null;
+  const c = cfg ?? DEFAULT_DEDUCTION_RATES;
   const perDay = f.workingDays > 0 ? f.basicSalary / f.workingDays : 0;
   const r = (v: number) => Math.round(v);
   return {
-    lateComingAmount: r(f.lateComing * cfg.lateComingFine),
-    halfDaysAmount: r(f.halfDays * perDay * cfg.halfDayFactor),
-    absentDaysAmount: r(f.absentDays * perDay * cfg.absentDayFactor),
-    ncnsAmount: r(f.ncns * perDay * cfg.ncnsFactor),
+    lateComingAmount: r(f.lateComing * c.lateComingFine),
+    halfDaysAmount: r(f.halfDays * perDay * c.halfDayFactor),
+    absentDaysAmount: r(f.absentDays * perDay * c.absentDayFactor),
+    ncnsAmount: r(f.ncns * perDay * c.ncnsFactor),
   };
 }
 
@@ -65,34 +74,28 @@ export function PayrollPage() {
   const [form, setForm] = useState<SavePayrollInput | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
-  // Deduction-amount fields HR has manually overridden — auto-calc must never overwrite these.
-  const [overridden, setOverridden] = useState<Set<keyof SavePayrollInput>>(new Set());
-  useEffect(() => { setForm(editing ? toInput(editing) : null); setOverridden(new Set()); }, [editing]);
+  useEffect(() => { setForm(editing ? toInput(editing) : null); }, [editing]);
 
   // The editing employee's call-centre deduction rules, so the modal can auto-calculate amounts live.
   const { data: editConfig } = useGetPayrollConfigQuery(editing?.callCenterId ?? "", { skip: !editing?.callCenterId });
+
+  // Once the real per-centre rules arrive (or on open), re-derive the four amounts so the preview
+  // matches what the server will store. The amounts are computed, never entered by hand.
+  useEffect(() => {
+    setForm((f) => (f ? { ...f, ...autoDeductions(f, editConfig) } : f));
+  }, [editConfig]);
 
   const num = (k: keyof SavePayrollInput) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => (f ? { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) } : f));
 
-  // Editing a deduction Amount directly marks it overridden so auto-calc leaves it alone thereafter.
-  const numOverride = (k: keyof SavePayrollInput) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => { setOverridden((s) => new Set(s).add(k)); num(k)(e); };
-
-  // A field whose change re-derives the auto deduction amounts (day counts + the basic/working-days basis),
-  // but NEVER touches an amount HR has manually overridden.
+  // A field whose change re-derives the auto deduction amounts (day counts + the basic/working-days basis).
   const numAuto = (k: keyof SavePayrollInput) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => {
         if (!f) return f;
         const next = { ...f, [k]: e.target.value === "" ? 0 : Number(e.target.value) };
-        const auto = autoDeductions(next, editConfig);
-        if (!auto) return next;
-        const merged = Object.fromEntries(
-          Object.entries(auto).filter(([ak]) => !overridden.has(ak as keyof SavePayrollInput)),
-        );
-        return { ...next, ...merged };
+        return { ...next, ...autoDeductions(next, editConfig) };
       });
 
   async function submit(e: React.FormEvent) {
@@ -370,11 +373,11 @@ export function PayrollPage() {
               Daily wage <span className="font-semibold text-ink-700 tabular-nums">{money(dailyWage)}</span>
               {" "}— basic {money(form.basicSalary)} ÷ {form.workingDays} working days. Day-based deductions (half/absent/NCNS) are computed from this.
             </div>
-            <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">Amounts auto-calculate from this call centre's deduction rules (Number × rate) — edit an Amount to override it. Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
-              <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} onAmount={numOverride("lateComingAmount")} />
-              <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} onAmount={numOverride("halfDaysAmount")} />
-              <LedgerLine label="Absent days" count={form.absentDays} onCount={numAuto("absentDays")} amount={form.absentDaysAmount} onAmount={numOverride("absentDaysAmount")} />
-              <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} onAmount={numOverride("ncnsAmount")} />
+            <Ledger title="Deductions" hint={<InfoHint title="Number & amount" side="right">The attendance amounts are computed automatically as Number × a day's pay (basic ÷ working days) × the call centre's rule — change the day count or the basic/working days and the amount follows. Advance salary carries from last month; docks are ad-hoc penalties. All amounts add up to total deductions.</InfoHint>}>
+              <LedgerLine label="Late coming" count={form.lateComing} onCount={numAuto("lateComing")} amount={form.lateComingAmount} />
+              <LedgerLine label="Half days" count={form.halfDays} onCount={numAuto("halfDays")} amount={form.halfDaysAmount} />
+              <LedgerLine label="Absent days" count={form.absentDays} onCount={numAuto("absentDays")} amount={form.absentDaysAmount} />
+              <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} />
               <LedgerLine label="Advance salary" amount={form.advanceSalary} onAmount={num("advanceSalary")} />
               <LedgerLine label="Docks" amount={form.docks} onAmount={num("docks")} />
             </Ledger>
@@ -534,13 +537,17 @@ function Ledger({ title, hint, children }: { title: string; hint?: React.ReactNo
 
 const cell = "h-9 w-full rounded-lg border border-ink-200 px-2 text-sm text-right tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20";
 
-/** One ledger row: label + optional day-count input (the "number") + the amount input. */
+/**
+ * One ledger row: label + optional day-count input (the "number") + the amount.
+ * When <c>onAmount</c> is omitted the amount is COMPUTED (read-only) — it auto-derives from the
+ * day count and the daily wage, so it can't be edited into an inconsistent value.
+ */
 function LedgerLine({ label, count, onCount, amount, onAmount }: {
   label: string;
   count?: number;
   onCount?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   amount: number;
-  onAmount: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAmount?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <>
@@ -548,7 +555,9 @@ function LedgerLine({ label, count, onCount, amount, onAmount }: {
       {onCount
         ? <input aria-label={`${label} number`} type="number" min={0} value={count ? count : ""} placeholder="0" onChange={onCount} className={cell} />
         : <span className="text-ink-300 text-right text-sm pr-2">—</span>}
-      <input aria-label={`${label} amount`} type="number" min={0} step="0.01" value={amount === 0 ? "" : amount} placeholder="0" onChange={onAmount} className={cell} />
+      {onAmount
+        ? <input aria-label={`${label} amount`} type="number" min={0} step="0.01" value={amount === 0 ? "" : amount} placeholder="0" onChange={onAmount} className={cell} />
+        : <span aria-label={`${label} amount`} className="h-9 flex items-center justify-end pr-2 text-sm text-ink-600 tabular-nums">{money(amount)}</span>}
     </>
   );
 }
