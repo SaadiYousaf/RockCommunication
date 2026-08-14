@@ -132,6 +132,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<DocumentNote> DocumentNotes => Set<DocumentNote>();
     public DbSet<Meeting> Meetings => Set<Meeting>();
     public DbSet<MeetingAttendee> MeetingAttendees => Set<MeetingAttendee>();
+    public DbSet<BugReport> BugReports => Set<BugReport>();
+    public DbSet<BugReportActivity> BugReportActivities => Set<BugReportActivity>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -333,6 +335,21 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.HasIndex(x => x.PostId);
             // One vote per user per poll (re-voting updates the existing row).
             e.HasIndex(x => new { x.PostId, x.UserId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+
+        b.Entity<BugReport>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(5000).IsRequired();
+            e.Property(x => x.PageUrl).HasMaxLength(500);
+            e.Property(x => x.UserAgent).HasMaxLength(400);
+            e.Property(x => x.Resolution).HasMaxLength(2000);
+            e.HasIndex(x => new { x.AgencyId, x.Status });
+        });
+        b.Entity<BugReportActivity>(e =>
+        {
+            e.Property(x => x.Comment).HasMaxLength(2000);
+            e.HasIndex(x => x.BugReportId);
         });
 
         b.Entity<Interview>(e =>

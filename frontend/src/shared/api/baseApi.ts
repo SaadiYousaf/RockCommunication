@@ -17,6 +17,7 @@ import type {
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput,
   FeedPost, FeedComment,
+  BugReport, BugActivity, BugReportDetail,
   SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
@@ -96,7 +97,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1206,6 +1207,32 @@ export const baseApi = createApi({
       invalidatesTags: ["Feed"],
     }),
 
+    // ── Bug reports (in-app issue tracker) ─────────────────────────────────────
+    listBugs: b.query<BugReport[], { status?: string; scope?: "mine" | "all" } | void>({
+      query: (p) => ({ url: "/api/bugs", params: p ?? undefined }),
+      providesTags: ["Bugs"],
+    }),
+    getBug: b.query<BugReportDetail, string>({
+      query: (id) => ({ url: `/api/bugs/${id}` }),
+      providesTags: (_r, _e, id) => [{ type: "Bug", id }],
+    }),
+    createBug: b.mutation<BugReport, { title: string; description: string; severity?: string; pageUrl?: string; userAgent?: string }>({
+      query: (body) => ({ url: "/api/bugs", method: "POST", body }),
+      invalidatesTags: ["Bugs"],
+    }),
+    setBugStatus: b.mutation<BugReport, { id: string; status: string; resolution?: string }>({
+      query: ({ id, ...body }) => ({ url: `/api/bugs/${id}/status`, method: "PATCH", body }),
+      invalidatesTags: (_r, _e, arg) => ["Bugs", { type: "Bug", id: arg.id }],
+    }),
+    assignBug: b.mutation<BugReport, { id: string; assignedToUserId: string | null }>({
+      query: ({ id, assignedToUserId }) => ({ url: `/api/bugs/${id}/assign`, method: "PATCH", body: { assignedToUserId } }),
+      invalidatesTags: (_r, _e, arg) => ["Bugs", { type: "Bug", id: arg.id }],
+    }),
+    commentBug: b.mutation<BugActivity, { id: string; comment: string }>({
+      query: ({ id, comment }) => ({ url: `/api/bugs/${id}/comments`, method: "POST", body: { comment } }),
+      invalidatesTags: (_r, _e, arg) => [{ type: "Bug", id: arg.id }],
+    }),
+
     getPayrollConfig: b.query<PayrollConfig, string>({
       query: (callCenterId) => `/api/hr/payroll/config/${callCenterId}`,
       providesTags: ["PayrollConfig"],
@@ -1475,6 +1502,7 @@ export const {
   useListPayrollQuery, useSavePayrollMutation, useGetPayrollConfigQuery, useSavePayrollConfigMutation,
   useListFeedQuery, useCreatePostMutation, useDeletePostMutation, useReactPostMutation,
   useCommentPostMutation, useDeleteFeedCommentMutation, useUploadFeedImageMutation, useVotePollMutation,
+  useListBugsQuery, useGetBugQuery, useCreateBugMutation, useSetBugStatusMutation, useAssignBugMutation, useCommentBugMutation,
   useListSocialReportsQuery, useCreateSocialReportMutation, useUpdateSocialReportMutation,
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
   useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,

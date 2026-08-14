@@ -1,0 +1,272 @@
+import { useMemo, useState } from "react";
+import { getErrorDetail } from "../../shared/api/apiError";
+import {
+  useListBugsQuery, useGetBugQuery, useSetBugStatusMutation, useAssignBugMutation, useCommentBugMutation,
+  useUserDirectoryQuery,
+} from "../../shared/api/baseApi";
+import {
+  BUG_STATUSES, bugStatusMeta, bugStatusLabel, bugSeverityMeta,
+} from "../../shared/constants/bugs";
+import { useRowSelection } from "../../shared/hooks/useRowSelection";
+import { exportRowsToCsv } from "../../shared/lib/csv";
+import { timeAgoShort } from "../../shared/lib/time";
+import {
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
+} from "../../shared/ui";
+
+/**
+ * Bug tracker — the triage board for everything reported through the in-app "Report a bug" button.
+ * Everyone sees and comments; Admins/SuperAdmin move a bug through the status workflow and assign it.
+ */
+export function BugsPage() {
+  const [status, setStatus] = useState<string>("");
+  const [scope, setScope] = useState<"all" | "mine">("all");
+  const { data: bugs, isLoading } = useListBugsQuery({ status: status || undefined, scope });
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const list = bugs ?? [];
+  const sel = useRowSelection(list.map((b) => b.id));
+  const canManage = list.some((b) => b.canManage);
+  const [bulkStatus, setBulkStatus] = useState(BUG_STATUSES[1].value);
+  const [setBugStatus, { isLoading: bulkBusy }] = useSetBugStatusMutation();
+  const toast = useToast();
+
+  const counts = useMemo(() => {
+    const c = { New: 0, InProgress: 0, Resolved: 0 } as Record<string, number>;
+    for (const b of list) if (b.status in c) c[b.status]++;
+    return c;
+  }, [list]);
+
+  function exportSelected() {
+    const chosen = list.filter((b) => sel.isSelected(b.id));
+    exportRowsToCsv(chosen, [
+      { header: "Title", value: (b) => b.title },
+      { header: "Severity", value: (b) => bugSeverityMeta(b.severity).label },
+      { header: "Status", value: (b) => bugStatusLabel(b.status) },
+      { header: "Reporter", value: (b) => b.reporterName },
+      { header: "Assigned to", value: (b) => b.assignedToName ?? "" },
+      { header: "Page", value: (b) => b.pageUrl ?? "" },
+      { header: "Reported", value: (b) => new Date(b.createdAt).toISOString() },
+    ], `bugs-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+  }
+
+  async function bulkApplyStatus() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    const results = await Promise.allSettled(ids.map((id) => setBugStatus({ id, status: bulkStatus }).unwrap()));
+    const failed = ids.filter((_, i) => results[i].status === "rejected");
+    const ok = ids.length - failed.length;
+    if (ok > 0) toast.success(`Moved ${ok} to ${bugStatusLabel(bulkStatus)}`);
+    if (failed.length > 0) { toast.error(`${failed.length} couldn't be updated`, "They're still selected."); sel.keepOnly(failed); }
+    else sel.clear();
+  }
+
+  return (
+    <>
+      <PageHeader eyebrow="Support" title="Bugs"
+        description="Every issue reported from the app, triaged through a clear workflow: New → Triaged → In Progress → Resolved → Closed." />
+
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <Stat label="New" value={counts.New} icon={<Icon name="inbox" size={16} />} tone="brand" />
+        <Stat label="In progress" value={counts.InProgress} icon={<Icon name="clock" size={16} />} tone="accent" />
+        <Stat label="Resolved" value={counts.Resolved} icon={<Icon name="check" size={16} />} tone="success" />
+      </div>
+
+      <Card className="mb-4">
+        <CardBody className="flex items-center gap-3 flex-wrap">
+          <Select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-48">
+            <option value="">All statuses</option>
+            {BUG_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </Select>
+          <div className="inline-flex rounded-lg border border-ink-200 p-0.5 text-sm">
+            {(["all", "mine"] as const).map((s) => (
+              <button key={s} type="button" onClick={() => setScope(s)}
+                className={cn("px-3 h-8 rounded-md transition-colors capitalize",
+                  scope === s ? "bg-brand-50 text-brand-700 font-medium" : "text-ink-500 hover:text-ink-800")}>
+                {s === "all" ? "All reports" : "My reports"}
+              </button>
+            ))}
+          </div>
+          <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "bug" : "bugs"}</span>
+        </CardBody>
+      </Card>
+
+      {isLoading ? (
+        <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : list.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState icon={<Icon name="success" size={20} />} title="No bugs here"
+            description={status || scope === "mine" ? "Nothing matches this filter." : "Nothing reported yet. Use the “Report a bug” button anytime you hit a problem."} />
+        </CardBody></Card>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <THead><TR>
+              <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
+              <TH>Bug</TH>
+              <TH>Severity</TH>
+              <TH>Status</TH>
+              <TH>Reporter</TH>
+              <TH>Assigned</TH>
+              <TH numeric>Reported</TH>
+            </TR></THead>
+            <TBody>
+              {list.map((b) => (
+                <TR key={b.id} className={cn("cursor-pointer", sel.isSelected(b.id) && "bg-brand-50/40")} onClick={() => setOpenId(b.id)}>
+                  <TD onClick={(e) => e.stopPropagation()}>
+                    <Checkbox aria-label={`Select ${b.title}`} {...sel.checkboxProps(b.id)} />
+                  </TD>
+                  <TD className="max-w-[26rem]">
+                    <div className="font-medium text-ink-900 truncate">{b.title}</div>
+                    {b.pageUrl && <div className="font-mono text-[11px] text-ink-400 truncate">{b.pageUrl}</div>}
+                  </TD>
+                  <TD><Badge tone={bugSeverityMeta(b.severity).tone} variant="soft">{bugSeverityMeta(b.severity).label}</Badge></TD>
+                  <TD><Badge tone={bugStatusMeta(b.status).tone} variant="soft">{bugStatusLabel(b.status)}</Badge></TD>
+                  <TD className="text-ink-600">{b.reporterName}</TD>
+                  <TD className="text-ink-600">{b.assignedToName ?? <span className="text-ink-400">—</span>}</TD>
+                  <TD numeric className="text-ink-500 tabular-nums whitespace-nowrap">{timeAgoShort(b.createdAt)}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          <BulkActionBar
+            count={sel.selectedCount} itemNoun="bug" onClear={sel.clear}
+            extra={canManage ? (
+              <Select aria-label="Status to set" value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as typeof bulkStatus)}
+                className="h-8 w-40 !bg-white/10 !border-white/20 !text-white text-sm">
+                {BUG_STATUSES.map((s) => <option key={s.value} value={s.value} className="text-ink-900">{s.label}</option>)}
+              </Select>
+            ) : undefined}
+            actions={[
+              ...(canManage ? [{ key: "status", label: "Set status", icon: "check" as const, onClick: bulkApplyStatus, loading: bulkBusy }] : []),
+              { key: "csv", label: "Export CSV", icon: "download" as const, onClick: exportSelected },
+            ]}
+          />
+        </div>
+      )}
+
+      {openId && <BugDetailModal bugId={openId} onClose={() => setOpenId(null)} />}
+    </>
+  );
+}
+
+function BugDetailModal({ bugId, onClose }: { bugId: string; onClose: () => void }) {
+  const { data, isLoading } = useGetBugQuery(bugId);
+  const { data: users } = useUserDirectoryQuery();
+  const [setStatus, { isLoading: savingStatus }] = useSetBugStatusMutation();
+  const [assign] = useAssignBugMutation();
+  const [comment, { isLoading: commenting }] = useCommentBugMutation();
+  const toast = useToast();
+
+  const bug = data?.bug;
+  const [newStatus, setNewStatus] = useState<string>("");
+  const [resolution, setResolution] = useState("");
+  const [body, setBody] = useState("");
+
+  const effectiveStatus = newStatus || bug?.status || "New";
+  const showResolution = ["Resolved", "Closed", "WontFix", "Duplicate", "CannotReproduce"].includes(effectiveStatus);
+
+  async function applyStatus() {
+    if (!bug || effectiveStatus === bug.status && !resolution.trim()) return;
+    try {
+      await setStatus({ id: bug.id, status: effectiveStatus, resolution: resolution.trim() || undefined }).unwrap();
+      toast.success(`Moved to ${bugStatusLabel(effectiveStatus)}`);
+      setResolution(""); setNewStatus("");
+    } catch (err: unknown) { toast.error("Couldn't update status", getErrorDetail(err) ?? "Try again."); }
+  }
+
+  async function changeAssignee(userId: string) {
+    if (!bug) return;
+    try { await assign({ id: bug.id, assignedToUserId: userId || null }).unwrap(); }
+    catch (err: unknown) { toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again."); }
+  }
+
+  async function sendComment() {
+    if (!body.trim() || !bug) return;
+    try { await comment({ id: bug.id, comment: body.trim() }).unwrap(); setBody(""); }
+    catch (err: unknown) { toast.error("Couldn't comment", getErrorDetail(err) ?? "Try again."); }
+  }
+
+  return (
+    <Modal open onClose={onClose} size="xl"
+      title={bug ? bug.title : "Bug"}
+      description={bug ? `Reported by ${bug.reporterName} · ${new Date(bug.createdAt).toLocaleString()}` : undefined}>
+      {isLoading || !bug ? (
+        <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>
+      ) : (
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge tone={bugStatusMeta(bug.status).tone} variant="soft">{bugStatusLabel(bug.status)}</Badge>
+            <Badge tone={bugSeverityMeta(bug.severity).tone} variant="soft">{bugSeverityMeta(bug.severity).label} severity</Badge>
+            {bug.pageUrl && <span className="font-mono text-[11px] text-ink-500">{bug.pageUrl}</span>}
+          </div>
+
+          <p className="text-sm text-ink-800 whitespace-pre-wrap break-words leading-relaxed">{bug.description}</p>
+          {bug.resolution && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-sm text-emerald-900">
+              <span className="font-semibold">Resolution:</span> {bug.resolution}
+            </div>
+          )}
+
+          {/* Triage — managers only */}
+          {bug.canManage && (
+            <div className="rounded-xl border border-ink-200 p-3 space-y-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">Triage</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select label="Move to status" value={effectiveStatus} onChange={(e) => setNewStatus(e.target.value)}>
+                  {BUG_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </Select>
+                <Select label="Assign to" value={bug.assignedToUserId ?? ""} onChange={(e) => changeAssignee(e.target.value)}>
+                  <option value="">Unassigned</option>
+                  {(users ?? []).map((u) => <option key={u.id} value={u.id}>{u.userName}</option>)}
+                </Select>
+              </div>
+              {showResolution && (
+                <Textarea label="Resolution / reason (optional)" value={resolution} onChange={(e) => setResolution(e.target.value)}
+                  rows={2} placeholder="What was done, or why it's being closed this way." />
+              )}
+              <div className="flex justify-end">
+                <Button size="sm" loading={savingStatus} onClick={applyStatus}
+                  disabled={effectiveStatus === bug.status && !resolution.trim()} leftIcon={<Icon name="check" size={14} />}>
+                  Update status
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Activity trail */}
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 mb-2">Activity</div>
+            <div className="space-y-2.5">
+              {data.activity.length === 0 && <p className="text-sm text-ink-400">No activity yet.</p>}
+              {data.activity.map((a) => (
+                <div key={a.id} className="flex items-start gap-2.5 text-sm">
+                  <div className="mt-0.5 h-6 w-6 shrink-0 grid place-items-center rounded-full bg-ink-100 text-ink-500">
+                    <Icon name={a.toStatus ? "refresh" : "chat"} size={12} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-medium text-ink-800">{a.userName}</span>{" "}
+                    {a.toStatus ? (
+                      <span className="text-ink-600">
+                        moved it {a.fromStatus ? <>from <b>{bugStatusLabel(a.fromStatus)}</b> </> : ""}to <b>{bugStatusLabel(a.toStatus)}</b>
+                      </span>
+                    ) : <span className="text-ink-600">commented</span>}
+                    <span className="text-ink-400"> · {timeAgoShort(a.createdAt)}</span>
+                    {a.comment && <p className="text-ink-700 whitespace-pre-wrap break-words mt-0.5">{a.comment}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a comment…"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); } }} />
+              <Button size="sm" variant="ghost" loading={commenting} disabled={!body.trim()} onClick={sendComment}>Send</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}

@@ -85,6 +85,8 @@ public interface IApplicationDbContext
     DbSet<DocumentNote> DocumentNotes { get; }
     DbSet<Meeting> Meetings { get; }
     DbSet<MeetingAttendee> MeetingAttendees { get; }
+    DbSet<BugReport> BugReports { get; }
+    DbSet<BugReportActivity> BugReportActivities { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

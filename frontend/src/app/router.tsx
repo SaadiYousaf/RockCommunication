@@ -100,6 +100,7 @@ const GuidePage = lazyWithReload(() => import("../features/guide/GuidePage").the
 const NotificationsPage = lazyWithReload(() => import("../features/notifications/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
 const CalendarPage = lazyWithReload(() => import("../features/scheduler/CalendarPage").then(m => ({ default: m.CalendarPage })));
 const PulsePage = lazyWithReload(() => import("../features/pulse/PulsePage").then(m => ({ default: m.PulsePage })));
+const BugsPage = lazyWithReload(() => import("../features/bugs/BugsPage").then(m => ({ default: m.BugsPage })));
 const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
@@ -161,6 +162,7 @@ const router = createBrowserRouter([
           { path: "/team",      element: <TeamPage /> },
           { path: "/calendar",  element: <CalendarPage /> },
           { path: "/pulse",     element: <PulsePage /> },
+          { path: "/bugs",      element: <BugsPage /> },
           // Self-service profile — /profile is the signed-in user (editable);
           // /profile/:userId views another (same-agency) user, read-only.
           { path: "/profile",          element: <ProfilePage /> },

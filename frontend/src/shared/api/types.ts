@@ -1071,6 +1071,38 @@ export interface FeedComment {
   createdAt: string;
   canDelete: boolean;
 }
+// ── Bug reports (in-app issue tracker) ────────────────────────────────────────
+export interface BugReport {
+  id: string;
+  title: string;
+  description: string;
+  severity: string;   // BugSeverity name
+  status: string;     // BugStatus name
+  reporterUserId: string;
+  reporterName: string;
+  assignedToUserId: string | null;
+  assignedToName: string | null;
+  pageUrl: string | null;
+  resolution: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  /** True when the current user may triage (change status / assign). */
+  canManage: boolean;
+}
+export interface BugActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  comment: string | null;
+  createdAt: string;
+}
+export interface BugReportDetail {
+  bug: BugReport;
+  activity: BugActivity[];
+}
+
 export type FeedPostKind = "Update" | "Announcement" | "Praise" | "Question" | "Poll";
 export interface FeedPollOption { id: string; text: string; votes: number; }
 export interface FeedPoll {

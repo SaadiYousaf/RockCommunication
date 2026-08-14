@@ -9,6 +9,7 @@ import { useMyProfileQuery } from "../../features/profile/baseApi";
 import { AvatarImage } from "../../features/profile/ProfileAvatar";
 import type { QueueCounts } from "../api/types";
 import { CallDock } from "../../features/softphone/CallDock";
+import { ReportBugButton } from "../../features/bugs/ReportBugButton";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
 import { BrandLogo } from "./BrandLogo";
 import { NotificationsBell } from "./NotificationsBell";
@@ -64,6 +65,7 @@ const NAV: NavNode[] = [
       { key: "agent", to: "/agent", label: "Agent Panel", icon: "phone", module: "agent" },
       { key: "team",  to: "/team",  label: "Team",        icon: "users" },
       { key: "guide", to: "/guide", label: "Guide",       icon: "book" },
+      { key: "bugs",  to: "/bugs",  label: "Bugs",        icon: "alert" },
     ],
   },
   {
@@ -429,6 +431,7 @@ function LayoutInner() {
         </main>
       </div>
       <CallDock />
+      <ReportBugButton />
     </div>
   );
 }
