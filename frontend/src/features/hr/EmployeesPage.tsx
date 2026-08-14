@@ -93,6 +93,12 @@ export function EmployeesPage() {
 
   function openAdd() { setEditingId(null); setForm(BLANK); setOpen(true); }
   function openEdit(id: string) { setEditingId(id); setForm(BLANK); setOpen(true); }
+  // Reset editingId on close so reopening the SAME employee re-fires the hydrate effect (otherwise the
+  // effect deps are unchanged, the form stays BLANK, and a Save would wipe the record with blanks).
+  function closeModal() { setOpen(false); setEditingId(null); setForm(BLANK); }
+
+  // True while an edit's full record hasn't loaded yet — the form isn't safe to save (would send blanks).
+  const hydrating = !!editingId && editingFull?.id !== editingId;
 
   const set = (k: keyof EmployeeInput) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -103,12 +109,13 @@ export function EmployeesPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (hydrating) return;   // guard: never save before the edited record has loaded
     const payload: EmployeeInput = { ...form, callCenterId: form.callCenterId || null,
       reportingToEmployeeId: form.reportingToEmployeeId || null };
     try {
       if (editingId) { await update({ id: editingId, ...payload }).unwrap(); toast.success("Employee updated"); }
       else { await create(payload).unwrap(); toast.success("Employee added"); }
-      setOpen(false);
+      closeModal();
     } catch (err: unknown) {
       toast.error("Couldn't save", getErrorDetail(err) ?? "Check the required fields and try again.");
     }
@@ -280,13 +287,13 @@ export function EmployeesPage() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)}
+      <Modal open={open} onClose={closeModal}
         title={editingId ? "Edit employee" : "Add employee"}
         description="CNIC and bank account number are encrypted at rest."
         size="xl"
         footer={<>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button form="emp-form" type="submit" loading={creating || updating}>{editingId ? "Save" : "Add employee"}</Button>
+          <Button variant="ghost" onClick={closeModal}>Cancel</Button>
+          <Button form="emp-form" type="submit" loading={creating || updating} disabled={hydrating}>{editingId ? "Save" : "Add employee"}</Button>
         </>}>
         <form id="emp-form" onSubmit={submit} className="space-y-5">
           <Section title="Identity">

@@ -252,11 +252,11 @@ export const baseApi = createApi({
     }),
     scheduleCallback: b.mutation<Callback, { leadId: string; scheduledFor: string; reason?: string }>({
       query: (body) => ({ url: "/api/callbacks", method: "POST", body }),
-      invalidatesTags: ["Callbacks"],
+      invalidatesTags: ["Callbacks", "QueueCounts"],
     }),
     completeCallback: b.mutation<Callback, string>({
       query: (id) => ({ url: `/api/callbacks/${id}/complete`, method: "POST" }),
-      invalidatesTags: ["Callbacks"],
+      invalidatesTags: ["Callbacks", "QueueCounts"],
     }),
 
     metricCatalog: b.query<MetricCatalogItem[], void>({
@@ -460,7 +460,7 @@ export const baseApi = createApi({
     // ---- Intake pipeline (Fronter → Verifier → Closer) ----
     captureIntakeLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
       query: (body) => ({ url: "/api/intake/leads", method: "POST", body }),
-      invalidatesTags: ["VerifierQueue", "Leads"],
+      invalidatesTags: ["VerifierQueue", "Leads", "QueueCounts"],
     }),
     verifierQueue: b.query<IntakeQueueItem[], void>({
       query: () => "/api/intake/verify/queue",
@@ -468,7 +468,7 @@ export const baseApi = createApi({
     }),
     setVerifierStatus: b.mutation<{ leadId: string; status: string; stage: string }, { leadId: string; status: string; notes?: string; callbackAt?: string }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/verify/${leadId}/status`, method: "POST", body }),
-      invalidatesTags: ["VerifierQueue", "CloserQueue"],
+      invalidatesTags: ["VerifierQueue", "CloserQueue", "QueueCounts"],
     }),
     // Verifier opens a queued lead to review / correct its intake details.
     getVerifyLead: b.query<ClosingApplicationView, string>({
@@ -494,12 +494,12 @@ export const baseApi = createApi({
     }),
     submitClosingApplication: b.mutation<{ leadId: string; status: string; stage: string; saleId: string | null }, { leadId: string; status: string; application: ClosingApplicationInput }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/close/${leadId}`, method: "POST", body }),
-      invalidatesTags: (_r, _e, arg) => ["CloserQueue", "Sales", "Leads", "Commissions", "ValidatorQueue", { type: "ClosingApp", id: arg.leadId }],
+      invalidatesTags: (_r, _e, arg) => ["CloserQueue", "Sales", "Leads", "Commissions", "ValidatorQueue", "QueueCounts", { type: "ClosingApp", id: arg.leadId }],
     }),
     // Closer adds a lead straight into the Closer queue (skips fronter/verifier).
     captureCloserLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
       query: (body) => ({ url: "/api/intake/close/leads", method: "POST", body }),
-      invalidatesTags: ["CloserQueue", "Leads"],
+      invalidatesTags: ["CloserQueue", "Leads", "QueueCounts"],
     }),
     // ---- Validator queue ----
     validatorQueue: b.query<ValidatorQueueItem[], void>({
@@ -508,7 +508,7 @@ export const baseApi = createApi({
     }),
     setValidatorStatus: b.mutation<{ saleId: string; status: string; leadStage: string }, { saleId: string } & SetValidatorStatusInput>({
       query: ({ saleId, ...body }) => ({ url: `/api/intake/validate/${saleId}/status`, method: "POST", body }),
-      invalidatesTags: ["ValidatorQueue", "Sales", "Leads", "Commissions"],   // approve/decline mints or voids commission lines
+      invalidatesTags: ["ValidatorQueue", "Sales", "Leads", "Commissions", "QueueCounts"],   // approve/decline mints or voids commission lines
     }),
     listCommissionConfig: b.query<{ ruleName: string; amount: number | null; threshold: number | null; enabled: boolean }[], void>({
       query: () => "/api/admin/commission-config",
@@ -571,11 +571,11 @@ export const baseApi = createApi({
     }),
     clockIn: b.mutation<any, void>({
       query: () => ({ url: "/api/cc/clock-in", method: "POST" }),
-      invalidatesTags: ["Session"],
+      invalidatesTags: ["Session", "Attendance"],   // refresh the dashboard "team status" widget immediately
     }),
     clockOut: b.mutation<any, void>({
       query: () => ({ url: "/api/cc/clock-out", method: "POST" }),
-      invalidatesTags: ["Session"],
+      invalidatesTags: ["Session", "Attendance"],
     }),
     setAgentStatus: b.mutation<any, { status: string; reason?: string }>({
       query: (body) => ({ url: "/api/cc/status", method: "POST", body }),

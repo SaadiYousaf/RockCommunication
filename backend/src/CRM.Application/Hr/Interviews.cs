@@ -57,6 +57,14 @@ public class CreateInterviewValidator : AbstractValidator<CreateInterviewCommand
 { public CreateInterviewValidator() => RuleFor(x => x.Input).SetValidator(new InterviewInputValidator()); }
 public class UpdateInterviewValidator : AbstractValidator<UpdateInterviewCommand>
 { public UpdateInterviewValidator() => RuleFor(x => x.Input).SetValidator(new InterviewInputValidator()); }
+public class BulkSetInterviewStatusValidator : AbstractValidator<BulkSetInterviewStatusCommand>
+{
+    public BulkSetInterviewStatusValidator()
+    {
+        RuleFor(x => x.Status).IsInEnum();          // block a crafted out-of-range OfferStatus (e.g. 99)
+        RuleFor(x => x.Ids).NotEmpty();
+    }
+}
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 

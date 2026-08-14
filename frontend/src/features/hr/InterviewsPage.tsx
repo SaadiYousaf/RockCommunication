@@ -23,7 +23,17 @@ const BLANK: InterviewInput = {
 const money = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "");
-const dateTimeLocal = (iso: string | null | undefined) => (iso ? iso.slice(0, 16) : "");
+// A <input type="datetime-local"> holds LOCAL wall-clock. Convert the stored UTC ISO to the viewer's
+// local time (getHours/getMinutes are local) — slicing the raw ISO would show it 5h off in PKT (UTC+5),
+// and re-saving that would then shift the real time. The write path (new Date(value).toISOString())
+// already treats the input as local, so this makes the round-trip correct.
+const dateTimeLocal = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 /** Whole calendar days from today (local) to the given instant; negative if past. */
 function daysUntil(iso: string): number {
@@ -131,12 +141,19 @@ export function InterviewsPage() {
       confirmLabel: "Delete", danger: true,
     }))) return;
     setBulkDeleting(true);
-    try {
-      await Promise.all(ids.map((id) => remove(id).unwrap()));
-      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "interview" : "interviews"}`);
+    // allSettled so one failed delete (e.g. a row already removed in another tab) doesn't abort the
+    // rest; report the split and keep only the failed rows selected so they can be retried.
+    const results = await Promise.allSettled(ids.map((id) => remove(id).unwrap()));
+    setBulkDeleting(false);
+    const failedIds = ids.filter((_, i) => results[i].status === "rejected");
+    const ok = ids.length - failedIds.length;
+    if (ok > 0) toast.success(`Deleted ${ok} ${ok === 1 ? "interview" : "interviews"}`);
+    if (failedIds.length > 0) {
+      toast.error(`${failedIds.length} couldn't be removed`, "They're still selected — try again.");
+      sel.keepOnly(failedIds);
+    } else {
       sel.clear();
-    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
-    finally { setBulkDeleting(false); }
+    }
   }
 
   return (

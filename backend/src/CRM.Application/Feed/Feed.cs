@@ -211,7 +211,15 @@ public class FeedHandlers :
             _db.FeedPollVotes.Remove(existing);   // clicking your current choice again un-votes
         else
             existing.OptionId = option.Id;        // move the vote to the new option
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (existing is null)
+        {
+            // A concurrent first-time vote (double-tap / two tabs) already inserted this (PostId,UserId)
+            // row, tripping the unique index. The vote is recorded — treat this as an idempotent success.
+        }
         return Unit.Value;
     }
 

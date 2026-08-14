@@ -11,9 +11,19 @@ export interface CsvColumn<T> {
   value: (row: T) => string | number | null | undefined;
 }
 
-/** Escape a single field per RFC 4180: wrap in quotes when it contains a comma, quote, or newline. */
+/** Leading characters that make a spreadsheet treat a cell as a formula (CWE-1236 CSV injection). */
+const FORMULA_TRIGGERS = "=+-@\t\r";
+
+/**
+ * Escape a single field:
+ *  1. Neutralize formula injection — a value starting with =, +, -, @, tab or CR is prefixed with an
+ *     apostrophe so Excel/Sheets/LibreOffice render it as text instead of evaluating it. Values here
+ *     include user-entered names/phones, so this matters.
+ *  2. RFC 4180 quoting — wrap in quotes when it contains a comma, quote, or newline.
+ */
 function escapeCell(input: string | number | null | undefined): string {
-  const s = input == null ? "" : String(input);
+  let s = input == null ? "" : String(input);
+  if (s.length > 0 && FORMULA_TRIGGERS.includes(s[0])) s = "'" + s;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

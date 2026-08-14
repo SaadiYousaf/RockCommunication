@@ -2,11 +2,16 @@ using CRM.Domain.Entities;
 using CcEntity = CRM.Domain.Entities.CallCenter;
 using DomainRoles = CRM.Domain.Enums.Roles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace CRM.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
+    /// <summary>EF database facade — for the rare handler that needs an explicit transaction
+    /// (e.g. serializing a per-agency serial allocation). Satisfied by DbContext.Database.</summary>
+    DatabaseFacade Database { get; }
+
     DbSet<Agency> Agencies { get; }
     DbSet<CcEntity> CallCenters { get; }
     DbSet<Team> Teams { get; }

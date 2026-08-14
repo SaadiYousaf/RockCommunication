@@ -198,15 +198,20 @@ export function PayrollPage() {
     }));
     setBulkBusy(false);
 
-    const ok = results.filter((x) => x.status === "fulfilled").length;
-    const failed = results.length - ok;
+    const failedIds = editable.filter((_, i) => results[i].status === "rejected").map((r) => r.employeeId);
+    const ok = editable.length - failedIds.length;
     if (ok > 0) {
       const note = [bulkForm.markPresent ? "Marked present" : null, "pay saved"].filter(Boolean).join(" · ");
       toast.success(`Updated ${ok} ${ok === 1 ? "employee" : "employees"}`,
         skipped > 0 ? `${note}. ${skipped} finalized row${skipped === 1 ? "" : "s"} skipped.` : `${note}.`);
+    }
+    if (failedIds.length > 0) {
+      // Keep ONLY the failed rows selected so the user can see and retry exactly "those".
+      toast.error(`${failedIds.length} couldn't be saved`, "They're still selected — try again.");
+      sel.keepOnly(failedIds);
+    } else {
       sel.clear(); setBulkOpen(false); setBulkForm(blankBulk);
     }
-    if (failed > 0) toast.error(`${failed} couldn't be saved`, "Please try those again.");
   }
 
   return (

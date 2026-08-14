@@ -82,7 +82,15 @@ public class AttendanceHandlers :
             existing.Notes = Clean(request.Notes);
             existing.UpdatedAt = DateTime.UtcNow;
         }
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException) when (existing is null)
+        {
+            // A concurrent mark for the same (employee, day) inserted first, tripping the unique index.
+            // The day is now marked — treat this as a benign no-op rather than a 500 (graceful failure).
+        }
         return Unit.Value;
     }
 
@@ -155,7 +163,8 @@ public class AttendanceHandlers :
             }
             count++;
         }
-        if (count > 0) await _db.SaveChangesAsync(ct);
+        try { if (count > 0) await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { return 0; }   // a concurrent mark raced an insert; report nothing changed rather than 500
         return count;
     }
 
@@ -187,7 +196,8 @@ public class AttendanceHandlers :
             { AgencyId = e.AgencyId, EmployeeId = e.Id, Date = day, Status = AttendanceStatus.Present });
             count++;
         }
-        if (count > 0) await _db.SaveChangesAsync(ct);
+        try { if (count > 0) await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { return 0; }   // a concurrent mark raced an insert; report nothing changed rather than 500
         return count;
     }
 

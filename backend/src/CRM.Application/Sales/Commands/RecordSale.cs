@@ -129,15 +129,22 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
 
         var (isInternal, reason) = await _checker.CheckAsync(lead, _user.UserId.Value, ct);
 
-        // Allocate the next per-agency serial ATOMICALLY. A plain read-then-increment races under
-        // concurrent closes in the same agency (both read N, both write N+1 → the second INSERT hits
-        // the unique (AgencyId, SaleNumber) index → the whole sale rolls back as a 500 and is lost).
-        // Increment in the database and read the fresh value so every close gets a distinct number.
-        var updated = await _db.Agencies.Where(a => a.Id == lead.AgencyId)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a.LastSaleNumber, a => a.LastSaleNumber + 1), ct);
-        if (updated == 0) throw new NotFoundException(nameof(Agency), lead.AgencyId);
-        var saleNumber = await _db.Agencies.AsNoTracking()
-            .Where(a => a.Id == lead.AgencyId).Select(a => a.LastSaleNumber).FirstAsync(ct);
+        // Allocate the next per-agency serial ATOMICALLY. The increment and the read-back MUST share
+        // one transaction — otherwise two concurrent closes each run the increment as its own
+        // autocommit txn and then both read the same higher value (both get N+1 → the second INSERT
+        // hits the unique (AgencyId, SaleNumber) index → the whole sale rolls back as a 500 and is
+        // lost). Inside a transaction the first close's increment holds SQLite's write lock, so the
+        // second close blocks until commit and then reads a distinct number.
+        int saleNumber;
+        await using (var tx = await _db.Database.BeginTransactionAsync(ct))
+        {
+            var updated = await _db.Agencies.Where(a => a.Id == lead.AgencyId)
+                .ExecuteUpdateAsync(s => s.SetProperty(a => a.LastSaleNumber, a => a.LastSaleNumber + 1), ct);
+            if (updated == 0) throw new NotFoundException(nameof(Agency), lead.AgencyId);
+            saleNumber = await _db.Agencies.AsNoTracking()
+                .Where(a => a.Id == lead.AgencyId).Select(a => a.LastSaleNumber).FirstAsync(ct);
+            await tx.CommitAsync(ct);
+        }
 
         var accountDigits = new string((input.AccountNumber ?? "").Where(char.IsDigit).ToArray());
         var sale = new Sale

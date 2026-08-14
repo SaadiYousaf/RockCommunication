@@ -261,6 +261,7 @@ export function AgentPanelPage() {
           />
           <CardBody>
             <WrapUpForm
+              key={unwrapped.id}
               callId={unwrapped.id}
               codes={codes}
               loading={wrappingUp}

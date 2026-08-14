@@ -18,6 +18,8 @@ export interface RowSelection {
   /** Select every visible row when not all are selected; otherwise clear them. */
   toggleAll: () => void;
   clear: () => void;
+  /** Reduce the selection to just these ids — e.g. after a partial bulk failure, keep the ones that failed. */
+  keepOnly: (ids: string[]) => void;
   /** All visible rows are selected (and there is at least one). */
   allSelected: boolean;
   /** Some — but not all — visible rows are selected (drives the indeterminate box). */
@@ -96,6 +98,12 @@ export function useRowSelection(ids: string[]): RowSelection {
 
   const clear = useCallback(() => { setSelected(new Set()); anchorRef.current = null; }, []);
 
+  const keepOnly = useCallback((ids: string[]) => {
+    const keep = new Set(ids);
+    setSelected((prev) => new Set([...prev].filter((id) => keep.has(id))));
+    anchorRef.current = null;
+  }, []);
+
   const checkboxProps = useCallback((id: string) => ({
     checked: selected.has(id),
     onChange: () => toggle(id),
@@ -107,7 +115,7 @@ export function useRowSelection(ids: string[]): RowSelection {
   }), [selected, toggle]);
 
   return {
-    selectedIds, selectedCount, isSelected, toggle, toggleAll, clear,
+    selectedIds, selectedCount, isSelected, toggle, toggleAll, clear, keepOnly,
     allSelected, someSelected, anySelected: selectedCount > 0,
     checkboxProps,
     allCheckboxProps: { checked: allSelected, indeterminate: someSelected, onChange: toggleAll },

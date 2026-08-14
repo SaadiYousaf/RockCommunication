@@ -192,17 +192,25 @@ public class PayrollHandlers :
 
     private static void Apply(EmployeePayroll p, SavePayrollInput i, CallCenterPayrollConfig cfg)
     {
+        // A row that was already finalized is a frozen snapshot: keep its stored deduction amounts even
+        // if the centre's rates changed later, so an unrelated edit (e.g. a Notes typo) can't silently
+        // re-price it. Recompute only for drafts and for the draft→finalized transition (freezing the
+        // then-current figures).
+        var wasFinalized = p.Finalized;
         p.BasicSalary = i.BasicSalary; p.Punctuality = i.Punctuality; p.DailyBonus = i.DailyBonus;
         p.MonthlyCommissions = i.MonthlyCommissions; p.TransportAllowance = i.TransportAllowance;
         p.SpecialAllowance = i.SpecialAllowance; p.AdvanceSalary = i.AdvanceSalary; p.Docks = i.Docks;
         p.WorkingDays = i.WorkingDays; p.PresentDays = i.PresentDays; p.LeavesApproved = i.LeavesApproved;
         p.LateComing = i.LateComing; p.HalfDays = i.HalfDays; p.AbsentDays = i.AbsentDays; p.Ncns = i.Ncns;
-        // The attendance-driven deduction amounts are ALWAYS derived server-side from the daily wage
-        // (basic ÷ working days) × count × rule — never taken from the client — so they can never drift
-        // out of step with the basic/working-days that were just saved.
-        var auto = PayrollDeductions.Auto(i.BasicSalary, i.WorkingDays, i.LateComing, i.HalfDays, i.AbsentDays, i.Ncns, cfg);
-        p.LateComingAmount = auto.Late; p.HalfDaysAmount = auto.Half;
-        p.AbsentDaysAmount = auto.Absent; p.NcnsAmount = auto.Ncns;
+        if (!(wasFinalized && i.Finalized))
+        {
+            // Attendance-driven deduction amounts are derived server-side from the daily wage
+            // (basic ÷ working days) × count × rule — never taken from the client — so they can never
+            // drift out of step with the basic/working-days that were just saved.
+            var auto = PayrollDeductions.Auto(i.BasicSalary, i.WorkingDays, i.LateComing, i.HalfDays, i.AbsentDays, i.Ncns, cfg);
+            p.LateComingAmount = auto.Late; p.HalfDaysAmount = auto.Half;
+            p.AbsentDaysAmount = auto.Absent; p.NcnsAmount = auto.Ncns;
+        }
         p.Notes = string.IsNullOrWhiteSpace(i.Notes) ? null : i.Notes.Trim();
         p.Finalized = i.Finalized;
     }
