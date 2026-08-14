@@ -5,14 +5,14 @@ import {
   useUserDirectoryQuery,
 } from "../../shared/api/baseApi";
 import {
-  BUG_STATUSES, bugStatusMeta, bugStatusLabel, bugSeverityMeta,
+  BUG_STATUSES, BUG_WORKFLOW, isBugOffRamp, bugStatusMeta, bugStatusLabel, bugSeverityMeta,
 } from "../../shared/constants/bugs";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { timeAgoShort } from "../../shared/lib/time";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
+  Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
 } from "../../shared/ui";
 
 /**
@@ -101,7 +101,7 @@ export function BugsPage() {
             description={status || scope === "mine" ? "Nothing matches this filter." : "Nothing reported yet. Use the “Report a bug” button anytime you hit a problem."} />
         </CardBody></Card>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto animate-rise">
           <Table>
             <THead><TR>
               <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
@@ -114,7 +114,9 @@ export function BugsPage() {
             </TR></THead>
             <TBody>
               {list.map((b) => (
-                <TR key={b.id} className={cn("cursor-pointer", sel.isSelected(b.id) && "bg-brand-50/40")} onClick={() => setOpenId(b.id)}>
+                <TR key={b.id}
+                  className={cn("cursor-pointer border-l-[3px]", bugSeverityMeta(b.severity).accent, sel.isSelected(b.id) && "bg-brand-50/40")}
+                  onClick={() => setOpenId(b.id)}>
                   <TD onClick={(e) => e.stopPropagation()}>
                     <Checkbox aria-label={`Select ${b.title}`} {...sel.checkboxProps(b.id)} />
                   </TD>
@@ -198,10 +200,21 @@ function BugDetailModal({ bugId, onClose }: { bugId: string; onClose: () => void
       ) : (
         <div className="space-y-5">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge tone={bugStatusMeta(bug.status).tone} variant="soft">{bugStatusLabel(bug.status)}</Badge>
             <Badge tone={bugSeverityMeta(bug.severity).tone} variant="soft">{bugSeverityMeta(bug.severity).label} severity</Badge>
+            {bug.assignedToName && <Badge tone="brand" variant="soft">Assigned · {bug.assignedToName}</Badge>}
             {bug.pageUrl && <span className="font-mono text-[11px] text-ink-500">{bug.pageUrl}</span>}
           </div>
+
+          {/* Workflow position: the linear pipeline for on-track statuses, a distinct banner otherwise. */}
+          {isBugOffRamp(bug.status) ? (
+            <div className={cn("rounded-xl border px-3 py-2 text-sm font-medium inline-flex items-center gap-2",
+              bugStatusMeta(bug.status).tone === "danger" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-ink-200 bg-ink-50 text-ink-700")}>
+              <Icon name="archive" size={14} /> Closed as {bugStatusLabel(bug.status)}
+            </div>
+          ) : (
+            <Stepper steps={BUG_WORKFLOW.map((s) => ({ key: s, label: bugStatusLabel(s) }))}
+              currentIndex={BUG_WORKFLOW.indexOf(bug.status as (typeof BUG_WORKFLOW)[number])} />
+          )}
 
           <p className="text-sm text-ink-800 whitespace-pre-wrap break-words leading-relaxed">{bug.description}</p>
           {bug.resolution && (

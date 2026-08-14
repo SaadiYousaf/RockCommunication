@@ -32,21 +32,31 @@ export const BUG_STATUSES: BugStatusMeta[] = [
   { value: "CannotReproduce", label: "Can't Reproduce", tone: "danger",  terminal: true,  description: "Could not be reproduced." },
 ];
 
+/** The linear "happy path" the Stepper renders — off-ramp statuses sit outside it. */
+export const BUG_WORKFLOW: BugStatus[] = ["New", "Triaged", "InProgress", "Resolved", "Closed"];
+export const isBugOffRamp = (v: string): boolean => !BUG_WORKFLOW.includes(v as BugStatus);
+
 const STATUS_BY_VALUE = new Map(BUG_STATUSES.map((s) => [s.value, s]));
 
 export const bugStatusMeta = (v: string): BugStatusMeta =>
   STATUS_BY_VALUE.get(v as BugStatus) ?? { value: "New", label: v, tone: "neutral", terminal: false, description: "" };
 export const bugStatusLabel = (v: string): string => bugStatusMeta(v).label;
 
-export interface BugSeverityMeta { value: BugSeverity; label: string; tone: BadgeTone; }
+export interface BugSeverityMeta {
+  value: BugSeverity;
+  label: string;
+  tone: BadgeTone;
+  /** Tailwind border colour for the row's left accent stripe. */
+  accent: string;
+}
 
 export const BUG_SEVERITIES: BugSeverityMeta[] = [
-  { value: "Low",      label: "Low",      tone: "neutral" },
-  { value: "Medium",   label: "Medium",   tone: "info" },
-  { value: "High",     label: "High",     tone: "warning" },
-  { value: "Critical", label: "Critical", tone: "danger" },
+  { value: "Low",      label: "Low",      tone: "neutral", accent: "border-l-ink-300" },
+  { value: "Medium",   label: "Medium",   tone: "info",    accent: "border-l-sky-400" },
+  { value: "High",     label: "High",     tone: "warning", accent: "border-l-amber-400" },
+  { value: "Critical", label: "Critical", tone: "danger",  accent: "border-l-rose-500" },
 ];
 
 const SEVERITY_BY_VALUE = new Map(BUG_SEVERITIES.map((s) => [s.value, s]));
 export const bugSeverityMeta = (v: string): BugSeverityMeta =>
-  SEVERITY_BY_VALUE.get(v as BugSeverity) ?? { value: "Medium", label: v, tone: "neutral" };
+  SEVERITY_BY_VALUE.get(v as BugSeverity) ?? { value: "Medium", label: v, tone: "neutral", accent: "border-l-ink-300" };

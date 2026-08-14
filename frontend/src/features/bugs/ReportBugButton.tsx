@@ -46,12 +46,13 @@ export function ReportBugButton() {
       <button
         type="button" onClick={() => setOpen(true)}
         aria-label="Report a bug" title="Report a bug"
-        className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full bg-ink-900/95 text-white shadow-pop
-                   pl-3 pr-4 h-11 hover:bg-ink-800 transition-colors backdrop-blur-sm
+        className="group fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full bg-ink-900/95 text-white shadow-pop
+                   pl-3 pr-4 h-11 backdrop-blur-sm animate-fade-up
+                   transition-[transform,background-color] duration-200 ease-out-quint hover:bg-ink-800 hover:-translate-y-0.5
                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
-        <Icon name="alert" size={16} className="text-amber-300" />
+        <Icon name="alert" size={16} className="text-amber-300 transition-transform group-hover:scale-110" />
         <span className="text-sm font-medium hidden sm:inline">Report a bug</span>
       </button>
 

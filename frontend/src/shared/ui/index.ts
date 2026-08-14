@@ -22,3 +22,4 @@ export { usePagination, Pager } from "./Pagination";
 export { SensitiveValue } from "./SensitiveValue";
 export { Checkbox, type CheckboxProps } from "./Checkbox";
 export { BulkActionBar, type BulkAction } from "./BulkActionBar";
+export { Stepper, type Step } from "./Stepper";
