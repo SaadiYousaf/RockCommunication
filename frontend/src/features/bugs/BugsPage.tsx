@@ -21,7 +21,7 @@ import {
  */
 export function BugsPage() {
   const [status, setStatus] = useState<string>("");
-  const [scope, setScope] = useState<"all" | "mine">("all");
+  const [scope, setScope] = useState<"all" | "mine" | "assigned">("all");
   const { data: bugs, isLoading } = useListBugsQuery({ status: status || undefined, scope });
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -81,11 +81,15 @@ export function BugsPage() {
             {BUG_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </Select>
           <div className="inline-flex rounded-lg border border-ink-200 p-0.5 text-sm">
-            {(["all", "mine"] as const).map((s) => (
-              <button key={s} type="button" onClick={() => setScope(s)}
-                className={cn("px-3 h-8 rounded-md transition-colors capitalize",
-                  scope === s ? "bg-brand-50 text-brand-700 font-medium" : "text-ink-500 hover:text-ink-800")}>
-                {s === "all" ? "All reports" : "My reports"}
+            {([
+              { key: "all", label: "All reports" },
+              { key: "mine", label: "My reports" },
+              { key: "assigned", label: "Assigned to me" },
+            ] as const).map((s) => (
+              <button key={s.key} type="button" onClick={() => setScope(s.key)}
+                className={cn("px-3 h-8 rounded-md transition-colors whitespace-nowrap",
+                  scope === s.key ? "bg-brand-50 text-brand-700 font-medium" : "text-ink-500 hover:text-ink-800")}>
+                {s.label}
               </button>
             ))}
           </div>

@@ -1208,7 +1208,7 @@ export const baseApi = createApi({
     }),
 
     // ── Bug reports (in-app issue tracker) ─────────────────────────────────────
-    listBugs: b.query<BugReport[], { status?: string; scope?: "mine" | "all" } | void>({
+    listBugs: b.query<BugReport[], { status?: string; scope?: "mine" | "all" | "assigned" } | void>({
       query: (p) => ({ url: "/api/bugs", params: p ?? undefined }),
       providesTags: ["Bugs"],
     }),

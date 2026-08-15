@@ -127,7 +127,12 @@ public class BugReportHandlers :
         _db.BugReports.Add(bug);
         await _db.SaveChangesAsync(ct);
 
-        var names = await _identity.ListUserNamesAsync(aid, ct);
+        // Alert triagers (agency Admins) so a fresh report doesn't sit unseen.
+        var users = await _identity.ListUsersAsync(aid, ct);
+        var names = (IReadOnlyDictionary<Guid, string>)users.ToDictionary(u => u.Id, u => u.UserName);
+        foreach (var admin in users.Where(u => u.Roles.Contains(DomainRoles.Admin)))
+            await NotifyAsync(aid, admin.Id, "New bug reported",
+                $"{Name(names, uid)} reported \"{Trim(bug.Title, 60)}\" ({bug.Severity} severity).", ct);
         return Map(bug, names, _user);
     }
 
@@ -138,6 +143,8 @@ public class BugReportHandlers :
         if (request.Status is { } s) q = q.Where(b => b.Status == s);
         if (string.Equals(request.Scope, "mine", StringComparison.OrdinalIgnoreCase))
             q = q.Where(b => b.ReporterUserId == uid);
+        else if (string.Equals(request.Scope, "assigned", StringComparison.OrdinalIgnoreCase))
+            q = q.Where(b => b.AssignedToUserId == uid);
         var bugs = await q.OrderByDescending(b => b.CreatedAt).Take(500).ToListAsync(ct);
         var names = await _identity.ListUserNamesAsync(aid, ct);
         return bugs.Select(b => Map(b, names, _user)).ToList();
@@ -178,7 +185,11 @@ public class BugReportHandlers :
             if (!string.IsNullOrWhiteSpace(request.Resolution)) bug.Resolution = request.Resolution.Trim();
             bug.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
-            await NotifyReporterAsync(bug, from, ct);
+
+            // Tell both the reporter and whoever it's assigned to (never the person who made the change).
+            var body = $"\"{Trim(bug.Title, 60)}\" moved from {BugStatusLabel(from)} to {BugStatusLabel(bug.Status)}.";
+            await NotifyAsync(bug.AgencyId, bug.ReporterUserId, "Bug update", body, ct);
+            if (bug.AssignedToUserId is { } assignee) await NotifyAsync(bug.AgencyId, assignee, "Bug update", body, ct);
         }
 
         var names = await _identity.ListUserNamesAsync(aid, ct);
@@ -201,6 +212,11 @@ public class BugReportHandlers :
             Comment = request.AssignedToUserId is { } a ? $"Assigned to {Name(names, a)}" : "Unassigned",
         });
         await _db.SaveChangesAsync(ct);
+
+        // The whole point of assigning: tell the assignee they now own this bug.
+        if (request.AssignedToUserId is { } assignee)
+            await NotifyAsync(bug.AgencyId, assignee, "A bug was assigned to you",
+                $"{Name(names, uid)} assigned you \"{Trim(bug.Title, 60)}\".", ct);
         return Map(bug, names, _user);
     }
 
@@ -217,23 +233,26 @@ public class BugReportHandlers :
         _db.BugReportActivities.Add(activity);
         await _db.SaveChangesAsync(ct);
         var names = await _identity.ListUserNamesAsync(aid, ct);
+
+        // Loop the reporter and the assignee in on the discussion.
+        var body = $"{Name(names, uid)} commented on \"{Trim(bug.Title, 60)}\".";
+        await NotifyAsync(bug.AgencyId, bug.ReporterUserId, "New comment on a bug", body, ct);
+        if (bug.AssignedToUserId is { } assignee) await NotifyAsync(bug.AgencyId, assignee, "New comment on a bug", body, ct);
         return new BugActivityDto(activity.Id, uid, Name(names, uid), null, null, activity.Comment, activity.CreatedAt);
     }
 
-    // Best-effort: tell the reporter their bug moved (never let a notification failure fail the transition).
-    private async Task NotifyReporterAsync(BugReport bug, BugStatus from, CancellationToken ct)
+    // Best-effort in-app notification. Never notify yourself, and never let a notification failure
+    // fail the action that triggered it. Deep-links to /bugs.
+    private async Task NotifyAsync(Guid agencyId, Guid recipientId, string title, string body, CancellationToken ct)
     {
-        if (bug.ReporterUserId == _user.UserId) return;   // don't notify yourself
+        if (recipientId == Guid.Empty || recipientId == _user.UserId) return;
         try
         {
             await _notify.DispatchAsync(
-                new NotificationPayload(bug.AgencyId, bug.ReporterUserId,
-                    "Bug update",
-                    $"Your report \"{Trim(bug.Title, 60)}\" moved from {BugStatusLabel(from)} to {BugStatusLabel(bug.Status)}.",
-                    "/bugs"),
+                new NotificationPayload(agencyId, recipientId, title, body, "/bugs"),
                 new[] { NotificationChannelType.InApp }, ct);
         }
-        catch { /* graceful: the transition already succeeded */ }
+        catch { /* graceful */ }
     }
 
     private BugReportDto Map(BugReport b, IReadOnlyDictionary<Guid, string> names, ICurrentUser user) => new(
