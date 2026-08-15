@@ -5,11 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput, Stepper,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
+import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -73,6 +74,7 @@ export function CloseQueuePage() {
           </Button>
         }
       />
+      <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.close} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
           <Stat label="Ready to close" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Verified leads waiting" />

@@ -7,7 +7,7 @@ import {
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, SensitiveValue, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, SensitiveValue, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -19,6 +19,7 @@ import {
 } from "../../shared/constants/intake";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { formatUsd, formatPhone } from "../../shared/lib/format";
+import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
@@ -58,6 +59,7 @@ export function ValidateQueuePage() {
         title="Submission Queue"
         description="Sales submitted by closers. Open a sale to copy its details into the carrier portal, then set its submission status."
       />
+      <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.submit} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
           <Stat label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />

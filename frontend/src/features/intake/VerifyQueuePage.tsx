@@ -10,11 +10,12 @@ import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/type
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection, type RowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
@@ -51,6 +52,7 @@ export function VerifyQueuePage() {
   return (
     <>
       <PageHeader eyebrow="Verifier" title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
+      <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.verify} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
           <Stat label="In queue" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Awaiting verification" />

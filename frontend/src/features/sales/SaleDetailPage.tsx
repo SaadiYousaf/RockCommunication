@@ -8,9 +8,10 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint,
-  PageHeader, Select, Skeleton, Stat, useToast,
+  PageHeader, Select, Skeleton, Stat, Stepper, useToast,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
+import { SALE_LIFECYCLE, saleLifecycleIndex } from "../../shared/constants/pipeline";
 import { usePermission, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 
@@ -229,11 +230,12 @@ export function SaleDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Timeline */}
+      {/* Timeline — the lifecycle as a connected pipeline, with the timestamps beneath. */}
       <Card className="mt-4">
         <CardHeader title="Timeline" bordered />
-        <CardBody>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <CardBody className="space-y-4">
+          <Stepper steps={SALE_LIFECYCLE} currentIndex={saleLifecycleIndex(sale)} className="max-w-xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
             <TimelineItem icon="plus"    label="Created"   at={dateTime(sale.createdAt)} done />
             <TimelineItem icon="briefcase" label="Sold"    at={dateTime(sale.soldAt)}    done />
             <TimelineItem icon="shield"  label="Validated" at={dateTime(sale.validatedAt)} done={!!sale.validatedAt} />
