@@ -68,10 +68,10 @@ export function BugsPage() {
       <PageHeader eyebrow="Support" title="Bugs"
         description="Every issue reported from the app, triaged through a clear workflow: New → Triaged → In Progress → Resolved → Closed." />
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <Stat label="New" value={counts.New} icon={<Icon name="inbox" size={16} />} tone="brand" />
-        <Stat label="In progress" value={counts.InProgress} icon={<Icon name="clock" size={16} />} tone="accent" />
-        <Stat label="Resolved" value={counts.Resolved} icon={<Icon name="check" size={16} />} tone="success" />
+      <div className="grid grid-cols-3 gap-3 mb-5 stagger-children">
+        <Stat className="stagger-item" label="New" value={counts.New} icon={<Icon name="inbox" size={16} />} tone="brand" />
+        <Stat className="stagger-item" label="In progress" value={counts.InProgress} icon={<Icon name="clock" size={16} />} tone="accent" />
+        <Stat className="stagger-item" label="Resolved" value={counts.Resolved} icon={<Icon name="check" size={16} />} tone="success" />
       </div>
 
       <Card className="mb-4">

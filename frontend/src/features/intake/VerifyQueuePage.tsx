@@ -54,10 +54,10 @@ export function VerifyQueuePage() {
       <PageHeader eyebrow="Verifier" title="Verifier Queue" description="Leads captured by fronters. Open one to review or correct it, then set a status — 'Verified' sends it to the closer queue." />
       <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.verify} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
-          <Stat label="In queue" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Awaiting verification" />
-          <Stat label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
-          <Stat label="Top priority" value={Math.round(topScore)} icon={<Icon name="zap" size={16} />} tone="accent" hint="Highest score in queue" />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
+          <Stat className="stagger-item" label="In queue" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Awaiting verification" />
+          <Stat className="stagger-item" label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
+          <Stat className="stagger-item" label="Top priority" value={Math.round(topScore)} icon={<Icon name="zap" size={16} />} tone="accent" hint="Highest score in queue" />
         </div>
       )}
       <Card>

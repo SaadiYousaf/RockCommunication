@@ -61,10 +61,10 @@ export function ValidateQueuePage() {
       />
       <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.submit} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
-          <Stat label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />
-          <Stat label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
-          <Stat label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint="Total across the queue" />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
+          <Stat className="stagger-item" label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />
+          <Stat className="stagger-item" label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
+          <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint="Total across the queue" />
         </div>
       )}
       <Card>

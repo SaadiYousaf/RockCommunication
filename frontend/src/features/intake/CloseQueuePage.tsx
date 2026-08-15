@@ -76,10 +76,10 @@ export function CloseQueuePage() {
       />
       <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.close} className="mb-5 max-w-2xl" />
       {queue && total > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
-          <Stat label="Ready to close" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Verified leads waiting" />
-          <Stat label="Started" value={started} icon={<Icon name="briefcase" size={16} />} tone="accent" hint="Application begun" />
-          <Stat label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
+          <Stat className="stagger-item" label="Ready to close" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Verified leads waiting" />
+          <Stat className="stagger-item" label="Started" value={started} icon={<Icon name="briefcase" size={16} />} tone="accent" hint="Application begun" />
+          <Stat className="stagger-item" label="Going stale" value={stale} icon={<Icon name="clock" size={16} />} tone="danger" hint="Waiting 24h or more" />
         </div>
       )}
       <Card>
