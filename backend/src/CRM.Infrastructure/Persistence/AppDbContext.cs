@@ -51,7 +51,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // row's own AgencyId, so they bypass. An AUTHENTICATED user never reaches here
             // via this branch, so the fail-closed guarantee below still holds.
             if (!_currentUser.IsAuthenticated) return true;
-            if (_currentUser.Roles.Contains(Domain.Enums.Roles.SuperAdmin)) return true;
+            // SuperAdmin bypasses the tenant filter to see across agencies — but ONLY while unscoped.
+            // Once they pick a working context (POST /api/auth/context), their token carries a concrete
+            // agency claim; we then run them through the normal filter so the app hard-scopes to that
+            // agency (and, for CallCenterEntity, the chosen call center). Backward-compatible: legacy /
+            // fresh SuperAdmin tokens carry agency == Guid.Empty and still bypass.
+            if (_currentUser.Roles.Contains(Domain.Enums.Roles.SuperAdmin) && CurrentAgencyId == Guid.Empty) return true;
             return false;
         }
     }

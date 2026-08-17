@@ -4,9 +4,7 @@ import type { RootState } from "../../app/store";
 import { Icon } from "../../shared/ui";
 
 // Roles that pick a working context — the only ones who see the switcher.
-// SuperAdmin joins in Phase 2, once the server-side hard-scope lands (until then picking an agency
-// wouldn't actually narrow their view, so the switcher would mislead).
-const CONTEXT_ROLES = ["Admin", "CallCenterAdmin"];
+const CONTEXT_ROLES = ["SuperAdmin", "Admin", "CallCenterAdmin"];
 
 /**
  * Top-bar workspace switcher for admins — shows the current scope (call center / agency) and

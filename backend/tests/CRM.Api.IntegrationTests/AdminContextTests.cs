@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -56,6 +57,35 @@ public class AdminContextTests : IClassFixture<CrmWebAppFactory>
         var admin = await _factory.LoginAdminAsync();
         var resp = await admin.PostAsJsonAsync("/api/auth/context", new { callCenterId = Guid.NewGuid() });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Scoped_superadmin_only_sees_the_chosen_agency_users()
+    {
+        var sa = await _factory.LoginAsync("superadmin", "SuperAdmin@123!");
+
+        var beaEmail = $"bea-{Guid.NewGuid():N}@crm.local";
+        var cidEmail = $"cid-{Guid.NewGuid():N}@crm.local";
+        var b = await sa.PostJsonAsync("/api/agencies", new
+        { name = $"B-{Guid.NewGuid():N}".Substring(0, 10), code = (string?)null, ceoName = "Bea Ceo", ceoEmail = beaEmail });
+        await sa.PostJsonAsync("/api/agencies", new
+        { name = $"C-{Guid.NewGuid():N}".Substring(0, 10), code = (string?)null, ceoName = "Cid Ceo", ceoEmail = cidEmail });
+        var agencyBId = b.GetProperty("id").GetGuid();
+
+        // Baseline: an UNSCOPED SuperAdmin sees users across every agency (platform view preserved).
+        var all = await sa.GetJsonAsync("/api/users");
+        Assert.Contains(all.EnumerateArray(), u => u.GetProperty("email").GetString() == beaEmail);
+        Assert.Contains(all.EnumerateArray(), u => u.GetProperty("email").GetString() == cidEmail);
+
+        // Scope to agency B, then the SAME SuperAdmin only sees agency B's users.
+        var ctx = await sa.PostJsonAsync("/api/auth/context", new { agencyId = agencyBId });
+        var scoped = _factory.CreateClient();
+        scoped.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", ctx.GetProperty("accessToken").GetString());
+
+        var scopedUsers = await scoped.GetJsonAsync("/api/users");
+        Assert.Contains(scopedUsers.EnumerateArray(), u => u.GetProperty("email").GetString() == beaEmail);
+        Assert.DoesNotContain(scopedUsers.EnumerateArray(), u => u.GetProperty("email").GetString() == cidEmail);
     }
 
     /// <summary>Decode a JWT payload and read a claim (no signature check — test-only).</summary>

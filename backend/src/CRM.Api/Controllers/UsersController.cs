@@ -77,7 +77,14 @@ public class UsersController : ControllerBase
     /// </summary>
     private Guid? ResolveAgencyFilter(Guid? requestedAgencyId)
     {
-        if (_user.Roles.Contains(Roles.SuperAdmin)) return requestedAgencyId; // null = all agencies
+        if (_user.Roles.Contains(Roles.SuperAdmin))
+        {
+            // Identity users have no global tenant filter, so an unfiltered list would leak every
+            // agency's users. A SuperAdmin may name any agency; with no param, fall back to their
+            // chosen working-context agency (non-empty claim) and only see "all" when truly unscoped.
+            if (requestedAgencyId is { } req) return req;
+            return _user.AgencyId is { } aid && aid != Guid.Empty ? aid : null;
+        }
         return _user.AgencyId; // pinned to the caller's tenant
     }
 }

@@ -42,7 +42,10 @@ public class ListAuditHandler : IRequestHandler<ListAuditQuery, PagedAuditResult
         // platform overseer and sees the whole audit trail across every agency; agency managers are
         // pinned to their own agency.
         var q = _db.AuditEntries.AsNoTracking();
-        if (!_user.IsSuperAdmin) q = q.Where(a => a.AgencyId == _user.AgencyId);
+        // AuditEntry has no global filter, so scope by the EFFECTIVE agency: a concrete agency claim
+        // narrows (a normal manager, or a SuperAdmin who chose a working context); only an UNSCOPED
+        // SuperAdmin (agency == Empty) reads the whole platform's trail.
+        if (_user.AgencyId is { } aid && aid != Guid.Empty) q = q.Where(a => a.AgencyId == aid);
         if (!string.IsNullOrWhiteSpace(request.EntityName))
             q = q.Where(a => a.EntityName == request.EntityName);
         if (!string.IsNullOrWhiteSpace(request.EntityId))
@@ -109,7 +112,7 @@ public class DistinctAuditFiltersHandler : IRequestHandler<DistinctAuditFiltersQ
         }
 
         var scoped = _db.AuditEntries.AsNoTracking();
-        if (!_user.IsSuperAdmin) scoped = scoped.Where(a => a.AgencyId == _user.AgencyId);
+        if (_user.AgencyId is { } aid && aid != Guid.Empty) scoped = scoped.Where(a => a.AgencyId == aid);
         var entityNames = await scoped
             .Select(a => a.EntityName).Distinct().OrderBy(x => x).ToListAsync(ct);
         var actions = await scoped

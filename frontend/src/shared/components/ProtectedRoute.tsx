@@ -43,8 +43,7 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   const userModules = auth.user.modules ?? [];
 
   // Admins choose a working context (agency / call-center) once per session before entering the app.
-  // (SuperAdmin joins this list in Phase 2, once the server-side hard-scope lands.)
-  const CONTEXT_ROLES = ["Admin", "CallCenterAdmin"];
+  const CONTEXT_ROLES = ["SuperAdmin", "Admin", "CallCenterAdmin"];
   if (userRoles.some((r) => CONTEXT_ROLES.includes(r)) && !auth.contextChosen && pathname !== "/select-context") {
     return <Navigate to="/select-context" replace />;
   }
