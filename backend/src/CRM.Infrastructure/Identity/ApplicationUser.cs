@@ -81,6 +81,16 @@ public class RefreshToken
     public DateTime? RevokedAt { get; set; }
     public string? ReplacedByHash { get; set; }
     public bool IsActive => RevokedAt is null && ExpiresAt > DateTime.UtcNow;
+
+    /// <summary>
+    /// The agency/call-center this SESSION is scoped to after an admin chose a working context
+    /// (POST /api/auth/context). Null = the user's home scope. Persisted here so the choice
+    /// survives access-token refresh (which otherwise re-derives scope from the user record).
+    /// Only honored for a SuperAdmin's agency; for other users only the call-center narrows and
+    /// only within their own agency (see JwtTokenService.RefreshAsync).
+    /// </summary>
+    public Guid? ScopeAgencyId { get; set; }
+    public Guid? ScopeCallCenterId { get; set; }
 }
 
 public class TwoFactorPendingToken

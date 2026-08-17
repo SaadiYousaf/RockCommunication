@@ -154,6 +154,23 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    public record SetContextRequest(Guid? AgencyId, Guid? CallCenterId);
+
+    /// <summary>
+    /// Admin context picker: re-scope the current session to a chosen agency/call-center. The service
+    /// validates the choice against the caller's own reach; null agency/center = "all". Returns a fresh
+    /// LoginResponse (scoped tokens + a UserSummary reflecting the chosen scope).
+    /// </summary>
+    [Authorize]
+    [DisableRateLimiting]
+    [HttpPost("context")]
+    public async Task<ActionResult<LoginResponse>> SetContext([FromBody] SetContextRequest req, CancellationToken ct)
+    {
+        Guard.AgainstNull(req);
+        if (_user.UserId is not { } uid) return Forbid();
+        return Ok(await _identity.SetContextAsync(uid, req.AgencyId, req.CallCenterId, ct));
+    }
+
     public record TwoFactorMethodBody(string Method);
 
     [Authorize]

@@ -38,6 +38,7 @@ public class JwtTokenService : IJwtTokenService
         Guid userId, string userName, Guid agencyId, IEnumerable<string> roles,
         Guid? callCenterId = null,
         IReadOnlyDictionary<string, string>? extraClaims = null,
+        Guid? scopeAgencyId = null, Guid? scopeCallCenterId = null,
         CancellationToken ct = default)
     {
         Guard.AgainstNull(roles);
@@ -69,7 +70,10 @@ public class JwtTokenService : IJwtTokenService
         {
             UserId = userId,
             TokenHash = Hash(refresh),
-            ExpiresAt = DateTime.UtcNow.AddDays(_opts.RefreshTokenDays)
+            ExpiresAt = DateTime.UtcNow.AddDays(_opts.RefreshTokenDays),
+            // Carry the chosen working scope onto the session so it survives token rotation.
+            ScopeAgencyId = scopeAgencyId,
+            ScopeCallCenterId = scopeCallCenterId,
         });
         await _db.SaveChangesAsync(ct);
 
@@ -95,23 +99,40 @@ public class JwtTokenService : IJwtTokenService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == existing.UserId, ct);
         if (user is null || !user.IsActive) return null;
 
-        // Company / call-center kill switch: once a SuperAdmin disables the user's agency
-        // or call center, their existing session can't be refreshed either — the next access
-        // token expires (<=15 min) and they're forced back to login, which then blocks them.
-        if (!await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
-            return null;
-
         var roles = await (from ur in _db.UserRoles
                            join r in _db.Roles on ur.RoleId equals r.Id
                            where ur.UserId == user.Id
                            select r.Name!).ToListAsync(ct);
+
+        // Resolve the EFFECTIVE scope this session runs at, carrying forward any working context the
+        // admin chose via /api/auth/context so it survives token rotation.
+        //  - SuperAdmin: honor both stored scope values (that's the only role whose agency can differ).
+        //  - Everyone else: agency ALWAYS reverts to the user's own (a demoted/moved user can't retain a
+        //    stale agency); only the chosen call center is kept, and only if it still belongs to them.
+        var isSuperAdmin = roles.Contains(Domain.Enums.Roles.SuperAdmin);
+        Guid effAgencyId = isSuperAdmin && existing.ScopeAgencyId is { } sa ? sa : user.AgencyId;
+        Guid? effCallCenterId;
+        if (isSuperAdmin)
+            effCallCenterId = existing.ScopeCallCenterId;
+        else if (existing.ScopeCallCenterId is { } sc
+                 && await _db.CallCenters.IgnoreQueryFilters().AnyAsync(c => c.Id == sc && c.AgencyId == user.AgencyId && !c.IsDeleted, ct))
+            effCallCenterId = sc;
+        else
+            effCallCenterId = user.CallCenterId;
+
+        // Company / call-center kill switch: once a SuperAdmin disables the effective agency or call
+        // center, this session can't refresh either — the next access token expires (<=15 min) and
+        // they're forced back to login, which then blocks them.
+        if (!await TenantLoginGate.IsTenantActiveAsync(_db, effAgencyId, effCallCenterId, ct))
+            return null;
 
         existing.RevokedAt = DateTime.UtcNow;
         // SECURITY: re-derive the enforcement claims from CURRENT user state and carry them onto the
         // refreshed token. Passing null here previously let a confined session (must-change-password
         // or mandatory-2FA-not-enrolled) strip its confinement simply by calling /auth/refresh.
         var extra = AuthEnforcementClaims.Build(user, roles, _enforce2Fa);
-        var newToken = await IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
+        var newToken = await IssueAsync(user.Id, user.UserName!, effAgencyId, roles, effCallCenterId, extra,
+            existing.ScopeAgencyId, existing.ScopeCallCenterId, ct);
         existing.ReplacedByHash = Hash(newToken.RefreshToken);
         await _db.SaveChangesAsync(ct);
         return newToken;

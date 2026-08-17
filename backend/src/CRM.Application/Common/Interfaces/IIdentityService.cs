@@ -58,6 +58,15 @@ public interface IIdentityService
     Task<TwoFactorStatusDto> GetTwoFactorStatusAsync(Guid userId, CancellationToken ct = default);
     Task<TokenResult?> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
     Task LogoutAsync(string refreshToken, CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-scopes the caller's session to a chosen agency/call-center (the admin context picker).
+    /// Validates the choice against the caller's own reach — a SuperAdmin may pick any agency and a
+    /// call center within it; an agency admin is confined to their own agency; a call-center admin to
+    /// their own center. Re-mints access+refresh tokens carrying the scope (durable across refresh)
+    /// and returns a LoginResponse whose UserSummary reflects the CHOSEN scope. null agency/center = "all".
+    /// </summary>
+    Task<LoginResponse> SetContextAsync(Guid userId, Guid? agencyId, Guid? callCenterId, CancellationToken ct = default);
     Task<UserSummaryDto?> GetUserAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default);
 

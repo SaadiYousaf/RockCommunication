@@ -124,6 +124,7 @@ public interface IJwtTokenService
         Guid userId, string userName, Guid agencyId, IEnumerable<string> roles,
         Guid? callCenterId = null,
         IReadOnlyDictionary<string, string>? extraClaims = null,
+        Guid? scopeAgencyId = null, Guid? scopeCallCenterId = null,
         CancellationToken ct = default);
 
     Task<TokenResult?> RefreshAsync(string refreshToken, CancellationToken ct = default);

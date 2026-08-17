@@ -448,13 +448,96 @@ public class IdentityService : IIdentityService
         var extra = AuthEnforcementClaims.Build(user, roles, _enforce2Fa);
         var require2Fa = extra?.ContainsKey(CustomJwtClaims.TwoFactorSetupRequired) ?? false;
 
-        var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct);
+        var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct: ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: require2Fa,
             AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
             CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
+    }
+
+    public async Task<LoginResponse> SetContextAsync(Guid userId, Guid? agencyId, Guid? callCenterId, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+        if (!user.IsActive)
+            throw new ForbiddenAccessException("Your account has been deactivated. Please contact your administrator.");
+
+        var roles = (await _users.GetRolesAsync(user)).ToList();
+        var isSuperAdmin = roles.Contains(DomainRoles.SuperAdmin);
+
+        // Resolve the EFFECTIVE agency/call-center this session runs at, validated against what the
+        // caller may actually reach, plus the scope to PERSIST so the choice survives token refresh.
+        Guid effAgency;
+        Guid? effCallCenter;
+        Guid? scopeAgency;      // only a SuperAdmin's agency can differ from home — persist for refresh
+        Guid? scopeCallCenter;
+
+        if (isSuperAdmin)
+        {
+            if (agencyId is { } aid && aid != Guid.Empty)
+            {
+                var agencyOk = await _db.Agencies.IgnoreQueryFilters()
+                    .AnyAsync(a => a.Id == aid && !a.IsDeleted && a.IsActive, ct);
+                if (!agencyOk) throw new NotFoundException("Agency", aid);
+                effAgency = aid;
+                effCallCenter = await ValidatedCallCenterAsync(callCenterId, aid, ct);
+                scopeAgency = aid;
+                scopeCallCenter = effCallCenter;
+            }
+            else
+            {
+                // "All agencies" — the platform-wide view. A call center is meaningless without an agency.
+                effAgency = Guid.Empty; effCallCenter = null; scopeAgency = null; scopeCallCenter = null;
+            }
+        }
+        else if (user.CallCenterId is { } pinned)
+        {
+            // Call-center-pinned user: cannot change agency or center.
+            if (callCenterId is { } cc && cc != pinned)
+                throw new ForbiddenAccessException("You can only work within your own call center.");
+            effAgency = user.AgencyId; effCallCenter = pinned; scopeAgency = null; scopeCallCenter = pinned;
+        }
+        else
+        {
+            // Agency-level admin: confined to their own agency; may pick a call center within it (null = agency-wide).
+            if (agencyId is { } aid && aid != user.AgencyId)
+                throw new ForbiddenAccessException("You can only work within your own agency.");
+            effAgency = user.AgencyId;
+            effCallCenter = await ValidatedCallCenterAsync(callCenterId, user.AgencyId, ct);
+            scopeAgency = null; scopeCallCenter = effCallCenter;
+        }
+
+        if (!await TenantLoginGate.IsTenantActiveAsync(_db, effAgency, effCallCenter, ct))
+            throw new ForbiddenAccessException(TenantLoginGate.DisabledMessage);
+
+        var modules = await _moduleAccess.GetCodesForUserAsync(user.Id, ct);
+        // Rebuild enforcement claims (a confined must-change-password / 2FA-setup session must not
+        // shed its confinement by re-scoping) — same rule login and refresh follow.
+        var extra = AuthEnforcementClaims.Build(user, roles, _enforce2Fa);
+        var require2Fa = extra?.ContainsKey(CustomJwtClaims.TwoFactorSetupRequired) ?? false;
+
+        var token = await _jwt.IssueAsync(user.Id, user.UserName!, effAgency, roles, effCallCenter, extra,
+            scopeAgency, scopeCallCenter, ct);
+        var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, effAgency, roles, modules,
+            MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
+            CallCenterId: effCallCenter,
+            TwoFactorSetupRequired: require2Fa,
+            AgencyName: await ResolveAgencyNameAsync(effAgency, ct),
+            CallCenterName: await ResolveCallCenterNameAsync(effCallCenter, ct),
+            InvitationExpired: InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow));
+        return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
+    }
+
+    /// <summary>Validate a chosen call center belongs to the agency and is live; null/empty = "all call centers".</summary>
+    private async Task<Guid?> ValidatedCallCenterAsync(Guid? callCenterId, Guid agencyId, CancellationToken ct)
+    {
+        if (callCenterId is not { } cc || cc == Guid.Empty) return null;
+        var ok = await _db.CallCenters.IgnoreQueryFilters()
+            .AnyAsync(c => c.Id == cc && c.AgencyId == agencyId && !c.IsDeleted && c.IsActive, ct);
+        if (!ok) throw new NotFoundException("CallCenter", cc);
+        return cc;
     }
 
     private static string GenerateToken()
