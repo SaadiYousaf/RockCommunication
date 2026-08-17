@@ -102,6 +102,11 @@ export const baseApi = createApi({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
     }),
+    // Admin context picker: re-scope the session to a chosen agency/call-center. Returns a fresh
+    // LoginResponse (scoped tokens + a summary reflecting the choice). null = "all".
+    setContext: b.mutation<LoginResponse, { agencyId?: string | null; callCenterId?: string | null }>({
+      query: (body) => ({ url: "/api/auth/context", method: "POST", body }),
+    }),
     verify2Fa: b.mutation<LoginResponse, { twoFactorToken: string; code: string }>({
       query: (body) => ({ url: "/api/auth/2fa/verify", method: "POST", body }),
     }),
@@ -1429,7 +1434,7 @@ export interface ActiveCall {
 }
 
 export const {
-  useLoginMutation, useVerify2FaMutation, useSetup2FaMutation, useEnable2FaMutation,
+  useLoginMutation, useSetContextMutation, useVerify2FaMutation, useSetup2FaMutation, useEnable2FaMutation,
   useDisable2FaMutation, useGet2FaStatusQuery,
   useMeQuery, useListUsersQuery, useUserDirectoryQuery,
   useListLeadsQuery, useMyLeadsQuery, useLeadTimelineQuery,

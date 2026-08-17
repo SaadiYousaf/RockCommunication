@@ -10,6 +10,7 @@ import { AvatarImage } from "../../features/profile/ProfileAvatar";
 import type { QueueCounts } from "../api/types";
 import { CallDock } from "../../features/softphone/CallDock";
 import { ReportBugButton } from "../../features/bugs/ReportBugButton";
+import { ContextSwitcher } from "../../features/context/ContextSwitcher";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
 import { BrandLogo } from "./BrandLogo";
 import { NotificationsBell } from "./NotificationsBell";
@@ -354,6 +355,7 @@ function LayoutInner() {
             <PaletteTrigger />
           </div>
 
+          <ContextSwitcher />
           <NotificationsBell />
 
           <div className="h-6 w-px bg-ink-200" />

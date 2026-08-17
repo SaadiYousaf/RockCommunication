@@ -42,6 +42,13 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   const userRoles = auth.user.roles ?? [];
   const userModules = auth.user.modules ?? [];
 
+  // Admins choose a working context (agency / call-center) once per session before entering the app.
+  // (SuperAdmin joins this list in Phase 2, once the server-side hard-scope lands.)
+  const CONTEXT_ROLES = ["Admin", "CallCenterAdmin"];
+  if (userRoles.some((r) => CONTEXT_ROLES.includes(r)) && !auth.contextChosen && pathname !== "/select-context") {
+    return <Navigate to="/select-context" replace />;
+  }
+
   // SuperAdmin = global admin (no agency). Admin = per-agency owner. Both bypass module
   // gating; the underlying API still enforces permission/tenant rules.
   if (userRoles.includes("SuperAdmin") || userRoles.includes("Admin")) return <Outlet />;

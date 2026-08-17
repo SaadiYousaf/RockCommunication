@@ -101,6 +101,7 @@ const NotificationsPage = lazyWithReload(() => import("../features/notifications
 const CalendarPage = lazyWithReload(() => import("../features/scheduler/CalendarPage").then(m => ({ default: m.CalendarPage })));
 const PulsePage = lazyWithReload(() => import("../features/pulse/PulsePage").then(m => ({ default: m.PulsePage })));
 const BugsPage = lazyWithReload(() => import("../features/bugs/BugsPage").then(m => ({ default: m.BugsPage })));
+const SelectContextPage = lazyWithReload(() => import("../features/context/SelectContextPage").then(m => ({ default: m.SelectContextPage })));
 const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
@@ -145,6 +146,8 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       { path: "/change-password", element: <ChangePasswordPage /> },
+      // Admin context picker — full-screen, no Layout chrome, before entering the app.
+      { path: "/select-context", element: <SelectContextPage /> },
     ],
   },
   {
