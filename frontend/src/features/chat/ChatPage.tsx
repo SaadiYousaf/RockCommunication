@@ -17,6 +17,8 @@ import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Avatar, Badge, Button, EmptyState, Icon, Input, Modal, Skeleton, useToast, cn,
 } from "../../shared/ui";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CHAT_MSG } from "./messages";
 
 
 function formatTime(iso: string) {
@@ -420,14 +422,14 @@ export function ChatPage() {
     if (!text || !activeRoom) { cancelEdit(); return; }
     if (text === m.body) { cancelEdit(); return; }
     try { await editMsg({ messageId: m.id, body: text, roomId: activeRoom }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't edit", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(CHAT_MSG.editFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
     cancelEdit();
   }
   async function onDeleteMessage(m: ChatMessage) {
     if (!activeRoom) return;
-    if (!(await confirm({ title: "Delete message?", description: "This removes the message for everyone.", confirmLabel: "Delete", danger: true }))) return;
+    if (!(await confirm({ title: CHAT_MSG.deleteMessageTitle, description: CHAT_MSG.deleteMessageDesc, confirmLabel: "Delete", danger: true }))) return;
     try { await deleteMsg({ messageId: m.id, roomId: activeRoom }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(CHAT_MSG.deleteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
   async function handleSend(e: React.FormEvent) {
@@ -440,7 +442,7 @@ export function ChatPage() {
       refetch();
     } catch (err: unknown) {
       setBody(text); // restore on error
-      toast.error("Couldn't send message", getErrorDetail(err) ?? "Try again.");
+      toast.error(CHAT_MSG.sendFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -448,7 +450,7 @@ export function ChatPage() {
   async function handleAttach(file: File) {
     if (!activeRoom) return;
     if (file.size > MAX_BYTES) {
-      toast.error("File too large", `Max ${MAX_BYTES / (1024 * 1024)} MB.`);
+      toast.error(CHAT_MSG.fileTooLargeTitle, CHAT_MSG.fileTooLargeDesc(MAX_BYTES / (1024 * 1024)));
       return;
     }
     const text = body;
@@ -458,18 +460,18 @@ export function ChatPage() {
       refetch();
     } catch (err: unknown) {
       setBody(text);
-      toast.error("Upload failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(CHAT_MSG.uploadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function handleCreate(name: string, memberIds: string[]) {
     try {
       const room = await createRoom({ name, isDirect: false, memberUserIds: memberIds }).unwrap();
-      toast.success("Room created", `#${room.name}`);
+      toast.success(CHAT_MSG.roomCreated, `#${room.name}`);
       setActiveRoom(room.id);
       setShowNewRoom(false);
     } catch (err: unknown) {
-      toast.error("Couldn't create room", getErrorDetail(err) ?? "Try again.");
+      toast.error(CHAT_MSG.createRoomFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -479,7 +481,7 @@ export function ChatPage() {
       setActiveRoom(room.id);
       setShowDm(false);
     } catch (err: unknown) {
-      toast.error("Couldn't start chat", getErrorDetail(err) ?? "Try again.");
+      toast.error(CHAT_MSG.startChatFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -537,8 +539,8 @@ export function ChatPage() {
             <div className="p-6">
               <EmptyState
                 icon={<Icon name="chat" size={18} />}
-                title="No conversations"
-                description="Start a new room to chat with your team."
+                title={CHAT_MSG.noConversationsTitle}
+                description={CHAT_MSG.noConversationsDesc}
                 action={
                   <Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNewRoom(true)}>
                     New room
@@ -611,8 +613,8 @@ export function ChatPage() {
           <div className="flex-1 grid place-items-center p-6">
             <EmptyState
               icon={<Icon name="chat" size={20} />}
-              title="Pick a conversation"
-              description="Select a room from the left to start chatting, or create a new one."
+              title={CHAT_MSG.pickConversationTitle}
+              description={CHAT_MSG.pickConversationDesc}
               action={
                 <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setShowNewRoom(true)}>
                   New conversation
@@ -680,8 +682,8 @@ export function ChatPage() {
                 <div className="h-full grid place-items-center">
                   <EmptyState
                     icon={<Icon name="chat" size={20} />}
-                    title="No messages yet"
-                    description="Be the first to break the ice."
+                    title={CHAT_MSG.noMessagesTitle}
+                    description={CHAT_MSG.noMessagesDesc}
                   />
                 </div>
               ) : (

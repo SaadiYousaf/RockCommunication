@@ -14,7 +14,14 @@ export const MESSAGES = {
   noPermission: (action: string) =>
     `You don't have permission to ${action}. Contact your administrator for access.`,
 
+  /**
+   * The ubiquitous failed-action toast title. e.g. failed("save the lead") →
+   * "Couldn't save the lead. Please try again." Use for the countless one-off "Couldn't X" toasts.
+   */
+  failed: (action: string) => `Couldn't ${action}. Please try again.`,
+
   /** Generic fallbacks used across mutations/toasts. */
   genericError: "Something went wrong. Please try again.",
+  tryAgain: "Please try again.",
   savedOk: "Saved.",
 } as const;

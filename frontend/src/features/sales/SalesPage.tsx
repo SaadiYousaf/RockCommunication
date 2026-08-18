@@ -18,6 +18,8 @@ import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { MESSAGES } from "../../shared/constants/messages";
+import { SALES_MSG } from "./messages";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "brand"> = {
   funded: "success", validated: "info", pending: "warning", internal: "brand",
@@ -57,7 +59,7 @@ export function SalesPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!routingNumber.trim() || !accountNumber.trim()) {
-      toast.error("Bank details required", "Enter the routing and account number so Lyons can validate the account.");
+      toast.error(SALES_MSG.bankDetailsRequiredTitle, SALES_MSG.bankDetailsRequiredBody);
       return;
     }
     try {
@@ -73,18 +75,18 @@ export function SalesPage() {
         recordingKey,
       }).unwrap();
       const bankMsg = sale.bankingCode === 198
-        ? "Lyons flagged the account (198) — recording attached."
-        : "Lyons cleared the account (103).";
-      toast.success("Sale recorded", `$${premium.toFixed(2)}/mo · ${carrier} · ${bankMsg}`);
+        ? SALES_MSG.bankFlagged198
+        : SALES_MSG.bankCleared103;
+      toast.success(SALES_MSG.saleRecordedTitle, SALES_MSG.saleRecordedBody(premium, carrier, bankMsg));
       setLeadId(""); setPolicyNumber(""); setRecordingFile(null);
       setRoutingNumber(""); setAccountNumber(""); setAccountType("checking");
     } catch (err: unknown) {
-      const detail = getErrorDetail(err) ?? "Try again.";
+      const detail = getErrorDetail(err) ?? MESSAGES.tryAgain;
       // Lyons flagged the account (198) and no recording was attached — keep the form so they can add one.
       if (/recording/i.test(detail)) {
-        toast.warning("Verification recording needed", detail);
+        toast.warning(SALES_MSG.verificationRecordingNeededTitle, detail);
       } else {
-        toast.error("Couldn't record sale", detail);
+        toast.error(SALES_MSG.recordSaleFailed, detail);
       }
     }
   }
@@ -258,8 +260,8 @@ export function SalesPage() {
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="briefcase" size={20} />}
-                title="No closed leads"
-                description="Closed leads will appear here once they're transitioned to Closed."
+                title={SALES_MSG.noClosedLeadsTitle}
+                description={SALES_MSG.noClosedLeadsBody}
               />
             </div>
           ) : (
@@ -298,7 +300,7 @@ export function SalesPage() {
                               const el = document.getElementById("record-sale-lead-id");
                               el?.scrollIntoView({ behavior: "smooth", block: "center" });
                               setTimeout(() => (el as HTMLInputElement | null)?.focus({ preventScroll: true }), 300);
-                              toast.success("Lead selected", `${name} — now fill in the sale above.`);
+                              toast.success(SALES_MSG.leadSelectedTitle, SALES_MSG.leadSelectedBody(name));
                             }}>
                             Use this lead
                           </Button>
@@ -319,27 +321,27 @@ export function SalesPage() {
   async function doValidate(id: string, approve: boolean) {
     if (!approve) {
       const ok = await confirm({
-        title: "Reject this sale?",
-        description: "The sale will be marked rejected in QA and won't move on to funding. Reject only if it fails validation.",
-        confirmLabel: "Reject sale",
+        title: SALES_MSG.rejectSaleConfirmTitle,
+        description: SALES_MSG.rejectSaleConfirmBody,
+        confirmLabel: SALES_MSG.rejectSaleConfirmLabel,
         danger: true,
       });
       if (!ok) return;
     }
     try {
       await validateSale({ id, approve }).unwrap();
-      toast.success(approve ? "Sale approved" : "Sale rejected");
+      toast.success(approve ? SALES_MSG.saleApproved : SALES_MSG.saleRejected);
     } catch (err: unknown) {
-      toast.error("Couldn't validate sale", getErrorDetail(err) ?? "Try again.");
+      toast.error(SALES_MSG.validateSaleFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function doFund(id: string) {
     try {
       await fundSale(id).unwrap();
-      toast.success("Sale funded");
+      toast.success(SALES_MSG.saleFunded);
     } catch (err: unknown) {
-      toast.error("Couldn't fund sale", getErrorDetail(err) ?? "Try again.");
+      toast.error(SALES_MSG.fundSaleFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 }
@@ -365,7 +367,7 @@ function SalesList() {
       { header: "Commission", value: (s) => s.commissionEarned ?? "" },
       { header: "Status", value: (s) => s.status },
     ], `sales-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(SALES_MSG.exportReadyTitle, SALES_MSG.rowsDownloaded(chosen.length));
   }
 
   const total = data?.total ?? 0;
@@ -459,8 +461,8 @@ function SalesList() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="briefcase" size={20} />}
-            title="No sales match"
-            description="Try a different filter or date range."
+            title={SALES_MSG.noSalesMatchTitle}
+            description={SALES_MSG.noSalesMatchBody}
           />
         </CardBody></Card>
       ) : (

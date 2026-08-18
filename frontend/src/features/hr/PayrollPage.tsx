@@ -14,6 +14,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { HR_MSG } from "./messages";
 
 // Salaries are paid in PKR.
 const money = (n: number | null | undefined) =>
@@ -106,10 +107,10 @@ export function PayrollPage() {
     if (!editing || !form) return;
     try {
       await save({ employeeId: editing.employeeId, year, month, input: form }).unwrap();
-      toast.success("Payroll saved", `${editing.fullName} — ${monthValue}`);
+      toast.success(HR_MSG.payrollSaved, HR_MSG.nameMonth(editing.fullName, monthValue));
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
+      toast.error(HR_MSG.saveFailed, getErrorDetail(err) ?? HR_MSG.retry);
     }
   }
 
@@ -125,16 +126,16 @@ export function PayrollPage() {
       const res = await fetch(`${API_URL}/api/hr/payroll/slip?employeeId=${row.employeeId}&year=${year}&month=${month}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { toast.error("Couldn't generate slip", "Try again in a moment."); return; }
+      if (!res.ok) { toast.error(HR_MSG.generateSlipFailed, HR_MSG.generateSlipDesc); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = `salary-slip-${row.agentCode}-${monthValue}.pdf`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Slip downloaded", `${row.fullName} — ${monthValue}`);
+      toast.success(HR_MSG.slipDownloaded, HR_MSG.nameMonth(row.fullName, monthValue));
     } catch {
-      toast.error("Couldn't download the slip", "Check your connection and try again.");
+      toast.error(HR_MSG.downloadSlipFailed, HR_MSG.downloadSlipDesc);
     } finally {
       setDownloadingId(null);
     }
@@ -153,7 +154,7 @@ export function PayrollPage() {
       { header: "Deductions", value: (r) => Math.round(r.deductions) },
       { header: "Net", value: (r) => Math.round(r.netPay) },
     ], `payroll-${monthValue}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(HR_MSG.exportReady, HR_MSG.rowsDownloaded(chosen.length));
   }
 
   // ── Bulk "set pay" — write common fields (and/or mark present) across every selected row.
@@ -177,10 +178,10 @@ export function PayrollPage() {
 
     if (basic === undefined && transport === undefined && special === undefined && wdays === undefined
         && !bulkForm.markPresent && !bulkForm.finalize) {
-      toast.error("Nothing to apply", "Set at least one field or an option.");
+      toast.error(HR_MSG.nothingToApply, HR_MSG.nothingToApplyDesc);
       return;
     }
-    if (editable.length === 0) { toast.error("Nothing to update", "Every selected row is finalized (locked)."); return; }
+    if (editable.length === 0) { toast.error(HR_MSG.nothingToUpdate, HR_MSG.nothingToUpdateDesc); return; }
 
     setBulkBusy(true);
     const results = await Promise.allSettled(editable.map((r) => {
@@ -204,13 +205,13 @@ export function PayrollPage() {
     const failedIds = editable.filter((_, i) => results[i].status === "rejected").map((r) => r.employeeId);
     const ok = editable.length - failedIds.length;
     if (ok > 0) {
-      const note = [bulkForm.markPresent ? "Marked present" : null, "pay saved"].filter(Boolean).join(" · ");
-      toast.success(`Updated ${ok} ${ok === 1 ? "employee" : "employees"}`,
-        skipped > 0 ? `${note}. ${skipped} finalized row${skipped === 1 ? "" : "s"} skipped.` : `${note}.`);
+      const note = [bulkForm.markPresent ? HR_MSG.markedPresent : null, HR_MSG.paySaved].filter(Boolean).join(" · ");
+      toast.success(HR_MSG.updatedEmployees(ok),
+        skipped > 0 ? `${note}. ${HR_MSG.finalizedRowsSkipped(skipped)}` : `${note}.`);
     }
     if (failedIds.length > 0) {
       // Keep ONLY the failed rows selected so the user can see and retry exactly "those".
-      toast.error(`${failedIds.length} couldn't be saved`, "They're still selected — try again.");
+      toast.error(HR_MSG.couldntBeSaved(failedIds.length), HR_MSG.stillSelectedRetry);
       sel.keepOnly(failedIds);
     } else {
       sel.clear(); setBulkOpen(false); setBulkForm(blankBulk);
@@ -284,7 +285,7 @@ export function PayrollPage() {
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : list.length === 0 ? (
-        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title="No employees" description="Add employees in HR → Employees first (or import from users)." /></CardBody></Card>
+        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.payrollEmptyDesc} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>
@@ -461,10 +462,10 @@ function DeductionRulesModal({ open, onClose, callCenters, initialCallCenterId }
     if (!ccId || !form) return;
     try {
       await saveConfig({ callCenterId: ccId, input: form }).unwrap();
-      toast.success("Deduction rules saved", callCenters.find((c) => c.id === ccId)?.name);
+      toast.success(HR_MSG.deductionRulesSaved, callCenters.find((c) => c.id === ccId)?.name);
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't save rules", getErrorDetail(err) ?? "You may not have permission for this call centre.");
+      toast.error(HR_MSG.saveRulesFailed, getErrorDetail(err) ?? HR_MSG.saveRulesPermissionDesc);
     }
   }
 

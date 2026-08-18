@@ -7,6 +7,7 @@ import type { CloserStatusValue } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
+import { INTAKE_MSG } from "./messages";
 
 
 const blank = {
@@ -55,7 +56,7 @@ export function ClosingApplicationPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!status) { toast.error("Select a closer status"); return; }
+    if (!status) { toast.error(INTAKE_MSG.selectCloserStatus); return; }
     try {
       const r = await submit({
         leadId: id, status,
@@ -73,11 +74,11 @@ export function ClosingApplicationPage() {
           banking198Reason: f.banking198Reason || undefined,
         },
       }).unwrap();
-      toast.success("Application submitted",
-        r.status === "CompleteAndSold" ? "Sale created (Lyons cleared the account)." : `Marked ${r.status}`);
+      toast.success(INTAKE_MSG.appSubmittedTitle,
+        r.status === "CompleteAndSold" ? INTAKE_MSG.saleCreated : INTAKE_MSG.marked(r.status));
       navigate("/close-queue");
     } catch (err: unknown) {
-      toast.error("Couldn't submit", getErrorDetail(err) ?? "Check the required fields and bank details.");
+      toast.error(INTAKE_MSG.submitFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.checkRequiredAndBank);
     }
   }
 
@@ -91,8 +92,8 @@ export function ClosingApplicationPage() {
     <>
       <PageHeader eyebrow="Closer" title="Closing application" />
       <Card><CardBody>
-        <EmptyState icon={<Icon name="briefcase" size={20} />} title="Lead not found"
-          description="It may have been removed, or you may not have access to it." />
+        <EmptyState icon={<Icon name="briefcase" size={20} />} title={INTAKE_MSG.leadNotFoundTitle}
+          description={INTAKE_MSG.leadNotFoundDesc} />
       </CardBody></Card>
     </>
   );

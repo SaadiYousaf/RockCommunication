@@ -17,6 +17,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { formatPhone } from "../../shared/lib/format";
+import { LEADS_MSG } from "./messages";
 
 type Filters = { phone: string; email: string; name: string; state: string; stage: string };
 
@@ -82,16 +83,16 @@ export function LeadSearchPage() {
       { header: "Email", value: (l) => l.email ?? "" },
       { header: "Stage", value: (l) => String(l.stage) },
     ], `lead-search-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(LEADS_MSG.exportReadyTitle, LEADS_MSG.exportRows(chosen.length));
   }
 
   async function dialFromRow(leadId: string) {
     try {
       await dialLead({ leadId }).unwrap();
-      toast.success("Calling…", "Watch the dock for status.");
+      toast.success(LEADS_MSG.callingTitle, LEADS_MSG.callingDesc);
       navigate(`/leads/${leadId}`);
     } catch (err: unknown) {
-      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.dialFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -182,8 +183,8 @@ export function LeadSearchPage() {
             <Card><CardBody>
               <EmptyState
                 icon={<Icon name="search" size={20} />}
-                title="Start typing to search"
-                description="Search across all leads by phone fragment, email, or partial name. Results appear as you type."
+                title={LEADS_MSG.searchEmptyStartTitle}
+                description={LEADS_MSG.searchEmptyStartDesc}
               />
             </CardBody></Card>
           ) : searching ? (
@@ -196,8 +197,8 @@ export function LeadSearchPage() {
             <Card><CardBody>
               <EmptyState
                 icon={<Icon name="search" size={20} />}
-                title="No leads match"
-                description="Try a shorter fragment or remove a filter."
+                title={LEADS_MSG.searchNoMatchTitle}
+                description={LEADS_MSG.searchNoMatchDesc}
                 action={<Button variant="ghost" size="sm" onClick={clearAll}>Clear filters</Button>}
               />
             </CardBody></Card>
@@ -306,8 +307,8 @@ export function LeadSearchPage() {
               ) : !duplicates || duplicates.length === 0 ? (
                 <EmptyState
                   icon={<Icon name="flag" size={20} />}
-                  title="No duplicates"
-                  description="Your database is clean — no two leads share the same phone number."
+                  title={LEADS_MSG.noDuplicatesTitle}
+                  description={LEADS_MSG.noDuplicatesDesc}
                 />
               ) : (
                 <div className="space-y-3">

@@ -1,5 +1,6 @@
 import { roleLabel } from "../../shared/constants/roles";
 import { MESSAGES } from "../../shared/constants/messages";
+import { TEAM_MSG } from "./messages";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
@@ -43,18 +44,18 @@ export function TeamPage() {
   async function moveToTeam(userId: string, teamId: string | null, label: string) {
     try {
       await setUserTeam({ userId, teamId }).unwrap();
-      toast.success(teamId ? `Moved to ${label}` : "Removed from team", "");
+      toast.success(teamId ? TEAM_MSG.movedTo(label) : TEAM_MSG.removedFromTeam, "");
     } catch (e) {
-      toast.error("Couldn't move user", getErrorDetail(e) ?? "Try again.");
+      toast.error(TEAM_MSG.moveFailed, getErrorDetail(e) ?? MESSAGES.tryAgain);
     }
   }
 
   async function makeLead(teamId: string, userId: string | null, teamName: string) {
     try {
       await setTeamLead({ teamId, userId }).unwrap();
-      toast.success(userId ? "Lead assigned" : "Lead cleared", teamName);
+      toast.success(userId ? TEAM_MSG.leadAssigned : TEAM_MSG.leadCleared, teamName);
     } catch (e) {
-      toast.error("Couldn't update lead", getErrorDetail(e) ?? "Try again.");
+      toast.error(TEAM_MSG.leadUpdateFailed, getErrorDetail(e) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -103,10 +104,10 @@ export function TeamPage() {
       </div>
 
       {waitingForAgency ? (
-        <Notice icon="building" title="Pick an agency"
+        <Notice icon="building" title={TEAM_MSG.pickAgencyTitle}
           body={!agencyOptions || agencyOptions.length === 0
-            ? "No agencies exist yet. Create one from the Agencies page to see its org chart."
-            : "Choose an agency from the selector above to view its organization chart."} />
+            ? TEAM_MSG.pickAgencyNoAgencies
+            : TEAM_MSG.pickAgencyBody} />
       ) : isLoading ? (
         <div className="space-y-6">
           <div className="flex justify-center"><Skeleton className="h-28 w-72 rounded-2xl" /></div>
@@ -115,12 +116,12 @@ export function TeamPage() {
           </div>
         </div>
       ) : isError || !data ? (
-        <Notice icon="warning" title="Couldn't load the team"
-          body="Something went wrong fetching the organization chart. It may be a temporary issue."
+        <Notice icon="warning" title={TEAM_MSG.loadFailedTitle}
+          body={TEAM_MSG.loadFailedBody}
           action={<Button variant="outline" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={() => refetch()}>Try again</Button>} />
       ) : totals.members + totals.leaders === 0 ? (
-        <Notice icon="users" title="No people yet"
-          body="This agency has no team members. Invite people from User Management and assign them to teams." />
+        <Notice icon="users" title={TEAM_MSG.noPeopleTitle}
+          body={TEAM_MSG.noPeopleBody} />
       ) : (
         <div className="space-y-6" aria-busy={isFetching}>
           <CeoLayer ceo={data.ceo} />
@@ -180,7 +181,7 @@ function CeoLayer({ ceo }: { ceo: OrgPersonDto | null }) {
         <CardBody className="py-6 text-center">
           <Icon name="shield" size={28} className="mx-auto text-amber-500 mb-2" />
           <div className="text-sm font-semibold text-ink-900">No CEO assigned yet</div>
-          <div className="text-xs text-ink-500 mt-1">A SuperAdmin can assign one from the Call Centers page.</div>
+          <div className="text-xs text-ink-500 mt-1">A Super Admin can assign one from the Call Centers page.</div>
         </CardBody>
       </Card>
     );
@@ -277,9 +278,9 @@ function TeamCard({
               <button
                 onClick={async () => {
                   if (!(await confirm({
-                    title: "Remove team lead?",
-                    description: `Clear the team lead for ${team.name}? You can assign a new one at any time.`,
-                    confirmLabel: "Remove",
+                    title: TEAM_MSG.removeLeadTitle,
+                    description: TEAM_MSG.removeLeadDesc(team.name),
+                    confirmLabel: TEAM_MSG.removeLeadConfirm,
                     danger: true,
                   }))) return;
                   onMakeLead(team.id, null, team.name);

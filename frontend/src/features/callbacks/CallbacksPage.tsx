@@ -9,6 +9,8 @@ import {
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLBACKS_MSG } from "./messages";
 
 type Bucket = "overdue" | "today" | "upcoming" | "completed" | "all";
 
@@ -89,7 +91,7 @@ export function CallbacksPage() {
       { header: "Due at", value: (c) => new Date(c.scheduledFor).toLocaleString() },
       { header: "Notes", value: (c) => c.reason ?? "" },
     ], `callbacks-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(CALLBACKS_MSG.exportReadyTitle, CALLBACKS_MSG.rowsDownloaded(chosen.length));
   }
 
   async function submit(e: React.FormEvent) {
@@ -100,10 +102,10 @@ export function CallbacksPage() {
         scheduledFor: new Date(when).toISOString(),
         reason: reason || undefined,
       }).unwrap();
-      toast.success("Callback scheduled", `Reminder set for ${new Date(when).toLocaleString()}.`);
+      toast.success(CALLBACKS_MSG.callbackScheduledTitle, CALLBACKS_MSG.callbackScheduledBody(new Date(when).toLocaleString()));
       setLeadId(""); setReason(""); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't schedule callback", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLBACKS_MSG.scheduleCallbackFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -111,9 +113,9 @@ export function CallbacksPage() {
     setCompletingId(id);
     try {
       await complete(id).unwrap();
-      toast.success("Callback completed");
+      toast.success(CALLBACKS_MSG.callbackCompleted);
     } catch (err: unknown) {
-      toast.error("Couldn't mark complete", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLBACKS_MSG.markCompleteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setCompletingId(null);
     }
@@ -168,8 +170,8 @@ export function CallbacksPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="calendar" size={20} />}
-            title="No callbacks scheduled"
-            description="Schedule a callback to keep customer follow-ups on track."
+            title={CALLBACKS_MSG.noCallbacksTitle}
+            description={CALLBACKS_MSG.noCallbacksBody}
             action={
               <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>
                 Schedule callback

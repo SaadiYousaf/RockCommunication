@@ -8,6 +8,7 @@ import {
 import type { LeadDiagnostics } from "../../shared/api/types";
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { timeAgo } from "../../shared/lib/time";
+import { LEADS_MSG } from "./messages";
 
 
 const severityTone: Record<string, { tone: "danger" | "warning" | "info"; icon: IconName; bg: string; ring: string }> = {
@@ -114,8 +115,8 @@ export function LeadTroubleshootPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="search" size={20} />}
-            title="Pick a lead to diagnose"
-            description="Paste a lead ID below or open this page from a lead's detail screen."
+            title={LEADS_MSG.pickLeadTitle}
+            description={LEADS_MSG.pickLeadDesc}
             action={
               <form
                 onSubmit={(e) => { e.preventDefault(); if (manualId.trim()) navigate(`/leads/${manualId.trim()}/troubleshoot`); }}
@@ -173,8 +174,8 @@ export function LeadTroubleshootPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="x" size={20} />}
-            title="Couldn't load diagnostics"
-            description="The lead may not exist or you may not have permission to see it."
+            title={LEADS_MSG.diagnosticsFailedTitle}
+            description={LEADS_MSG.diagnosticsFailedDesc}
             action={<Button onClick={() => refetch()}>Retry</Button>}
           />
         </CardBody></Card>
@@ -462,8 +463,8 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
             {data.cadence.enrollments.length === 0 ? (
               <EmptyState
                 icon={<Icon name="workflow" size={18} />}
-                title="No enrollments"
-                description="This lead isn't currently in any automated cadence."
+                title={LEADS_MSG.noEnrollmentsTitle}
+                description={LEADS_MSG.noEnrollmentsDesc}
               />
             ) : (
               <ul className="space-y-2">
@@ -506,8 +507,8 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
             {data.callActivity.recent.length === 0 ? (
               <EmptyState
                 icon={<Icon name="phone" size={18} />}
-                title="No calls yet"
-                description="Once an agent dials this lead it'll show up here."
+                title={LEADS_MSG.noCallsTitle}
+                description={LEADS_MSG.troubleshootNoCallsDesc}
               />
             ) : (
               <ul className="space-y-2">
@@ -545,8 +546,8 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="workflow" size={18} />}
-                title="No matching rules"
-                description="No workflow rules are configured for the events this lead would emit."
+                title={LEADS_MSG.noMatchingRulesTitle}
+                description={LEADS_MSG.noMatchingRulesDesc}
               />
             </div>
           ) : (

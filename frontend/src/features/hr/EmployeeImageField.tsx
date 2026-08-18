@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import { Icon } from "../../shared/ui";
+import { HR_MSG } from "./messages";
 
 type ImageKind = "Photo" | "IdCardFront" | "IdCardBack";
 
@@ -56,9 +57,9 @@ export function EmployeeImageField({
         method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
       });
       if (res.ok) onChanged();
-      else setError("Upload failed — use an image under 10 MB.");
+      else setError(HR_MSG.uploadFailedSize);
     } catch {
-      setError("Upload failed. Try again.");
+      setError(HR_MSG.uploadFailedRetry);
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";

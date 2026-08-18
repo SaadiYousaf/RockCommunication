@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useState } from "react";
 import {
   useCheckIntegrationMutation, useListIntegrationsQuery, useTestDialMutation,
@@ -43,10 +45,10 @@ export function IntegrationsPage() {
     try {
       const res = await check(code).unwrap();
       setResults((r) => ({ ...r, [code]: res }));
-      if (res.healthy) toast.success(`${code} OK`, res.message);
-      else toast.error(`${code} unhealthy`, res.message);
+      if (res.healthy) toast.success(ADMIN_MSG.integrations.checkOk(code), res.message);
+      else toast.error(ADMIN_MSG.integrations.checkUnhealthy(code), res.message);
     } catch (err: unknown) {
-      toast.error("Check failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.integrations.checkFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setChecking(null);
     }
@@ -90,8 +92,8 @@ export function IntegrationsPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="cog" size={20} />}
-            title="No integrations configured"
-            description="No external providers are registered yet. Configure them in appsettings.json, then restart the API."
+            title={ADMIN_MSG.integrations.emptyTitle}
+            description={ADMIN_MSG.integrations.emptyDesc}
             tone="neutral"
             action={
               <Button variant="outline" size="sm" leftIcon={<Icon name="refresh" size={14} />} onClick={() => refetch()}>
@@ -156,9 +158,9 @@ function TestDialerCard() {
     try {
       const r = await testDial({ phoneNumber: phone.trim() }).unwrap();
       setResult(r);
-      toast.success("Test call placed", `Provider ${r.provider} · ${r.status}`);
+      toast.success(ADMIN_MSG.integrations.testCallPlaced, ADMIN_MSG.integrations.testCallPlacedDesc(r.provider, r.status));
     } catch (err: unknown) {
-      toast.error("Test call failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.integrations.testCallFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 

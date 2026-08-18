@@ -14,6 +14,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { HR_MSG } from "./messages";
 
 type Tab = "daily" | "summary";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -73,7 +74,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
 
   async function setStatus(employeeId: string, status: string) {
     try { await mark({ employeeId, date, status }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(HR_MSG.saveFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   // Bulk-set the chosen status on ONLY the ticked employees (the "Apply to all" button above
@@ -83,16 +84,16 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
     if (ids.length === 0) return;
     const label = hrLabel(bulkStatus);
     if (!(await confirm({
-      title: `Set ${ids.length} to "${label}"?`,
-      description: `This sets the ${ids.length} selected ${ids.length === 1 ? "employee" : "employees"} to "${label}" for ${date}.`,
-      confirmLabel: `Set to ${label}`,
+      title: HR_MSG.setToConfirmTitle(ids.length, label),
+      description: HR_MSG.setToConfirmDesc(ids.length, label, date),
+      confirmLabel: HR_MSG.setToConfirmLabel(label),
     }))) return;
     setApplying(true);
     try {
       await Promise.all(ids.map((employeeId) => mark({ employeeId, date, status: bulkStatus }).unwrap()));
-      toast.success(`Set ${ids.length} to ${label}`);
+      toast.success(HR_MSG.setCountToLabel(ids.length, label));
       sel.clear();
-    } catch (err: unknown) { toast.error("Couldn't apply", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(HR_MSG.applyFailed, getErrorDetail(err) ?? HR_MSG.retry); }
     finally { setApplying(false); }
   }
 
@@ -105,26 +106,26 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
       { header: "Call centre", value: (r) => r.callCenterName ?? "Agency-wide" },
       { header: "Status", value: (r) => (r.status ? hrLabel(r.status) : "") },
     ], `attendance-${date}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(HR_MSG.exportReady, HR_MSG.rowsDownloaded(chosen.length));
   }
   async function applyToAll() {
     const label = hrLabel(bulkStatus);
     const n = rows?.length ?? 0;
     if (!(await confirm({
-      title: `Set everyone to "${label}"?`,
-      description: `This sets all ${n} ${n === 1 ? "employee" : "employees"} to "${label}" for ${date}, overwriting any status already marked. You can still fine-tune individuals afterwards.`,
-      confirmLabel: `Set all to ${label}`,
+      title: HR_MSG.setEveryoneTitle(label),
+      description: HR_MSG.setEveryoneDesc(n, label, date),
+      confirmLabel: HR_MSG.setAllConfirmLabel(label),
     }))) return;
     try {
       const r = await bulk({ date, status: bulkStatus, callCenterId, onlyUnmarked: false }).unwrap();
-      toast.success(`Set ${r.count} to ${label}`, "Every employee on this date was updated.");
-    } catch (err: unknown) { toast.error("Couldn't apply to all", getErrorDetail(err) ?? "Try again."); }
+      toast.success(HR_MSG.setCountToLabel(r.count, label), HR_MSG.everyoneUpdatedDesc);
+    } catch (err: unknown) { toast.error(HR_MSG.applyAllFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
   async function fillFromClockIns() {
     try {
       const r = await fill({ date, callCenterId }).unwrap();
-      toast.success(r.count > 0 ? `Marked ${r.count} present from clock-ins` : "No new clock-ins", "Anyone who clocked in that day was marked Present.");
-    } catch (err: unknown) { toast.error("Couldn't fill", getErrorDetail(err) ?? "Try again."); }
+      toast.success(r.count > 0 ? HR_MSG.markedPresentFromClockIns(r.count) : HR_MSG.noNewClockIns, HR_MSG.clockInsDesc);
+    } catch (err: unknown) { toast.error(HR_MSG.fillFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   return (
@@ -151,7 +152,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>
       ) : (rows ?? []).length === 0 ? (
-        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title="No employees" description="Add employees in HR → Employees first." /></CardBody></Card>
+        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.addEmployeesFirst} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>
@@ -224,7 +225,7 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>
       ) : (rows ?? []).length === 0 ? (
-        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title="No employees" description="Add employees in HR → Employees first." /></CardBody></Card>
+        <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.addEmployeesFirst} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>

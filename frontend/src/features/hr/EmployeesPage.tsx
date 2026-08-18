@@ -18,6 +18,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { HR_MSG } from "./messages";
 
 const BLANK: EmployeeInput = {
   fullName: "", agentCode: "", phoneNumber: "", officialEmail: "",
@@ -58,10 +59,10 @@ export function EmployeesPage() {
   async function importFromUsers() {
     try {
       const r = await syncFromUsers().unwrap();
-      toast.success(r.created > 0 ? `Imported ${r.created} employee${r.created === 1 ? "" : "s"}` : "Already up to date",
-        r.created > 0 ? "Created records from your user accounts — fill in the rest of each profile." : "Every user already has an employee record.");
+      toast.success(r.created > 0 ? HR_MSG.imported(r.created) : HR_MSG.alreadyUpToDate,
+        r.created > 0 ? HR_MSG.importedDesc : HR_MSG.allUsersHaveRecords);
     } catch (err: unknown) {
-      toast.error("Couldn't import", getErrorDetail(err) ?? "Try again.");
+      toast.error(HR_MSG.importFailed, getErrorDetail(err) ?? HR_MSG.retry);
     }
   }
 
@@ -113,18 +114,18 @@ export function EmployeesPage() {
     const payload: EmployeeInput = { ...form, callCenterId: form.callCenterId || null,
       reportingToEmployeeId: form.reportingToEmployeeId || null };
     try {
-      if (editingId) { await update({ id: editingId, ...payload }).unwrap(); toast.success("Employee updated"); }
-      else { await create(payload).unwrap(); toast.success("Employee added"); }
+      if (editingId) { await update({ id: editingId, ...payload }).unwrap(); toast.success(HR_MSG.employeeUpdated); }
+      else { await create(payload).unwrap(); toast.success(HR_MSG.employeeAdded); }
       closeModal();
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the required fields and try again.");
+      toast.error(HR_MSG.saveFailed, getErrorDetail(err) ?? HR_MSG.checkRequiredFields);
     }
   }
 
   async function onDelete(id: string, name: string) {
-    if (!(await confirm({ title: "Remove employee?", description: `Remove ${name}'s record? This can't be undone.`, confirmLabel: "Remove", danger: true }))) return;
-    try { await remove(id).unwrap(); toast.success("Employee removed"); }
-    catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    if (!(await confirm({ title: HR_MSG.removeEmployeeTitle, description: HR_MSG.removeEmployeeDesc(name), confirmLabel: HR_MSG.removeLabel, danger: true }))) return;
+    try { await remove(id).unwrap(); toast.success(HR_MSG.employeeRemoved); }
+    catch (err: unknown) { toast.error(HR_MSG.removeFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   const rows = employees ?? [];
@@ -142,23 +143,23 @@ export function EmployeesPage() {
       { header: "Phone", value: (r) => r.phoneNumber ?? "" },
       { header: "Email", value: (r) => r.officialEmail ?? "" },
     ], `employees-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(HR_MSG.exportReady, HR_MSG.rowsDownloaded(chosen.length));
   }
 
   async function bulkDelete() {
     const ids = sel.selectedIds;
     if (ids.length === 0) return;
     if (!(await confirm({
-      title: `Remove ${ids.length} ${ids.length === 1 ? "employee" : "employees"}?`,
-      description: "This removes the selected employee records. This can't be undone.",
-      confirmLabel: "Remove", danger: true,
+      title: HR_MSG.removeEmployeesTitle(ids.length),
+      description: HR_MSG.removeEmployeesDesc,
+      confirmLabel: HR_MSG.removeLabel, danger: true,
     }))) return;
     setBulkDeleting(true);
     try {
       await Promise.all(ids.map((id) => remove(id).unwrap()));
-      toast.success(`Removed ${ids.length} ${ids.length === 1 ? "employee" : "employees"}`);
+      toast.success(HR_MSG.removedEmployees(ids.length));
       sel.clear();
-    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(HR_MSG.removeFailed, getErrorDetail(err) ?? HR_MSG.retry); }
     finally { setBulkDeleting(false); }
   }
 
@@ -221,8 +222,8 @@ export function EmployeesPage() {
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="users" size={20} />} title={search || designation ? "No matches" : "No employees yet"}
-            description={search || designation ? "No employee matches your filters." : "Import your existing user accounts to get started, or add records manually."}
+          <EmptyState icon={<Icon name="users" size={20} />} title={search || designation ? HR_MSG.noMatchesTitle : HR_MSG.employeesEmptyTitle}
+            description={search || designation ? HR_MSG.noEmployeeMatchesDesc : HR_MSG.employeesEmptyDesc}
             action={!search && !designation ? (
               <div className="flex items-center gap-2">
                 <Button variant="outline" leftIcon={<Icon name="download" size={15} />} loading={syncing} onClick={importFromUsers}>Import from users</Button>

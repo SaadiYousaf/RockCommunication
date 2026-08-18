@@ -15,6 +15,7 @@ import {
   Avatar, Button, Card, CardBody, EmptyState, Icon, PageHeader, Skeleton, cn, useToast,
 } from "../../shared/ui";
 import { MentionBox, type MentionUser } from "./MentionBox";
+import { PULSE_MSG } from "./messages";
 
 const QUICK_EMOJIS = ["👍", "❤️", "🎉", "🔥", "👏", "😄", "🙌", "💯"];
 
@@ -134,7 +135,7 @@ export function PulsePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/") || file.size > 8 * 1024 * 1024) {
-      toast.error("Image too large", "Please choose an image under 8 MB.");
+      toast.error(PULSE_MSG.imageTooLarge, PULSE_MSG.imageTooLargeDesc);
       return;
     }
     try {
@@ -143,7 +144,7 @@ export function PulsePage() {
       if (imagePreview) URL.revokeObjectURL(imagePreview);
       setImagePreview(URL.createObjectURL(file));
     } catch (err: unknown) {
-      toast.error("Couldn't attach image", getErrorDetail(err) ?? "Try again.");
+      toast.error(PULSE_MSG.attachImageFailed, getErrorDetail(err) ?? PULSE_MSG.retry);
     }
   }
 
@@ -163,7 +164,7 @@ export function PulsePage() {
       ).unwrap();
       resetComposer();
     } catch (err: unknown) {
-      toast.error("Couldn't post", getErrorDetail(err) ?? "Try again.");
+      toast.error(PULSE_MSG.postFailed, getErrorDetail(err) ?? PULSE_MSG.retry);
     }
   }
 
@@ -247,8 +248,8 @@ export function PulsePage() {
         <div className="space-y-4">{[0, 1, 2].map((i) => <Card key={i}><CardBody><Skeleton className="h-20" /></CardBody></Card>)}</div>
       ) : !posts || posts.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="chat" size={20} />} title="Nothing here yet"
-            description="Be the first to post — share a win, a shout-out, or an announcement for the team." />
+          <EmptyState icon={<Icon name="chat" size={20} />} title={PULSE_MSG.nothingHereTitle}
+            description={PULSE_MSG.nothingHereDesc} />
         </CardBody></Card>
       ) : (
         <div className="space-y-4">
@@ -292,13 +293,13 @@ function PostCard({ post, meName, users, onMention, onOpenDm }: {
   async function toggle(emoji: string) {
     setShowPicker(false);
     try { await react({ postId: post.id, emoji }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't react", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(PULSE_MSG.reactFailed, getErrorDetail(err) ?? PULSE_MSG.retry); }
   }
 
   async function remove() {
-    if (!(await confirm({ title: "Delete post?", description: "This removes the post and its comments.", confirmLabel: "Delete", danger: true }))) return;
-    try { await deletePost(post.id).unwrap(); toast.success("Post deleted"); }
-    catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); }
+    if (!(await confirm({ title: PULSE_MSG.deletePostTitle, description: PULSE_MSG.deletePostDesc, confirmLabel: PULSE_MSG.deleteLabel, danger: true }))) return;
+    try { await deletePost(post.id).unwrap(); toast.success(PULSE_MSG.postDeleted); }
+    catch (err: unknown) { toast.error(PULSE_MSG.deleteFailed, getErrorDetail(err) ?? PULSE_MSG.retry); }
   }
 
   return (
@@ -387,7 +388,7 @@ function PollBlock({ postId, poll }: { postId: string; poll: FeedPoll }) {
 
   async function cast(optionId: string) {
     try { await vote({ postId, optionId }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't record your vote", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(PULSE_MSG.voteFailed, getErrorDetail(err) ?? PULSE_MSG.retry); }
   }
 
   return (
@@ -441,7 +442,7 @@ function CommentRow({ comment, onMention, onOpenDm }: {
             className="text-sm font-medium text-ink-900 hover:text-brand-600 transition-colors">{comment.authorName}</button>
           <span className="text-[11px] text-ink-400 tabular-nums">· {timeAgo(comment.createdAt)}</span>
           {comment.canDelete && (
-            <button onClick={async () => { try { await del(comment.id).unwrap(); } catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); } }}
+            <button onClick={async () => { try { await del(comment.id).unwrap(); } catch (err: unknown) { toast.error(PULSE_MSG.deleteFailed, getErrorDetail(err) ?? PULSE_MSG.retry); } }}
               aria-label="Delete comment" title="Delete comment"
               className="ml-auto opacity-0 group-hover:opacity-100 text-ink-300 hover:text-rose-500 transition">
               <Icon name="trash" size={12} />
@@ -463,7 +464,7 @@ function CommentComposer({ postId, meName, users }: { postId: string; meName: st
     const text = body.trim();
     if (!text) return;
     try { await comment({ postId, body: text }).unwrap(); setBody(""); }
-    catch (err: unknown) { toast.error("Couldn't comment", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(PULSE_MSG.commentFailed, getErrorDetail(err) ?? PULSE_MSG.retry); }
   }
 
   return (

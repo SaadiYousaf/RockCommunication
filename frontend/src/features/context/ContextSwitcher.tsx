@@ -5,7 +5,9 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { setAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
 import { useListCallCentersQuery, useSetContextMutation } from "../../shared/api/baseApi";
+import { MESSAGES } from "../../shared/constants/messages";
 import { Icon, type IconName, Spinner, cn, useToast } from "../../shared/ui";
+import { CONTEXT_MSG } from "./messages";
 
 // Roles that pick a working context — the only ones who see the switcher.
 const CONTEXT_ROLES = ["SuperAdmin", "Admin", "CallCenterAdmin"];
@@ -54,9 +56,9 @@ export function ContextSwitcher() {
       const res = await setContext({ callCenterId }).unwrap();
       if (!res.user) return;
       dispatch(setAuth({ accessToken: res.accessToken, refreshToken: res.refreshToken, user: res.user, contextChosen: true }));
-      toast.success("Workspace switched", res.user.callCenterName ?? "Now viewing all call centers");
+      toast.success(CONTEXT_MSG.workspaceSwitched, res.user.callCenterName ?? CONTEXT_MSG.nowViewingAll);
     } catch (err: unknown) {
-      toast.error("Couldn't switch workspace", getErrorDetail(err) ?? "Please try again.");
+      toast.error(CONTEXT_MSG.switchFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 

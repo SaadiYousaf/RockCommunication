@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CONFIDENTIAL_MSG } from "./messages";
 import { useMemo, useState } from "react";
 import {
   useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
@@ -53,30 +55,30 @@ export function ConfidentialPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      if (editing) { await update({ id: editing.id, ...form }).unwrap(); toast.success("Login updated"); }
-      else { await create(form).unwrap(); toast.success("Login saved"); }
+      if (editing) { await update({ id: editing.id, ...form }).unwrap(); toast.success(CONFIDENTIAL_MSG.loginUpdated); }
+      else { await create(form).unwrap(); toast.success(CONFIDENTIAL_MSG.loginSaved); }
       setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
+      toast.error(CONFIDENTIAL_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function onDelete(c: PortalCredential) {
     if (!(await confirm({
-      title: "Delete this login?",
-      description: `Remove the stored login for "${c.portalName}"? This can't be undone.`,
-      confirmLabel: "Delete", danger: true,
+      title: CONFIDENTIAL_MSG.deleteConfirmTitle,
+      description: CONFIDENTIAL_MSG.deleteConfirmDesc(c.portalName),
+      confirmLabel: CONFIDENTIAL_MSG.deleteConfirmLabel, danger: true,
     }))) return;
-    try { await remove(c.id).unwrap(); toast.success("Login deleted"); }
-    catch (err: unknown) { toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again."); }
+    try { await remove(c.id).unwrap(); toast.success(CONFIDENTIAL_MSG.loginDeleted); }
+    catch (err: unknown) { toast.error(CONFIDENTIAL_MSG.deleteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
   function toggleReveal(id: string) {
     setRevealed((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
   async function copy(text: string, label: string) {
-    try { await navigator.clipboard.writeText(text); toast.success("Copied", `${label} copied to clipboard.`); }
-    catch { toast.error("Couldn't copy", "Your browser blocked clipboard access."); }
+    try { await navigator.clipboard.writeText(text); toast.success(CONFIDENTIAL_MSG.copied, CONFIDENTIAL_MSG.copiedDesc(label)); }
+    catch { toast.error(CONFIDENTIAL_MSG.copyFailed, CONFIDENTIAL_MSG.copyFailedDesc); }
   }
 
   return (
@@ -107,8 +109,8 @@ export function ConfidentialPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="lock" size={20} />}
-            title={q ? "No matches" : "No logins yet"}
-            description={q ? "No stored login matches your search." : "Add a portal login to share it securely with your admins."}
+            title={q ? CONFIDENTIAL_MSG.emptyNoMatchTitle : CONFIDENTIAL_MSG.emptyNoLoginsTitle}
+            description={q ? CONFIDENTIAL_MSG.emptyNoMatchDesc : CONFIDENTIAL_MSG.emptyNoLoginsDesc}
             action={!q ? <Button leftIcon={<Icon name="plus" size={15} />} onClick={openAdd}>Add login</Button> : undefined}
           />
         </CardBody></Card>

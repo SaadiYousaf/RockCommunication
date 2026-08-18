@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -50,7 +52,7 @@ export function SubmissionAgentsPage() {
       { header: "Status", value: (a) => (a.isActive ? (a.pendingInvite ? "Active — awaiting sign-in" : "Active") : "Inactive") },
       { header: "Active", value: (a) => (a.isActive ? "Yes" : "No") },
     ], `submission-agents-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
   }
 
   // Bulk deactivate loops the SAME per-row setActive mutation over the ticked agents — no new endpoint.
@@ -58,18 +60,18 @@ export function SubmissionAgentsPage() {
     const n = sel.selectedCount;
     if (n === 0) return;
     if (!(await confirm({
-      title: `Deactivate ${n} ${n === 1 ? "agent" : "agents"}?`,
-      description: "They'll be signed out and can no longer validate or approve sales. You can reactivate them later.",
-      confirmLabel: "Deactivate",
+      title: ADMIN_MSG.submissionAgents.deactivateConfirmTitle(n),
+      description: ADMIN_MSG.submissionAgents.deactivateConfirmDesc,
+      confirmLabel: ADMIN_MSG.submissionAgents.deactivateConfirmLabel,
       danger: true,
     }))) return;
     setDeactivating(true);
     try {
       await Promise.all(sel.selectedIds.map((id) => setActive({ id, isActive: false }).unwrap()));
-      toast.success("Agents deactivated", `${n} can no longer sign in.`);
+      toast.success(ADMIN_MSG.submissionAgents.agentsDeactivated, ADMIN_MSG.common.canNoLongerSignIn(n));
       sel.clear();
     } catch (err: unknown) {
-      toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setDeactivating(false);
     }
@@ -78,18 +80,18 @@ export function SubmissionAgentsPage() {
   async function reactivate(a: SubmissionAgent) {
     try {
       await setActive({ id: a.id, isActive: true }).unwrap();
-      toast.success("Agent reactivated", `${a.name} can sign in and validate again.`);
+      toast.success(ADMIN_MSG.submissionAgents.agentReactivated, ADMIN_MSG.submissionAgents.agentReactivatedDesc(a.name));
     } catch (err: unknown) {
-      toast.error("Couldn't reactivate", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.reactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function resend(a: SubmissionAgent) {
     try {
       await resendInvite(a.id).unwrap();
-      toast.success("Invitation resent", `A fresh temporary password was emailed to ${a.name}.`);
+      toast.success(ADMIN_MSG.common.invitationResent, ADMIN_MSG.common.invitationResentDesc(a.name));
     } catch (err: unknown) {
-      toast.error("Couldn't resend invitation", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.resendInviteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -119,8 +121,8 @@ export function SubmissionAgentsPage() {
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-32" /> : !agents || agents.length === 0 ? (
-            <EmptyState icon={<Icon name="userPlus" size={20} />} title="No submission agents"
-              description="Add one with the button above — they can approve sales for every agency."
+            <EmptyState icon={<Icon name="userPlus" size={20} />} title={ADMIN_MSG.submissionAgents.noAgentsTitle}
+              description={ADMIN_MSG.submissionAgents.noAgentsDesc}
               action={<Button size="sm" leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>} />
           ) : (
             <>
@@ -211,10 +213,10 @@ export function SubmissionAgentsPage() {
                 if (!confirmDeactivate) return;
                 try {
                   await setActive({ id: confirmDeactivate.id, isActive: false }).unwrap();
-                  toast.success("Agent deactivated", `${confirmDeactivate.name} can no longer sign in.`);
+                  toast.success(ADMIN_MSG.submissionAgents.agentDeactivated, ADMIN_MSG.common.canNoLongerSignIn(confirmDeactivate.name));
                   setConfirmDeactivate(null);
                 } catch (err: unknown) {
-                  toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
+                  toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                 }
               }}
             >Deactivate</Button>
@@ -247,10 +249,10 @@ function ResetPasswordModal({ agent, onClose }: { agent: { id: string; name: str
             onClick={async () => {
               try {
                 await resetPw({ id: agent.id, newPassword: newPwd }).unwrap();
-                toast.success("Password reset", `New password set for ${agent.name}.`);
+                toast.success(ADMIN_MSG.common.passwordReset, ADMIN_MSG.common.passwordResetDesc(agent.name));
                 onClose();
               } catch (err: unknown) {
-                toast.error("Couldn't reset password", getErrorDetail(err) ?? "Try again.");
+                toast.error(ADMIN_MSG.common.resetPasswordFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
               }
             }}
           >Set password</Button>
@@ -282,10 +284,10 @@ function NewSubmissionAgentModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     try {
       await create({ name: name.trim(), email: email.trim() }).unwrap();
-      toast.success("Submission agent added", "They've been emailed an invitation.");
+      toast.success(ADMIN_MSG.submissionAgents.agentAdded, ADMIN_MSG.common.emailedInvitation);
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't add submission agent", getErrorDetail(err) ?? "Check the fields and try again.");
+      toast.error(ADMIN_MSG.submissionAgents.agentAddFailed, getErrorDetail(err) ?? ADMIN_MSG.common.checkFieldsAndTryAgain);
     }
   }
 

@@ -26,6 +26,7 @@ import {
   ALLOWED_TRANSITIONS, TERMINAL_STAGES, STAGE_DESCRIPTIONS, DISPOSITION_DESCRIPTIONS, WORKFLOW_STAGES,
 } from "../../shared/constants/leadStage";
 import { formatPhone } from "../../shared/lib/format";
+import { LEADS_MSG } from "./messages";
 
 const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","CallBack","DoNotCall","Sold","NotQualified","Voicemail","NoAnswer","WrongNumber"];
 // The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
@@ -84,8 +85,8 @@ export function LeadDetailPage() {
       <Card><CardBody>
         <EmptyState
           icon={<Icon name="search" size={20} />}
-          title="Lead not found"
-          description="This lead doesn't exist or you don't have access to it. Check the link, or head back to Leads."
+          title={LEADS_MSG.leadNotFoundTitle}
+          description={LEADS_MSG.leadNotFoundDesc}
           action={<Button variant="outline" onClick={() => navigate("/leads")} leftIcon={<Icon name="arrowRight" size={14} className="rotate-180" />}>Back to Leads</Button>}
         />
       </CardBody></Card>
@@ -100,49 +101,49 @@ export function LeadDetailPage() {
     try {
       const result = await checkCompliance({ phone: lead.phoneNumber, state: lead.state ?? undefined }).unwrap();
       setCompliance(result);
-      if (!result.allowed) { toast.error("Call blocked", result.blockReason ?? "Compliance check failed."); return; }
+      if (!result.allowed) { toast.error(LEADS_MSG.callBlockedTitle, result.blockReason ?? LEADS_MSG.complianceCheckFailed); return; }
     } catch {
-      toast.error("Can't verify compliance", "The DNC/TCPA check is unavailable — the call was not placed.");
+      toast.error(LEADS_MSG.cantVerifyComplianceTitle, LEADS_MSG.cantVerifyComplianceDesc);
       return;
     }
     try {
       await dial({ leadId: id }).unwrap();
     } catch (err: unknown) {
-      toast.error("Couldn't place call", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.placeCallFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {
-      const ok = await confirm({ title: `Move to ${toStage}?`, description: "This takes the lead off the active pipeline.", danger: true, confirmLabel: `Move to ${toStage}` });
+      const ok = await confirm({ title: LEADS_MSG.moveConfirmTitle(toStage), description: LEADS_MSG.moveConfirmDesc, danger: true, confirmLabel: LEADS_MSG.moveConfirmLabel(toStage) });
       if (!ok) return;
     }
     try {
       await transition({ id, toStage, disposition: lead!.disposition as LeadDisposition }).unwrap();
-      toast.success("Stage updated", `Moved to ${toStage}.`);
+      toast.success(LEADS_MSG.stageUpdatedTitle, LEADS_MSG.movedTo(toStage));
       refetchLead();
     } catch (err: unknown) {
-      toast.error("Couldn't move stage", getErrorDetail(err) ?? "That transition isn't allowed.");
+      toast.error(LEADS_MSG.moveStageFailedTitle, getErrorDetail(err) ?? LEADS_MSG.transitionNotAllowed);
     }
   }
 
   async function doVerifyJornaya() {
     try {
       await verifyJornaya(id).unwrap();
-      toast.success("Jornaya verified", "The lead's consent token is now on file.");
+      toast.success(LEADS_MSG.jornayaVerifiedTitle, LEADS_MSG.jornayaVerifiedDesc);
       refetchLead();
     } catch (err: unknown) {
-      toast.error("Couldn't verify Jornaya", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.verifyJornayaFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
   async function doDisposition(disposition: LeadDisposition) {
     try {
       await setDisposition({ id, disposition }).unwrap();
-      toast.success("Disposition set", disposition);
+      toast.success(LEADS_MSG.dispositionSetTitle, disposition);
       refetchLead();
     } catch (err: unknown) {
-      toast.error("Couldn't set disposition", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.setDispositionFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -152,7 +153,7 @@ export function LeadDetailPage() {
       await updateNotes({ id, notes }).unwrap();
       setSavedAt(new Date().toLocaleTimeString());
     } catch (err: unknown) {
-      toast.error("Notes not saved", getErrorDetail(err) ?? "Your changes weren't saved — try again.");
+      toast.error(LEADS_MSG.notesNotSavedTitle, getErrorDetail(err) ?? LEADS_MSG.notesNotSavedDesc);
     }
   }
 
@@ -161,11 +162,11 @@ export function LeadDetailPage() {
     if (!smsBody.trim()) return;
     try {
       await sendSms({ leadId: id, body: smsBody }).unwrap();
-      toast.success("SMS sent");
+      toast.success(LEADS_MSG.smsSentTitle);
       setSmsBody("");
       setShowSms(false);
     } catch (err) {
-      toast.error("SMS not sent", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.smsNotSentTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -174,11 +175,11 @@ export function LeadDetailPage() {
     if (!callbackAt) return;
     try {
       await scheduleCallback({ leadId: id, scheduledFor: new Date(callbackAt).toISOString(), reason: callbackReason || undefined }).unwrap();
-      toast.success("Callback scheduled");
+      toast.success(LEADS_MSG.callbackScheduledTitle);
       setCallbackAt(""); setCallbackReason(""); setShowCallback(false);
       refetchLead();
     } catch (err) {
-      toast.error("Couldn't schedule callback", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.scheduleCallbackFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -250,9 +251,9 @@ export function LeadDetailPage() {
                 const sel = e.target;
                 try {
                   await dropVm({ leadId: id, voicemailAssetId: sel.value }).unwrap();
-                  toast.success("Voicemail dropped");
+                  toast.success(LEADS_MSG.voicemailDroppedTitle);
                 } catch (err) {
-                  toast.error("Couldn't drop voicemail", getErrorDetail(err) ?? "Try again.");
+                  toast.error(LEADS_MSG.dropVoicemailFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
                 }
                 sel.value = "";
               }}>
@@ -358,11 +359,11 @@ export function LeadDetailPage() {
             </div>
             <textarea
               className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition-shadow"
-              rows={5} placeholder={canEditNotes ? "Type call notes here…" : "You have read-only access to notes"}
+              rows={5} placeholder={canEditNotes ? "Type call notes here…" : LEADS_MSG.notesReadOnly}
               value={notes} onChange={e => setNotes(e.target.value)}
               onBlur={saveNotes}
               readOnly={!canEditNotes}
-              title={!canEditNotes ? "You don't have permission to edit notes on this lead" : undefined}
+              title={!canEditNotes ? LEADS_MSG.notesNoPermission : undefined}
               {...secureNotes}
             />
             <div className="text-xs text-ink-500 mt-1">Notes auto-save when you click out.</div>
@@ -387,7 +388,7 @@ export function LeadDetailPage() {
               </div>
             </div>
             {lead.recentCalls.length === 0 ? (
-              <EmptyState compact icon={<Icon name="phone" size={18} />} title="No calls yet" description="Calls appear here once you dial this lead." />
+              <EmptyState compact icon={<Icon name="phone" size={18} />} title={LEADS_MSG.noCallsTitle} description={LEADS_MSG.noCallsDesc} />
             ) : (
               <div className="space-y-2">
                 {lead.recentCalls.map(c => (
@@ -425,7 +426,7 @@ export function LeadDetailPage() {
               ))}
             </ul>
             {(!timeline || timeline.entries.length === 0) && (
-              <EmptyState compact icon={<Icon name="activity" size={18} />} title="No activity yet" description="Actions on this lead will show up here." />
+              <EmptyState compact icon={<Icon name="activity" size={18} />} title={LEADS_MSG.noActivityTitle} description={LEADS_MSG.noActivityDesc} />
             )}
           </div>
         </div>
@@ -529,7 +530,7 @@ export function LeadDetailPage() {
               <Row label="Lead ID" mono value={
                 <button
                   type="button"
-                  onClick={() => { navigator.clipboard?.writeText(lead.id); toast.success("Lead ID copied", "Paste it into the sale form."); }}
+                  onClick={() => { navigator.clipboard?.writeText(lead.id); toast.success(LEADS_MSG.leadIdCopiedTitle, LEADS_MSG.leadIdCopiedDesc); }}
                   className="inline-flex items-center gap-1 hover:text-brand-700"
                   title="Copy lead ID"
                 >

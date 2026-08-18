@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import { ADMIN_MSG } from "./messages";
 import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQuery } from "../../shared/api/baseApi";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -91,7 +92,7 @@ export function AuditLogPage() {
       { header: "IP", value: (e) => e.ipAddress ?? "" },
       { header: "Changes", value: (e) => (e.changes ?? "").replace(/\s+/g, " ") },
     ], `audit-log-selected-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
   }
 
   const total = data?.total ?? 0;
@@ -134,7 +135,7 @@ export function AuditLogPage() {
     a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${rows.length} rows`);
+    toast.success(ADMIN_MSG.audit.exportedRows(rows.length));
   }
 
   return (
@@ -216,8 +217,8 @@ export function AuditLogPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="doc" size={20} />}
-            title="No audit entries"
-            description="Try a different filter or date range."
+            title={ADMIN_MSG.audit.emptyTitle}
+            description={ADMIN_MSG.audit.emptyDesc}
           />
         </CardBody></Card>
       ) : (

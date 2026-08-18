@@ -15,6 +15,8 @@ import {
   PageHeader, Skeleton, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { MESSAGES } from "../../shared/constants/messages";
+import { DOCUMENTS_MSG } from "./messages";
 
 
 function fmtSize(n: number) {
@@ -42,11 +44,11 @@ export function DocumentsPage() {
     if (!pending) return;
     try {
       await uploadDoc({ name: name.trim() || pending.name, file: pending }).unwrap();
-      toast.success("Uploaded", pending.name);
+      toast.success(DOCUMENTS_MSG.uploaded, pending.name);
       setPending(null); setName("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (err: unknown) {
-      toast.error("Upload failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(DOCUMENTS_MSG.uploadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -105,8 +107,8 @@ export function DocumentsPage() {
             {isLoading ? (
               <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
             ) : !docs || docs.length === 0 ? (
-              <EmptyState icon={<Icon name="doc" size={20} />} title="No documents yet"
-                description={canManage ? "Upload one above to get started." : "Documents shared by your office will appear here."} />
+              <EmptyState icon={<Icon name="doc" size={20} />} title={DOCUMENTS_MSG.noDocumentsTitle}
+                description={canManage ? DOCUMENTS_MSG.noDocumentsManageDesc : DOCUMENTS_MSG.noDocumentsReadonlyDesc} />
             ) : (
               <ul className="space-y-1">
                 {docs.map((d) => (
@@ -137,16 +139,16 @@ export function DocumentsPage() {
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (!(await confirm({
-                              title: `Delete "${d.name}"?`,
-                              description: "This permanently removes the document for everyone in the agency.",
+                              title: DOCUMENTS_MSG.deleteConfirmTitle(d.name),
+                              description: DOCUMENTS_MSG.deleteConfirmDesc,
                               confirmLabel: "Delete",
                               danger: true,
                             }))) return;
                             try {
                               await deleteDoc(d.id).unwrap();
                               if (active?.id === d.id) setActive(null);
-                              toast.success("Deleted", d.name);
-                            } catch (err: unknown) { toast.error("Delete failed", getErrorDetail(err) ?? "Try again."); }
+                              toast.success(DOCUMENTS_MSG.deleted, d.name);
+                            } catch (err: unknown) { toast.error(DOCUMENTS_MSG.deleteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
                           }}
                           className="text-ink-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded-md transition-colors shrink-0"
                         >
@@ -167,8 +169,8 @@ export function DocumentsPage() {
           : (
             <Card>
               <CardBody>
-                <EmptyState icon={<Icon name="doc" size={20} />} title="Select a document"
-                  description="Pick a file from the library to read it in the protected viewer." />
+                <EmptyState icon={<Icon name="doc" size={20} />} title={DOCUMENTS_MSG.selectDocumentTitle}
+                  description={DOCUMENTS_MSG.selectDocumentDesc} />
               </CardBody>
             </Card>
           )}
@@ -222,7 +224,7 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         });
         if (!cancelled) setHtml(safe);
       } catch (e) {
-        if (!cancelled) setError("Couldn't render this document. The file may be an unsupported format.");
+        if (!cancelled) setError(DOCUMENTS_MSG.renderFailed);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -321,7 +323,7 @@ function NotesPanel({ documentId }: { documentId: string }) {
       await addNote({ id: documentId, body: body.trim() }).unwrap();
       setBody("");
     } catch (err: unknown) {
-      toast.error("Couldn't save note", getErrorDetail(err) ?? "Try again.");
+      toast.error(DOCUMENTS_MSG.saveNoteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 

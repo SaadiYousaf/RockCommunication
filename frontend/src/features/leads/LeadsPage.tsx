@@ -23,6 +23,7 @@ import {
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { formatPhone } from "../../shared/lib/format";
+import { LEADS_MSG } from "./messages";
 
 
 const PAGE_SIZE = 25;
@@ -137,9 +138,9 @@ export function LeadsPage() {
   async function transition(id: string, toStage: string, name: string) {
     try {
       await transitionLead({ id, toStage: toStage as WorkflowStage, disposition: "Interested" }).unwrap();
-      toast.success("Lead transitioned", `${name} → ${toStage}`);
+      toast.success(LEADS_MSG.leadTransitionedTitle, LEADS_MSG.leadTransitionedDesc(name, toStage));
     } catch (err: unknown) {
-      toast.error("Couldn't transition", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.transitionFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -147,10 +148,10 @@ export function LeadsPage() {
     setDialingId(id);
     try {
       await dialLead({ leadId: id }).unwrap();
-      toast.success("Calling…");
+      toast.success(LEADS_MSG.callingTitle);
       navigate(`/leads/${id}`);
     } catch (err: unknown) {
-      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.dialFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     } finally {
       setDialingId(null);
     }
@@ -162,20 +163,20 @@ export function LeadsPage() {
     try {
       if (bulkAction === "assign" && bulkAssignee) {
         const r = await bulkAssign({ leadIds: ids, assigneeUserId: bulkAssignee }).unwrap();
-        toast.success("Assigned", `${r.updated} updated · ${r.skipped} skipped`);
+        toast.success(LEADS_MSG.assignedTitle, LEADS_MSG.updatedSkipped(r.updated, r.skipped));
       } else if (bulkAction === "stage") {
         const r = await bulkStage({ leadIds: ids, toStage: bulkStageVal, disposition: "Interested" }).unwrap();
-        const errs = r.errors.length > 0 ? `, ${r.errors.length} errors` : "";
-        toast.success("Stage updated", `${r.updated} updated · ${r.skipped} skipped${errs}`);
+        const errs = r.errors.length > 0 ? LEADS_MSG.bulkErrors(r.errors.length) : "";
+        toast.success(LEADS_MSG.stageUpdatedTitle, LEADS_MSG.updatedSkipped(r.updated, r.skipped, errs));
       } else if (bulkAction === "cadence" && bulkCadence) {
         const r = await bulkEnroll({ leadIds: ids, cadenceId: bulkCadence }).unwrap();
-        toast.success("Enrolled in cadence", `${r.updated} enrolled · ${r.skipped} already in`);
+        toast.success(LEADS_MSG.enrolledTitle, LEADS_MSG.enrolledDesc(r.updated, r.skipped));
       }
       setBulkAction("none");
       clearSelection();
       refetch();
     } catch (err: unknown) {
-      toast.error("Bulk action failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.bulkFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -183,12 +184,12 @@ export function LeadsPage() {
     const params = new URLSearchParams();
     if (filter !== "All") params.set("stage", filter);
     const token = auth.accessToken;
-    if (!token) { toast.error("Not authenticated"); return; }
+    if (!token) { toast.error(LEADS_MSG.notAuthenticated); return; }
     setExporting(true);
     fetch(`${API_URL}/api/leads/export.csv?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => { if (!r.ok) throw new Error("Export failed"); return r.blob(); })
+      .then((r) => { if (!r.ok) throw new Error(LEADS_MSG.exportFailed); return r.blob(); })
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -196,9 +197,9 @@ export function LeadsPage() {
         a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Export ready", "Your CSV has downloaded.");
+        toast.success(LEADS_MSG.exportReadyTitle, LEADS_MSG.csvDownloaded);
       })
-      .catch((err) => toast.error("Export failed", getErrorDetail(err) ?? "Export failed"))
+      .catch((err) => toast.error(LEADS_MSG.exportFailed, getErrorDetail(err) ?? LEADS_MSG.exportFailed))
       .finally(() => setExporting(false));
   }
 
@@ -206,11 +207,11 @@ export function LeadsPage() {
     e.preventDefault();
     try {
       await createLead(form).unwrap();
-      toast.success("Lead created", `${form.firstName} ${form.lastName}`);
+      toast.success(LEADS_MSG.leadCreatedTitle, `${form.firstName} ${form.lastName}`);
       setForm({ firstName: "", lastName: "", phoneNumber: "", email: "" });
       setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't create lead", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.createLeadFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
 
@@ -355,10 +356,10 @@ export function LeadsPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="list" size={20} />}
-            title={search || filter !== "All" ? "No leads match your filter" : "No leads yet"}
+            title={search || filter !== "All" ? LEADS_MSG.leadsEmptyFilterTitle : LEADS_MSG.leadsEmptyTitle}
             description={search || filter !== "All"
-              ? "Try clearing your search or picking a different stage."
-              : "Get started by creating your first lead."}
+              ? LEADS_MSG.leadsEmptyFilterDesc
+              : LEADS_MSG.leadsEmptyDesc}
             action={
               <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>
                 New lead

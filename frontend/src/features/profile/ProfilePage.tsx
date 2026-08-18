@@ -8,6 +8,8 @@ import {
 import { useMyProfileQuery, useUpdateMyProfileMutation, useUserProfileQuery } from "./baseApi";
 import { AvatarImage, ProfileAvatarUploader } from "./ProfileAvatar";
 import type { UpdateProfileInput } from "./types";
+import { MESSAGES } from "../../shared/constants/messages";
+import { PROFILE_MSG } from "./messages";
 
 /**
  * Self-service profile page. Modelled like an MS / Office account: the "Organization" card is
@@ -40,9 +42,9 @@ export function ProfilePage() {
     e.preventDefault();
     try {
       await update(form).unwrap();
-      toast.success("Profile saved", "Your personal details have been updated.");
+      toast.success(PROFILE_MSG.profileSaved, PROFILE_MSG.profileSavedDesc);
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
+      toast.error(PROFILE_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -68,10 +70,8 @@ export function ProfilePage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name={forbidden ? "lock" : "user"} size={20} />}
-            title={forbidden ? "Not available" : "Profile not found"}
-            description={forbidden
-              ? "You can only view profiles of people in your own organization."
-              : "This profile couldn't be loaded."}
+            title={forbidden ? PROFILE_MSG.notAvailableTitle : PROFILE_MSG.notFoundTitle}
+            description={forbidden ? PROFILE_MSG.notAvailableDesc : PROFILE_MSG.notFoundDesc}
           />
         </CardBody></Card>
       </>

@@ -9,6 +9,8 @@ import { isManager } from "../../shared/constants/roles";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { MESSAGES } from "../../shared/constants/messages";
+import { SALES_MSG } from "./messages";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
@@ -69,7 +71,7 @@ export function CommissionsPage() {
       { header: "Status", value: (c) => (c.paid ? "Paid" : "Unpaid") },
       { header: "Date", value: (c) => new Date(c.earnedAt).toLocaleString() },
     ], `commissions-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(SALES_MSG.exportReadyTitle, SALES_MSG.rowsDownloaded(chosen.length));
   }
 
   function setRange(days: number) {
@@ -84,15 +86,15 @@ export function CommissionsPage() {
     // Use the CURRENT tab's token from redux — not localStorage, which is shared across tabs and
     // may hold a different logged-in account, causing a 403 "Export failed" on a valid session.
     const token = auth.accessToken;
-    if (!token) { toast.error("Not authenticated"); return; }
+    if (!token) { toast.error(SALES_MSG.notAuthenticated); return; }
     setExportingKey(runId ?? PERIOD_EXPORT);
     try {
       const r = await fetch(`${API_URL}/api/sales/payroll-export?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!r.ok) {
-        if (r.status === 403) throw new Error("You don't have permission to export payroll (need Payroll access).");
-        throw new Error(`Export failed (${r.status}).`);
+        if (r.status === 403) throw new Error(SALES_MSG.exportPayrollNoPermission);
+        throw new Error(SALES_MSG.exportFailedStatus(r.status));
       }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -101,9 +103,9 @@ export function CommissionsPage() {
       a.download = `payroll-${runId ?? `${from}-to-${to}`}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export ready", "The payroll CSV has started downloading.");
+      toast.success(SALES_MSG.exportReadyTitle, SALES_MSG.payrollCsvDownloading);
     } catch (err) {
-      toast.error("Export failed", getErrorDetail(err) ?? "Export failed");
+      toast.error(SALES_MSG.exportFailedTitle, getErrorDetail(err) ?? SALES_MSG.exportFailedTitle);
     } finally {
       setExportingKey(null);
     }
@@ -111,16 +113,16 @@ export function CommissionsPage() {
 
   async function makeRun() {
     const ok = await confirm({
-      title: "Run payroll for this period?",
-      description: `This finalizes commissions earned between ${from} and ${to} and freezes them as paid. Make sure the date range is right before continuing.`,
-      confirmLabel: "Run payroll",
+      title: SALES_MSG.runPayrollConfirmTitle,
+      description: SALES_MSG.runPayrollConfirmBody(from, to),
+      confirmLabel: SALES_MSG.runPayrollConfirmLabel,
     });
     if (!ok) return;
     try {
       await createRun({ periodStart: new Date(from).toISOString(), periodEnd: new Date(to).toISOString() }).unwrap();
-      toast.success("Payroll run created", `Period ${from} → ${to}`);
+      toast.success(SALES_MSG.payrollRunCreatedTitle, SALES_MSG.payrollRunPeriod(from, to));
     } catch (err: unknown) {
-      toast.error("Couldn't create payroll run", getErrorDetail(err) ?? "Try again.");
+      toast.error(SALES_MSG.createPayrollRunFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -196,8 +198,8 @@ export function CommissionsPage() {
         <Card className="mb-6"><CardBody>
           <EmptyState
             icon={<Icon name="doc" size={20} />}
-            title="No commissions in this range"
-            description="Earn commissions by closing and funding sales, then check back here."
+            title={SALES_MSG.noCommissionsTitle}
+            description={SALES_MSG.noCommissionsBody}
           />
         </CardBody></Card>
       ) : (
@@ -271,8 +273,8 @@ export function CommissionsPage() {
               <div className="px-5 pb-5">
                 <EmptyState
                   icon={<Icon name="card" size={20} />}
-                  title="No payroll runs yet"
-                  description="Run payroll to summarize and freeze commissions for a period."
+                  title={SALES_MSG.noPayrollRunsTitle}
+                  description={SALES_MSG.noPayrollRunsBody}
                 />
               </div>
             ) : (

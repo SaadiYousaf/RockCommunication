@@ -7,6 +7,7 @@ import {
   Avatar, Badge, Card, CardBody, EmptyState, Icon, Input, PageHeader, Select, Skeleton, Stat, cn,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
+import { CALLCENTER_MSG } from "./messages";
 
 const statusTone: Record<string, BadgeTone> = {
   Available: "success", OnCall: "brand", Break: "warning", Lunch: "warning",
@@ -122,14 +123,14 @@ export function AttendancePage() {
       </Card>
 
       {waitingForAgency ? (
-        <Notice icon="building" title="Pick an agency"
-          body={!agencyOptions?.length ? "No agencies exist yet." : "Choose an agency above to view its attendance."} />
+        <Notice icon="building" title={CALLCENTER_MSG.pickAgencyTitle}
+          body={!agencyOptions?.length ? CALLCENTER_MSG.noAgenciesExist : CALLCENTER_MSG.chooseAgencyToView} />
       ) : isLoading ? (
         <Card><CardBody className="space-y-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-14" />)}</CardBody></Card>
       ) : !data || data.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="clock" size={20} />} title="No attendance in this range"
-            description="Nobody clocked in during the selected dates. Try a wider range." />
+          <EmptyState icon={<Icon name="clock" size={20} />} title={CALLCENTER_MSG.noAttendanceTitle}
+            description={CALLCENTER_MSG.noAttendanceBody} />
         </CardBody></Card>
       ) : (
         <div className="space-y-2.5">

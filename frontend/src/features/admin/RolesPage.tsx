@@ -12,6 +12,7 @@ import {
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
 import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 
 /**
  * Role Management.
@@ -107,13 +108,13 @@ export function RolesPage() {
     if (!newName.trim()) return;
     try {
       const created = await createRole({ name: newName.trim(), moduleCodes: newModules }).unwrap();
-      toast.success("Role created", `${created.name} is ready to assign.`);
+      toast.success(ADMIN_MSG.roles.created, ADMIN_MSG.roles.createdDesc(created.name));
       setShowCreate(false);
       setNewName("");
       setNewModules([]);
       setSelectedRoleId(created.id);
     } catch (err: unknown) {
-      toast.error("Could not create role", getErrorDetail(err) ?? "");
+      toast.error(ADMIN_MSG.roles.createFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -121,9 +122,9 @@ export function RolesPage() {
     if (!selected) return;
     try {
       await setRoleModules({ id: selected.id, moduleCodes: draftModules }).unwrap();
-      toast.success("Saved", `Module access updated for ${selected.name}.`);
+      toast.success(ADMIN_MSG.common.saved, ADMIN_MSG.roles.modulesSavedDesc(selected.name));
     } catch (err: unknown) {
-      toast.error("Save failed", getErrorDetail(err) ?? "");
+      toast.error(ADMIN_MSG.roles.saveFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -131,9 +132,9 @@ export function RolesPage() {
     if (!selected || editingName.trim() === selected.name) return;
     try {
       await renameRole({ id: selected.id, name: editingName.trim() }).unwrap();
-      toast.success("Renamed");
+      toast.success(ADMIN_MSG.roles.renamed);
     } catch (err: unknown) {
-      toast.error("Rename failed", getErrorDetail(err) ?? "");
+      toast.error(ADMIN_MSG.roles.renameFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -141,11 +142,11 @@ export function RolesPage() {
     if (!confirmDelete) return;
     try {
       await deleteRole(confirmDelete.id).unwrap();
-      toast.success("Role deleted", confirmDelete.name);
+      toast.success(ADMIN_MSG.roles.deleted, confirmDelete.name);
       setConfirmDelete(null);
       if (selectedRoleId === confirmDelete.id) setSelectedRoleId(null);
     } catch (err: unknown) {
-      toast.error("Delete failed", getErrorDetail(err) ?? "");
+      toast.error(ADMIN_MSG.roles.deleteFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -191,8 +192,8 @@ export function RolesPage() {
               <div className="py-10">
                 <EmptyState
                   icon={<Icon name="search" size={20} />}
-                  title={search ? "No matching roles" : "No roles yet"}
-                  description={search ? "Try a different name." : "Create one to get started."}
+                  title={search ? ADMIN_MSG.roles.noMatchTitle : ADMIN_MSG.roles.emptyTitle}
+                  description={search ? ADMIN_MSG.roles.noMatchDesc : ADMIN_MSG.roles.emptyDesc}
                 />
               </div>
             ) : (
@@ -264,8 +265,8 @@ export function RolesPage() {
             <CardBody className="py-16">
               <EmptyState
                 icon={<Icon name="shield" size={24} />}
-                title="Pick a role to manage"
-                description="Select a role on the left to edit its module access and permissions."
+                title={ADMIN_MSG.roles.pickRoleTitle}
+                description={ADMIN_MSG.roles.pickRoleDesc}
                 action={
                   canEditModules ? (
                     <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setShowCreate(true)}>
@@ -564,9 +565,9 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
   async function handleSave() {
     try {
       await setRolePermissions({ roleId, permissionCodes: draft }).unwrap();
-      toast.success("Permissions saved", "Role grants updated.");
+      toast.success(ADMIN_MSG.roles.permissionsSaved, ADMIN_MSG.roles.permissionsSavedDesc);
     } catch (err: unknown) {
-      toast.error("Save failed", getErrorDetail(err) ?? "");
+      toast.error(ADMIN_MSG.roles.saveFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -581,8 +582,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
             <div>
               <div className="text-base font-semibold text-ink-900">Permissions</div>
               <div className="text-xs text-ink-500 mt-0.5 max-w-xl">
-                Tick the actions this role can perform. <code className="font-mono">*.write</code> codes gate every mutating button across the app.
-                Without the write grant, the user only sees read-only.
+                {ADMIN_MSG.roles.permissionsHint}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { ADMIN_MSG } from "./messages";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -108,8 +109,8 @@ export function AgencyDetailPage() {
           {!agents ? (
             <Skeleton className="h-24" />
           ) : agents.length === 0 ? (
-            <EmptyState icon={<Icon name="userPlus" size={18} />} title="No license agents yet"
-              description="Add one with the button above — they'll be emailed an invitation." />
+            <EmptyState icon={<Icon name="userPlus" size={18} />} title={ADMIN_MSG.agencyDetail.noAgentsTitle}
+              description={ADMIN_MSG.agencyDetail.noAgentsDesc} />
           ) : (
             <div className="flex flex-wrap gap-2">
               {agents.map((a) => (
@@ -131,8 +132,8 @@ export function AgencyDetailPage() {
         />
         <CardBody>
           {!callCenters ? <Skeleton className="h-24" /> : callCenters.length === 0 ? (
-            <EmptyState icon={<Icon name="building" size={18} />} title="No call centres yet"
-              description="Add one with the button above — its admin is emailed an invitation." />
+            <EmptyState icon={<Icon name="building" size={18} />} title={ADMIN_MSG.agencyDetail.noCcTitle}
+              description={ADMIN_MSG.agencyDetail.noCcDesc} />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -183,7 +184,7 @@ export function AgencyDetailPage() {
         <CardHeader title="Sales" subtitle={sales ? `${total} sale(s)` : undefined} />
         <CardBody>
           {salesLoading || agencyLoading ? <Skeleton className="h-48" /> : items.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No sales" description="This agency has no recorded sales yet." />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title={ADMIN_MSG.agencyDetail.noSalesTitle} description={ADMIN_MSG.agencyDetail.noSalesDesc} />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -249,10 +250,10 @@ function EditCallCenterModal({ agencyId, cc, onClose }: { agencyId: string; cc: 
     e.preventDefault();
     try {
       await update({ agencyId, callCenterId: cc.id, name: name.trim(), code: code.trim() || null, isActive }).unwrap();
-      toast.success("Call centre saved", isActive ? cc.name : `${cc.name} disabled — its agents are logged out`);
+      toast.success(ADMIN_MSG.agencyDetail.ccSaved, isActive ? cc.name : ADMIN_MSG.agencyDetail.ccDisabledDesc(cc.name));
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the fields and try again.");
+      toast.error(ADMIN_MSG.common.saveFailed, getErrorDetail(err) ?? ADMIN_MSG.common.checkFieldsAndTryAgain);
     }
   }
 
@@ -289,10 +290,10 @@ function NewCallCenterModal({ agencyId, onClose }: { agencyId: string; onClose: 
         adminName: form.adminName.trim(),
         adminEmail: form.adminEmail.trim(),
       }).unwrap();
-      toast.success("Call centre created", "The Call Center Admin has been emailed an invitation.");
+      toast.success(ADMIN_MSG.agencyDetail.ccCreated, ADMIN_MSG.agencyDetail.ccCreatedDesc);
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't create call centre", getErrorDetail(err) ?? "Check the fields and try again.");
+      toast.error(ADMIN_MSG.agencyDetail.ccCreateFailed, getErrorDetail(err) ?? ADMIN_MSG.common.checkFieldsAndTryAgain);
     }
   }
 
@@ -327,10 +328,10 @@ function NewLicenseAgentModal({ agencyId, onClose }: { agencyId: string; onClose
     e.preventDefault();
     try {
       await create({ agencyId, name: name.trim(), email: email.trim() }).unwrap();
-      toast.success("License agent added", "They've been emailed an invitation.");
+      toast.success(ADMIN_MSG.agencyDetail.agentAdded, ADMIN_MSG.common.emailedInvitation);
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't add license agent", getErrorDetail(err) ?? "Check the fields and try again.");
+      toast.error(ADMIN_MSG.agencyDetail.agentAddFailed, getErrorDetail(err) ?? ADMIN_MSG.common.checkFieldsAndTryAgain);
     }
   }
 

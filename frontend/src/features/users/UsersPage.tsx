@@ -1,4 +1,5 @@
 import { roleLabel } from "../../shared/constants/roles";
+import { USERS_MSG } from "./messages";
 import { useMemo, useState } from "react";
 import { useListUsersQuery } from "../../shared/api/baseApi";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -54,7 +55,7 @@ export function UsersPage() {
       { header: "Email", value: (u) => u.email },
       { header: "Roles", value: (u) => u.roles.map((r) => roleLabel(r)).join("; ") },
     ], `users-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(USERS_MSG.exportReady, USERS_MSG.exportReadyDesc(chosen.length));
   }
 
   const stats = useMemo(() => {
@@ -115,8 +116,8 @@ export function UsersPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="x" size={20} />}
-            title="Couldn't load users"
-            description="Please refresh the page or contact your admin."
+            title={USERS_MSG.loadFailedTitle}
+            description={USERS_MSG.loadFailedDesc}
           />
         </CardBody></Card>
       ) : isLoading ? (
@@ -133,10 +134,10 @@ export function UsersPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="users" size={20} />}
-            title={users && users.length === 0 ? "No users yet" : "No users match"}
+            title={users && users.length === 0 ? USERS_MSG.emptyTitleNoUsers : USERS_MSG.emptyTitleNoMatch}
             description={users && users.length === 0
-              ? "Users will appear here once created."
-              : "Try a different search or role filter."}
+              ? USERS_MSG.emptyDescNoUsers
+              : USERS_MSG.emptyDescNoMatch}
           />
         </CardBody></Card>
       ) : (

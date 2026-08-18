@@ -12,6 +12,8 @@ import {
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLCENTER_MSG } from "./messages";
 
 type TabKey = "campaigns" | "sources" | "skills" | "wrapup";
 
@@ -70,23 +72,23 @@ function CampaignsSection() {
     e.preventDefault();
     try {
       await upsert({ id: null, code, name, verticalId: null, isActive: true, startsAt: null, endsAt: null }).unwrap();
-      toast.success("Campaign saved", name);
+      toast.success(CALLCENTER_MSG.campaignSavedTitle, name);
       setCode(""); setName(""); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't save campaign", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.saveCampaignFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function toggle(c: Campaign) {
     if (c.isActive && !(await confirm({
-      title: `Disable ${c.name}?`,
-      description: "The dialer will stop pulling leads from this campaign until you re-enable it.",
-      confirmLabel: "Disable", danger: true,
+      title: CALLCENTER_MSG.disableNameConfirmTitle(c.name),
+      description: CALLCENTER_MSG.disableCampaignConfirmBody,
+      confirmLabel: CALLCENTER_MSG.disableLabel, danger: true,
     }))) return;
     setBusyId(c.id);
     try { await upsert({ ...c, isActive: !c.isActive }).unwrap();
-      toast.success(c.isActive ? "Campaign disabled" : "Campaign enabled");
-    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+      toast.success(c.isActive ? CALLCENTER_MSG.campaignDisabled : CALLCENTER_MSG.campaignEnabled);
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
     finally { setBusyId(null); }
   }
 
@@ -101,8 +103,8 @@ function CampaignsSection() {
           <div className="px-5 pb-5">
             <EmptyState
               icon={<Icon name="target" size={20} />}
-              title="No campaigns yet"
-              description="Create a campaign to group dialer activity and lead sources."
+              title={CALLCENTER_MSG.noCampaignsTitle}
+              description={CALLCENTER_MSG.noCampaignsBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>}
             />
           </div>
@@ -187,9 +189,9 @@ function LeadSourcesSection() {
         id: null, code, name, campaignId: campaignId || null,
         costPerLead: parseFloat(cost) || 0, isActive: true,
       }).unwrap();
-      toast.success("Lead source saved", name);
+      toast.success(CALLCENTER_MSG.leadSourceSavedTitle, name);
       setCode(""); setName(""); setCost("0"); setCampaignId(""); setOpen(false);
-    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
   return (
@@ -201,7 +203,7 @@ function LeadSourcesSection() {
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
           <div className="px-5 pb-5">
-            <EmptyState icon={<Icon name="target" size={20} />} title="No lead sources" description="Track how leads enter your pipeline."
+            <EmptyState icon={<Icon name="target" size={20} />} title={CALLCENTER_MSG.noLeadSourcesTitle} description={CALLCENTER_MSG.noLeadSourcesBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>} />
           </div>
         ) : (
@@ -264,21 +266,21 @@ function SkillsSection() {
     e.preventDefault();
     try {
       await upsert({ id: null, code, name, isActive: true }).unwrap();
-      toast.success("Skill saved", name);
+      toast.success(CALLCENTER_MSG.skillSavedTitle, name);
       setCode(""); setName(""); setOpen(false);
-    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
   async function toggle(s: Skill) {
     if (s.isActive && !(await confirm({
-      title: `Disable ${s.name}?`,
-      description: "This skill will stop being used for skill-based call routing until you re-enable it.",
-      confirmLabel: "Disable", danger: true,
+      title: CALLCENTER_MSG.disableNameConfirmTitle(s.name),
+      description: CALLCENTER_MSG.disableSkillConfirmBody,
+      confirmLabel: CALLCENTER_MSG.disableLabel, danger: true,
     }))) return;
     setBusyId(s.id);
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
-      toast.success(s.isActive ? "Skill disabled" : "Skill enabled");
-    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+      toast.success(s.isActive ? CALLCENTER_MSG.skillDisabled : CALLCENTER_MSG.skillEnabled);
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
     finally { setBusyId(null); }
   }
 
@@ -290,7 +292,7 @@ function SkillsSection() {
         {isLoading ? (
           <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
-          <EmptyState icon={<Icon name="star" size={20} />} title="No skills" description="Add skills to enable skill-based routing."
+          <EmptyState icon={<Icon name="star" size={20} />} title={CALLCENTER_MSG.noSkillsTitle} description={CALLCENTER_MSG.noSkillsBody}
             action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>} />
         ) : (
           <ul className="divide-y divide-ink-100">
@@ -347,9 +349,9 @@ function WrapUpCodesSection() {
     e.preventDefault();
     try {
       await upsert({ id: undefined, code, label, isSale, isContact, isRetry, isActive: true }).unwrap();
-      toast.success("Wrap-up code saved", label);
+      toast.success(CALLCENTER_MSG.wrapUpCodeSavedTitle, label);
       setCode(""); setLabel(""); setOpen(false);
-    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
   return (
@@ -361,7 +363,7 @@ function WrapUpCodesSection() {
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
           <div className="px-5 pb-5">
-            <EmptyState icon={<Icon name="check" size={20} />} title="No wrap-up codes" description="Add codes for agents to use after calls."
+            <EmptyState icon={<Icon name="check" size={20} />} title={CALLCENTER_MSG.noWrapUpCodesTitle} description={CALLCENTER_MSG.noWrapUpCodesBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>} />
           </div>
         ) : (

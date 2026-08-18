@@ -14,6 +14,8 @@ import type { BadgeTone } from "../../shared/ui";
 import { SALE_LIFECYCLE, saleLifecycleIndex } from "../../shared/constants/pipeline";
 import { usePermission, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { SALES_MSG } from "./messages";
 
 const statusTone: Record<string, BadgeTone> = {
   Funded: "success", Validated: "info", Pending: "warning",
@@ -53,8 +55,8 @@ export function SaleDetailPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="briefcase" size={20} />}
-            title="Sale not found"
-            description="It may have been removed, or you may not have access to it."
+            title={SALES_MSG.saleNotFoundTitle}
+            description={SALES_MSG.saleNotFoundBody}
           />
         </CardBody></Card>
       </>
@@ -205,8 +207,8 @@ export function SaleDetailPage() {
           {sale.commissions.length === 0 ? (
             <EmptyState
               icon={<Icon name="card" size={20} />}
-              title="No commission lines yet"
-              description="These are created when the sale is approved and funded."
+              title={SALES_MSG.noCommissionLinesTitle}
+              description={SALES_MSG.noCommissionLinesBody}
             />
           ) : (
             <div className="divide-y hairline">
@@ -285,9 +287,9 @@ function LicenseAgentRow({ sale }: { sale: SaleDetail }) {
   async function pick(userId: string) {
     try {
       await assign({ id: sale.id, licenseAgentUserId: userId || null }).unwrap();
-      toast.success(userId ? "License agent assigned" : "License agent cleared");
+      toast.success(userId ? SALES_MSG.licenseAgentAssigned : SALES_MSG.licenseAgentCleared);
     } catch (e) {
-      toast.error("Couldn't update license agent", getErrorDetail(e) ?? "Try again.");
+      toast.error(SALES_MSG.updateLicenseAgentFailed, getErrorDetail(e) ?? MESSAGES.tryAgain);
     }
   }
 

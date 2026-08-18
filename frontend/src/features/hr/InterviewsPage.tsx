@@ -13,6 +13,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { HR_MSG } from "./messages";
 
 const BLANK: InterviewInput = {
   interviewDate: null, candidateName: "", cnic: "", phoneNumber: "",
@@ -88,18 +89,18 @@ export function InterviewsPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      if (editing) { await update({ id: editing.id, ...form }).unwrap(); toast.success("Interview updated"); }
-      else { await create(form).unwrap(); toast.success("Interview added"); }
+      if (editing) { await update({ id: editing.id, ...form }).unwrap(); toast.success(HR_MSG.interviewUpdated); }
+      else { await create(form).unwrap(); toast.success(HR_MSG.interviewAdded); }
       setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the required fields and try again.");
+      toast.error(HR_MSG.saveFailed, getErrorDetail(err) ?? HR_MSG.checkRequiredFields);
     }
   }
 
   async function onDelete(i: Interview) {
-    if (!(await confirm({ title: "Delete interview?", description: `Remove ${i.candidateName}'s record?`, confirmLabel: "Delete", danger: true }))) return;
-    try { await remove(i.id).unwrap(); toast.success("Interview removed"); }
-    catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    if (!(await confirm({ title: HR_MSG.deleteInterviewTitle, description: HR_MSG.deleteInterviewDesc(i.candidateName), confirmLabel: HR_MSG.deleteLabel, danger: true }))) return;
+    try { await remove(i.id).unwrap(); toast.success(HR_MSG.interviewRemoved); }
+    catch (err: unknown) { toast.error(HR_MSG.removeFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   const rows = interviews ?? [];
@@ -115,9 +116,9 @@ export function InterviewsPage() {
     if (ids.length === 0) return;
     try {
       const { updated } = await bulkSetStatus({ ids, status: bulkStatus }).unwrap();
-      toast.success(`Moved ${updated} to ${hrLabel(bulkStatus)}`);
+      toast.success(HR_MSG.movedToStatus(updated, hrLabel(bulkStatus)));
       sel.clear();
-    } catch (err: unknown) { toast.error("Couldn't update status", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(HR_MSG.updateStatusFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   function exportSelected() {
@@ -129,16 +130,16 @@ export function InterviewsPage() {
       { header: "Status", value: (r) => hrLabel(r.status) },
       { header: "Interview date", value: (r) => dateOnly(r.interviewDate) },
     ], `interviews-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(HR_MSG.exportReady, HR_MSG.rowsDownloaded(chosen.length));
   }
 
   async function bulkDelete() {
     const ids = sel.selectedIds;
     if (ids.length === 0) return;
     if (!(await confirm({
-      title: `Delete ${ids.length} ${ids.length === 1 ? "interview" : "interviews"}?`,
-      description: "This removes the selected candidate records. This can't be undone.",
-      confirmLabel: "Delete", danger: true,
+      title: HR_MSG.deleteInterviewsTitle(ids.length),
+      description: HR_MSG.deleteInterviewsDesc,
+      confirmLabel: HR_MSG.deleteLabel, danger: true,
     }))) return;
     setBulkDeleting(true);
     // allSettled so one failed delete (e.g. a row already removed in another tab) doesn't abort the
@@ -147,9 +148,9 @@ export function InterviewsPage() {
     setBulkDeleting(false);
     const failedIds = ids.filter((_, i) => results[i].status === "rejected");
     const ok = ids.length - failedIds.length;
-    if (ok > 0) toast.success(`Deleted ${ok} ${ok === 1 ? "interview" : "interviews"}`);
+    if (ok > 0) toast.success(HR_MSG.deletedInterviews(ok));
     if (failedIds.length > 0) {
-      toast.error(`${failedIds.length} couldn't be removed`, "They're still selected — try again.");
+      toast.error(HR_MSG.couldntBeRemoved(failedIds.length), HR_MSG.stillSelectedRetry);
       sel.keepOnly(failedIds);
     } else {
       sel.clear();
@@ -205,8 +206,8 @@ export function InterviewsPage() {
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="users" size={20} />} title={search || status ? "No matches" : "No interviews yet"}
-            description={search || status ? "No candidate matches your filters." : "Add a candidate to start tracking the hiring pipeline."}
+          <EmptyState icon={<Icon name="users" size={20} />} title={search || status ? HR_MSG.noMatchesTitle : HR_MSG.interviewsEmptyTitle}
+            description={search || status ? HR_MSG.noCandidateMatchesDesc : HR_MSG.interviewsEmptyDesc}
             action={!search && !status ? <Button leftIcon={<Icon name="userPlus" size={15} />} onClick={openAdd}>New interview</Button> : undefined} />
         </CardBody></Card>
       ) : (

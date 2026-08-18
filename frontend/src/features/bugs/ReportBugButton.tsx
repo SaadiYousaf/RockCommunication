@@ -3,7 +3,9 @@ import { useLocation } from "react-router-dom";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useCreateBugMutation } from "../../shared/api/baseApi";
 import { BUG_SEVERITIES } from "../../shared/constants/bugs";
+import { MESSAGES } from "../../shared/constants/messages";
 import { Button, Icon, Input, Modal, Select, Textarea, useToast } from "../../shared/ui";
+import { BUGS_MSG } from "./messages";
 
 /**
  * App-wide "Report a bug" affordance: a small floating button, always reachable, that opens a
@@ -35,9 +37,9 @@ export function ReportBugButton() {
       }).unwrap();
       setOpen(false);
       reset();
-      toast.success("Thanks — bug reported", "You can track its status under Bugs.");
+      toast.success(BUGS_MSG.bugReported, BUGS_MSG.bugReportedDesc);
     } catch (err: unknown) {
-      toast.error("Couldn't submit the report", getErrorDetail(err) ?? "Please try again.");
+      toast.error(BUGS_MSG.submitFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 

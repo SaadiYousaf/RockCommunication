@@ -17,6 +17,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { formatPhone } from "../../shared/lib/format";
+import { SEARCH_MSG } from "./messages";
 
 
 function useDebounced<T>(value: T, delay = 300) {
@@ -113,16 +114,16 @@ export function GlobalSearchPage() {
       { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
       { header: "Stage", value: (l) => String(l.stage) },
     ], `search-leads-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(SEARCH_MSG.exportReadyTitle, SEARCH_MSG.exportReadyDesc(chosen.length));
   }
 
   const [dialLead] = useDialLeadMutation();
   async function handleDial(id: string, name: string) {
     try {
       await dialLead({ leadId: id }).unwrap();
-      toast.success("Dialing", `Calling ${name}…`);
+      toast.success(SEARCH_MSG.dialingTitle, SEARCH_MSG.dialingDesc(name));
     } catch (err: unknown) {
-      toast.error("Dial failed", getErrorDetail(err) ?? "");
+      toast.error(SEARCH_MSG.dialFailed, getErrorDetail(err) ?? "");
     }
   }
 
@@ -178,8 +179,8 @@ export function GlobalSearchPage() {
           <CardBody>
             <EmptyState
               icon={<Icon name="search" size={20} />}
-              title="Start typing"
-              description="Search by lead phone, email, partial name, or username/role for users."
+              title={SEARCH_MSG.startTypingTitle}
+              description={SEARCH_MSG.startTypingDesc}
             />
           </CardBody>
         </Card>
@@ -196,8 +197,8 @@ export function GlobalSearchPage() {
           <CardBody>
             <EmptyState
               icon={<Icon name="search" size={20} />}
-              title="No matches"
-              description={`Nothing matched "${debounced}". Try a different phone, email, or name fragment.`}
+              title={SEARCH_MSG.noMatchesTitle}
+              description={SEARCH_MSG.noMatchesDesc(debounced)}
             />
           </CardBody>
         </Card>

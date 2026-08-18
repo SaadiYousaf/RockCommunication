@@ -13,6 +13,7 @@ import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { LISTS_MSG } from "./messages";
 
 export function LeadListsPage() {
   const { data: lists, isLoading } = useLeadListsQuery();
@@ -53,7 +54,7 @@ export function LeadListsPage() {
       { header: "Count", value: (l) => l.leadCount ?? 0 },
       { header: "Created", value: (l) => (l.isActive ? "Active" : "Inactive") },
     ], `lead-lists-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(LISTS_MSG.exportReadyTitle, LISTS_MSG.exportRows(chosen.length));
   }
 
   const activeList = lists?.find((l) => l.id === activeListId);
@@ -69,26 +70,26 @@ export function LeadListsPage() {
     e.preventDefault();
     try {
       await upsert({ id: null, name, isActive: true }).unwrap();
-      toast.success("List created", name);
+      toast.success(LISTS_MSG.listCreatedTitle, name);
       setName(""); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't create list", getErrorDetail(err) ?? "Try again.");
+      toast.error(LISTS_MSG.createFailedTitle, getErrorDetail(err) ?? LISTS_MSG.retry);
     }
   }
 
   async function toggle(l: LeadList) {
     if (l.isActive && !(await confirm({
-      title: `Disable "${l.name}"?`,
-      description: "Disabling hides this list from new campaign setup and stops it being used until you turn it back on. Nothing is deleted.",
-      confirmLabel: "Disable",
+      title: LISTS_MSG.disableConfirmTitle(l.name),
+      description: LISTS_MSG.disableConfirmDesc,
+      confirmLabel: LISTS_MSG.disableConfirmLabel,
       danger: true,
     }))) return;
     setTogglingId(l.id);
     try {
       await upsert({ id: l.id, name: l.name, isActive: !l.isActive }).unwrap();
-      toast.success(l.isActive ? "List disabled" : "List enabled");
+      toast.success(l.isActive ? LISTS_MSG.listDisabled : LISTS_MSG.listEnabled);
     } catch (err: unknown) {
-      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+      toast.error(LISTS_MSG.updateFailedTitle, getErrorDetail(err) ?? LISTS_MSG.retry);
     } finally {
       setTogglingId(null);
     }
@@ -98,17 +99,17 @@ export function LeadListsPage() {
     if (!activeListId) return;
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      toast.warning("No file selected", "Pick a CSV first.");
+      toast.warning(LISTS_MSG.noFileTitle, LISTS_MSG.noFileDesc);
       return;
     }
     try {
       const result = await importCsv({ listId: activeListId, file }).unwrap();
-      toast.success("Import finished",
-        `${result?.imported ?? 0} imported · ${result?.duplicates ?? 0} dups · ${result?.dncScrubbed ?? 0} scrubbed`);
+      toast.success(LISTS_MSG.importFinishedTitle,
+        LISTS_MSG.importSummary(result?.imported ?? 0, result?.duplicates ?? 0, result?.dncScrubbed ?? 0));
       if (fileRef.current) fileRef.current.value = "";
       setFilename("");
     } catch (err: unknown) {
-      toast.error("Import failed", getErrorDetail(err) ?? "Try again.");
+      toast.error(LISTS_MSG.importFailedTitle, getErrorDetail(err) ?? LISTS_MSG.retry);
     }
   }
 
@@ -142,8 +143,8 @@ export function LeadListsPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="inbox" size={20} />}
-            title={search ? "No lists match" : "No lead lists yet"}
-            description={search ? "Try a different search." : "Create a list to organize leads and import contacts in bulk."}
+            title={search ? LISTS_MSG.listsEmptyMatchTitle : LISTS_MSG.listsEmptyTitle}
+            description={search ? LISTS_MSG.listsEmptyMatchDesc : LISTS_MSG.listsEmptyDesc}
             action={!search ? <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New list</Button></Can> : undefined}
           />
         </CardBody></Card>
@@ -267,8 +268,8 @@ export function LeadListsPage() {
             ) : !batches || batches.length === 0 ? (
               <EmptyState
                 icon={<Icon name="clock" size={18} />}
-                title="No imports yet"
-                description="Once you upload a CSV, the run summary will appear here."
+                title={LISTS_MSG.noImportsTitle}
+                description={LISTS_MSG.noImportsDesc}
               />
             ) : (
               <Table>

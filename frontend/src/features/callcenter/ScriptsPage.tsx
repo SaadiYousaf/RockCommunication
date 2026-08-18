@@ -10,6 +10,8 @@ import {
 import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLCENTER_MSG } from "./messages";
 
 const STAGES = ["New", "Fronted", "Verified", "JrClosed", "Closed", "Validated", "Funded", "Followup", "Winback", "Lost"];
 const ROLES  = ["Fronter", "Verifier", "JrCloser", "Closer", "Validator", "Followups", "Winbacks"];
@@ -60,23 +62,23 @@ export function ScriptsPage() {
         campaignId: editing.campaignId || null,
         body: editing.body, isActive: editing.isActive,
       }).unwrap();
-      toast.success(editing.id ? "Script updated" : "Script created", editing.name);
+      toast.success(editing.id ? CALLCENTER_MSG.scriptUpdated : CALLCENTER_MSG.scriptCreated, editing.name);
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't save script", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.saveScriptFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function toggle(s: Script) {
     if (s.isActive && !(await confirm({
-      title: `Disable "${s.name}"?`,
-      description: "Agents will no longer see this script in the dialer until you re-enable it.",
-      confirmLabel: "Disable", danger: true,
+      title: CALLCENTER_MSG.disableScriptConfirmTitle(s.name),
+      description: CALLCENTER_MSG.disableScriptConfirmBody,
+      confirmLabel: CALLCENTER_MSG.disableLabel, danger: true,
     }))) return;
     setBusyId(s.id);
     try { await upsert({ ...s, isActive: !s.isActive }).unwrap();
-      toast.success(s.isActive ? "Script disabled" : "Script enabled");
-    } catch (err: unknown) { toast.error("Couldn't update", getErrorDetail(err) ?? "Try again."); }
+      toast.success(s.isActive ? CALLCENTER_MSG.scriptDisabled : CALLCENTER_MSG.scriptEnabled);
+    } catch (err: unknown) { toast.error(CALLCENTER_MSG.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
     finally { setBusyId(null); }
   }
 
@@ -112,8 +114,8 @@ export function ScriptsPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="doc" size={20} />}
-            title={search ? "No scripts match" : "No scripts yet"}
-            description={search ? "Try a different search." : "Create call scripts your agents can use during calls."}
+            title={search ? CALLCENTER_MSG.noScriptsMatchTitle : CALLCENTER_MSG.noScriptsTitle}
+            description={search ? CALLCENTER_MSG.tryDifferentSearch : CALLCENTER_MSG.noScriptsBody}
             action={!search ? <Can permission={Perm.ScriptsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New script</Button></Can> : undefined}
           />
         </CardBody></Card>

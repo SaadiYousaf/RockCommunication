@@ -7,6 +7,8 @@ import {
   SearchInput, Skeleton, Textarea, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { MESSAGES } from "../../shared/constants/messages";
+import { KB_MSG } from "./messages";
 
 export function KnowledgeBasePage() {
   const [q, setQ] = useState("");
@@ -24,11 +26,11 @@ export function KnowledgeBasePage() {
   async function handleSave(a: KbArticle) {
     try {
       await upsert(a).unwrap();
-      toast.success("Article saved", a.title);
+      toast.success(KB_MSG.articleSaved, a.title);
       setEditing(null);
       if (a.slug) setActiveSlug(a.slug);
     } catch (err: unknown) {
-      toast.error("Couldn't save article", getErrorDetail(err) ?? "Try again.");
+      toast.error(KB_MSG.saveArticleFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -59,8 +61,8 @@ export function KnowledgeBasePage() {
               <div className="p-6">
                 <EmptyState
                   icon={<Icon name="doc" size={18} />}
-                  title="No articles"
-                  description={q ? `No results for "${q}"` : "Get started by creating your first article."}
+                  title={KB_MSG.noArticlesTitle}
+                  description={q ? KB_MSG.noResultsDesc(q) : KB_MSG.noArticlesDesc}
                   action={<Can permission={Perm.KnowledgeWrite}><Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={openNew}>New article</Button></Can>}
                 />
               </div>
@@ -135,8 +137,8 @@ export function KnowledgeBasePage() {
             <div className="flex-1 grid place-items-center">
               <EmptyState
                 icon={<Icon name="doc" size={20} />}
-                title="Pick an article to read"
-                description="Search or browse the list to read knowledge base entries."
+                title={KB_MSG.pickArticleTitle}
+                description={KB_MSG.pickArticleDesc}
               />
             </div>
           )}

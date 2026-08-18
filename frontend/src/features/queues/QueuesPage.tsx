@@ -13,6 +13,8 @@ import {
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { MESSAGES } from "../../shared/constants/messages";
+import { QUEUES_MSG } from "./messages";
 
 export function QueuesPage() {
   return (
@@ -51,7 +53,7 @@ function QueueSection() {
       { header: "Max wait (s)", value: (q) => q.maxWaitSeconds },
       { header: "Status", value: (q) => (q.isActive ? "Active" : "Inactive") },
     ], `queues-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(QUEUES_MSG.exportReadyTitle, QUEUES_MSG.exportReadyDesc(chosen.length));
   }
 
   async function submit(e: React.FormEvent) {
@@ -62,10 +64,10 @@ function QueueSection() {
         campaignId: null, strategy: "longest-idle", maxWaitSeconds: 120,
         overflowQueueId: null, voicemailAssetId: null, isActive: true,
       }).unwrap();
-      toast.success("Queue created", `${name} is ready to receive calls.`);
+      toast.success(QUEUES_MSG.queueCreated, QUEUES_MSG.queueCreatedDesc(name));
       setName(""); setPhone(""); setSkill(""); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't create queue", getErrorDetail(err) ?? "Try again.");
+      toast.error(QUEUES_MSG.createQueueFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -85,8 +87,8 @@ function QueueSection() {
           <div className="px-5 pb-5">
             <EmptyState
               icon={<Icon name="phone" size={20} />}
-              title="No queues yet"
-              description="Create an inbound queue to start routing customer calls."
+              title={QUEUES_MSG.noQueuesTitle}
+              description={QUEUES_MSG.noQueuesDesc}
               action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New queue</Button>}
             />
           </div>
@@ -173,10 +175,10 @@ function VoicemailSection() {
         id: null, name, url, durationSeconds: parseInt(duration) || 30,
         campaignId: null, isActive: true,
       }).unwrap();
-      toast.success("Voicemail saved");
+      toast.success(QUEUES_MSG.voicemailSaved);
       setName(""); setUrl(""); setDuration("30"); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't save voicemail", getErrorDetail(err) ?? "Try again.");
+      toast.error(QUEUES_MSG.saveVoicemailFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -193,8 +195,8 @@ function VoicemailSection() {
         ) : !vms || vms.length === 0 ? (
           <EmptyState
             icon={<Icon name="mic" size={20} />}
-            title="No voicemail assets"
-            description="Upload a recording URL so agents can drop messages on no-answer."
+            title={QUEUES_MSG.noVoicemailsTitle}
+            description={QUEUES_MSG.noVoicemailsDesc}
             action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New asset</Button>}
           />
         ) : (
@@ -251,9 +253,9 @@ function PublicEndpointsSection() {
       const result = await create({ slug }).unwrap();
       setRevealedSecret(result.secret);
       setSlug("");
-      toast.success("Endpoint created", `Slug: ${result.slug}`);
+      toast.success(QUEUES_MSG.endpointCreated, QUEUES_MSG.endpointCreatedDesc(result.slug));
     } catch (err: unknown) {
-      toast.error("Couldn't create endpoint", getErrorDetail(err) ?? "Try again.");
+      toast.error(QUEUES_MSG.createEndpointFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -282,8 +284,8 @@ function PublicEndpointsSection() {
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" variant="outline"
                     onClick={() => navigator.clipboard.writeText(revealedSecret)
-                      .then(() => toast.success("Copied", "Secret copied to your clipboard."))
-                      .catch(() => toast.error("Couldn't copy", "Your browser blocked clipboard access."))}>
+                      .then(() => toast.success(QUEUES_MSG.copiedTitle, QUEUES_MSG.copiedDesc))
+                      .catch(() => toast.error(QUEUES_MSG.copyFailedTitle, QUEUES_MSG.copyFailedDesc))}>
                     Copy secret
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRevealedSecret(null)}>Dismiss</Button>
@@ -299,8 +301,8 @@ function PublicEndpointsSection() {
           <div className="px-5 pb-5">
             <EmptyState
               icon={<Icon name="target" size={20} />}
-              title="No endpoints yet"
-              description="Generate one to capture leads from your website forms."
+              title={QUEUES_MSG.noEndpointsTitle}
+              description={QUEUES_MSG.noEndpointsDesc}
               action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Generate</Button>}
             />
           </div>

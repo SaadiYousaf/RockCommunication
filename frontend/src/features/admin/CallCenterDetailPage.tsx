@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -44,15 +46,15 @@ export function CallCenterDetailPage() {
       { header: "Email", value: (u) => u.email },
       { header: "Roles", value: (u) => u.roles.map((r) => roleLabel(r)).join("; ") },
     ], `staff-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
   }
 
   async function assignCallCentre(userId: string, value: string) {
     try {
       await setUserCc({ userId, callCenterId: value || null }).unwrap();
-      toast.success("Assignment saved", value ? "Pinned to the call centre." : "Set to agency-wide.");
+      toast.success(ADMIN_MSG.callCenterDetail.assignmentSaved, value ? ADMIN_MSG.callCenterDetail.pinnedDesc : ADMIN_MSG.callCenterDetail.agencyWideDesc);
     } catch (err: unknown) {
-      toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.assignFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -86,10 +88,10 @@ export function CallCenterDetailPage() {
       <Card>
         <CardBody>
           {!people ? <Skeleton className="h-32" /> : staff.length === 0 ? (
-            <EmptyState icon={<Icon name="users" size={20} />} title="No staff here"
+            <EmptyState icon={<Icon name="users" size={20} />} title={ADMIN_MSG.callCenterDetail.noStaffTitle}
               description={isAgencyWide
-                ? "Every user is pinned to a call centre."
-                : "No one is assigned to this call centre yet — pick it from a user's dropdown to move them here."} />
+                ? ADMIN_MSG.callCenterDetail.noStaffDescAgencyWide
+                : ADMIN_MSG.callCenterDetail.noStaffDesc} />
           ) : (
             <div className="overflow-x-auto">
               <Table>

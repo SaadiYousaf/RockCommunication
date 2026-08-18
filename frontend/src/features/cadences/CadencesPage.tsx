@@ -8,6 +8,8 @@ import {
 import type { Cadence, CadenceStep } from "../../shared/api/types";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CADENCES_MSG } from "./messages";
 
 const KINDS = ["Call", "Sms", "Email", "Wait"] as const;
 
@@ -54,10 +56,10 @@ export function CadencesPage() {
     if (!editing) return;
     try {
       await upsert(editing).unwrap();
-      toast.success(editing.id ? "Cadence updated" : "Cadence created", editing.name);
+      toast.success(editing.id ? CADENCES_MSG.cadenceUpdated : CADENCES_MSG.cadenceCreated, editing.name);
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't save cadence", getErrorDetail(err) ?? "Try again.");
+      toast.error(CADENCES_MSG.saveCadenceFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -75,8 +77,8 @@ export function CadencesPage() {
         <Card className="mb-8"><CardBody>
           <EmptyState
             icon={<Icon name="workflow" size={20} />}
-            title="No cadences yet"
-            description="Build a multi-touch sequence to consistently engage leads over time."
+            title={CADENCES_MSG.noCadencesTitle}
+            description={CADENCES_MSG.noCadencesDesc}
             action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}
           />
         </CardBody></Card>
@@ -141,8 +143,8 @@ export function CadencesPage() {
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="inbox" size={20} />}
-                title="No enrollments yet"
-                description="Enroll a lead into a cadence to see live progress here."
+                title={CADENCES_MSG.noEnrollmentsTitle}
+                description={CADENCES_MSG.noEnrollmentsDesc}
               />
             </div>
           ) : (

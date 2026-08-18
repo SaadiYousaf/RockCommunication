@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -67,7 +69,7 @@ export function CallCentersPage() {
       { header: "Leads", value: (c) => c.leadCount ?? 0 },
       { header: "Active", value: (c) => (c.isActive ? "Yes" : "No") },
     ], `call-centres-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
   }
 
   const [editing, setEditing] = useState<CallCenterDto | null>(null);
@@ -77,15 +79,15 @@ export function CallCentersPage() {
   async function submitNew(e: React.FormEvent) {
     e.preventDefault();
     try {
-      if (!form.adminName.trim() || !form.adminEmail.trim()) { toast.error("Admin required", "A Call Center Admin name and email are required."); return; }
-      if (isSuperAdmin && !agencyId) { toast.error("Agency required", "Choose which agency this call centre belongs to."); return; }
+      if (!form.adminName.trim() || !form.adminEmail.trim()) { toast.error(ADMIN_MSG.callCenters.adminRequiredTitle, ADMIN_MSG.callCenters.adminRequiredDesc); return; }
+      if (isSuperAdmin && !agencyId) { toast.error(ADMIN_MSG.callCenters.agencyRequiredTitle, ADMIN_MSG.callCenters.agencyRequiredDesc); return; }
       const body = { name: form.name.trim(), code: form.code.trim() || null, adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim() };
       if (isSuperAdmin) await createCcInAgency({ agencyId, ...body }).unwrap();
       else await createCc(body).unwrap();
-      toast.success("Call center created", `${form.name} — the admin has been emailed an invitation.`);
+      toast.success(ADMIN_MSG.callCenters.created, ADMIN_MSG.callCenters.createdDesc(form.name));
       setShowNew(false); setForm({ name: "", code: "", adminName: "", adminEmail: "" });
     } catch (err: unknown) {
-      toast.error("Couldn't create", getErrorDetail(err) ?? "Check the name and try again.");
+      toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? ADMIN_MSG.callCenters.createFailedDesc);
     }
   }
 
@@ -98,10 +100,10 @@ export function CallCentersPage() {
       const body = { name: editing.name.trim(), code: editing.code?.trim() || null, isActive: editing.isActive };
       if (isSuperAdmin) await updateCcInAgency({ agencyId, callCenterId: editing.id, ...body }).unwrap();
       else await updateCc({ id: editing.id, ...body }).unwrap();
-      toast.success("Saved", editing.name);
+      toast.success(ADMIN_MSG.common.saved, editing.name);
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -163,8 +165,8 @@ export function CallCentersPage() {
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
-            <EmptyState icon={<Icon name="building" size={20} />} title="No call centers yet"
-              description="Create one, then assign agents to it from User Management."
+            <EmptyState icon={<Icon name="building" size={20} />} title={ADMIN_MSG.callCenters.emptyTitle}
+              description={ADMIN_MSG.callCenters.emptyDesc}
               action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNew(true)}>Add call center</Button>} />
           ) : (
             <>

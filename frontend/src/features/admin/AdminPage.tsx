@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useState } from "react";
 import {
   useAddIpAllowlistMutation, useCreateVerticalMutation, useListCommissionConfigQuery,
@@ -66,9 +68,9 @@ function IpAllowlistSection() {
           e.preventDefault();
           try {
             await add({ cidrOrIp: cidr, note: note || undefined }).unwrap();
-            toast.success("Entry added");
+            toast.success(ADMIN_MSG.system.ipAdded);
             setCidr(""); setNote("");
-          } catch (err: unknown) { toast.error("Couldn't add", getErrorDetail(err) ?? "Try again."); }
+          } catch (err: unknown) { toast.error(ADMIN_MSG.system.ipAddFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
         }}>
           <Input leftIcon={<Icon name="shield" size={14} />} placeholder="IP or CIDR (e.g. 10.0.0.0/24)"
             value={cidr} onChange={(e) => setCidr(e.target.value)} required containerClassName="flex-1 min-w-[220px]" />
@@ -79,8 +81,8 @@ function IpAllowlistSection() {
 
         {isLoading ? <Skeleton className="h-24" /> : !list || list.length === 0 ? (
           <EmptyState icon={<Icon name="shield" size={20} />}
-            title="No entries — all IPs allowed"
-            description="Add at least one CIDR/IP to start enforcing allowlisting." />
+            title={ADMIN_MSG.system.ipEmptyTitle}
+            description={ADMIN_MSG.system.ipEmptyDesc} />
         ) : (
           <ul className="divide-y hairline">
             {list.map((e) => (
@@ -116,9 +118,9 @@ function VerticalsSection() {
           e.preventDefault();
           try {
             await create({ name, description: description || undefined }).unwrap();
-            toast.success("Vertical created", name);
+            toast.success(ADMIN_MSG.system.verticalCreated, name);
             setName(""); setDescription("");
-          } catch (err: unknown) { toast.error("Couldn't create", getErrorDetail(err) ?? "Try again."); }
+          } catch (err: unknown) { toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
         }}>
           <Input placeholder="Vertical name (e.g. Health)" value={name}
             onChange={(e) => setName(e.target.value)} required containerClassName="w-56" />
@@ -128,7 +130,7 @@ function VerticalsSection() {
         </form>
         {isLoading ? <Skeleton className="h-24" /> : !verticals || verticals.length === 0 ? (
           <EmptyState icon={<Icon name="target" size={20} />}
-            title="No verticals yet" description="Create the first one to tag leads and teams." />
+            title={ADMIN_MSG.system.verticalsEmptyTitle} description={ADMIN_MSG.system.verticalsEmptyDesc} />
         ) : (
           <ul className="divide-y hairline">
             {verticals.map((v) => (
@@ -168,9 +170,9 @@ function HorizontalsSection() {
           e.preventDefault();
           try {
             await create({ name, description: description || undefined }).unwrap();
-            toast.success("Horizontal created", name);
+            toast.success(ADMIN_MSG.system.horizontalCreated, name);
             setName(""); setDescription("");
-          } catch (err: unknown) { toast.error("Couldn't create", getErrorDetail(err) ?? "Try again."); }
+          } catch (err: unknown) { toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
         }}>
           <Input placeholder="Horizontal name (e.g. East Region)" value={name}
             onChange={(e) => setName(e.target.value)} required containerClassName="w-56" />
@@ -180,7 +182,7 @@ function HorizontalsSection() {
         </form>
         {isLoading ? <Skeleton className="h-24" /> : !horizontals || horizontals.length === 0 ? (
           <EmptyState icon={<Icon name="target" size={20} />}
-            title="No horizontals yet" description="Create the first one to organise teams and campaigns across verticals." />
+            title={ADMIN_MSG.system.horizontalsEmptyTitle} description={ADMIN_MSG.system.horizontalsEmptyDesc} />
         ) : (
           <ul className="divide-y hairline">
             {horizontals.map((v) => (
@@ -289,9 +291,9 @@ function RuleRow({ ruleName, initial, onSave }: {
                 threshold: threshold === "" ? null : parseFloat(threshold),
                 enabled,
               });
-              toast.success("Rule saved", ruleName);
+              toast.success(ADMIN_MSG.system.ruleSaved, ruleName);
             } catch {
-              toast.error("Couldn't save rule", ruleName);
+              toast.error(ADMIN_MSG.system.ruleSaveFailed, ruleName);
             }
           }}>Save</Button>
       </td>

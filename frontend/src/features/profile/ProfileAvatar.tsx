@@ -4,6 +4,7 @@ import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import { Avatar, Button, Icon, cn, useToast } from "../../shared/ui";
 import { useUploadAvatarMutation } from "./baseApi";
+import { PROFILE_MSG } from "./messages";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
@@ -80,8 +81,8 @@ export function ProfileAvatarUploader({
   async function onSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setError("Please choose an image file."); return; }
-    if (file.size > MAX_AVATAR_BYTES) { setError("Image must be under 5 MB."); return; }
+    if (!file.type.startsWith("image/")) { setError(PROFILE_MSG.chooseImageFile); return; }
+    if (file.size > MAX_AVATAR_BYTES) { setError(PROFILE_MSG.imageTooLarge); return; }
     setError(null);
     try {
       const fd = new FormData();
@@ -89,9 +90,9 @@ export function ProfileAvatarUploader({
       await upload(fd).unwrap();
       setVersion((v) => v + 1);
       onChanged?.();
-      toast.success("Photo updated");
+      toast.success(PROFILE_MSG.photoUpdated);
     } catch {
-      setError("Upload failed — use an image under 5 MB.");
+      setError(PROFILE_MSG.avatarUploadFailed);
     } finally {
       if (inputRef.current) inputRef.current.value = "";
     }

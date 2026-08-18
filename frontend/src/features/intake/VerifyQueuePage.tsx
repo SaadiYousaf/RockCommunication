@@ -16,6 +16,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection, type RowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
+import { INTAKE_MSG } from "./messages";
 
 
 /** Verifier work queue — fronted leads awaiting a verification status. */
@@ -46,7 +47,7 @@ export function VerifyQueuePage() {
       { header: "Status", value: (l) => l.verifierStatus },
       { header: "Date", value: (l) => new Date(l.createdAt).toLocaleDateString() },
     ], `verifier-queue-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(INTAKE_MSG.exportReadyTitle, INTAKE_MSG.exportRows(chosen.length));
   }
 
   return (
@@ -65,7 +66,7 @@ export function VerifyQueuePage() {
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="Queue is empty" description={q ? "No matches in this queue." : "New fronted leads will appear here."} />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.verifyEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.verifyEmptyDesc} />
           ) : (
             <Table>
               <THead>
@@ -115,12 +116,12 @@ function VerifyRow({ lead, onEdit, selected, checkboxProps }: {
   const [status, setStatusVal] = useState<VerifierStatusValue | "">("");
 
   async function apply() {
-    if (!status) { toast.error("Pick a status"); return; }
+    if (!status) { toast.error(INTAKE_MSG.pickStatus); return; }
     try {
       const r = await setStatus({ leadId: lead.id, status }).unwrap();
-      toast.success("Status saved", r.status === "Verified" ? "Lead sent to closer queue" : `Marked ${r.status}`);
+      toast.success(INTAKE_MSG.statusSavedTitle, r.status === "Verified" ? INTAKE_MSG.leadSentToCloser : INTAKE_MSG.marked(r.status));
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Try again.");
+      toast.error(INTAKE_MSG.saveFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.retry);
     }
   }
 
@@ -189,10 +190,10 @@ function EditLeadModal({ leadId, onClose }: { leadId: string; onClose: () => voi
         ageYears: f.ageYears ? parseInt(f.ageYears, 10) : undefined,
         email: f.email || undefined, jornayaLeadId: f.jornayaLeadId || undefined,
       }).unwrap();
-      toast.success("Lead updated");
+      toast.success(INTAKE_MSG.leadUpdatedTitle);
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't save", getErrorDetail(err) ?? "Check the fields and try again.");
+      toast.error(INTAKE_MSG.saveFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.checkFieldsAndTryAgain);
     }
   }
 

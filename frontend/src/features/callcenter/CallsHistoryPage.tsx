@@ -7,6 +7,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { CALLCENTER_MSG } from "./messages";
 
 const statusTone: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
   answered: "success", completed: "success",
@@ -33,7 +34,7 @@ export function CallsHistoryPage() {
       { header: "Disposition", value: (c) => c.wrapUpCode ?? "" },
       { header: "Agent", value: (c) => c.agentName ?? "" },
     ], `calls-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(CALLCENTER_MSG.exportReadyTitle, CALLCENTER_MSG.rowsDownloaded(chosen.length));
   }
 
   const total = data?.total ?? 0;
@@ -131,8 +132,8 @@ export function CallsHistoryPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="phone" size={20} />}
-            title="No calls match"
-            description="Try removing a filter or expanding the date range."
+            title={CALLCENTER_MSG.noCallsMatchTitle}
+            description={CALLCENTER_MSG.noCallsMatchBody}
           />
         </CardBody></Card>
       ) : (

@@ -10,6 +10,8 @@ import {
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLCENTER_MSG } from "./messages";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "danger"> = {
   Available: "success", OnCall: "info", Break: "warning", Lunch: "warning",
@@ -80,7 +82,7 @@ export function SupervisorPage() {
       { header: "Extension/queue", value: (a) => a.currentCallStatus ?? "" },
       { header: "Duration", value: (a) => formatDuration(a.duration) },
     ], `agents-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(CALLCENTER_MSG.exportReadyTitle, CALLCENTER_MSG.rowsDownloaded(chosen.length));
   }
 
   async function force(userId: string, status: string, label: string, reason: string) {
@@ -88,9 +90,9 @@ export function SupervisorPage() {
     try {
       await forceStatus({ id: userId, status, reason }).unwrap();
       await refetch();
-      toast.success(`${label} applied`, `Agent moved to ${status}.`);
+      toast.success(CALLCENTER_MSG.forceApplied(label), CALLCENTER_MSG.agentMovedTo(status));
     } catch (err: unknown) {
-      toast.error(`Couldn't ${label.toLowerCase()}`, getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.forceFailed(label), getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setBusy(null);
     }
@@ -100,9 +102,9 @@ export function SupervisorPage() {
     setBusy(`${userId}:${mode}`);
     try {
       await coach({ id: userId, mode }).unwrap();
-      toast.success(`${mode[0].toUpperCase() + mode.slice(1)} started`, `Connected to ${agentName}.`);
+      toast.success(CALLCENTER_MSG.coachStarted(mode), CALLCENTER_MSG.connectedTo(agentName));
     } catch (err: unknown) {
-      toast.error("Couldn't start coaching", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.startCoachingFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setBusy(null);
     }
@@ -159,8 +161,8 @@ export function SupervisorPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="users" size={20} />}
-            title={search || statusFilter !== "all" ? "No agents match" : "No agents clocked in"}
-            description="Live agent activity will appear here as your team starts shifts."
+            title={search || statusFilter !== "all" ? CALLCENTER_MSG.noAgentsMatchTitle : CALLCENTER_MSG.noAgentsClockedInTitle}
+            description={CALLCENTER_MSG.noAgentsBody}
           />
         </CardBody></Card>
       ) : (
@@ -238,9 +240,9 @@ export function SupervisorPage() {
                         title="Force this agent off the clock — ends their shift"
                         onClick={async () => {
                           if (!(await confirm({
-                            title: `Log ${a.userName} out?`,
-                            description: "This ends their shift and forces them Offline. They'll have to clock in again before they can take calls.",
-                            confirmLabel: "Force logout", danger: true,
+                            title: CALLCENTER_MSG.forceLogoutConfirmTitle(a.userName),
+                            description: CALLCENTER_MSG.forceLogoutConfirmBody,
+                            confirmLabel: CALLCENTER_MSG.forceLogoutLabel, danger: true,
                           }))) return;
                           force(a.userId, "Offline", "Logout", "Forced logout");
                         }}>Logout</Button>

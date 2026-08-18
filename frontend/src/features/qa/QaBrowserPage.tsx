@@ -7,6 +7,7 @@ import {
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { QA_MSG } from "./messages";
 
 function scoreTone(pct: number): "success" | "warning" | "danger" {
   if (pct >= 85) return "success";
@@ -48,7 +49,7 @@ export function QaBrowserPage() {
       { header: "Score", value: (r) => `${r.totalScore} / ${r.maxScore}` },
       { header: "Date", value: (r) => new Date(r.reviewedAt).toLocaleString() },
     ], `qa-reviews-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(QA_MSG.exportReadyTitle, QA_MSG.exportReadyDesc(chosen.length));
   }
 
   return (
@@ -83,8 +84,8 @@ export function QaBrowserPage() {
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="star" size={20} />}
-                title="No scorecards"
-                description="Once reviewers score calls, agent rollups will appear here."
+                title={QA_MSG.noScorecardsTitle}
+                description={QA_MSG.noScorecardsDesc}
               />
             </div>
           ) : (
@@ -144,8 +145,8 @@ export function QaBrowserPage() {
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="doc" size={20} />}
-                title="No reviews"
-                description="Reviews submitted by your QA team will show up here."
+                title={QA_MSG.noReviewsTitle}
+                description={QA_MSG.noReviewsDesc}
               />
             </div>
           ) : (

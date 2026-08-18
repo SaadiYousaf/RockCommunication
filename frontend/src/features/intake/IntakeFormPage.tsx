@@ -3,6 +3,7 @@ import { useCaptureIntakeLeadMutation } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import { Badge, Card, CardBody, CardHeader, InfoHint, PageHeader, useToast } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
+import { INTAKE_MSG } from "./messages";
 
 /** Fronter intake form — Jornaya lead capture. All fields mandatory, typing-only. */
 export function IntakeFormPage() {
@@ -12,10 +13,10 @@ export function IntakeFormPage() {
   async function onSubmit(input: IntakeLeadInput) {
     try {
       const r = await capture(input).unwrap();
-      toast.success("Lead submitted", `${r.firstName} ${r.lastName} → verifier queue`);
+      toast.success(INTAKE_MSG.leadSubmittedTitle, INTAKE_MSG.leadSubmittedDesc(`${r.firstName} ${r.lastName}`));
       return true;
     } catch (err: unknown) {
-      toast.error("Couldn't submit", getErrorDetail(err) ?? "Check the required fields and try again.");
+      toast.error(INTAKE_MSG.submitFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.checkRequiredFields);
       return false;
     }
   }

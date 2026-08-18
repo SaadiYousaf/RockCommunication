@@ -15,6 +15,7 @@ import { formatPhone } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { LEADS_MSG } from "./messages";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
   New: ["Fronted", "Lost"],
@@ -89,17 +90,17 @@ export function MyQueuePage() {
       { header: "Stage", value: (l) => stageOf(l.stage) },
       { header: "Next action", value: (l) => String(l.disposition) },
     ], `my-queue-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(LEADS_MSG.exportReadyTitle, LEADS_MSG.exportRows(chosen.length));
   }
 
   async function dialFromRow(id: string, name: string) {
     setBusyId(id);
     try {
       await dial({ leadId: id }).unwrap();
-      toast.success("Calling…", name);
+      toast.success(LEADS_MSG.callingTitle, name);
       navigate(`/leads/${id}`);
     } catch (err: unknown) {
-      toast.error("Couldn't dial", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.dialFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     } finally {
       setBusyId(null);
     }
@@ -109,10 +110,10 @@ export function MyQueuePage() {
     setBusyId(id);
     try {
       await transition({ id, toStage, disposition }).unwrap();
-      toast.success("Disposition saved", `${name} → ${disposition}`);
+      toast.success(LEADS_MSG.dispositionSavedTitle, LEADS_MSG.dispositionSavedDesc(name, disposition));
       refetch();
     } catch (err: unknown) {
-      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+      toast.error(LEADS_MSG.queueUpdateFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     } finally {
       setBusyId(null);
     }
@@ -167,10 +168,10 @@ export function MyQueuePage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="inbox" size={20} />}
-            title={leads && leads.length === 0 ? "No leads in your queue" : "Nothing matches your filter"}
+            title={leads && leads.length === 0 ? LEADS_MSG.queueEmptyTitle : LEADS_MSG.queueNoMatchTitle}
             description={leads && leads.length === 0
-              ? "Leads assigned to you will appear here. Speak to your team lead about pulling some."
-              : "Try clearing the search or switching the tab."}
+              ? LEADS_MSG.queueEmptyDesc
+              : LEADS_MSG.queueNoMatchDesc}
           />
         </CardBody></Card>
       ) : (

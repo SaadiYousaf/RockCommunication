@@ -6,6 +6,8 @@ import {
   Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
+import { MESSAGES } from "../../shared/constants/messages";
+import { QA_MSG } from "./messages";
 
 export function QaPage() {
   const { data: rubrics, isLoading } = useRubricsQuery();
@@ -24,11 +26,11 @@ export function QaPage() {
     e.preventDefault();
     try {
       await create({ name, description: description || undefined, items }).unwrap();
-      toast.success("Rubric created", name);
+      toast.success(QA_MSG.rubricCreated, name);
       setName(""); setDescription(""); setItems([{ label: "Greeting", maxScore: 10, order: 1 }]);
       setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't create rubric", getErrorDetail(err) ?? "Try again.");
+      toast.error(QA_MSG.createRubricFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -48,8 +50,8 @@ export function QaPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="star" size={20} />}
-            title="No rubrics yet"
-            description="Create a rubric to standardize how your team scores calls."
+            title={QA_MSG.noRubricsTitle}
+            description={QA_MSG.noRubricsDesc}
             action={<Can permission={Perm.QaWrite}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New rubric</Button></Can>}
           />
         </CardBody></Card>

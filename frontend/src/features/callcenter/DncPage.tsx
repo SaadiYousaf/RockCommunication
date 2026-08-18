@@ -10,6 +10,8 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLCENTER_MSG } from "./messages";
 
 export function DncPage() {
   const { data: list, isLoading } = useListDncQuery();
@@ -46,25 +48,25 @@ export function DncPage() {
       { header: "Reason/note", value: (e) => e.reason ?? "" },
       { header: "Added", value: (e) => e.source },
     ], `dnc-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(CALLCENTER_MSG.exportReadyTitle, CALLCENTER_MSG.rowsDownloaded(chosen.length));
   }
 
   async function removeSelected() {
     const ids = sel.selectedIds;
     if (ids.length === 0) return;
     if (!(await confirm({
-      title: `Remove ${ids.length} ${ids.length === 1 ? "number" : "numbers"} from DNC?`,
-      description: "These numbers will be eligible for outbound dialing again. You can always re-add them later.",
-      confirmLabel: "Remove",
+      title: CALLCENTER_MSG.removeDncConfirmTitle(ids.length),
+      description: CALLCENTER_MSG.removeDncConfirmBody,
+      confirmLabel: CALLCENTER_MSG.removeLabel,
       danger: true,
     }))) return;
     setBulkRemoving(true);
     try {
       await Promise.all(ids.map((id) => remove(id).unwrap()));
-      toast.success(`Removed ${ids.length} from DNC`);
+      toast.success(CALLCENTER_MSG.removedFromDncCount(ids.length));
       sel.clear();
     } catch (err: unknown) {
-      toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.removeFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setBulkRemoving(false);
     }
@@ -74,20 +76,20 @@ export function DncPage() {
     e.preventDefault();
     try {
       await add({ phone, reason: reason || undefined }).unwrap();
-      toast.success("Added to DNC", phone);
+      toast.success(CALLCENTER_MSG.addedToDncTitle, phone);
       setPhone(""); setReason(""); setOpen(false);
     } catch (err: unknown) {
-      toast.error("Couldn't add DNC entry", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.addDncFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
   async function doRemove(id: string) {
     try {
       await remove(id).unwrap();
-      toast.success("Removed from DNC");
+      toast.success(CALLCENTER_MSG.removedFromDnc);
       setConfirmRemove(null);
     } catch (err: unknown) {
-      toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again.");
+      toast.error(CALLCENTER_MSG.removeFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -124,8 +126,8 @@ export function DncPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="flag" size={20} />}
-            title={search ? "No matching entries" : "No DNC entries"}
-            description={search ? "Try a different search." : "Numbers added here will be blocked from outbound dialing."}
+            title={search ? CALLCENTER_MSG.noMatchingEntriesTitle : CALLCENTER_MSG.noDncEntriesTitle}
+            description={search ? CALLCENTER_MSG.tryDifferentSearch : CALLCENTER_MSG.noDncEntriesBody}
             action={!search
               ? <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Add number</Button>
               : undefined}

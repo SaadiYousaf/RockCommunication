@@ -11,6 +11,7 @@ import { formatUsd } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { SALES_MSG } from "./messages";
 
 function statusOf(s: SaleListItem): { label: string; tone: BadgeTone } {
   if (s.fundedAt) return { label: "Funded", tone: "success" };
@@ -43,7 +44,7 @@ export function LicenseAgentQueuePage() {
       { header: "Premium", value: (s) => s.monthlyPremium },
       { header: "Status", value: (s) => statusOf(s).label },
     ], `my-sales-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(SALES_MSG.exportReadyTitle, SALES_MSG.rowsDownloaded(chosen.length));
   }
 
   return (
@@ -79,8 +80,8 @@ export function LicenseAgentQueuePage() {
           ) : items.length === 0 ? (
             <EmptyState
               icon={<Icon name="briefcase" size={20} />}
-              title="No sales assigned yet"
-              description="When a submission agent assigns a sale to you, it'll appear here — and you'll get a notification."
+              title={SALES_MSG.noSalesAssignedTitle}
+              description={SALES_MSG.noSalesAssignedBody}
             />
           ) : (
             <Table>

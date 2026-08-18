@@ -20,6 +20,7 @@ import {
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { formatUsd, formatPhone } from "../../shared/lib/format";
 import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
+import { INTAKE_MSG } from "./messages";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
@@ -49,7 +50,7 @@ export function ValidateQueuePage() {
       { header: "Status", value: (s) => LABEL[s.status] },
       { header: "Agency", value: (s) => s.agencyName },
     ], `submission-queue-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(INTAKE_MSG.exportReadyTitle, INTAKE_MSG.exportRows(chosen.length));
   }
 
   return (
@@ -72,7 +73,7 @@ export function ValidateQueuePage() {
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No sales to submit" description={q ? "No matches in this queue." : "Sales appear here as soon as a closer completes one."} />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
           ) : (
             <Table>
               <THead>
@@ -158,9 +159,9 @@ function LeadDetailModal({ leadId, title, onClose }: { leadId: string; title: st
   async function copyAll() {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Copied", "Lead details copied to clipboard.");
+      toast.success(INTAKE_MSG.copiedTitle, INTAKE_MSG.copiedDesc);
     } catch {
-      toast.error("Couldn't copy", "Your browser blocked clipboard access.");
+      toast.error(INTAKE_MSG.copyFailedTitle, INTAKE_MSG.copyFailedDesc);
     }
   }
 
@@ -277,10 +278,10 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
         declineReason: isDecline || isError ? reason : undefined,
         licenseAgentUserId: status === "Approved" && licenseAgentUserId ? licenseAgentUserId : undefined,
       }).unwrap();
-      toast.success("Status updated", `${sale.leadName} → ${LABEL[status]}`);
+      toast.success(INTAKE_MSG.statusUpdatedTitle, INTAKE_MSG.statusUpdatedDesc(sale.leadName, LABEL[status]));
       onClose();
     } catch (err: unknown) {
-      toast.error("Couldn't update", getErrorDetail(err) ?? "Check the required fields and try again.");
+      toast.error(INTAKE_MSG.updateFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.checkRequiredFields);
     }
   }
 

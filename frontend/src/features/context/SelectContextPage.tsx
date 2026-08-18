@@ -9,10 +9,12 @@ import {
   useAgencyCallCentersQuery, useListUsersQuery,
 } from "../../shared/api/baseApi";
 import { roleLabel } from "../../shared/constants/roles";
+import { MESSAGES } from "../../shared/constants/messages";
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Skeleton, Stepper, cn, useToast,
 } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
+import { CONTEXT_MSG } from "./messages";
 
 type StepKey = "agency" | "center" | "roster";
 
@@ -62,7 +64,7 @@ export function SelectContextPage() {
       }));
       navigate("/dashboard");
     } catch (err: unknown) {
-      toast.error("Couldn't enter that workspace", getErrorDetail(err) ?? "Please try again.");
+      toast.error(CONTEXT_MSG.enterFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -186,8 +188,8 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
       {isLoading ? (
         <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
       ) : roster.length === 0 ? (
-        <EmptyState icon={<Icon name="users" size={20} />} title="No members yet"
-          description="No users are assigned to this scope. You can still enter and manage it." />
+        <EmptyState icon={<Icon name="users" size={20} />} title={CONTEXT_MSG.noMembersTitle}
+          description={CONTEXT_MSG.noMembersDesc} />
       ) : (
         <div className="max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5">
           {roster.map((u) => (

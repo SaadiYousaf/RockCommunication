@@ -9,6 +9,7 @@ import {
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
+import { INTAKE_MSG } from "./messages";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -47,17 +48,17 @@ export function CloseQueuePage() {
       { header: "Assigned", value: (l) => (l.hasApplication ? "Started" : "New") },
       { header: "Updated", value: (l) => new Date(l.createdAt).toLocaleDateString() },
     ], `closer-queue-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(INTAKE_MSG.exportReadyTitle, INTAKE_MSG.exportRows(chosen.length));
   }
 
   async function onAdd(input: IntakeLeadInput) {
     try {
       const r = await addLead(input).unwrap();
-      toast.success("Lead added", `${r.firstName} ${r.lastName} → your closer queue`);
+      toast.success(INTAKE_MSG.leadAddedTitle, INTAKE_MSG.leadAddedDesc(`${r.firstName} ${r.lastName}`));
       setOpen(false);
       return true;
     } catch (err: unknown) {
-      toast.error("Couldn't add lead", getErrorDetail(err) ?? "Check the required fields and try again.");
+      toast.error(INTAKE_MSG.addLeadFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.checkRequiredFields);
       return false;
     }
   }
@@ -87,7 +88,7 @@ export function CloseQueuePage() {
           action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title="No verified leads" description={q ? "No matches in this queue." : "Verified leads will appear here. Use “Add lead” to start one yourself."}
+            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.closeEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.closeEmptyDesc}
               action={!q ? <Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setOpen(true)}>Add lead</Button> : undefined} />
           ) : (
             <Table>

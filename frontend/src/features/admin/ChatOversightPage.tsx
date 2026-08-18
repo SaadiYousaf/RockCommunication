@@ -6,6 +6,7 @@ import {
 import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, PageHeader, SearchInput, Skeleton, cn,
 } from "../../shared/ui";
+import { ADMIN_MSG } from "./messages";
 
 const AGENCY_WIDE = "00000000-0000-0000-0000-000000000000";
 
@@ -24,7 +25,7 @@ export function ChatOversightPage() {
       <PageHeader
         eyebrow="Oversight"
         title="Chat oversight"
-        description="Read-only view of every chat conversation across all agencies. Visible to SuperAdmin only."
+        description="Read-only view of every chat conversation across all agencies. Visible to Super Admins only."
         badge={<Badge tone="brand" variant="soft"><Icon name="shield" size={11} className="-ml-0.5" /> SuperAdmin</Badge>}
       />
 
@@ -102,7 +103,7 @@ function Empty({ title, body, icon = "chat" }: { title: string; body: string; ic
 function AgencyGrid({ onPick }: { onPick: (a: { id: string; name: string }) => void }) {
   const { data, isLoading } = useChatOversightAgenciesQuery();
   if (isLoading) return <Grid>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>;
-  if (!data || data.length === 0) return <Empty icon="building" title="No agencies" body="No agencies exist yet." />;
+  if (!data || data.length === 0) return <Empty icon="building" title={ADMIN_MSG.chatOversight.noAgenciesTitle} body={ADMIN_MSG.chatOversight.noAgenciesBody} />;
   return (
     <Grid>
       {data.map((a) => (
@@ -130,7 +131,7 @@ function CallCenterGrid({ agency, onPick, onAllChats }: {
       {isLoading ? (
         <Grid>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>
       ) : !data || data.length === 0 ? (
-        <Empty icon="headset" title="No call centers with chats" body={`No conversations grouped by call center in ${agency.name}. Use "View all chats" above.`} />
+        <Empty icon="headset" title={ADMIN_MSG.chatOversight.noCallCentersTitle} body={ADMIN_MSG.chatOversight.noCallCentersBody(agency.name)} />
       ) : (
         <>
           <Grid>
@@ -180,7 +181,7 @@ function RoomBrowser({ agencyId, callCenter }: {
             <div className="p-3 space-y-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}</div>
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center text-sm text-ink-500">
-              {q ? "No rooms match your search." : "No conversations here."}
+              {q ? ADMIN_MSG.chatOversight.noRoomsMatch : ADMIN_MSG.chatOversight.noConversations}
             </div>
           ) : filtered.map((r) => (
             <button
@@ -202,8 +203,8 @@ function RoomBrowser({ agencyId, callCenter }: {
           <div className="flex-1 grid place-items-center text-center px-6">
             <div>
               <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-ink-100 grid place-items-center text-ink-400"><Icon name="chat" size={22} /></div>
-              <div className="font-semibold text-ink-900">Select a conversation</div>
-              <div className="text-sm text-ink-500 mt-1">Pick a room on the left to read its full transcript.</div>
+              <div className="font-semibold text-ink-900">{ADMIN_MSG.chatOversight.selectConversationTitle}</div>
+              <div className="text-sm text-ink-500 mt-1">{ADMIN_MSG.chatOversight.selectConversationBody}</div>
             </div>
           </div>
         ) : (
@@ -216,7 +217,7 @@ function RoomBrowser({ agencyId, callCenter }: {
               {msgLoading ? (
                 [0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)
               ) : (messages ?? []).length === 0 ? (
-                <div className="text-center text-sm text-ink-500 py-8">This room has no messages yet.</div>
+                <div className="text-center text-sm text-ink-500 py-8">{ADMIN_MSG.chatOversight.noMessages}</div>
               ) : (messages ?? []).map((m) => (
                 <div key={m.id} className="flex gap-2.5">
                   <Avatar name={m.sender} size={30} />

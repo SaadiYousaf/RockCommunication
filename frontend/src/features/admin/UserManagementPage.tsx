@@ -1,4 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -42,9 +44,9 @@ export function UserManagementPage() {
   async function assignCallCenter(userId: string, value: string) {
     try {
       await setUserCc({ userId, callCenterId: value || null }).unwrap();
-      toast.success("Call center updated");
+      toast.success(ADMIN_MSG.userMgmt.callCenterUpdated);
     } catch (err: unknown) {
-      toast.error("Couldn't update call center", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.userMgmt.callCenterUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -81,7 +83,7 @@ export function UserManagementPage() {
       { header: "Call centre", value: (u) => (callCenters ?? []).find((c) => c.id === u.callCenterId)?.name ?? "Agency-level" },
       { header: "Active", value: (u) => ((u.isActive ?? true) ? "Yes" : "No") },
     ], `users-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
   }
 
   // Bulk deactivate loops the SAME per-row setActive mutation over the ticked users — no new endpoint.
@@ -89,17 +91,17 @@ export function UserManagementPage() {
     const n = sel.selectedCount;
     if (n === 0) return;
     if (!(await confirm({
-      title: `Deactivate ${n} ${n === 1 ? "user" : "users"}?`,
-      description: "They'll be blocked from signing in. You can reactivate them later.",
-      confirmLabel: "Deactivate",
+      title: ADMIN_MSG.userMgmt.deactivateConfirmTitle(n),
+      description: ADMIN_MSG.userMgmt.deactivateConfirmDesc,
+      confirmLabel: ADMIN_MSG.userMgmt.deactivateConfirmLabel,
       danger: true,
     }))) return;
     try {
       await Promise.all(sel.selectedIds.map((id) => setActive({ id, isActive: false }).unwrap()));
-      toast.success("Users deactivated", `${n} can no longer sign in.`);
+      toast.success(ADMIN_MSG.userMgmt.usersDeactivated, ADMIN_MSG.common.canNoLongerSignIn(n));
       sel.clear();
     } catch (err: unknown) {
-      toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -132,7 +134,7 @@ export function UserManagementPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <Stat label="Total users"  value={stats.total}      icon={<Icon name="users" size={18} />} tone="brand" />
         <Stat label="Admins"       value={stats.admins}     icon={<Icon name="shield" size={18} />} tone="danger"
-              hint="Admin & ProgramManager" />
+              hint="Admins & program managers" />
         <Stat label="Pending pwd"  value={stats.mustChange} icon={<Icon name="key" size={18} />} tone="warning"
               hint={stats.expired > 0 ? `${stats.expired} invite${stats.expired === 1 ? "" : "s"} expired — resend needed` : "First-login change required; invites expire after 2 days"} />
         <Stat label="No roles"     value={stats.noRoles}    icon={<Icon name="userX" size={18} />} tone="neutral"
@@ -170,8 +172,8 @@ export function UserManagementPage() {
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="users" size={20} />}
-            title="No users yet"
-            description="Users will appear here once they're created."
+            title={ADMIN_MSG.userMgmt.emptyTitle}
+            description={ADMIN_MSG.userMgmt.emptyDesc}
           />
         </CardBody></Card>
       ) : (
@@ -269,9 +271,9 @@ export function UserManagementPage() {
                         onClick={async () => {
                           try {
                             await resendInvite(u.id).unwrap();
-                            toast.success("Invitation resent", `A fresh temporary password was emailed to ${u.userName}.`);
+                            toast.success(ADMIN_MSG.common.invitationResent, ADMIN_MSG.common.invitationResentDesc(u.userName));
                           } catch (err: unknown) {
-                            toast.error("Couldn't resend invitation", getErrorDetail(err) ?? "Try again.");
+                            toast.error(ADMIN_MSG.common.resendInviteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                           }
                         }}
                       ><Icon name="mail" size={15} /></Button>
@@ -287,9 +289,9 @@ export function UserManagementPage() {
                         onClick={async () => {
                           try {
                             await setActive({ id: u.id, isActive: true }).unwrap();
-                            toast.success("User reactivated", `${u.userName} can sign in again.`);
+                            toast.success(ADMIN_MSG.userMgmt.userReactivated, ADMIN_MSG.userMgmt.userReactivatedDesc(u.userName));
                           } catch (err: unknown) {
-                            toast.error("Couldn't reactivate", getErrorDetail(err) ?? "Try again.");
+                            toast.error(ADMIN_MSG.common.reactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                           }
                         }}
                       ><Icon name="userCheck" size={15} /></Button>
@@ -326,10 +328,10 @@ export function UserManagementPage() {
             onSave={async (roles) => {
               try {
                 await updateRoles({ id: editing.id, roles }).unwrap();
-                toast.success("Roles updated", `${editing.userName} now has ${roles.length} role(s).`);
+                toast.success(ADMIN_MSG.userMgmt.rolesUpdated, ADMIN_MSG.userMgmt.rolesUpdatedDesc(editing.userName, roles.length));
                 setEditing(null);
               } catch (err: unknown) {
-                toast.error("Couldn't update roles", getErrorDetail(err) ?? "Try again.");
+                toast.error(ADMIN_MSG.userMgmt.rolesUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
               }
             }}
           />
@@ -353,10 +355,10 @@ export function UserManagementPage() {
                 if (!resetting) return;
                 try {
                   await resetPw({ id: resetting.id, newPassword: newPwd }).unwrap();
-                  toast.success("Password reset", `New password set for ${resetting.userName}.`);
+                  toast.success(ADMIN_MSG.common.passwordReset, ADMIN_MSG.common.passwordResetDesc(resetting.userName));
                   setResetting(null);
                 } catch (err: unknown) {
-                  toast.error("Couldn't reset password", getErrorDetail(err) ?? "Try again.");
+                  toast.error(ADMIN_MSG.common.resetPasswordFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                 }
               }}
             >Set password</Button>
@@ -393,10 +395,10 @@ export function UserManagementPage() {
                 if (!confirmDeactivate) return;
                 try {
                   await setActive({ id: confirmDeactivate.id, isActive: false }).unwrap();
-                  toast.success("User deactivated", `${confirmDeactivate.userName} can no longer sign in.`);
+                  toast.success(ADMIN_MSG.userMgmt.userDeactivated, ADMIN_MSG.common.canNoLongerSignIn(confirmDeactivate.userName));
                   setConfirmDeactivate(null);
                 } catch (err: unknown) {
-                  toast.error("Couldn't deactivate", getErrorDetail(err) ?? "Try again.");
+                  toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                 }
               }}
             >Deactivate user</Button>

@@ -11,6 +11,8 @@ import {
 } from "../../shared/ui";
 import type { WorkflowRule } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { MESSAGES } from "../../shared/constants/messages";
+import { WORKFLOWS_MSG } from "./messages";
 
 type Rule = {
   id: string | null;
@@ -100,10 +102,10 @@ export function WorkflowsPage() {
     if (!editing) return;
     try {
       await upsert(editing).unwrap();
-      toast.success(editing.id ? "Rule updated" : "Rule created", editing.name);
+      toast.success(editing.id ? WORKFLOWS_MSG.ruleUpdated : WORKFLOWS_MSG.ruleCreated, editing.name);
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't save rule", getErrorDetail(err) ?? "Try again.");
+      toast.error(WORKFLOWS_MSG.saveRuleFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -111,10 +113,10 @@ export function WorkflowsPage() {
     if (!confirmDelete) return;
     try {
       await del(confirmDelete.id).unwrap();
-      toast.success("Rule deleted", confirmDelete.name);
+      toast.success(WORKFLOWS_MSG.ruleDeleted, confirmDelete.name);
       setConfirmDelete(null);
     } catch (err: unknown) {
-      toast.error("Couldn't delete", getErrorDetail(err) ?? "Try again.");
+      toast.error(WORKFLOWS_MSG.deleteRuleFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -162,8 +164,8 @@ export function WorkflowsPage() {
         <Card><CardBody className="py-12">
           <EmptyState
             icon={<Icon name="workflow" size={22} />}
-            title={search ? "No rules match" : "No workflow rules yet"}
-            description={search ? "Try a different search." : "Create automations: e.g. on every lead.created with score >= 50, assign-agent."}
+            title={search ? WORKFLOWS_MSG.noRulesMatchTitle : WORKFLOWS_MSG.noRulesTitle}
+            description={search ? WORKFLOWS_MSG.noRulesMatchDesc : WORKFLOWS_MSG.noRulesDesc}
             action={!search ? <Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New rule</Button> : undefined}
           />
         </CardBody></Card>
@@ -191,8 +193,8 @@ export function WorkflowsPage() {
               <div className="px-5 py-10">
                 <EmptyState
                   icon={<Icon name="activity" size={20} />}
-                  title="No executions yet"
-                  description="Executions appear after a rule matches a triggering event."
+                  title={WORKFLOWS_MSG.noExecutionsTitle}
+                  description={WORKFLOWS_MSG.noExecutionsDesc}
                 />
               </div>
             ) : (

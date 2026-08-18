@@ -10,6 +10,7 @@ import {
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { timeAgoShort } from "../../shared/lib/time";
+import { BUGS_MSG } from "./messages";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
@@ -49,7 +50,7 @@ export function BugsPage() {
       { header: "Page", value: (b) => b.pageUrl ?? "" },
       { header: "Reported", value: (b) => new Date(b.createdAt).toISOString() },
     ], `bugs-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(BUGS_MSG.exportReady, BUGS_MSG.rowsDownloaded(chosen.length));
   }
 
   async function bulkApplyStatus() {
@@ -58,8 +59,8 @@ export function BugsPage() {
     const results = await Promise.allSettled(ids.map((id) => setBugStatus({ id, status: bulkStatus }).unwrap()));
     const failed = ids.filter((_, i) => results[i].status === "rejected");
     const ok = ids.length - failed.length;
-    if (ok > 0) toast.success(`Moved ${ok} to ${bugStatusLabel(bulkStatus)}`);
-    if (failed.length > 0) { toast.error(`${failed.length} couldn't be updated`, "They're still selected."); sel.keepOnly(failed); }
+    if (ok > 0) toast.success(BUGS_MSG.movedCount(ok, bugStatusLabel(bulkStatus)));
+    if (failed.length > 0) { toast.error(BUGS_MSG.couldntBeUpdated(failed.length), BUGS_MSG.stillSelected); sel.keepOnly(failed); }
     else sel.clear();
   }
 
@@ -101,8 +102,8 @@ export function BugsPage() {
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : list.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="success" size={20} />} title="No bugs here"
-            description={status || scope === "mine" ? "Nothing matches this filter." : "Nothing reported yet. Use the “Report a bug” button anytime you hit a problem."} />
+          <EmptyState icon={<Icon name="success" size={20} />} title={BUGS_MSG.noBugsTitle}
+            description={status || scope === "mine" ? BUGS_MSG.noBugsFilterDesc : BUGS_MSG.noBugsDesc} />
         </CardBody></Card>
       ) : (
         <div className="overflow-x-auto animate-rise">
@@ -178,21 +179,21 @@ function BugDetailModal({ bugId, onClose }: { bugId: string; onClose: () => void
     if (!bug || effectiveStatus === bug.status && !resolution.trim()) return;
     try {
       await setStatus({ id: bug.id, status: effectiveStatus, resolution: resolution.trim() || undefined }).unwrap();
-      toast.success(`Moved to ${bugStatusLabel(effectiveStatus)}`);
+      toast.success(BUGS_MSG.movedTo(bugStatusLabel(effectiveStatus)));
       setResolution(""); setNewStatus("");
-    } catch (err: unknown) { toast.error("Couldn't update status", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(BUGS_MSG.updateStatusFailed, getErrorDetail(err) ?? BUGS_MSG.retry); }
   }
 
   async function changeAssignee(userId: string) {
     if (!bug) return;
     try { await assign({ id: bug.id, assignedToUserId: userId || null }).unwrap(); }
-    catch (err: unknown) { toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(BUGS_MSG.assignFailed, getErrorDetail(err) ?? BUGS_MSG.retry); }
   }
 
   async function sendComment() {
     if (!body.trim() || !bug) return;
     try { await comment({ id: bug.id, comment: body.trim() }).unwrap(); setBody(""); }
-    catch (err: unknown) { toast.error("Couldn't comment", getErrorDetail(err) ?? "Try again."); }
+    catch (err: unknown) { toast.error(BUGS_MSG.commentFailed, getErrorDetail(err) ?? BUGS_MSG.retry); }
   }
 
   return (

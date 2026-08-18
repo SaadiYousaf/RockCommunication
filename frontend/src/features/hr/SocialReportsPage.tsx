@@ -12,6 +12,7 @@ import {
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { HR_MSG } from "./messages";
 
 const BLANK: SocialMediaInput = { date: new Date().toISOString(), employeeId: null, platform: "", postsMade: 0, queriesAnswered: 0, link: "", notes: "" };
 const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "");
@@ -48,16 +49,16 @@ export function SocialReportsPage() {
     e.preventDefault();
     const payload = { ...form, employeeId: form.employeeId || null };
     try {
-      if (editing) { await update({ id: editing.id, ...payload }).unwrap(); toast.success("Report updated"); }
-      else { await create(payload).unwrap(); toast.success("Report added"); }
+      if (editing) { await update({ id: editing.id, ...payload }).unwrap(); toast.success(HR_MSG.reportUpdated); }
+      else { await create(payload).unwrap(); toast.success(HR_MSG.reportAdded); }
       setOpen(false);
-    } catch (err: unknown) { toast.error("Couldn't save", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(HR_MSG.saveFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   async function onDelete(r: SocialMediaReport) {
-    if (!(await confirm({ title: "Delete report?", description: `Remove the ${dateOnly(r.date)} report?`, confirmLabel: "Delete", danger: true }))) return;
-    try { await remove(r.id).unwrap(); toast.success("Report removed"); }
-    catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    if (!(await confirm({ title: HR_MSG.deleteReportTitle, description: HR_MSG.deleteReportDesc(dateOnly(r.date)), confirmLabel: HR_MSG.deleteLabel, danger: true }))) return;
+    try { await remove(r.id).unwrap(); toast.success(HR_MSG.reportRemoved); }
+    catch (err: unknown) { toast.error(HR_MSG.removeFailed, getErrorDetail(err) ?? HR_MSG.retry); }
   }
 
   const allRows = reports ?? [];
@@ -78,23 +79,23 @@ export function SocialReportsPage() {
       { header: "Queries answered", value: (r) => r.queriesAnswered },
       { header: "Link", value: (r) => r.link ?? "" },
     ], `social-reports-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success("Export ready", `${chosen.length} rows downloaded.`);
+    toast.success(HR_MSG.exportReady, HR_MSG.rowsDownloaded(chosen.length));
   }
 
   async function bulkDelete() {
     const ids = sel.selectedIds;
     if (ids.length === 0) return;
     if (!(await confirm({
-      title: `Delete ${ids.length} ${ids.length === 1 ? "report" : "reports"}?`,
-      description: "This removes the selected reports. This can't be undone.",
-      confirmLabel: "Delete", danger: true,
+      title: HR_MSG.deleteReportsTitle(ids.length),
+      description: HR_MSG.deleteReportsDesc,
+      confirmLabel: HR_MSG.deleteLabel, danger: true,
     }))) return;
     setBulkDeleting(true);
     try {
       await Promise.all(ids.map((id) => remove(id).unwrap()));
-      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "report" : "reports"}`);
+      toast.success(HR_MSG.deletedReports(ids.length));
       sel.clear();
-    } catch (err: unknown) { toast.error("Couldn't remove", getErrorDetail(err) ?? "Try again."); }
+    } catch (err: unknown) { toast.error(HR_MSG.removeFailed, getErrorDetail(err) ?? HR_MSG.retry); }
     finally { setBulkDeleting(false); }
   }
 
@@ -155,8 +156,8 @@ export function SocialReportsPage() {
         <Card><CardBody>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody>
-          <EmptyState icon={<Icon name="chat" size={20} />} title={search ? "No matches" : "No reports yet"}
-            description={search ? "No report matches your search." : "Log a daily report of posts and queries answered."}
+          <EmptyState icon={<Icon name="chat" size={20} />} title={search ? HR_MSG.noMatchesTitle : HR_MSG.reportsEmptyTitle}
+            description={search ? HR_MSG.noReportMatchesDesc : HR_MSG.reportsEmptyDesc}
             action={!search ? <Button leftIcon={<Icon name="plus" size={15} />} onClick={openAdd}>Add report</Button> : undefined} />
         </CardBody></Card>
       ) : (

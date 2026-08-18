@@ -1,4 +1,6 @@
 import { getErrorDetail, getErrorStatus } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
+import { ADMIN_MSG } from "./messages";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAssignAgencyCeoMutation,
@@ -59,13 +61,13 @@ export function AgenciesPage() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (!ceoName.trim() || !ceoEmail.trim()) { toast.error("CEO required", "An Agency CEO name and email are required."); return; }
+    if (!ceoName.trim() || !ceoEmail.trim()) { toast.error(ADMIN_MSG.agencies.ceoRequiredTitle, ADMIN_MSG.agencies.ceoRequiredDesc); return; }
     try {
       await createAgency({ name: trimmed, code: code.trim() || null, ceoName: ceoName.trim(), ceoEmail: ceoEmail.trim() }).unwrap();
-      toast.success("Agency created", `${trimmed} — the CEO has been emailed an invitation.`);
+      toast.success(ADMIN_MSG.agencies.created, ADMIN_MSG.agencies.createdDesc(trimmed));
       setName(""); setCode(""); setCeoName(""); setCeoEmail("");
     } catch (err: unknown) {
-      toast.error("Couldn't create", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -85,10 +87,10 @@ export function AgenciesPage() {
         code: editCode.trim() || null,
         isActive: editActive,
       }).unwrap();
-      toast.success("Updated", editing.name);
+      toast.success(ADMIN_MSG.agencies.updated, editing.name);
       setEditing(null);
     } catch (err: unknown) {
-      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -96,10 +98,10 @@ export function AgenciesPage() {
     // Disabling a tenant locks everyone in it out — confirm before doing it.
     if (a.isActive) {
       const ok = await confirm({
-        title: `Disable ${a.name}?`,
-        description: "Everyone in this agency is signed out and blocked from signing in until you re-enable it. Its leads, sales, and users are preserved.",
+        title: ADMIN_MSG.agencies.disableConfirmTitle(a.name),
+        description: ADMIN_MSG.agencies.disableConfirmDesc,
         danger: true,
-        confirmLabel: "Disable agency",
+        confirmLabel: ADMIN_MSG.agencies.disableConfirmLabel,
       });
       if (!ok) return;
     }
@@ -111,9 +113,9 @@ export function AgenciesPage() {
         code: a.code,
         isActive: !a.isActive,
       }).unwrap();
-      toast.success(a.isActive ? "Disabled" : "Enabled", a.name);
+      toast.success(a.isActive ? ADMIN_MSG.agencies.disabled : ADMIN_MSG.agencies.enabled, a.name);
     } catch (err: unknown) {
-      toast.error("Couldn't update", getErrorDetail(err) ?? "Try again.");
+      toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setTogglingId(null);
     }
@@ -233,8 +235,8 @@ export function AgenciesPage() {
             <div className="px-5 py-4">
               <EmptyState
                 icon={<Icon name="building" size={20} />}
-                title="No agencies yet"
-                description="Use the form above to create your first one."
+                title={ADMIN_MSG.agencies.emptyTitle}
+                description={ADMIN_MSG.agencies.emptyDesc}
               />
             </div>
           ) : (
@@ -352,10 +354,10 @@ export function AgenciesPage() {
           if (!assigning) return;
           try {
             await assignCeo({ id: assigning.id, userId }).unwrap();
-            toast.success("CEO assigned", assigning.name);
+            toast.success(ADMIN_MSG.agencies.ceoAssigned, assigning.name);
             setAssigning(null);
           } catch (err: unknown) {
-            toast.error("Couldn't assign", getErrorDetail(err) ?? "Try again.");
+            toast.error(ADMIN_MSG.common.assignFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
           }
         }}
       />
@@ -446,8 +448,8 @@ function AssignCeoModal({
         return;
       } catch (err: unknown) {
         toast.error(
-          collision.sameAgency ? "Couldn't promote" : "Couldn't move user",
-          getErrorDetail(err) ?? "Try again.",
+          collision.sameAgency ? ADMIN_MSG.agencies.promoteFailed : ADMIN_MSG.agencies.moveUserFailed,
+          getErrorDetail(err) ?? MESSAGES.tryAgain,
         );
         return;
       }
@@ -466,13 +468,13 @@ function AssignCeoModal({
       const detail: string = getErrorDetail(err) ?? getErrorDetail(err) ?? "";
       if (status === 409 || /already exists/i.test(detail)) {
         toast.error(
-          "User already exists",
-          "Someone with that username or email is already registered. Try a different one or use 'Pick existing user'.",
+          ADMIN_MSG.agencies.userExistsTitle,
+          ADMIN_MSG.agencies.userExistsDesc,
         );
       } else if (status === 400) {
-        toast.error("Invalid details", detail || "Check the username and email format.");
+        toast.error(ADMIN_MSG.agencies.invalidDetailsTitle, detail || ADMIN_MSG.agencies.invalidDetailsDesc);
       } else {
-        toast.error("Couldn't register CEO", detail || "Try again.");
+        toast.error(ADMIN_MSG.agencies.registerCeoFailed, detail || MESSAGES.tryAgain);
       }
     }
   }

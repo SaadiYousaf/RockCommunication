@@ -10,6 +10,8 @@ import {
 } from "../../shared/ui";
 import type { WrapUpCode } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { MESSAGES } from "../../shared/constants/messages";
+import { CALLCENTER_MSG } from "./messages";
 
 type AgentStatus = "Available" | "OnCall" | "Break" | "Lunch" | "Training" | "Meeting" | "Offline";
 
@@ -91,17 +93,17 @@ export function AgentPanelPage() {
     setPendingStatus(status);
     try {
       await setStatus({ status, reason: reason || undefined }).unwrap();
-      toast.success("Status updated", `You're now ${status}.`);
+      toast.success(CALLCENTER_MSG.statusUpdatedTitle, CALLCENTER_MSG.statusUpdatedBody(status));
       setReason("");
     } catch (err: unknown) {
-      const detail: string = getErrorDetail(err) ?? "Try again.";
+      const detail: string = getErrorDetail(err) ?? MESSAGES.tryAgain;
       // Self-heal: if backend says we're not clocked in, our cached session is stale.
       // Refetch and let the UI render the empty state with a fresh Clock-in CTA.
       if (/not clocked in/i.test(detail)) {
         await refetchSession();
-        toast.warning("Session expired", "Your shift was ended remotely. Please clock in again.");
+        toast.warning(CALLCENTER_MSG.sessionExpiredTitle, CALLCENTER_MSG.sessionExpiredBody);
       } else {
-        toast.error("Couldn't update status", detail);
+        toast.error(CALLCENTER_MSG.updateStatusFailed, detail);
       }
     } finally {
       setPendingStatus(null);
@@ -109,22 +111,22 @@ export function AgentPanelPage() {
   }
 
   async function doClockIn() {
-    try { await clockIn().unwrap(); await refetchSession(); toast.success("Clocked in", "Welcome back."); }
-    catch (err: unknown) { toast.error("Clock-in failed", getErrorDetail(err) ?? "Try again."); }
+    try { await clockIn().unwrap(); await refetchSession(); toast.success(CALLCENTER_MSG.clockedInTitle, CALLCENTER_MSG.clockedInBody); }
+    catch (err: unknown) { toast.error(CALLCENTER_MSG.clockInFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
   async function doClockOut() {
     try {
       await clockOut().unwrap();
       await refetchSession();
-      toast.success("Clocked out", "Have a good one.");
+      toast.success(CALLCENTER_MSG.clockedOutTitle, CALLCENTER_MSG.clockedOutBody);
     } catch (err: unknown) {
-      const detail: string = getErrorDetail(err) ?? "Try again.";
+      const detail: string = getErrorDetail(err) ?? MESSAGES.tryAgain;
       // If the backend says we're not clocked in, our cache was stale — sync it.
       if (/not clocked in/i.test(detail)) {
         await refetchSession();
-        toast.warning("No active shift", "Your shift was already ended elsewhere.");
+        toast.warning(CALLCENTER_MSG.noActiveShiftTitle, CALLCENTER_MSG.noActiveShiftBody);
       } else {
-        toast.error("Clock-out failed", detail);
+        toast.error(CALLCENTER_MSG.clockOutFailed, detail);
       }
     }
   }
@@ -156,8 +158,8 @@ export function AgentPanelPage() {
           <CardBody>
             <EmptyState
               icon={<Icon name="phone" size={20} />}
-              title="You're off the clock"
-              description="Clock in to start receiving calls and tracking your shift."
+              title={CALLCENTER_MSG.offTheClockTitle}
+              description={CALLCENTER_MSG.offTheClockBody}
               action={
                 <Button variant="success" loading={clockingIn} onClick={doClockIn} leftIcon={<Icon name="phone" size={16} />}>
                   Clock in
@@ -269,9 +271,9 @@ export function AgentPanelPage() {
                 try {
                   await wrapUp(vals).unwrap();
                   await refetchSession();
-                  toast.success("Wrap-up saved");
+                  toast.success(CALLCENTER_MSG.wrapUpSaved);
                 } catch (err: unknown) {
-                  toast.error("Couldn't save wrap-up", getErrorDetail(err) ?? "Try again.");
+                  toast.error(CALLCENTER_MSG.saveWrapUpFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
                 }
               }}
             />
@@ -294,8 +296,8 @@ export function AgentPanelPage() {
             <div className="px-5 pb-5">
               <EmptyState
                 icon={<Icon name="phone" size={20} />}
-                title="No calls yet"
-                description="Calls will appear here once you start your shift."
+                title={CALLCENTER_MSG.noCallsTitle}
+                description={CALLCENTER_MSG.noCallsBody}
               />
             </div>
           ) : (
