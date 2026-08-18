@@ -3,13 +3,14 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { ADMIN_MSG } from "./messages";
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import type { RootState } from "../../app/store";
 import {
   useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation,
   useAgencyOptionsQuery, useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation,
-  useUpdateCallCenterInAgencyMutation,
+  useUpdateCallCenterInAgencyMutation, useListUsersQuery,
 } from "../../shared/api/baseApi";
-import type { CallCenterDto } from "../../shared/api/types";
+import type { CallCenterDto, UserSummary } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -27,6 +28,7 @@ import {
 export function CallCentersPage() {
   const roles = useSelector((s: RootState) => s.auth.user?.roles ?? []);
   const isSuperAdmin = roles.includes("SuperAdmin");
+  const navigate = useNavigate();
 
   // SuperAdmin scopes the page to a chosen agency; others are pinned to their own.
   const { data: agencyOptions } = useAgencyOptionsQuery(undefined, { skip: !isSuperAdmin });
@@ -38,6 +40,23 @@ export function CallCentersPage() {
   const own = useListCallCentersQuery(undefined, { skip: isSuperAdmin });
   const scoped = useAgencyCallCentersQuery(agencyId, { skip: !isSuperAdmin || !agencyId });
   const list = isSuperAdmin ? scoped.data : own.data;
+
+  // Who runs each centre: the Call Center Admin(s) pinned to it. The users list already carries
+  // callCenterId + roles, so we group here rather than round-tripping the backend. Clicking one
+  // opens their profile (where their access can be managed).
+  const { data: users } = useListUsersQuery(isSuperAdmin ? { agencyId } : undefined, {
+    skip: isSuperAdmin && !agencyId,
+  });
+  const adminsByCenter = useMemo(() => {
+    const map = new Map<string, UserSummary[]>();
+    for (const u of users ?? []) {
+      if (!u.callCenterId || !(u.roles ?? []).includes("CallCenterAdmin")) continue;
+      const arr = map.get(u.callCenterId) ?? [];
+      arr.push(u);
+      map.set(u.callCenterId, arr);
+    }
+    return map;
+  }, [users]);
   const { sorted, dirFor, toggle } = useTableSort(list, {
     key: "name",
     accessors: { status: (c) => (c.isActive ? 1 : 0) },
@@ -66,6 +85,7 @@ export function CallCentersPage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (c) => c.name },
       { header: "Code", value: (c) => c.code ?? "" },
+      { header: "Admin", value: (c) => (adminsByCenter.get(c.id) ?? []).map((a) => a.userName).join("; ") },
       { header: "Leads", value: (c) => c.leadCount ?? 0 },
       { header: "Active", value: (c) => (c.isActive ? "Yes" : "No") },
     ], `call-centres-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -178,6 +198,9 @@ export function CallCentersPage() {
                   <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>
                     <span className="inline-flex items-center gap-1">Code<InfoHint title="Short code" side="top">An optional short identifier for the call centre — it shows up in reports and logs so you can spot it at a glance.</InfoHint></span>
                   </TH>
+                  <TH>
+                    <span className="inline-flex items-center gap-1">Admin<InfoHint title="Call Center Admin" side="top">The admin who runs this call centre. Click a name to open their profile, where you can manage their access.</InfoHint></span>
+                  </TH>
                   <TH numeric sortDir={dirFor("leadCount")} onClick={() => toggle("leadCount")}>
                     <span className="inline-flex items-center gap-1">Leads<InfoHint title="Leads" side="top">How many leads currently sit in this call centre's pipeline.</InfoHint></span>
                   </TH>
@@ -193,6 +216,7 @@ export function CallCentersPage() {
                     <TD><Checkbox aria-label={`Select ${c.name}`} {...sel.checkboxProps(c.id)} /></TD>
                     <TD className="font-medium text-ink-900 truncate max-w-[16rem]">{c.name}</TD>
                     <TD className="font-mono text-xs text-ink-600 whitespace-nowrap">{c.code || "—"}</TD>
+                    <TD><AdminCell admins={adminsByCenter.get(c.id) ?? []} onOpen={(id) => navigate(`/profile/${id}`)} /></TD>
                     <TD numeric className="text-sm tabular-nums">{c.leadCount}</TD>
                     <TD>{c.isActive
                       ? <Badge tone="success" variant="soft">Active</Badge>
@@ -244,6 +268,11 @@ export function CallCentersPage() {
               <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-2 focus:ring-brand-500/40" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
               Active {!editing.isActive && <span className="text-amber-700">— every agent pinned to this centre will be locked out</span>}
             </label>
+            <div className="border-t border-ink-100 pt-3">
+              <div className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Call Center Admin</div>
+              <AdminCell admins={adminsByCenter.get(editing.id) ?? []}
+                onOpen={(id) => { setEditing(null); navigate(`/profile/${id}`); }} />
+            </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
               <Button type="submit" loading={saving || savingSa}>Save</Button>
@@ -252,5 +281,23 @@ export function CallCentersPage() {
         )}
       </Modal>
     </>
+  );
+}
+
+/** The Call Center Admin(s) for a centre — each a link to their profile. Falls back to a muted dash. */
+function AdminCell({ admins, onOpen }: { admins: UserSummary[]; onOpen: (id: string) => void }) {
+  if (admins.length === 0) return <span className="text-ink-400 text-sm">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {admins.map((a) => (
+        <button
+          key={a.id} type="button" onClick={() => onOpen(a.id)} title={a.email}
+          className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 rounded"
+        >
+          <Icon name="user" size={13} className="text-ink-400" />
+          <span className="truncate max-w-[10rem]">{a.userName}</span>
+        </button>
+      ))}
+    </div>
   );
 }

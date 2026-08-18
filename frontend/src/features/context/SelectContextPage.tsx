@@ -53,7 +53,9 @@ export function SelectContextPage() {
   const [callCenterId, setCallCenterId] = useState<string | null>(pinnedCallCenter);
   const [callCenterLabel, setCallCenterLabel] = useState<string>(user?.callCenterName ?? "");
 
-  async function enter() {
+  // Enter the chosen workspace. `destination` lets a clicked roster member land straight on their
+  // profile (the scope is set first, so the app is already narrowed when the profile opens).
+  async function enter(destination: string = "/dashboard") {
     try {
       const res = await setContext({
         agencyId: isSuperAdmin ? agencyId : undefined,
@@ -62,7 +64,7 @@ export function SelectContextPage() {
       dispatch(setAuth({
         accessToken: res.accessToken, refreshToken: res.refreshToken, user: res.user, contextChosen: true,
       }));
-      navigate("/dashboard");
+      navigate(destination);
     } catch (err: unknown) {
       toast.error(CONTEXT_MSG.enterFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
@@ -166,10 +168,10 @@ function CenterStep({ isSuperAdmin, agencyId, onPick }: {
   );
 }
 
-/** Final step: informational roster of the chosen scope, then Enter. */
+/** Final step: roster of the chosen scope. Click a member to open their profile; or Enter the workspace. */
 function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
   agencyId: string | null; callCenterId: string | null; scopeLabel: string;
-  entering: boolean; onEnter: () => void;
+  entering: boolean; onEnter: (destination?: string) => void;
 }) {
   const { data: users, isLoading } = useListUsersQuery(agencyId ? { agencyId } : undefined);
   const roster = useMemo(
@@ -193,7 +195,9 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
       ) : (
         <div className="max-h-72 overflow-y-auto -mx-1 px-1 space-y-1.5">
           {roster.map((u) => (
-            <div key={u.id} className="flex items-center gap-3 rounded-xl border hairline px-3 py-2">
+            <button key={u.id} type="button" disabled={entering}
+              onClick={() => onEnter(`/profile/${u.id}`)} title={`Open ${u.userName}'s profile`}
+              className="group w-full flex items-center gap-3 rounded-xl border hairline px-3 py-2 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/40 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30">
               <Avatar name={u.userName} size={32} />
               <div className="min-w-0">
                 <div className="text-sm font-medium text-ink-900 truncate">{u.userName}</div>
@@ -202,14 +206,17 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
               <div className="ml-auto flex items-center gap-1.5">
                 {!u.isActive && <Badge tone="neutral" variant="soft">Inactive</Badge>}
                 <Badge tone="neutral" variant="soft">{roleLabel(u.roles?.[0] ?? "")}</Badge>
+                <Icon name="chevronRight" size={15} className="text-ink-300 group-hover:text-brand-500 transition-colors" />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
+      <p className="text-xs text-ink-400 -mt-1">Tip: click a teammate to open their profile.</p>
+
       <div className="flex items-center justify-end pt-1">
-        <Button loading={entering} onClick={onEnter} leftIcon={<Icon name="arrowRight" size={15} />}>Enter workspace</Button>
+        <Button loading={entering} onClick={() => onEnter()} leftIcon={<Icon name="arrowRight" size={15} />}>Enter workspace</Button>
       </div>
     </div>
   );

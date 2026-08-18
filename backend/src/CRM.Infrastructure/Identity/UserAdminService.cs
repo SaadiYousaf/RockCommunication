@@ -1,6 +1,7 @@
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Application.Users.Commands;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
@@ -13,24 +14,47 @@ namespace CRM.Infrastructure.Identity;
 
 public class UserAdminService : IUserAdminService
 {
+    // User-facing notification copy. Kept as constants (not inline literals) and deliberately free of
+    // internal role codes — the affected user is told their access changed, not the raw role names.
+    private const string AccessChangedTitle = "Your access was updated";
+    private const string AccessChangedBody =
+        "An administrator updated your access. Sign out and back in for the changes to take effect.";
+
     private readonly UserManager<ApplicationUser> _users;
     private readonly RoleManager<ApplicationRole> _roles;
     private readonly AppDbContext _db;
     private readonly IJwtTokenService _jwt;
     private readonly ICurrentUser _current;
+    private readonly INotificationDispatcher _notify;
 
     public UserAdminService(
         UserManager<ApplicationUser> users,
         RoleManager<ApplicationRole> roles,
         AppDbContext db,
         IJwtTokenService jwt,
-        ICurrentUser current)
+        ICurrentUser current,
+        INotificationDispatcher notify)
     {
         _users = Guard.AgainstNull(users);
         _roles = Guard.AgainstNull(roles);
         _db = Guard.AgainstNull(db);
         _jwt = Guard.AgainstNull(jwt);
         _current = Guard.AgainstNull(current);
+        _notify = Guard.AgainstNull(notify);
+    }
+
+    // Best-effort in-app notice to the affected user — never notify yourself, and never let a
+    // notification failure fail the admin action that triggered it. Deep-links to their profile.
+    private async Task NotifyAccessChangedAsync(ApplicationUser target, CancellationToken ct)
+    {
+        if (target.Id == _current.UserId) return;
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(target.AgencyId, target.Id, AccessChangedTitle, AccessChangedBody, "/profile"),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch { /* graceful — notification is not critical to the role change */ }
     }
 
     private bool CallerIsSuperAdmin => _current.Roles?.Contains(Roles.SuperAdmin) == true;
@@ -123,6 +147,11 @@ public class UserAdminService : IUserAdminService
             var add = await _users.AddToRolesAsync(user, toAdd);
             if (!add.Succeeded) throw new ConflictException(string.Join("; ", add.Errors.Select(e => e.Description)));
         }
+
+        // Notify the affected user their access changed — required whenever an action touches another
+        // user. Only when something actually changed, so a no-op save stays silent.
+        if (toRemove.Count > 0 || toAdd.Count > 0)
+            await NotifyAccessChangedAsync(user, ct);
 
         var assigned = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, assigned.ToList(), Array.Empty<string>());

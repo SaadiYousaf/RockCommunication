@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import { getErrorDetail } from "../../shared/api/apiError";
-import { roleLabel } from "../../shared/constants/roles";
+import { roleLabel, canManageUser } from "../../shared/constants/roles";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, type IconName, InfoHint, Input, PageHeader, Skeleton, Textarea, useToast,
+  Badge, Button, Card, CardBody, EmptyState, Icon, type IconName, InfoHint, Input, Modal, PageHeader, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
+import { RolePicker } from "../../shared/components/RolePicker";
+import { useUpdateUserRolesMutation } from "../../shared/api/baseApi";
 import { useMyProfileQuery, useUpdateMyProfileMutation, useUserProfileQuery } from "./baseApi";
 import { AvatarImage, ProfileAvatarUploader } from "./ProfileAvatar";
 import type { UpdateProfileInput } from "./types";
@@ -32,6 +36,12 @@ export function ProfilePage() {
   const [update, { isLoading: saving }] = useUpdateMyProfileMutation();
   const toast = useToast();
 
+  // Admin viewing a colleague can edit their roles ("Manage access"). Guarded by the same rank rule
+  // the backend enforces — you can't grant a role above your own — so the card only shows when allowed.
+  const me = useSelector((s: RootState) => s.auth.user);
+  const [updateRoles, { isLoading: savingRoles }] = useUpdateUserRolesMutation();
+  const [editRolesOpen, setEditRolesOpen] = useState(false);
+
   const [form, setForm] = useState<UpdateProfileInput>({ phoneNumber: "", location: "", bio: "" });
   useEffect(() => {
     if (!profile) return;
@@ -45,6 +55,18 @@ export function ProfilePage() {
       toast.success(PROFILE_MSG.profileSaved, PROFILE_MSG.profileSavedDesc);
     } catch (err: unknown) {
       toast.error(PROFILE_MSG.saveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function saveRoles(roles: string[]) {
+    if (!profile) return;
+    try {
+      await updateRoles({ id: profile.id, roles }).unwrap();
+      toast.success(PROFILE_MSG.accessUpdated, PROFILE_MSG.accessUpdatedDesc(displayName));
+      setEditRolesOpen(false);
+      otherProfileQ.refetch();
+    } catch (err: unknown) {
+      toast.error(PROFILE_MSG.accessUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -79,6 +101,8 @@ export function ProfilePage() {
   }
 
   const displayName = profile.displayName || profile.userName || "User";
+  const canManageAccess = !isSelf && !!me
+    && canManageUser({ id: me.id, roles: me.roles }, { id: profile.id, roles: profile.roles });
   const set = (k: keyof UpdateProfileInput) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -167,8 +191,37 @@ export function ProfilePage() {
               )}
             </CardBody>
           </Card>
+
+          {canManageAccess && (
+            <Card>
+              <CardBody>
+                <SectionTitle icon="shield" title={PROFILE_MSG.manageAccessTitle} note={PROFILE_MSG.manageAccessNote} />
+                <p className="text-sm text-ink-600 mb-4">{PROFILE_MSG.manageAccessBlurb(displayName)}</p>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.roles.length > 0
+                      ? profile.roles.map((r) => <Badge key={r} tone="brand" variant="soft">{roleLabel(r)}</Badge>)
+                      : <span className="text-sm text-ink-400">{PROFILE_MSG.noRolesAssigned}</span>}
+                  </div>
+                  <Button variant="outline" leftIcon={<Icon name="edit" size={15} />}
+                    onClick={() => setEditRolesOpen(true)}>{PROFILE_MSG.editRoles}</Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
         </div>
       </div>
+
+      {canManageAccess && (
+        <Modal open={editRolesOpen} onClose={() => setEditRolesOpen(false)} title={PROFILE_MSG.editRolesTitle(displayName)}>
+          <RolePicker
+            initial={profile.roles}
+            saving={savingRoles}
+            onSave={saveRoles}
+            onCancel={() => setEditRolesOpen(false)}
+          />
+        </Modal>
+      )}
     </>
   );
 }

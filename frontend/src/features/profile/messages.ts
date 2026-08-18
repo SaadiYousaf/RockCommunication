@@ -19,4 +19,16 @@ export const PROFILE_MSG = {
   chooseImageFile: "Please choose an image file.",
   imageTooLarge: "Image must be under 5 MB.",
   avatarUploadFailed: "Upload failed — use an image under 5 MB.",
+
+  // Manage access (admin editing another user's roles)
+  manageAccessTitle: "Manage access",
+  manageAccessNote: "Admin only",
+  manageAccessBlurb: (name: string) =>
+    `Roles control what ${name} can see and do — for example promoting them to Admin. Changes take effect on their next sign-in and they'll be notified.`,
+  noRolesAssigned: "No roles assigned",
+  editRoles: "Edit roles",
+  editRolesTitle: (name: string) => `Edit roles — ${name}`,
+  accessUpdated: "Access updated",
+  accessUpdatedDesc: (name: string) => `${name}'s roles have been updated.`,
+  accessUpdateFailed: "Couldn't update access",
 } as const;
