@@ -29,10 +29,11 @@ public static class PayrollSlipPdf
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text(companyName).FontSize(16).SemiBold().FontColor(Colors.Green.Darken2);
+                    // The employee's CALL CENTER is the entity that pays them, so it headlines the slip
+                    // (falling back to the company name only when they aren't tied to a call center).
+                    var payer = !string.IsNullOrWhiteSpace(p.CallCenterName) ? p.CallCenterName! : companyName;
+                    col.Item().Text(payer).FontSize(16).SemiBold().FontColor(Colors.Green.Darken2);
                     col.Item().Text($"Salary Slip — {monthName} {p.Year}").FontSize(11).FontColor(Colors.Grey.Medium);
-                    if (!string.IsNullOrWhiteSpace(p.CallCenterName))
-                        col.Item().Text(p.CallCenterName).FontSize(10).FontColor(Colors.Grey.Darken1);
                     col.Item().PaddingTop(6).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                 });
 

@@ -30,15 +30,16 @@ public record SavePayrollConfigCommand(Guid CallCenterId, SavePayrollConfigInput
 public static class PayrollConfigAccess
 {
     /// <summary>
-    /// HR / Admin / SuperAdmin may configure any call centre in their tenant; a CallCenterAdmin may
-    /// configure only their own. Everyone else is denied.
+    /// ACCESS is gated by the <c>payroll.config</c> permission at the API (assignable via the Roles
+    /// UI — HR/Admin/CEO/CallCenterAdmin hold it by default). This enforces SCOPE only: a user pinned
+    /// to a call centre may configure only that centre; an agency-level holder may configure any
+    /// centre in their agency (the tenant query filter enforces the agency boundary).
     /// </summary>
     public static void EnsureCanConfigure(ICurrentUser user, Guid callCenterId)
     {
         Guard.AgainstNull(user);
-        if (HrAccess.IsHr(user)) return;
-        if (user.Roles.Contains(DomainRoles.CallCenterAdmin) && user.CallCenterId == callCenterId) return;
-        throw new ForbiddenAccessException();
+        if (user.CallCenterId is { } pinned && pinned != callCenterId)
+            throw new ForbiddenAccessException("You can only configure your own call center's deduction rules.");
     }
 }
 

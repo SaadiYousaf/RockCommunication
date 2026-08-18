@@ -83,6 +83,12 @@ export function SelectContextPage() {
 
         <Card className="animate-rise">
           <CardBody className="space-y-5">
+            {stepIdx > 0 && (
+              <button type="button" onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
+                className="inline-flex items-center gap-1 -mt-1 -ml-1 text-sm font-medium text-ink-600 hover:text-ink-900 transition-colors">
+                <Icon name="chevronLeft" size={16} /> Back
+              </button>
+            )}
             <div>
               <div className="section-title mb-1.5 flex items-center gap-1.5">
                 <span aria-hidden className="inline-block h-1 w-1 rounded-full bg-brand-500" /> Choose your workspace
@@ -112,7 +118,6 @@ export function SelectContextPage() {
                 callCenterId={callCenterId}
                 scopeLabel={callCenterId ? callCenterLabel : (isSuperAdmin && agencyId ? `${agencyLabel} · all call centers` : "All call centers")}
                 entering={entering}
-                onBack={flow.length > 1 ? () => setStepIdx((i) => Math.max(0, i - 1)) : undefined}
                 onEnter={enter}
               />
             )}
@@ -160,9 +165,9 @@ function CenterStep({ isSuperAdmin, agencyId, onPick }: {
 }
 
 /** Final step: informational roster of the chosen scope, then Enter. */
-function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onBack, onEnter }: {
+function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
   agencyId: string | null; callCenterId: string | null; scopeLabel: string;
-  entering: boolean; onBack?: () => void; onEnter: () => void;
+  entering: boolean; onEnter: () => void;
 }) {
   const { data: users, isLoading } = useListUsersQuery(agencyId ? { agencyId } : undefined);
   const roster = useMemo(
@@ -201,8 +206,7 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onBack, onEn
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-1">
-        {onBack ? <Button variant="ghost" onClick={onBack} leftIcon={<Icon name="chevronLeft" size={15} />}>Back</Button> : <span />}
+      <div className="flex items-center justify-end pt-1">
         <Button loading={entering} onClick={onEnter} leftIcon={<Icon name="arrowRight" size={15} />}>Enter workspace</Button>
       </div>
     </div>

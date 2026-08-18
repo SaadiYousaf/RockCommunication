@@ -46,6 +46,8 @@ public static class Permissions
     public const string CommissionsWrite = "commissions.write";
     public const string PayrollView = "payroll.view";
     public const string PayrollProcess = "payroll.process";
+    /// <summary>Manage a call centre's salary deduction rules (late/half/absent/NCNS factors).</summary>
+    public const string PayrollConfig = "payroll.config";
 
     // Resources
     public const string KnowledgeView = "knowledge.view";

@@ -148,17 +148,14 @@ public class PayrollTests
     }
 
     [Fact]
-    public void EnsureCanConfigure_forbids_an_unrelated_role()
+    public void EnsureCanConfigure_allows_an_agency_level_holder_any_centre()
     {
-        var centre = Guid.NewGuid();
-        // A Closer pinned to the very centre still has no business editing deduction rules.
-        var user = new FakeCurrentUser
-        {
-            Roles = new[] { DomainRoles.Closer },
-            CallCenterId = centre
-        };
+        // Access is gated by the payroll.config PERMISSION at the API; EnsureCanConfigure enforces
+        // SCOPE only. An agency-level holder (no call-centre pin) may configure any centre in their
+        // agency (the tenant query filter enforces the agency boundary).
+        var user = new FakeCurrentUser { Roles = new[] { DomainRoles.HR }, CallCenterId = null };
 
-        Assert.Throws<ForbiddenAccessException>(
-            () => PayrollConfigAccess.EnsureCanConfigure(user, centre));
+        var ex = Record.Exception(() => PayrollConfigAccess.EnsureCanConfigure(user, Guid.NewGuid()));
+        Assert.Null(ex);
     }
 }

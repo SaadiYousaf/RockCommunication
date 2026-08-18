@@ -1,4 +1,6 @@
+using CRM.Api.Authorization;
 using CRM.Api.Services;
+using CRM.Application.Common.Authorization;
 using CRM.Application.Hr;
 using CRM.Domain.Common;
 using MediatR;
@@ -38,10 +40,12 @@ public class HrPayrollController : ControllerBase
 
     // Per-call-centre deduction rules. Access is enforced in the handler: HR/Admin/SuperAdmin manage
     // any centre; a CallCenterAdmin manages only their own.
+    [HasPermission(Permissions.PayrollConfig)]
     [HttpGet("config/{callCenterId:guid}")]
     public async Task<IActionResult> GetConfig(Guid callCenterId, CancellationToken ct)
         => Ok(await _mediator.Send(new GetPayrollConfigQuery(callCenterId), ct));
 
+    [HasPermission(Permissions.PayrollConfig)]
     [HttpPut("config/{callCenterId:guid}")]
     public async Task<IActionResult> SaveConfig(Guid callCenterId, [FromBody] SavePayrollConfigInput input, CancellationToken ct)
     {

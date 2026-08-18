@@ -1,6 +1,8 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 import {
   useAttendanceDayQuery, useAttendanceSummaryQuery, useMarkAttendanceMutation, useListCallCentersQuery,
   useBulkMarkAttendanceMutation, useFillAttendanceFromClockInsMutation,
@@ -22,7 +24,11 @@ const today = () => new Date().toISOString().slice(0, 10);
  */
 export function HrAttendancePage() {
   const [tab, setTab] = useState<Tab>("daily");
-  const [callCenterId, setCallCenterId] = useState("");
+  // Default the call-centre filter to the admin's chosen workspace (and re-sync when they switch),
+  // so the page opens focused on the call center they're working in.
+  const scopedCallCenter = useSelector((s: RootState) => s.auth.user?.callCenterId) ?? "";
+  const [callCenterId, setCallCenterId] = useState(scopedCallCenter);
+  useEffect(() => { setCallCenterId(scopedCallCenter); }, [scopedCallCenter]);
   const { data: callCenters } = useListCallCentersQuery();
   const cc = callCenterId || undefined;
 

@@ -42,8 +42,10 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   const userRoles = auth.user.roles ?? [];
   const userModules = auth.user.modules ?? [];
 
-  // Admins choose a working context (agency / call-center) once per session before entering the app.
-  const CONTEXT_ROLES = ["SuperAdmin", "Admin", "CallCenterAdmin"];
+  // Admins who actually have a CHOICE pick a working context once per session before entering the app.
+  // A Call Center Admin is pinned to a single center (already scoped by their token), so forcing them
+  // through a one-option picker is just friction — they skip it.
+  const CONTEXT_ROLES = ["SuperAdmin", "Admin"];
   if (userRoles.some((r) => CONTEXT_ROLES.includes(r)) && !auth.contextChosen && pathname !== "/select-context") {
     return <Navigate to="/select-context" replace />;
   }

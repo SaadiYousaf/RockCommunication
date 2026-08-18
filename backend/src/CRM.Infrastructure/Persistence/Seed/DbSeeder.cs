@@ -166,7 +166,16 @@ public static class DbSeeder
             Permissions.UsersRead, Permissions.UsersManage,
             Permissions.CallCentersView, Permissions.CallCenterProfileEdit,
             Permissions.AttendanceView,
+            Permissions.PayrollConfig,   // may set their OWN call centre's deduction rules
             Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
+        };
+
+        // HR: people-ops management — attendance, payroll, and the deduction rules.
+        string[] hrGrants = new[]
+        {
+            Permissions.DashboardView, Permissions.AttendanceView,
+            Permissions.PayrollView, Permissions.PayrollProcess, Permissions.PayrollConfig,
+            Permissions.UsersRead, Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
         };
 
         // Common read bundles
@@ -232,6 +241,7 @@ public static class DbSeeder
             [Roles.ProgramManager] = everythingExceptRestricted,
             [Roles.TeamLead] = teamLeadGrants,
             [Roles.CallCenterAdmin] = callCenterAdminGrants,
+            [Roles.HR] = hrGrants,
             // Every agent-level role gets ChatWrite — internal chat is how the floor
             // communicates; read-only chat is useless. Same for QueueWrite (mark
             // queue items handled).

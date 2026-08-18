@@ -61,7 +61,10 @@ export function PayrollPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [callCenterId, setCallCenterId] = useState("");
+  // Default the call-centre filter to the admin's chosen workspace (re-sync on switch).
+  const scopedCallCenter = useSelector((s: RootState) => s.auth.user?.callCenterId) ?? "";
+  const [callCenterId, setCallCenterId] = useState(scopedCallCenter);
+  useEffect(() => { setCallCenterId(scopedCallCenter); }, [scopedCallCenter]);
   const monthValue = `${year}-${String(month).padStart(2, "0")}`;
 
   const { data: rows, isLoading } = useListPayrollQuery({ year, month, callCenterId: callCenterId || undefined });
