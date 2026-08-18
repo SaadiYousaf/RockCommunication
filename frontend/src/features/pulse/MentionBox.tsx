@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Avatar, Textarea, cn } from "../../shared/ui";
 
 export interface MentionUser { id: string; userName: string; }
@@ -26,12 +27,29 @@ export function MentionBox({
   const [query, setQuery] = useState("");
   const [anchor, setAnchor] = useState(0);   // index of the '@' being completed
   const [active, setActive] = useState(0);
+  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null);
 
   const matches = useMemo(() => {
     if (!open) return [];
     const q = query.toLowerCase();
     return users.filter((u) => u.userName.toLowerCase().includes(q)).slice(0, 6);
   }, [open, query, users]);
+
+  // Position the menu against the field in VIEWPORT space and render it through a portal. The feed's
+  // per-post entrance animation leaves a transform on each post, creating a stacking context that
+  // would otherwise trap this dropdown behind the next post — a portal + fixed positioning escapes it.
+  useLayoutEffect(() => {
+    if (!open || matches.length === 0) { setMenuPos(null); return; }
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const menuH = matches.length * 34 + 34;
+    const openUp = r.bottom + 4 + menuH > window.innerHeight - 8 && r.top - menuH > 8;
+    setMenuPos({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - 272)),
+      top: openUp ? r.top - menuH - 4 : r.bottom + 4,
+    });
+  }, [open, matches.length, value]);
 
   function detect(v: string, caret: number) {
     const before = v.slice(0, caret);
@@ -75,8 +93,9 @@ export function MentionBox({
     else if (!multiline && e.key === "Enter" && !e.shiftKey && !(open && matches.length)) { e.preventDefault(); onSubmit(); }
   }
 
-  const menu = open && matches.length > 0 && (
-    <div className="absolute z-20 mt-1 left-0 w-60 max-w-[80vw] rounded-xl border border-ink-200 bg-white shadow-pop py-1">
+  const menu = open && matches.length > 0 && menuPos && createPortal(
+    <div style={{ position: "fixed", left: menuPos.left, top: menuPos.top, width: 256 }}
+      className="z-[100] rounded-xl border border-ink-200 bg-white shadow-pop py-1">
       <div className="px-3 pb-1 pt-0.5 text-[10px] uppercase tracking-wide text-ink-400">Mention a teammate</div>
       {matches.map((u, i) => (
         <button key={u.id} type="button" onMouseDown={(ev) => { ev.preventDefault(); insert(u); }}
@@ -85,7 +104,8 @@ export function MentionBox({
           <Avatar name={u.userName} size={22} /> {u.userName}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 
   return (

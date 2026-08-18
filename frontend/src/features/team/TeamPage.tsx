@@ -1,4 +1,5 @@
 import { roleLabel } from "../../shared/constants/roles";
+import { MESSAGES } from "../../shared/constants/messages";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
@@ -90,7 +91,7 @@ export function TeamPage() {
       {!canEdit && (
         <div className="mb-4 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2 text-xs text-ink-600 flex items-center gap-2">
           <Icon name="lock" size={14} />
-          Read-only — you don't have <code className="px-1 py-0.5 bg-white rounded border border-ink-200">team.write</code>. Ask your CEO to grant it via Role management.
+          {MESSAGES.readOnly("the team")}
         </div>
       )}
 

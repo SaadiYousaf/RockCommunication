@@ -11,6 +11,7 @@ import {
   SearchInput, Skeleton, Stat, useToast, cn,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
+import { MESSAGES } from "../../shared/constants/messages";
 
 /**
  * Role Management.
@@ -315,7 +316,7 @@ export function RolesPage() {
                       leftIcon={<Icon name="trash" size={15} />}
                       onClick={() => setConfirmDelete(selected)}
                       disabled={!canEditModules}
-                      title={canEditModules ? "Delete this custom role" : "You need roles.manage to delete roles"}
+                      title={canEditModules ? "Delete this custom role" : MESSAGES.noPermission("delete roles")}
                       className="text-rose-600 hover:bg-rose-50"
                     >
                       Delete role
@@ -336,7 +337,7 @@ export function RolesPage() {
                       variant="outline"
                       onClick={handleRename}
                       loading={renaming}
-                      title={!canEditModules ? "You need roles.manage to rename roles" : editingName.trim() === selected.name ? "Change the name first" : undefined}
+                      title={!canEditModules ? MESSAGES.noPermission("rename roles") : editingName.trim() === selected.name ? "Change the name first" : undefined}
                       disabled={!canEditModules || selected.isSystem || editingName.trim() === selected.name || !editingName.trim()}
                     >
                       Save name
@@ -377,7 +378,7 @@ export function RolesPage() {
                 {!canEditModules && (
                   <div className="px-5 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-100">
                     <Icon name="lock" size={12} className="inline-block mr-1" />
-                    Read-only — you don't have <code className="font-mono">roles.manage</code>.
+                    {MESSAGES.readOnly("roles")}
                   </div>
                 )}
 
@@ -601,7 +602,7 @@ function RolePermissionsPanel({ roleId, canEdit }: { roleId: string; canEdit: bo
         {!canEdit && (
           <div className="px-5 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-100">
             <Icon name="lock" size={12} className="inline-block mr-1" />
-            Read-only — you don't have <code className="font-mono">permissions.manage</code>.
+            {MESSAGES.readOnly("permissions")}
           </div>
         )}
 
