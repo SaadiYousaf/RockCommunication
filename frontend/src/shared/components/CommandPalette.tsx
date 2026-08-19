@@ -46,6 +46,7 @@ const ALL_ITEMS: PaletteItem[] = [
   { id: "lists",          label: "Lead Lists", to: "/lists", group: "Pipeline", icon: "inbox", module: "campaigns", keywords: ["list", "import"] },
   { id: "cadences",       label: "Cadences", to: "/cadences", group: "Pipeline", icon: "filter", module: "campaigns" },
   { id: "sales",          label: "Sales", to: "/sales", group: "Pipeline", icon: "briefcase", module: "sales" },
+  { id: "retention",      label: "Retention", to: "/retention", group: "Pipeline", icon: "refresh", module: "retention", keywords: ["bad bank", "nsf", "cancelled", "declined", "recover", "policy"] },
   { id: "commissions",    label: "Commissions", to: "/commissions", group: "Pipeline", icon: "doc", module: "commissions", keywords: ["pay", "earnings"] },
 
   // Operations
@@ -187,7 +188,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 function Palette({ onClose }: { onClose: () => void }) {
   const auth = useSelector((s: RootState) => s.auth);
   const userModules = auth.user?.modules ?? [];
-  const isAdmin = (auth.user?.roles ?? []).includes("Admin");
+  // Admin AND SuperAdmin bypass module gating here, matching the sidebar nav (Layout `visible()`).
+  // Without the SuperAdmin bypass, a SuperAdmin only saw palette pages present in their (possibly
+  // stale) module list, so freshly-added modules like Retention wouldn't surface until re-login.
+  const roles = auth.user?.roles ?? [];
+  const isAdmin = roles.includes("Admin") || roles.includes("SuperAdmin");
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const toast = useToast();
