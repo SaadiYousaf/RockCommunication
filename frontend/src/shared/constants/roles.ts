@@ -7,6 +7,7 @@ export const ALL_ROLES = [
   "JrCloser", "Closer", "Validator", "SelfValidator",
   "LicenseAgent",
   "Followups", "Correspondence", "Winbacks",
+  "Retention",
   "HR", "OfficeBoy",
 ] as const;
 
@@ -26,6 +27,7 @@ export const ROLE_TONES: Record<string, BadgeTone> = {
   Closer: "success", JrCloser: "success", SelfValidator: "success",
   Validator: "info", LicenseAgent: "info", Fronter: "brand", Verifier: "brand",
   Followups: "neutral", Correspondence: "neutral", Winbacks: "neutral",
+  Retention: "warning",
   HR: "accent", OfficeBoy: "neutral",
 };
 

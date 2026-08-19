@@ -1127,3 +1127,29 @@ export interface FeedPost {
   poll: FeedPoll | null;
   canDelete: boolean;
 }
+
+/** A policy sitting in the Retention worklist — a sale that went bad post-submission. */
+export interface RetentionPolicy {
+  saleId: string;
+  saleNumber: number;
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  state?: string | null;
+  carrier: string;
+  policyNumber?: string | null;
+  monthlyPremium: number;
+  closerUserId: string;
+  closerName?: string | null;
+  /** ValidatorStatus name, e.g. "BadBank" | "Nsf" | "ClientCancelled" | "Decline" | "ErrorInApplicationInformation". */
+  status: string;
+  declineReason?: string | null;
+  soldAt: string;
+  validatedAt?: string | null;
+}
+
+export interface RetentionResolveResult {
+  saleId: string;
+  status: string;
+  leadStage: string;
+}

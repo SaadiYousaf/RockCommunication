@@ -22,6 +22,12 @@ public static class Permissions
     public const string SalesFund = "sales.fund";
     public const string SalesWrite = "sales.write";
 
+    /// <summary>View the retention worklist — policies that went bad post-submission (bad bank, NSF,
+    /// client cancelled, declined, application error).</summary>
+    public const string RetentionRead = "retention.read";
+    /// <summary>Work a retention policy — update its status (e.g. mark recovered) and add a note.</summary>
+    public const string RetentionWork = "retention.work";
+
     public const string CallbacksRead = "callbacks.read";
     public const string CallbacksWrite = "callbacks.write";
 

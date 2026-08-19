@@ -103,6 +103,7 @@ const PulsePage = lazyWithReload(() => import("../features/pulse/PulsePage").the
 const BugsPage = lazyWithReload(() => import("../features/bugs/BugsPage").then(m => ({ default: m.BugsPage })));
 const SelectContextPage = lazyWithReload(() => import("../features/context/SelectContextPage").then(m => ({ default: m.SelectContextPage })));
 const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
+const RetentionPage = lazyWithReload(() => import("../features/retention/RetentionPage").then(m => ({ default: m.RetentionPage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 
@@ -114,6 +115,7 @@ const M = {
   Leads: "leads",
   LeadsSearch: "leads.search",
   Sales: "sales",
+  Retention: "retention",
   Callbacks: "callbacks",
   Commissions: "commissions",
   Reports: "reports",
@@ -232,6 +234,10 @@ const router = createBrowserRouter([
               { path: "/sales",     element: <SalesPage /> },
               { path: "/sales/:id", element: <SaleDetailPage /> },
             ],
+          },
+          {
+            element: <ProtectedRoute modules={[M.Retention]} />,
+            children: [{ path: "/retention", element: <RetentionPage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Commissions]} />,

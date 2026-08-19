@@ -17,6 +17,7 @@ import type {
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput,
   FeedPost, FeedComment,
+  RetentionPolicy, RetentionResolveResult,
   BugReport, BugActivity, BugReportDetail,
   SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
@@ -97,7 +98,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1297,6 +1298,19 @@ export const baseApi = createApi({
       query: ({ id, response }) => ({ url: `/api/meetings/${id}/respond`, method: "POST", body: { response } }),
       invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings"],
     }),
+
+    // Retention worklist — problem policies (bad bank / NSF / cancelled / declined / app error).
+    listRetentionPolicies: b.query<RetentionPolicy[], void>({
+      query: () => "/api/retention",
+      providesTags: ["Retention"],
+    }),
+    resolveRetention: b.mutation<RetentionResolveResult, { saleId: string; newStatus: string; note?: string | null; leadId?: string }>({
+      // leadId is client-only (for cache invalidation); the backend endpoint takes status + note.
+      query: ({ saleId, newStatus, note }) => ({ url: `/api/retention/${saleId}/resolve`, method: "POST", body: { newStatus, note } }),
+      // A resolution changes the policy's status (may leave the worklist) and touches the lead + sale.
+      invalidatesTags: (_r, _e, arg) =>
+        ["Retention", "Sales", "Leads", ...(arg.leadId ? [{ type: "Lead", id: arg.leadId } as const] : [])],
+    }),
   }),
 });
 
@@ -1512,6 +1526,7 @@ export const {
   useDeleteSocialReportMutation, useUpcomingBirthdaysQuery,
   useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,
   useUpdateMeetingMutation, useCancelMeetingMutation, useRespondMeetingMutation,
+  useListRetentionPoliciesQuery, useResolveRetentionMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

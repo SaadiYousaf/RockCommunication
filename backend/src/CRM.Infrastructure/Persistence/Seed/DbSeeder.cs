@@ -167,6 +167,7 @@ public static class DbSeeder
             Permissions.CallCentersView, Permissions.CallCenterProfileEdit,
             Permissions.AttendanceView,
             Permissions.PayrollConfig,   // may set their OWN call centre's deduction rules
+            Permissions.RetentionRead, Permissions.RetentionWork,   // oversee their centre's retention
             Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
         };
 
@@ -202,6 +203,7 @@ public static class DbSeeder
             Permissions.CallCenterView,
             Permissions.QaView, Permissions.QaSubmit, Permissions.QaWrite,
             Permissions.SalesRead,
+            Permissions.RetentionRead, Permissions.RetentionWork,
             Permissions.UsersRead, Permissions.TeamRead,
             Permissions.ReportsView
         }).Distinct().ToArray();
@@ -271,7 +273,16 @@ public static class DbSeeder
             },
             [Roles.Followups] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray(),
             [Roles.Correspondence] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray(),
-            [Roles.Winbacks] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray()
+            [Roles.Winbacks] = agentReads.Concat(new[] { Permissions.LeadsTransition, Permissions.CallbacksWrite, Permissions.ChatWrite, Permissions.QueueWrite }).ToArray(),
+            // Retention: works problem policies only — read leads/sales to see the case, read+work the
+            // retention worklist, chat + KB. No queue/callbacks/agent-panel (not a dialing role).
+            [Roles.Retention] = new[]
+            {
+                Permissions.DashboardView,
+                Permissions.LeadsRead, Permissions.SalesRead,
+                Permissions.RetentionRead, Permissions.RetentionWork,
+                Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
+            }
         };
 
         foreach (var (roleName, codes) in roleGrants)
@@ -348,7 +359,7 @@ public static class DbSeeder
         string[] manager = new[] {
             Modules.Dashboard, Modules.Team, Modules.AgentPanel, Modules.MyQueue,
             Modules.Leads, Modules.LeadsSearch,
-            Modules.Sales, Modules.Callbacks,
+            Modules.Sales, Modules.Retention, Modules.Callbacks,
             Modules.Supervisor, Modules.Attendance, Modules.CallCenter, Modules.Qa,
             Modules.Commissions,
             Modules.Knowledge, Modules.Chat, Modules.Reports,
@@ -366,7 +377,7 @@ public static class DbSeeder
             [Domain.Enums.Roles.CEO] = all,
             // Call Center Admin manages its own call center's users + profile — give it the nav
             // it needs (User Management is its core screen) and nothing agency-wide.
-            [Domain.Enums.Roles.CallCenterAdmin] = new[] { Modules.Dashboard, Modules.Team, Modules.UsersManagement, Modules.Attendance, Modules.Knowledge, Modules.Chat },
+            [Domain.Enums.Roles.CallCenterAdmin] = new[] { Modules.Dashboard, Modules.Team, Modules.UsersManagement, Modules.Attendance, Modules.Retention, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.ProjectManager] = manager,
             [Domain.Enums.Roles.QAManager] = new[] { Modules.Dashboard, Modules.Qa, Modules.Supervisor, Modules.Reports, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.TechLead] = manager,
@@ -381,7 +392,9 @@ public static class DbSeeder
             [Domain.Enums.Roles.LicenseAgent] = new[] { Modules.Dashboard, Modules.Sales, Modules.Commissions, Modules.Knowledge, Modules.Chat },
             [Domain.Enums.Roles.Followups] = agent,
             [Domain.Enums.Roles.Correspondence] = agent,
-            [Domain.Enums.Roles.Winbacks] = agent
+            [Domain.Enums.Roles.Winbacks] = agent,
+            // Retention agent: their worklist + the surfaces they need to work a case.
+            [Domain.Enums.Roles.Retention] = new[] { Modules.Dashboard, Modules.Retention, Modules.Leads, Modules.Knowledge, Modules.Chat },
         };
 
         // Reconcile (add missing AND remove grants that aren't in the spec) so role

@@ -84,6 +84,7 @@ const NAV: NavNode[] = [
         ],
       },
       { key: "sales",       to: "/sales",       label: "Sales",       icon: "briefcase", module: "sales" },
+      { key: "retention",   to: "/retention",   label: "Retention",   icon: "refresh",   module: "retention" },
       { key: "commissions", to: "/commissions", label: "Commissions", icon: "doc",       module: "commissions" },
       { key: "calls",       to: "/calls",       label: "Call History", icon: "phone",    module: "callcenter" },
     ],

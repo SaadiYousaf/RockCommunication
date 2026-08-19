@@ -45,6 +45,13 @@ public static class Roles
     public const string Correspondence = "Correspondence";
     public const string Winbacks = "Winbacks";
 
+    /// <summary>
+    /// Retention agent — works submitted policies that went bad post-submission (bank rejected,
+    /// payment bounced/NSF, client cancelled, declined, application error) and tries to recover
+    /// them. Sees ONLY policies in those problem statuses, within their agency/call-center scope.
+    /// </summary>
+    public const string Retention = "Retention";
+
     // ── Back-office / support ─────────────────────────────────────────────────
     /// <summary>Human-resources staff: manage employee records, attendance, payroll, hiring.</summary>
     public const string HR = "HR";
@@ -61,6 +68,7 @@ public static class Roles
         JrCloser, Closer, Validator, SelfValidator,
         LicenseAgent,
         Followups, Correspondence, Winbacks,
+        Retention,
         HR, OfficeBoy
     };
 
