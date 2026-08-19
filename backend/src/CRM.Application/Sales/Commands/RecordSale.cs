@@ -3,6 +3,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Workflow;
+using CRM.Application.Sales.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
@@ -72,9 +73,11 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
     private readonly IInternalSaleChecker _checker;
     private readonly IWorkflowEngine _workflow;
     private readonly ILyonsBankingValidator _lyons;
+    private readonly IDuplicateSaleNotifier _duplicateAlert;
 
     public RecordSaleHandler(IApplicationDbContext db, ICurrentUser user, ICommissionEngine commission,
-        IInternalSaleChecker checker, IWorkflowEngine workflow, ILyonsBankingValidator lyons)
+        IInternalSaleChecker checker, IWorkflowEngine workflow, ILyonsBankingValidator lyons,
+        IDuplicateSaleNotifier duplicateAlert)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
@@ -82,6 +85,7 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
         _checker = Guard.AgainstNull(checker);
         _workflow = Guard.AgainstNull(workflow);
         _lyons = Guard.AgainstNull(lyons);
+        _duplicateAlert = Guard.AgainstNull(duplicateAlert);
     }
 
     public async Task<SaleDto> Handle(RecordSaleCommand request, CancellationToken ct)
@@ -94,9 +98,17 @@ public class RecordSaleHandler : IRequestHandler<RecordSaleCommand, SaleDto>
             l => l.Id == input.LeadId && l.AgencyId == _user.AgencyId, ct)
             ?? throw new NotFoundException(nameof(Lead), input.LeadId);
 
-        // 1) Duplicate check — a lead can only have one sale.
+        // 1) Duplicate check — a lead can only have one sale. Before rejecting, alert oversight
+        //    (call-centre admin, Super Admin, the closer's team lead) about who tried — best-effort,
+        //    so a notification hiccup never turns this clean 409 into a 500.
         var existing = await _db.Sales.AnyAsync(s => s.LeadId == lead.Id, ct);
-        if (existing) throw new ConflictException("A sale already exists for this lead.");
+        if (existing)
+        {
+            await _duplicateAlert.NotifyAsync(new DuplicateSaleAttempt(
+                lead.AgencyId, lead.CallCenterId, _user.UserId.Value, lead.Id,
+                $"{lead.FirstName} {lead.LastName}".Trim()), ct);
+            throw new ConflictException("A sale already exists for this lead.");
+        }
 
         // 2) Banking gate — the banking code is derived from a Lyons validation of the
         //    bank account, never entered by the closer.
