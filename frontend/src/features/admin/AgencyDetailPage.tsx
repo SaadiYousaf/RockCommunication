@@ -1,14 +1,18 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { ADMIN_MSG } from "./messages";
-import { useMemo, useState } from "react";
+import { MESSAGES } from "../../shared/constants/messages";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import { API_URL } from "../../shared/config";
 import {
   useGetAgencyQuery, useListSalesQuery, useAgencyLicenseAgentsQuery,
   useCreateCallCenterInAgencyMutation, useCreateLicenseAgentMutation,
   useAgencyCallCentersQuery, useUpdateCallCenterInAgencyMutation,
-  useListUsersQuery,
+  useListUsersQuery, useUpdateAgencyMutation, useUploadAgencyLogoMutation,
 } from "../../shared/api/baseApi";
-import type { CallCenterDto } from "../../shared/api/types";
+import type { AgencyDto, CallCenterDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
@@ -123,6 +127,9 @@ export function AgencyDetailPage() {
         </CardBody>
       </Card>
 
+      {/* Customer-email branding (welcome email) */}
+      {agency && <AgencyBrandingCard agency={agency} />}
+
       {/* Call centres */}
       <Card className="mb-4">
         <CardHeader
@@ -236,6 +243,120 @@ export function AgencyDetailPage() {
       {showAgent && <NewLicenseAgentModal agencyId={agencyId} onClose={() => setShowAgent(false)} />}
       {editCc && <EditCallCenterModal agencyId={agencyId} cc={editCc} onClose={() => setEditCc(null)} />}
     </>
+  );
+}
+
+/**
+ * Customer-email branding for an agency: the reply-to address and the logo that appear on the
+ * welcome email a customer receives when their policy is approved. The logo preview streams through
+ * the authorized endpoint (bearer → blob), mirroring the avatar pattern.
+ */
+function AgencyBrandingCard({ agency }: { agency: AgencyDto }) {
+  const toast = useToast();
+  const [updateAgency, { isLoading: saving }] = useUpdateAgencyMutation();
+  const [uploadLogo, { isLoading: uploading }] = useUploadAgencyLogoMutation();
+  const [senderEmail, setSenderEmail] = useState(agency.senderEmail ?? "");
+  useEffect(() => { setSenderEmail(agency.senderEmail ?? ""); }, [agency.senderEmail]);
+
+  const token = useSelector((s: RootState) => s.auth.accessToken) ?? "";
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoVer, setLogoVer] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!agency.hasLogo) { setLogoPreview(null); return; }
+    let url: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/agencies/${agency.id}/logo?v=${logoVer}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const blob = await res.blob();
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setLogoPreview(url);
+      } catch { /* preview is best-effort */ }
+    })();
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [agency.id, agency.hasLogo, token, logoVer]);
+
+  async function saveSender() {
+    try {
+      await updateAgency({
+        id: agency.id, name: agency.name, code: agency.code, isActive: agency.isActive,
+        senderEmail: senderEmail.trim() || null,
+      }).unwrap();
+      toast.success(ADMIN_MSG.agencyDetail.brandingSaved);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.agencyDetail.brandingSaveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function onPickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";   // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error(ADMIN_MSG.agencyDetail.chooseImage); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(ADMIN_MSG.agencyDetail.logoTooLarge); return; }
+    try {
+      await uploadLogo({ id: agency.id, file }).unwrap();
+      setLogoVer((v) => v + 1);
+      toast.success(ADMIN_MSG.agencyDetail.logoUpdated);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.agencyDetail.logoUploadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  return (
+    <Card className="mb-4">
+      <CardHeader title={ADMIN_MSG.agencyDetail.brandingTitle} subtitle={ADMIN_MSG.agencyDetail.brandingSubtitle} />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Reply-to email */}
+          <div>
+            <Input
+              label={ADMIN_MSG.agencyDetail.senderEmailLabel}
+              labelHint="Optional"
+              type="email"
+              leftIcon={<Icon name="mail" size={14} />}
+              value={senderEmail}
+              onChange={(e) => setSenderEmail(e.target.value)}
+              placeholder={ADMIN_MSG.agencyDetail.senderEmailPlaceholder}
+            />
+            <p className="text-xs text-ink-500 mt-1">{ADMIN_MSG.agencyDetail.senderEmailHint}</p>
+            <div className="mt-3">
+              <Button size="sm" loading={saving} leftIcon={<Icon name="save" size={14} />} onClick={saveSender}>
+                Save
+              </Button>
+            </div>
+          </div>
+
+          {/* Logo */}
+          <div>
+            <div className="text-[13px] font-medium text-ink-700 mb-1.5">{ADMIN_MSG.agencyDetail.logoLabel}</div>
+            <div className="flex items-center gap-3">
+              <div className="h-16 w-28 rounded-lg border hairline bg-ink-50 grid place-items-center overflow-hidden shrink-0">
+                {logoPreview
+                  ? <img src={logoPreview} alt={agency.name} className="max-h-14 max-w-[6.5rem] object-contain" />
+                  : <Icon name="building" size={18} className="text-ink-300" />}
+              </div>
+              <div>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickLogo} />
+                <Button size="sm" variant="outline" loading={uploading} leftIcon={<Icon name="upload" size={14} />}
+                  onClick={() => fileRef.current?.click()}>
+                  {agency.hasLogo ? ADMIN_MSG.agencyDetail.changeLogo : ADMIN_MSG.agencyDetail.uploadLogo}
+                </Button>
+                <p className="text-xs text-ink-500 mt-1.5">
+                  {agency.hasLogo ? ADMIN_MSG.agencyDetail.logoHint : ADMIN_MSG.agencyDetail.noLogoYet}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

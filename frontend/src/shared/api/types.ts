@@ -407,6 +407,10 @@ export interface AgencyDto {
   ceoUserName: string | null;
   userCount: number;
   createdAt: string;
+  /** Reply-to address for customer mail (welcome email). Null = not configured. */
+  senderEmail: string | null;
+  /** True when a logo has been uploaded (fetch from /api/agencies/{id}/logo). */
+  hasLogo: boolean;
 }
 
 // ---- Org tree (Team hierarchy page) -----------------------------------------

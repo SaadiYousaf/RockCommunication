@@ -1,6 +1,7 @@
 using CRM.Api.Authorization;
 using CRM.Application.Agencies;
 using CRM.Application.Common.Authorization;
+using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,16 @@ namespace CRM.Api.Controllers;
 public class AgenciesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AgenciesController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
+    private readonly IFileStorage _files;
+    public AgenciesController(IMediator mediator, IFileStorage files)
+    {
+        _mediator = Guard.AgainstNull(mediator);
+        _files = Guard.AgainstNull(files);
+    }
+
+    // Customer-facing branding lives in App_Data alongside avatars/documents.
+    private const string LogoContainer = "agency-logos";
+    private const long MaxLogoBytes = 2 * 1024 * 1024;   // 2 MB is plenty for a logo
 
     [HttpGet]
     [HasPermission(Permissions.AgenciesManage)]
@@ -43,15 +53,51 @@ public class AgenciesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
-    public record UpdateAgencyBody(string Name, string? Code, bool IsActive);
+    public record UpdateAgencyBody(string Name, string? Code, bool IsActive, string? SenderEmail = null);
 
     [HttpPut("{id:guid}")]
     [HasPermission(Permissions.AgenciesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAgencyBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive), ct));
+        return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive, body.SenderEmail), ct));
     }
+
+    /// <summary>Upload / replace the agency logo shown in customer emails. Images only, under 2 MB.</summary>
+    [HttpPost("{id:guid}/logo")]
+    [HasPermission(Permissions.AgenciesManage)]
+    [RequestSizeLimit(MaxLogoBytes + 1024 * 1024)]
+    public async Task<IActionResult> UploadLogo(Guid id, IFormFile file, CancellationToken ct)
+    {
+        Guard.AgainstNull(file);
+        if (file.Length == 0 || file.Length > MaxLogoBytes || !(file.ContentType?.StartsWith("image/") ?? false))
+            return BadRequest("Please upload an image file under 2 MB.");
+
+        await using var stream = file.OpenReadStream();
+        var key = await _files.SaveAsync(LogoContainer, file.FileName, stream, ct);
+        await _mediator.Send(new SetAgencyLogoCommand(id, key), ct);
+        return Ok(new { key });
+    }
+
+    /// <summary>Streams the agency logo (SuperAdmin or same-agency, enforced in the handler). 404 if none.</summary>
+    [HttpGet("{id:guid}/logo")]
+    public async Task<IActionResult> GetLogo(Guid id, CancellationToken ct)
+    {
+        var key = await _mediator.Send(new GetAgencyLogoKeyQuery(id), ct);
+        if (string.IsNullOrEmpty(key)) return NotFound();
+        var stream = await _files.OpenReadAsync(key, ct);
+        return File(stream, ContentTypeFor(key));
+    }
+
+    private static string ContentTypeFor(string key) => System.IO.Path.GetExtension(key).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        ".svg" => "image/svg+xml",
+        _ => "application/octet-stream",
+    };
 
     public record AssignCeoBody(Guid UserId);
 

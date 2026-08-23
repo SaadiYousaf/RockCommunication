@@ -251,6 +251,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationChannel, SmsNotificationChannel>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
         services.AddScoped<Application.Sales.Notifications.IDuplicateSaleNotifier, DuplicateSaleNotifier>();
+        services.AddScoped<Application.Sales.Notifications.IPolicyWelcomeEmailSender, PolicyWelcomeEmailSender>();
 
         // Lead assignment strategies
         services.AddScoped<IAssignmentStrategy, RoundRobinStrategy>();

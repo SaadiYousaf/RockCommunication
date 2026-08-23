@@ -50,13 +50,28 @@ public class SmtpEmailProvider : IEmailProvider
             var msg = new MimeMessage();
             msg.From.Add(new MailboxAddress(message.FromName ?? _opts.FromName, _opts.FromAddress));
             msg.To.Add(MailboxAddress.Parse(message.To));
+            // Reply-To lets a customer reply straight to the agency even though the send goes via the
+            // shared relay (From address is our authenticated sender, for deliverability).
+            if (!string.IsNullOrWhiteSpace(message.ReplyTo))
+                msg.ReplyTo.Add(MailboxAddress.Parse(message.ReplyTo));
             msg.Subject = message.Subject;
             if (message.Attachments is { Count: > 0 })
             {
                 var builder = new BodyBuilder();
                 if (message.IsHtml) builder.HtmlBody = message.Body; else builder.TextBody = message.Body;
                 foreach (var a in message.Attachments)
-                    builder.Attachments.Add(a.FileName, a.Content, ContentType.Parse(a.ContentType));
+                {
+                    if (!string.IsNullOrWhiteSpace(a.ContentId))
+                    {
+                        // Inline (linked resource) — referenced from the HTML as cid:{ContentId}.
+                        var linked = builder.LinkedResources.Add(a.FileName, a.Content, ContentType.Parse(a.ContentType));
+                        linked.ContentId = a.ContentId;
+                    }
+                    else
+                    {
+                        builder.Attachments.Add(a.FileName, a.Content, ContentType.Parse(a.ContentType));
+                    }
+                }
                 msg.Body = builder.ToMessageBody();
             }
             else

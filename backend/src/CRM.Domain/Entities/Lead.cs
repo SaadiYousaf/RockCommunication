@@ -131,4 +131,10 @@ public class Sale : CallCenterEntity
     public string? PlanApproved { get; set; }
     /// <summary>Reason recorded when the validator marks the sale Declined.</summary>
     public string? DeclineReason { get; set; }
+
+    /// <summary>
+    /// When the customer welcome/onboarding email was sent (null = not yet). Idempotency guard so a
+    /// sale that passes through Approved → ActivePaid (or is re-saved) only ever mails the customer once.
+    /// </summary>
+    public DateTime? WelcomeEmailSentAt { get; set; }
 }

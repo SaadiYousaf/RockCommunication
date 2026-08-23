@@ -19,7 +19,11 @@ public record AgencyDto(
     Guid? CeoUserId,
     string? CeoUserName,
     int UserCount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    /// <summary>Reply-to address for customer mail (welcome email). Null = not configured.</summary>
+    string? SenderEmail = null,
+    /// <summary>True when a logo has been uploaded (fetch it from /api/agencies/{id}/logo).</summary>
+    bool HasLogo = false);
 
 public record ListAgenciesQuery(bool IncludeInactive = false) : IRequest<IReadOnlyList<AgencyDto>>;
 public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
@@ -29,8 +33,12 @@ public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
 /// appended to this record without changing the handler's control flow.
 /// </summary>
 public record CreateAgencyCommand(string Name, string? Code, string CeoName, string CeoEmail) : IRequest<AgencyDto>;
-public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive) : IRequest<AgencyDto>;
+public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive, string? SenderEmail = null) : IRequest<AgencyDto>;
 public record AssignCeoCommand(Guid AgencyId, Guid UserId) : IRequest<AgencyDto>;
+/// <summary>Point the agency's logo at an already-stored file key (uploaded via the controller).</summary>
+public record SetAgencyLogoCommand(Guid Id, string LogoKey) : IRequest<Unit>;
+/// <summary>The agency logo storage key (null if none). SuperAdmin or same-agency access.</summary>
+public record GetAgencyLogoKeyQuery(Guid Id) : IRequest<string?>;
 
 public class CreateAgencyValidator : AbstractValidator<CreateAgencyCommand>
 {
@@ -51,6 +59,9 @@ public class UpdateAgencyValidator : AbstractValidator<UpdateAgencyCommand>
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Code).MaximumLength(40);
+        When(x => !string.IsNullOrWhiteSpace(x.SenderEmail), () =>
+            RuleFor(x => x.SenderEmail).EmailAddress().MaximumLength(200)
+                .WithMessage("Enter a valid sender email address."));
     }
 }
 
@@ -59,6 +70,8 @@ public class AgenciesHandler :
     IRequestHandler<GetAgencyQuery, AgencyDto>,
     IRequestHandler<CreateAgencyCommand, AgencyDto>,
     IRequestHandler<UpdateAgencyCommand, AgencyDto>,
+    IRequestHandler<SetAgencyLogoCommand, Unit>,
+    IRequestHandler<GetAgencyLogoKeyQuery, string?>,
     IRequestHandler<AssignCeoCommand, AgencyDto>
 {
     private readonly IApplicationDbContext _db;
@@ -159,6 +172,7 @@ public class AgenciesHandler :
         agency.Name = request.Name.Trim();
         agency.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim();
         agency.IsActive = request.IsActive;
+        agency.SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? null : request.SenderEmail!.Trim();
         await _db.SaveChangesAsync(ct);
 
         // Disabling an agency is a kill switch: force-logout every user underneath it so they
@@ -231,7 +245,27 @@ public class AgenciesHandler :
         return new AgencyDto(
             a.Id, a.Name, a.Code, a.IsActive,
             ceo?.Id, ceo?.UserName,
-            users.Count, a.CreatedAt);
+            users.Count, a.CreatedAt,
+            a.SenderEmail, !string.IsNullOrWhiteSpace(a.LogoKey));
+    }
+
+    public async Task<Unit> Handle(SetAgencyLogoCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdminOrSameAgency(request.Id);
+        var agency = await _db.Agencies.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
+            ?? throw new NotFoundException(nameof(Agency), request.Id);
+        agency.LogoKey = request.LogoKey;
+        await _db.SaveChangesAsync(ct);
+        return Unit.Value;
+    }
+
+    public async Task<string?> Handle(GetAgencyLogoKeyQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdminOrSameAgency(request.Id);
+        return await _db.Agencies.AsNoTracking()
+            .Where(x => x.Id == request.Id).Select(x => x.LogoKey).FirstOrDefaultAsync(ct);
     }
 
     private void EnsureSuperAdmin()

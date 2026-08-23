@@ -2,6 +2,7 @@ using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Notifications;
+using CRM.Application.Sales.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
@@ -94,15 +95,17 @@ public class ValidatorQueueHandler :
     private readonly IIdentityService _identity;
     private readonly ICommissionEngine _commission;
     private readonly INotificationDispatcher _notify;
+    private readonly IPolicyWelcomeEmailSender _welcome;
 
     public ValidatorQueueHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
-        ICommissionEngine commission, INotificationDispatcher notify)
+        ICommissionEngine commission, INotificationDispatcher notify, IPolicyWelcomeEmailSender welcome)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _commission = Guard.AgainstNull(commission);
         _notify = Guard.AgainstNull(notify);
+        _welcome = Guard.AgainstNull(welcome);
     }
 
     public async Task<IReadOnlyList<ValidatorQueueItem>> Handle(ValidatorQueueQuery request, CancellationToken ct)
@@ -298,7 +301,40 @@ public class ValidatorQueueHandler :
         }
 
         await _db.SaveChangesAsync(ct);
+
+        // Onboard the customer once the policy is approved: a branded welcome email carrying the
+        // approved carrier + coverage, sent as the agency (reply-to their inbox, logo inline).
+        // Best-effort and idempotent (WelcomeEmailSentAt), so it never blocks or double-sends.
+        await MaybeSendWelcomeEmailAsync(sale, lead, request.Status, ct);
+
         return new ValidatorStatusResult(sale.Id, sale.ValidatorStatus, lead?.Stage ?? WorkflowStage.Closed);
+    }
+
+    private async Task MaybeSendWelcomeEmailAsync(Sale sale, Lead? lead, ValidatorStatus status, CancellationToken ct)
+    {
+        if (status is not (ValidatorStatus.Approved or ValidatorStatus.ActivePaid)) return;
+        if (sale.WelcomeEmailSentAt is not null) return;                 // already onboarded
+        if (string.IsNullOrWhiteSpace(sale.CarrierApproved)) return;     // no approved carrier to announce
+
+        // Customer email: the lead's, falling back to the application's. IgnoreQueryFilters so a
+        // central Submission Agent (empty tenant) still resolves the real agency's application row.
+        var customerEmail = lead?.Email;
+        if (string.IsNullOrWhiteSpace(customerEmail))
+            customerEmail = await _db.LeadApplications.IgnoreQueryFilters()
+                .Where(a => a.LeadId == sale.LeadId && a.AgencyId == sale.AgencyId)
+                .Select(a => a.Email).FirstOrDefaultAsync(ct);
+        if (string.IsNullOrWhiteSpace(customerEmail)) return;
+
+        var customerName = lead is null ? "" : $"{lead.FirstName} {lead.LastName}".Trim();
+        var sent = await _welcome.SendAsync(new PolicyWelcomeEmailRequest(
+            sale.AgencyId, customerEmail!, customerName, sale.CarrierApproved!,
+            sale.CoverageApproved, sale.PremiumApproved, sale.PlanApproved), ct);
+
+        if (sent)
+        {
+            sale.WelcomeEmailSentAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     /// <summary>

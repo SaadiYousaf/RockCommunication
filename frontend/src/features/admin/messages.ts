@@ -130,6 +130,24 @@ export const ADMIN_MSG = {
     noCcDesc: "Add one with the button above — its admin is emailed an invitation.",
     noSalesTitle: "No sales",
     noSalesDesc: "This agency has no recorded sales yet.",
+
+    // Customer-email branding (welcome email)
+    brandingTitle: "Customer email branding",
+    brandingSubtitle: "Shown on the welcome email a customer receives when their policy is approved.",
+    senderEmailLabel: "Reply-to email",
+    senderEmailHint: "Customer replies go here. The email is sent as your agency's name via our mail server.",
+    senderEmailPlaceholder: "e.g. hello@youragency.com",
+    logoLabel: "Agency logo",
+    logoHint: "Shown at the top of the welcome email. PNG or JPG, under 2 MB.",
+    uploadLogo: "Upload logo",
+    changeLogo: "Change logo",
+    logoUpdated: "Logo updated",
+    logoTooLarge: "Please choose an image under 2 MB.",
+    chooseImage: "Please choose an image file.",
+    logoUploadFailed: "Couldn't upload the logo",
+    brandingSaved: "Branding saved",
+    brandingSaveFailed: "Couldn't save branding",
+    noLogoYet: "No logo uploaded yet",
   },
 
   // ── Call centers list (CallCentersPage) ──────────────────────────────────

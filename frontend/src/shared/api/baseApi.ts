@@ -791,9 +791,17 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/agencies", method: "POST", body }),
       invalidatesTags: ["Agencies"],
     }),
-    updateAgency: b.mutation<AgencyDto, { id: string; name: string; code?: string | null; isActive: boolean }>({
+    updateAgency: b.mutation<AgencyDto, { id: string; name: string; code?: string | null; isActive: boolean; senderEmail?: string | null }>({
       query: ({ id, ...body }) => ({ url: `/api/agencies/${id}`, method: "PUT", body }),
-      invalidatesTags: ["Agencies"],
+      invalidatesTags: (_r, _e, arg) => ["Agencies", { type: "Agencies", id: arg.id }],
+    }),
+    uploadAgencyLogo: b.mutation<{ key: string }, { id: string; file: File }>({
+      query: ({ id, file }) => {
+        const form = new FormData();
+        form.append("file", file);
+        return { url: `/api/agencies/${id}/logo`, method: "POST", body: form };
+      },
+      invalidatesTags: (_r, _e, arg) => ["Agencies", { type: "Agencies", id: arg.id }],
     }),
     assignAgencyCeo: b.mutation<AgencyDto, { id: string; userId: string }>({
       query: ({ id, userId }) => ({ url: `/api/agencies/${id}/assign-ceo`, method: "POST", body: { userId } }),
@@ -1504,7 +1512,7 @@ export const {
   useSetRoleModulesMutation, useDeleteRoleMutation,
   useListModulesQuery, useMyModulesQuery,
   useListAgenciesQuery, useGetAgencyQuery, useCreateAgencyMutation,
-  useUpdateAgencyMutation, useAssignAgencyCeoMutation,
+  useUpdateAgencyMutation, useUploadAgencyLogoMutation, useAssignAgencyCeoMutation,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery, useCreateLicenseAgentMutation,
   useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation, useUpdateCallCenterInAgencyMutation,
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,

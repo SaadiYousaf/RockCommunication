@@ -8,6 +8,15 @@ public class Agency : BaseEntity
     public string? Code { get; set; }
     public bool IsActive { get; set; } = true;
 
+    // ---- Customer-facing branding (used by the policy welcome email) ----
+    /// <summary>
+    /// The agency's reply-to address for customer mail. Outbound send goes via the shared relay
+    /// with the agency <see cref="Name"/> as the From display name; customer replies route here.
+    /// </summary>
+    public string? SenderEmail { get; set; }
+    /// <summary>Storage key of the agency logo shown in customer emails. Null = no logo uploaded.</summary>
+    public string? LogoKey { get; set; }
+
     /// <summary>
     /// Highest sale serial issued for this agency. Incremented atomically when a sale is created
     /// so each agency's sales are numbered 1, 2, 3… independently. See Sale.SaleNumber.
