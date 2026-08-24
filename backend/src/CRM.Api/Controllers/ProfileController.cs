@@ -69,8 +69,16 @@ public class ProfileController : ControllerBase
     {
         var key = await _mediator.Send(new GetAvatarKeyQuery(userId), ct);
         if (string.IsNullOrEmpty(key)) return NotFound();
-        var stream = await _files.OpenReadAsync(key, ct);
-        return File(stream, ContentTypeFor(key));
+        try
+        {
+            var stream = await _files.OpenReadAsync(key, ct);
+            return File(stream, ContentTypeFor(key));
+        }
+        catch (FileNotFoundException)
+        {
+            // The DB points at an avatar whose bytes are gone (e.g. cleaned up) — 404, not a 500.
+            return NotFound();
+        }
     }
 
     private static string ContentTypeFor(string key) => System.IO.Path.GetExtension(key).ToLowerInvariant() switch

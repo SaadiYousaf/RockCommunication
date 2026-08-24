@@ -1,0 +1,5 @@
+# Rock Communication CRM is a private, login-gated application — it should never be
+# crawled or indexed. This also gives crawlers/Lighthouse a valid robots.txt instead
+# of the SPA's index.html (which is what "robots.txt is not valid — 67 errors" was).
+User-agent: *
+Disallow: /
