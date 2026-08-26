@@ -35,6 +35,8 @@ public static class Permissions
     public const string CommissionDeskWork = "commission-desk.work";
     /// <summary>Manage carrier advancing rules (carrier / rate / advanced months).</summary>
     public const string CarrierRulesManage = "carrier-rules.manage";
+    /// <summary>Set the commission rates each role earns per sale (amount / threshold / on-off).</summary>
+    public const string CommissionRatesManage = "commission-rates.manage";
 
     public const string CallbacksRead = "callbacks.read";
     public const string CallbacksWrite = "callbacks.write";

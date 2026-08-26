@@ -105,6 +105,7 @@ const SelectContextPage = lazyWithReload(() => import("../features/context/Selec
 const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
 const RetentionPage = lazyWithReload(() => import("../features/retention/RetentionPage").then(m => ({ default: m.RetentionPage })));
 const CommissionDeskPage = lazyWithReload(() => import("../features/commission/CommissionDeskPage").then(m => ({ default: m.CommissionDeskPage })));
+const CommissionRatesPage = lazyWithReload(() => import("../features/commission/CommissionRatesPage").then(m => ({ default: m.CommissionRatesPage })));
 const CarrierRulesPage = lazyWithReload(() => import("../features/commission/CarrierRulesPage").then(m => ({ default: m.CarrierRulesPage })));
 const CommissionDashboardPage = lazyWithReload(() => import("../features/commission/CommissionDashboardPage").then(m => ({ default: m.CommissionDashboardPage })));
 
@@ -121,6 +122,7 @@ const M = {
   Retention: "retention",
   CommissionDesk: "commission-desk",
   CarrierRules: "carrier-rules",
+  CommissionRates: "commission-rates",
   Callbacks: "callbacks",
   Commissions: "commissions",
   Reports: "reports",
@@ -254,6 +256,10 @@ const router = createBrowserRouter([
           {
             element: <ProtectedRoute modules={[M.CarrierRules]} />,
             children: [{ path: "/carrier-rules", element: <CarrierRulesPage /> }],
+          },
+          {
+            element: <ProtectedRoute modules={[M.CommissionRates]} />,
+            children: [{ path: "/commission-rates", element: <CommissionRatesPage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Commissions]} />,

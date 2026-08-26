@@ -89,6 +89,7 @@ const NAV: NavNode[] = [
       { key: "commission-desk", to: "/commission-desk", label: "Commission Desk", icon: "dollar", module: "commission-desk" },
       { key: "commission-dash", to: "/commission-desk/dashboard", label: "Commission Dashboard", icon: "chart", module: "commission-desk" },
       { key: "carrier-rules",   to: "/carrier-rules",  label: "Carrier Rules",    icon: "doc",    module: "carrier-rules" },
+      { key: "commission-rates", to: "/commission-rates", label: "Commission Rates", icon: "dollar", module: "commission-rates" },
       { key: "calls",       to: "/calls",       label: "Call History", icon: "phone",    module: "callcenter" },
     ],
   },

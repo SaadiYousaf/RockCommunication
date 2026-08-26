@@ -176,6 +176,7 @@ public static class DbSeeder
         {
             Permissions.DashboardView, Permissions.AttendanceView,
             Permissions.PayrollView, Permissions.PayrollProcess, Permissions.PayrollConfig,
+            Permissions.CommissionRatesManage,   // HR set these before they moved to the finance desk
             Permissions.UsersRead, Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
         };
 
@@ -290,7 +291,7 @@ public static class DbSeeder
                 Permissions.DashboardView,
                 Permissions.SalesRead, Permissions.CommissionsView,
                 Permissions.CommissionDeskView, Permissions.CommissionDeskWork,
-                Permissions.CarrierRulesManage,
+                Permissions.CarrierRulesManage, Permissions.CommissionRatesManage,
                 Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
             }
         };
@@ -371,7 +372,7 @@ public static class DbSeeder
             Modules.Leads, Modules.LeadsSearch,
             Modules.Sales, Modules.Retention, Modules.Callbacks,
             Modules.Supervisor, Modules.Attendance, Modules.CallCenter, Modules.Qa,
-            Modules.Commissions, Modules.CommissionDesk,
+            Modules.Commissions, Modules.CommissionDesk, Modules.CommissionRates,
             Modules.Knowledge, Modules.Chat, Modules.Reports,
             Modules.Campaigns, Modules.Scripts, Modules.Dnc,
         };
@@ -409,7 +410,7 @@ public static class DbSeeder
             // read-only sales/commissions surfaces they reconcile against.
             [Domain.Enums.Roles.CommissionAgent] = new[]
             {
-                Modules.Dashboard, Modules.CommissionDesk, Modules.CarrierRules,
+                Modules.Dashboard, Modules.CommissionDesk, Modules.CarrierRules, Modules.CommissionRates,
                 Modules.Sales, Modules.Commissions, Modules.Knowledge, Modules.Chat,
             },
         };

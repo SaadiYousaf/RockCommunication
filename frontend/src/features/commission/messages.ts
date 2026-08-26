@@ -189,3 +189,33 @@ export const goesToRetention = (s: string): boolean =>
 export const NEEDS_CONFIRMATION = ["ChargedBack", ...MOVES_TO_RETENTION] as const;
 export const needsConfirmation = (s: string): boolean =>
   (NEEDS_CONFIRMATION as readonly string[]).includes(s);
+
+/** Copy for the Commission Rates screen (what each role earns per sale). */
+export const COMMISSION_RATES_MSG = {
+  eyebrow: "Finance",
+  title: "Commission Rates",
+  description:
+    "What each role earns on a sale. Set an amount to override the platform default for your agency, or turn a rate off entirely. These drive every commission line the system creates.",
+
+  searchPlaceholder: "Search by rate or who earns it…",
+  noMatchTitle: "No matches",
+  noMatchDesc: "No commission rate matches your search.",
+
+  colRate: "Rate",
+  colEarnedBy: "Earned by",
+  colAmount: "Amount",
+  colThreshold: "Applies above",
+  colEnabled: "Active",
+
+  amountHint: "What this rate pays per sale. Leave blank to use the platform default.",
+  thresholdHint: "This rate only pays when the monthly premium reaches this figure.",
+  enabledHint: "Turn a rate off to stop it creating commission lines. Existing lines are untouched.",
+  usingDefault: (amount: number) => `Default ${amount}`,
+  noThreshold: "Always applies",
+
+  save: "Save",
+  saved: "Rate saved",
+  savedDesc: (label: string) => `${label} has been updated.`,
+  saveFailed: "Couldn't save the rate",
+  changesNote: "Changes apply to sales closed from now on — commission already recorded is not recalculated.",
+} as const;

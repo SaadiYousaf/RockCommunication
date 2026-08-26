@@ -121,12 +121,14 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("commission-config")]
-    [HasPermission(Permissions.PayrollProcess)]   // management config — not the rank-and-file CommissionsView
+    // Commission RATES are a finance-desk concern, not payroll processing — gating them on their own
+    // permission lets the Commission Agent own them without also handing over payroll runs.
+    [HasPermission(Permissions.CommissionRatesManage)]
     public async Task<IActionResult> CommissionConfig(CancellationToken ct)
         => Ok(await _mediator.Send(new ListCommissionConfigQuery(), ct));
 
     [HttpPut("commission-config")]
-    [HasPermission(Permissions.PayrollProcess)]
+    [HasPermission(Permissions.CommissionRatesManage)]
     public async Task<IActionResult> UpsertCommissionConfig([FromBody] AgencyCommissionRuleDto dto, CancellationToken ct)
     {
         Guard.AgainstNull(dto);
