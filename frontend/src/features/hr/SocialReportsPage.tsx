@@ -144,7 +144,7 @@ export function SocialReportsPage() {
 
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder="Search platform, notes…" /></div>
+          <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.socialSearchPlaceholder} /></div>
           <Select aria-label="Filter by platform" value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)} className="w-44">
             <option value="">All platforms</option>
             {platforms.map((p) => <option key={p} value={p}>{p}</option>)}

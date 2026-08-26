@@ -167,7 +167,7 @@ export function AuditLogPage() {
             <SearchInput
               value={filters.search ?? ""}
               onChange={(v) => update("search", v || undefined)}
-              placeholder="Search entity, user, changes, IP…"
+              placeholder={ADMIN_MSG.search.audit}
             />
           </div>
           <Select

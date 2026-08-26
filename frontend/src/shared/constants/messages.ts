@@ -6,6 +6,8 @@
  * to end users. Use these helpers — they speak in plain language about what the user can/can't do.
  */
 export const MESSAGES = {
+  /** Global header search placeholder (shared chrome — no copy inline). */
+  globalSearchPlaceholder: "Search leads, users, sales…   ⌘K",
   /** Read-only banner: the user can view `resource` but not change it. e.g. readOnly("the team"). */
   readOnly: (resource: string) =>
     `You have read-only access to ${resource}. Contact your administrator if you need to make changes.`,

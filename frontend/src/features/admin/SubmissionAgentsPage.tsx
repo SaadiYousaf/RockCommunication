@@ -4,7 +4,7 @@ import { ADMIN_MSG } from "./messages";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useSetUserActiveMutation, useResetUserPasswordMutation, useResendInvitationMutation,
@@ -12,7 +12,7 @@ import {
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
@@ -37,7 +37,16 @@ export function SubmissionAgentsPage() {
   const confirm = useConfirm();
   const [deactivating, setDeactivating] = useState(false);
 
-  const { sorted, dirFor, toggle } = useTableSort(agents, {
+  // Client-side search over the already-loaded agents (name / email).
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return agents ?? [];
+    return (agents ?? []).filter((a) =>
+      [a.name, a.email].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [agents, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
     key: "name",
     accessors: { status: (a) => (a.isActive ? "Active" : "Inactive") },
   });
@@ -117,13 +126,22 @@ export function SubmissionAgentsPage() {
         <CardHeader
           title="Central submission agents"
           subtitle={agents ? `${agents.length} agent(s)` : undefined}
-          action={<Button leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchInput value={search} onChange={setSearch}
+                placeholder={ADMIN_MSG.submissionAgents.searchPlaceholder} className="w-64" />
+              <Button leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>
+            </div>
+          }
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-32" /> : !agents || agents.length === 0 ? (
             <EmptyState icon={<Icon name="userPlus" size={20} />} title={ADMIN_MSG.submissionAgents.noAgentsTitle}
               description={ADMIN_MSG.submissionAgents.noAgentsDesc}
               action={<Button size="sm" leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>} />
+          ) : sorted.length === 0 ? (
+            <EmptyState icon={<Icon name="search" size={20} />} title={ADMIN_MSG.submissionAgents.noMatchTitle}
+              description={ADMIN_MSG.submissionAgents.noMatchDesc} />
           ) : (
             <>
             <Table>

@@ -4,6 +4,8 @@
  * (buttons, headers, placeholders) stay inline in the component.
  */
 export const CONFIDENTIAL_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search portals, usernames…",
   loginUpdated: "Login updated",
   loginSaved: "Login saved",
   saveFailed: "Couldn't save",

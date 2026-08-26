@@ -208,7 +208,7 @@ export function EmployeesPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px]">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search name, agent ID, phone, email…" />
+            <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.employeeSearchPlaceholder} />
           </div>
           <Select aria-label="Filter by designation" value={designation} onChange={(e) => setDesignation(e.target.value)} className="w-48">
             <option value="">All designations</option>

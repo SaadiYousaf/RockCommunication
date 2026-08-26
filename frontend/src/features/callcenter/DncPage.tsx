@@ -114,7 +114,7 @@ export function DncPage() {
       <Card className="mb-4">
         <CardBody>
           <SearchInput
-            placeholder="Search by phone or reason…"
+            placeholder={CALLCENTER_MSG.dncSearchPlaceholder}
             value={search} onChange={setSearch}
           />
         </CardBody>

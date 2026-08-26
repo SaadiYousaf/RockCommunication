@@ -94,7 +94,7 @@ export function UsersPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search by name, email, or role…"
+              placeholder={USERS_MSG.searchPlaceholder}
             />
           </div>
           <Select

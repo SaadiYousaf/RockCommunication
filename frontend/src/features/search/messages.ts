@@ -3,6 +3,8 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const SEARCH_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search by name, phone, email, role…",
   // CSV export
   exportReadyTitle: "Export ready",
   exportReadyDesc: (count: number) => `${count} rows downloaded.`,

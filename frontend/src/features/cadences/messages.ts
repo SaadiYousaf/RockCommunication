@@ -13,4 +13,11 @@ export const CADENCES_MSG = {
   noCadencesDesc: "Build a multi-touch sequence to consistently engage leads over time.",
   noEnrollmentsTitle: "No enrollments yet",
   noEnrollmentsDesc: "Enroll a lead into a cadence to see live progress here.",
+
+  // Search
+  noMatchesDesc: "Try a different search.",
+  cadenceSearchPlaceholder: "Search cadences by name or description…",
+  noCadencesMatchTitle: "No cadences match",
+  enrollmentSearchPlaceholder: "Search enrollments by cadence or status…",
+  noEnrollmentsMatchTitle: "No enrollments match",
 } as const;

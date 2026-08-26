@@ -143,7 +143,7 @@ export function GlobalSearchPage() {
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder="Search by name, phone, email, role…"
+            placeholder={SEARCH_MSG.searchPlaceholder}
             autoFocus
           />
           <div className="mt-3 flex items-center gap-2 text-xs text-ink-500">

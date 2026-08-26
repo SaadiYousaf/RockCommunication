@@ -16,7 +16,7 @@ import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /**
@@ -57,7 +57,16 @@ export function CallCentersPage() {
     }
     return map;
   }, [users]);
-  const { sorted, dirFor, toggle } = useTableSort(list, {
+  // Client-side search over the already-loaded centres (name / short code).
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list ?? [];
+    return (list ?? []).filter((c) =>
+      [c.name, c.code].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [list, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
     key: "name",
     accessors: { status: (c) => (c.isActive ? 1 : 0) },
   });
@@ -176,18 +185,27 @@ export function CallCentersPage() {
         <CardHeader
           title="Call centers"
           subtitle={list ? `${list.length} call center${list.length === 1 ? "" : "s"}` : undefined}
-          action={isSuperAdmin ? (
-            <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
-              {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
-              {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>)}
-            </Select>
-          ) : undefined}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              {isSuperAdmin && (
+                <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
+                  {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
+                  {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>)}
+                </Select>
+              )}
+              <SearchInput value={search} onChange={setSearch}
+                placeholder={ADMIN_MSG.callCenters.searchPlaceholder} className="w-64" />
+            </div>
+          }
         />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
             <EmptyState icon={<Icon name="building" size={20} />} title={ADMIN_MSG.callCenters.emptyTitle}
               description={ADMIN_MSG.callCenters.emptyDesc}
               action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNew(true)}>Add call center</Button>} />
+          ) : sorted.length === 0 ? (
+            <EmptyState icon={<Icon name="search" size={20} />} title={ADMIN_MSG.callCenters.noMatchTitle}
+              description={ADMIN_MSG.callCenters.noMatchDesc} />
           ) : (
             <>
             <Table>

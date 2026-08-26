@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useCreatePublicEndpointMutation,
   useListPublicEndpointsQuery,
@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -41,7 +41,17 @@ function QueueSection() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [skill, setSkill] = useState("");
-  const { sorted, dirFor, toggle } = useTableSort(queues);
+
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return queues ?? [];
+    return (queues ?? []).filter((row) =>
+      [row.name, row.phoneNumber, row.requiredSkillCode, row.strategy]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [queues, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered);
   const sel = useRowSelection(sorted.map((q) => q.id));
 
   function exportSelected() {
@@ -76,7 +86,13 @@ function QueueSection() {
       <CardHeader
         title={<span className="flex items-center gap-2"><Icon name="phone" size={18} /><span className="inline-flex items-center gap-1">Inbound queues (ACD)<InfoHint title="ACD — Automatic Call Distribution" side="right">Inbound calls are routed automatically to the longest-idle available agent who holds the queue's required skill.</InfoHint></span></span>}
         subtitle="When a configured number rings, the routing engine picks the longest-idle agent matching the required skill."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New queue</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={QUEUES_MSG.queueSearchPlaceholder} className="w-64" />
+            <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New queue</Button>
+          </div>
+        }
       />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
@@ -90,6 +106,14 @@ function QueueSection() {
               title={QUEUES_MSG.noQueuesTitle}
               description={QUEUES_MSG.noQueuesDesc}
               action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New queue</Button>}
+            />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="px-5 pb-5">
+            <EmptyState
+              icon={<Icon name="search" size={20} />}
+              title={QUEUES_MSG.noQueuesMatchTitle}
+              description={QUEUES_MSG.noMatchesDesc}
             />
           </div>
         ) : (
@@ -168,6 +192,13 @@ function VoicemailSection() {
   const [url, setUrl] = useState("");
   const [duration, setDuration] = useState("30");
 
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return vms ?? [];
+    return (vms ?? []).filter((v) => (v.name ?? "").toLowerCase().includes(q));
+  }, [vms, search]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -187,7 +218,13 @@ function VoicemailSection() {
       <CardHeader
         title={<span className="flex items-center gap-2"><Icon name="chat" size={18} /> Voicemail drops</span>}
         subtitle="Pre-recorded messages used when an answering machine is detected."
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New asset</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={QUEUES_MSG.voicemailSearchPlaceholder} className="w-64" />
+            <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New asset</Button>
+          </div>
+        }
       />
       <CardBody className="pt-0">
         {isLoading ? (
@@ -199,9 +236,15 @@ function VoicemailSection() {
             description={QUEUES_MSG.noVoicemailsDesc}
             action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New asset</Button>}
           />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={QUEUES_MSG.noVoicemailsMatchTitle}
+            description={QUEUES_MSG.noMatchesDesc}
+          />
         ) : (
           <ul className="divide-y divide-ink-100">
-            {vms.map((v) => (
+            {filtered.map((v) => (
               <li key={v.id} className="py-3 px-2 -mx-2 rounded-lg flex items-center gap-3 hover:bg-ink-50/50 transition-colors">
                 <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
                   <Icon name="chat" size={16} />
@@ -245,7 +288,15 @@ function PublicEndpointsSection() {
   const [open, setOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
-  const { sorted, dirFor, toggle } = useTableSort(endpoints);
+
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return endpoints ?? [];
+    return (endpoints ?? []).filter((e) => (e.slug ?? "").toLowerCase().includes(q));
+  }, [endpoints, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -269,7 +320,13 @@ function PublicEndpointsSection() {
             with header <code className="bg-ink-100 text-ink-800 px-1.5 py-0.5 rounded text-[11px] font-mono">X-Signature: hmac-sha256(secret, body)</code>.
           </>
         }
-        action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => { setRevealedSecret(null); setOpen(true); }}>Generate</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={QUEUES_MSG.endpointSearchPlaceholder} className="w-64" />
+            <Button leftIcon={<Icon name="plus" size={16} />} onClick={() => { setRevealedSecret(null); setOpen(true); }}>Generate</Button>
+          </div>
+        }
       />
       <CardBody className="pt-0 px-0">
         {revealedSecret && (
@@ -304,6 +361,14 @@ function PublicEndpointsSection() {
               title={QUEUES_MSG.noEndpointsTitle}
               description={QUEUES_MSG.noEndpointsDesc}
               action={<Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>Generate</Button>}
+            />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="px-5 pb-5">
+            <EmptyState
+              icon={<Icon name="search" size={20} />}
+              title={QUEUES_MSG.noEndpointsMatchTitle}
+              description={QUEUES_MSG.noMatchesDesc}
             />
           </div>
         ) : (

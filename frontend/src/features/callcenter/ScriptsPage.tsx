@@ -102,7 +102,7 @@ export function ScriptsPage() {
       <Card className="mb-4">
         <CardBody>
           <SearchInput
-            placeholder="Search scripts by name, content, stage, or role…"
+            placeholder={CALLCENTER_MSG.scriptsSearchPlaceholder}
             value={search} onChange={setSearch}
           />
         </CardBody>

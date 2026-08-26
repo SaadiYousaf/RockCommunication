@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, Input } from "../ui";
+import { MESSAGES } from "../constants/messages";
 
 /**
  * Global header search.
@@ -49,7 +50,7 @@ export function HeaderSearch() {
   return (
     <Input
       ref={inputRef}
-      placeholder="Search leads, users, sales…   ⌘K"
+      placeholder={MESSAGES.globalSearchPlaceholder}
       value={q}
       onChange={(e) => setQ(e.target.value)}
       onKeyDown={(e) => { if (e.key === "Enter") submit(); }}

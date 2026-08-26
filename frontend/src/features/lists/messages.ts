@@ -4,6 +4,8 @@
  * Never surface internal identifiers here — speak in plain language.
  */
 export const LISTS_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search lists by name…",
   // ---- Export ----
   exportReadyTitle: "Export ready",
   exportRows: (rows: number) => `${rows} rows downloaded.`,

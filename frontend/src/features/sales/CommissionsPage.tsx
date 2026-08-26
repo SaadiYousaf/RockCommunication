@@ -13,7 +13,7 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { SALES_MSG } from "./messages";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /** Key used to track the in-flight period export (vs a per-run export keyed by run id). */
@@ -56,7 +56,17 @@ export function CommissionsPage() {
       .sort((a, b) => b.amount - a.amount);
   }, [commissions]);
 
-  const { sorted, dirFor, toggle } = useTableSort(commissions, {
+  // Free-text search over the rows already loaded (the stats + "by rule" rollup stay on the full range).
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return commissions ?? [];
+    return (commissions ?? []).filter((c) =>
+      [c.ruleName, c.note, c.paid ? "Paid" : "Unpaid"]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [commissions, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (c) => (c.paid ? "Paid" : "Unpaid") },
   });
 
@@ -152,6 +162,11 @@ export function CommissionsPage() {
             <Button size="sm" variant="ghost" title="Last 30 days" onClick={() => setRange(30)}>30d</Button>
             <Button size="sm" variant="ghost" title="Last 90 days" onClick={() => setRange(90)}>90d</Button>
           </div>
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder={SALES_MSG.commissionsSearchPlaceholder}
+            className="w-64" containerClassName="ml-auto"
+          />
         </CardBody>
       </Card>
 
@@ -200,6 +215,14 @@ export function CommissionsPage() {
             icon={<Icon name="doc" size={20} />}
             title={SALES_MSG.noCommissionsTitle}
             description={SALES_MSG.noCommissionsBody}
+          />
+        </CardBody></Card>
+      ) : sorted.length === 0 ? (
+        <Card className="mb-6"><CardBody>
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={SALES_MSG.noCommissionsMatchTitle}
+            description={SALES_MSG.noCommissionsMatchBody}
           />
         </CardBody></Card>
       ) : (

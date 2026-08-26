@@ -85,7 +85,7 @@ export function CloseQueuePage() {
       )}
       <Card>
         <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
-          action={<SearchInput value={q} onChange={setQ} placeholder="Search this queue…" className="w-56" />} />
+          action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.closeEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.closeEmptyDesc}

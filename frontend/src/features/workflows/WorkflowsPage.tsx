@@ -152,7 +152,7 @@ export function WorkflowsPage() {
           <CardBody className="border-t hairline">
             <SearchInput
               value={search} onChange={setSearch}
-              placeholder="Search by name, event, description…"
+              placeholder={WORKFLOWS_MSG.searchPlaceholder}
             />
           </CardBody>
         )}

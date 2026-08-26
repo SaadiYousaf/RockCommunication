@@ -1,6 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import {
@@ -9,8 +9,8 @@ import {
 } from "../../shared/api/baseApi";
 import { ATTENDANCE_STATUSES, hrLabel } from "../../shared/constants/hr";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton,
-  Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader, SearchInput,
+  Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -67,9 +67,19 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [bulkStatus, setBulkStatus] = useState("Present");
+  const [search, setSearch] = useState("");
 
-  const list = rows ?? [];
-  const sel = useRowSelection(list.map((r) => r.employeeId));
+  // Client-side search over the day's already-loaded register — the query above is untouched.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const all = rows ?? [];
+    if (!q) return all;
+    return all.filter((r) =>
+      [r.fullName, r.agentCode, hrLabel(r.designation), r.callCenterName]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [rows, search]);
+  // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
+  const sel = useRowSelection(filtered.map((r) => r.employeeId));
   const [applying, setApplying] = useState(false);
 
   async function setStatus(employeeId: string, status: string) {
@@ -98,7 +108,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
   }
 
   function exportSelected() {
-    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    const chosen = filtered.filter((r) => sel.isSelected(r.employeeId));
     exportRowsToCsv(chosen, [
       { header: "Employee", value: (r) => r.fullName },
       { header: "Agent ID", value: (r) => r.agentCode },
@@ -132,6 +142,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
     <>
       <div className="mb-4 flex items-center gap-3 flex-wrap">
         <Input type="date" aria-label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
+        <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.attendanceSearchPlaceholder} className="w-64" />
         <span className="text-sm text-ink-500">{rows?.length ?? 0} {(rows?.length ?? 0) === 1 ? "employee" : "employees"}</span>
         <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" leftIcon={<Icon name="phone" size={13} />} loading={filling} onClick={fillFromClockIns}>Fill from clock-ins</Button>
@@ -153,6 +164,8 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>
       ) : (rows ?? []).length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.addEmployeesFirst} /></CardBody></Card>
+      ) : filtered.length === 0 ? (
+        <Card><CardBody><EmptyState icon={<Icon name="search" size={20} />} title={HR_MSG.noMatchesTitle} description={HR_MSG.noEmployeeSearchMatchesDesc} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>
@@ -167,7 +180,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
               <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Attendance status" side="left">Late = arrived after start; Half day = half a shift worked; Leave = pre-approved time off; NCNS = no call, no show (an unexcused absence).</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {list.map((r) => (
+              {filtered.map((r) => (
                 <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />
@@ -213,6 +226,17 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const { data: rows, isLoading } = useAttendanceSummaryQuery({ year, month, callCenterId });
   const monthValue = `${year}-${String(month).padStart(2, "0")}`;
+  const [search, setSearch] = useState("");
+
+  // Client-side search over the month's already-loaded roll-up — the query above is untouched.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const all = rows ?? [];
+    if (!q) return all;
+    return all.filter((r) =>
+      [r.fullName, r.agentCode, hrLabel(r.designation), r.callCenterName]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [rows, search]);
 
   return (
     <>
@@ -220,12 +244,15 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
         <Input type="month" aria-label="Month" value={monthValue}
           onChange={(e) => { const [y, m] = e.target.value.split("-").map(Number); if (y && m) { setYear(y); setMonth(m); } }}
           className="w-44" />
+        <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.attendanceSearchPlaceholder} className="w-64" />
         <span className="text-sm text-ink-500">{rows?.length ?? 0} {(rows?.length ?? 0) === 1 ? "employee" : "employees"}</span>
       </div>
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-11 mb-2" />)}</CardBody></Card>
       ) : (rows ?? []).length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.addEmployeesFirst} /></CardBody></Card>
+      ) : filtered.length === 0 ? (
+        <Card><CardBody><EmptyState icon={<Icon name="search" size={20} />} title={HR_MSG.noMatchesTitle} description={HR_MSG.noEmployeeSearchMatchesDesc} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>
@@ -240,7 +267,7 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
               <TH numeric><span className="inline-flex items-center gap-1">Marked<InfoHint title="Days marked" side="left">Total days with any attendance status recorded this month — the base rolled up to payroll.</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {(rows ?? []).map((r) => (
+              {filtered.map((r) => (
                 <TR key={r.employeeId}>
                   <TD className="font-medium text-ink-900">{r.fullName}</TD>
                   <TD className="font-mono text-xs text-ink-600">{r.agentCode}</TD>

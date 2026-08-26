@@ -1,9 +1,9 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCadenceEnrollmentsQuery, useListCadencesQuery, useUpsertCadenceMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
+  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
 } from "../../shared/ui";
 import type { Cadence, CadenceStep } from "../../shared/api/types";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -43,7 +43,28 @@ export function CadencesPage() {
   const toast = useToast();
 
   const [editing, setEditing] = useState<any | null>(null);
-  const { sorted: sortedEnrollments, dirFor, toggle } = useTableSort(enrollments);
+
+  // Client-side search over the cadences already loaded — name / description.
+  const [search, setSearch] = useState("");
+  const filteredCadences = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return cadences ?? [];
+    return (cadences ?? []).filter((c) =>
+      [c.name, c.description].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [cadences, search]);
+
+  // Enrollments get their own box: match on the cadence's name (not its id) plus status.
+  const [enrollmentSearch, setEnrollmentSearch] = useState("");
+  const filteredEnrollments = useMemo(() => {
+    const q = enrollmentSearch.trim().toLowerCase();
+    if (!q) return enrollments ?? [];
+    return (enrollments ?? []).filter((e) => {
+      const cadenceName = cadences?.find((c) => c.id === e.cadenceId)?.name ?? "";
+      return [cadenceName, e.status].some((v) => (v ?? "").toLowerCase().includes(q));
+    });
+  }, [enrollments, cadences, enrollmentSearch]);
+
+  const { sorted: sortedEnrollments, dirFor, toggle } = useTableSort(filteredEnrollments);
 
   function openNew() {
     setEditing({
@@ -71,6 +92,15 @@ export function CadencesPage() {
         actions={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}
       />
 
+      <Card className="mb-4">
+        <CardBody>
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder={CADENCES_MSG.cadenceSearchPlaceholder}
+          />
+        </CardBody>
+      </Card>
+
       {isLoading ? (
         <div className="space-y-3 mb-8">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : !cadences || cadences.length === 0 ? (
@@ -82,9 +112,17 @@ export function CadencesPage() {
             action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={openNew}>New cadence</Button></Can>}
           />
         </CardBody></Card>
+      ) : filteredCadences.length === 0 ? (
+        <Card className="mb-8"><CardBody>
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={CADENCES_MSG.noCadencesMatchTitle}
+            description={CADENCES_MSG.noMatchesDesc}
+          />
+        </CardBody></Card>
       ) : (
         <div className="space-y-4 mb-8">
-          {cadences.map((c) => (
+          {filteredCadences.map((c) => (
             <Card key={c.id} className="hover:shadow-card-hover transition-shadow">
               <CardBody>
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -135,6 +173,8 @@ export function CadencesPage() {
         <CardHeader
           title={<span className="flex items-center gap-2"><Icon name="activity" size={18} /> Recent enrollments</span>}
           subtitle="Leads currently moving through cadences"
+          action={<SearchInput value={enrollmentSearch} onChange={setEnrollmentSearch}
+            placeholder={CADENCES_MSG.enrollmentSearchPlaceholder} className="w-64" />}
         />
         <CardBody className="pt-0 px-0">
           {enrLoading ? (
@@ -145,6 +185,14 @@ export function CadencesPage() {
                 icon={<Icon name="inbox" size={20} />}
                 title={CADENCES_MSG.noEnrollmentsTitle}
                 description={CADENCES_MSG.noEnrollmentsDesc}
+              />
+            </div>
+          ) : sortedEnrollments.length === 0 ? (
+            <div className="px-5 pb-5">
+              <EmptyState
+                icon={<Icon name="search" size={20} />}
+                title={CADENCES_MSG.noEnrollmentsMatchTitle}
+                description={CADENCES_MSG.noMatchesDesc}
               />
             </div>
           ) : (

@@ -101,8 +101,11 @@ export const CARRIER_RULES_MSG = {
   active: "Active",
   inactiveHint: "Inactive rules stop applying to the sales list but keep their history.",
 
+  searchPlaceholder: "Search by carrier or notes…",
   emptyTitle: "No carrier rules yet",
   emptyDesc: "Add a rule so the Commission Desk can show what each carrier advances.",
+  noMatchTitle: "No matches",
+  noMatchDesc: "No carrier rules match your search. Try a different carrier name.",
 
   saved: "Rule saved",
   saveFailed: "Couldn't save the rule",

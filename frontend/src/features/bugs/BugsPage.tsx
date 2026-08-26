@@ -13,7 +13,7 @@ import { timeAgoShort } from "../../shared/lib/time";
 import { BUGS_MSG } from "./messages";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
+  SearchInput, Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
 } from "../../shared/ui";
 
 /**
@@ -25,9 +25,21 @@ export function BugsPage() {
   const [scope, setScope] = useState<"all" | "mine" | "assigned">("all");
   const { data: bugs, isLoading } = useListBugsQuery({ status: status || undefined, scope });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const list = bugs ?? [];
-  const sel = useRowSelection(list.map((b) => b.id));
+  // Client-side search over the already-loaded reports — the query above is untouched.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const all = bugs ?? [];
+    if (!q) return all;
+    return all.filter((b) =>
+      [b.title, b.reporterName, b.assignedToName, b.pageUrl]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [bugs, search]);
+
+  // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
+  const sel = useRowSelection(filtered.map((b) => b.id));
   const canManage = list.some((b) => b.canManage);
   const [bulkStatus, setBulkStatus] = useState(BUG_STATUSES[1].value);
   const [setBugStatus, { isLoading: bulkBusy }] = useSetBugStatusMutation();
@@ -40,7 +52,7 @@ export function BugsPage() {
   }, [list]);
 
   function exportSelected() {
-    const chosen = list.filter((b) => sel.isSelected(b.id));
+    const chosen = filtered.filter((b) => sel.isSelected(b.id));
     exportRowsToCsv(chosen, [
       { header: "Title", value: (b) => b.title },
       { header: "Severity", value: (b) => bugSeverityMeta(b.severity).label },
@@ -94,6 +106,7 @@ export function BugsPage() {
               </button>
             ))}
           </div>
+          <SearchInput value={search} onChange={setSearch} placeholder={BUGS_MSG.searchPlaceholder} className="w-64" />
           <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "bug" : "bugs"}</span>
         </CardBody>
       </Card>
@@ -104,6 +117,10 @@ export function BugsPage() {
         <Card><CardBody>
           <EmptyState icon={<Icon name="success" size={20} />} title={BUGS_MSG.noBugsTitle}
             description={status || scope === "mine" ? BUGS_MSG.noBugsFilterDesc : BUGS_MSG.noBugsDesc} />
+        </CardBody></Card>
+      ) : filtered.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState icon={<Icon name="search" size={20} />} title={BUGS_MSG.noMatchTitle} description={BUGS_MSG.noMatchDesc} />
         </CardBody></Card>
       ) : (
         <div className="overflow-x-auto animate-rise">
@@ -118,7 +135,7 @@ export function BugsPage() {
               <TH numeric>Reported</TH>
             </TR></THead>
             <TBody>
-              {list.map((b) => (
+              {filtered.map((b) => (
                 <TR key={b.id}
                   className={cn("cursor-pointer border-l-[3px]", bugSeverityMeta(b.severity).accent, sel.isSelected(b.id) && "bg-brand-50/40")}
                   onClick={() => setOpenId(b.id)}>

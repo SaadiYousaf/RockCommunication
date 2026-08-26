@@ -49,7 +49,7 @@ export function KnowledgeBasePage() {
           <div className="p-4 border-b hairline">
             <SearchInput
               value={q} onChange={setQ}
-              placeholder="Search articles…"
+              placeholder={KB_MSG.searchPlaceholder}
             />
           </div>
           <div className="flex-1 overflow-y-auto">

@@ -1,13 +1,13 @@
 import type { Campaign, Skill } from "../../shared/api/types";
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useListCampaignsQuery, useListLeadSourcesQuery, useListSkillsQuery, useListWrapUpCodesQuery,
   useUpsertCampaignMutation, useUpsertLeadSourceMutation, useUpsertSkillMutation, useUpsertWrapUpCodeMutation,
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -64,7 +64,14 @@ function CampaignsSection() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
 
-  const { sorted, dirFor, toggle: sortToggle } = useTableSort(list, {
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list ?? [];
+    return (list ?? []).filter((c) => [c.code, c.name].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [list, search]);
+
+  const { sorted, dirFor, toggle: sortToggle } = useTableSort(filtered, {
     accessors: { status: (c) => (c.isActive ? "Active" : "Inactive") },
   });
 
@@ -95,7 +102,13 @@ function CampaignsSection() {
   return (
     <Card>
       <CardHeader title="Campaigns" subtitle="Outbound dialer campaigns and verticals."
-        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>} />
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={CALLCENTER_MSG.campaignSearchPlaceholder} className="w-64" />
+            <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>
+          </div>
+        } />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -106,6 +119,14 @@ function CampaignsSection() {
               title={CALLCENTER_MSG.noCampaignsTitle}
               description={CALLCENTER_MSG.noCampaignsBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New campaign</Button></Can>}
+            />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="px-5 pb-5">
+            <EmptyState
+              icon={<Icon name="search" size={20} />}
+              title={CALLCENTER_MSG.noCampaignsMatchTitle}
+              description={CALLCENTER_MSG.tryDifferentSearch}
             />
           </div>
         ) : (
@@ -178,7 +199,17 @@ function LeadSourcesSection() {
   const [cost, setCost] = useState("0");
   const [campaignId, setCampaignId] = useState("");
 
-  const { sorted, dirFor, toggle } = useTableSort(list, {
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list ?? [];
+    return (list ?? []).filter((s) => {
+      const campaignName = campaigns?.find((c) => c.id === s.campaignId)?.name ?? "";
+      return [s.code, s.name, campaignName].some((v) => (v ?? "").toLowerCase().includes(q));
+    });
+  }, [list, campaigns, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { campaign: (s) => campaigns?.find((c) => c.id === s.campaignId)?.name ?? "" },
   });
 
@@ -197,7 +228,13 @@ function LeadSourcesSection() {
   return (
     <Card>
       <CardHeader title="Lead sources" subtitle="Where your leads come from and what they cost."
-        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>} />
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={CALLCENTER_MSG.leadSourceSearchPlaceholder} className="w-64" />
+            <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>
+          </div>
+        } />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -205,6 +242,11 @@ function LeadSourcesSection() {
           <div className="px-5 pb-5">
             <EmptyState icon={<Icon name="target" size={20} />} title={CALLCENTER_MSG.noLeadSourcesTitle} description={CALLCENTER_MSG.noLeadSourcesBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New source</Button></Can>} />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="px-5 pb-5">
+            <EmptyState icon={<Icon name="search" size={20} />} title={CALLCENTER_MSG.noLeadSourcesMatchTitle}
+              description={CALLCENTER_MSG.tryDifferentSearch} />
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">
@@ -262,6 +304,13 @@ function SkillsSection() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
 
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list ?? [];
+    return (list ?? []).filter((s) => [s.code, s.name].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [list, search]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -287,16 +336,25 @@ function SkillsSection() {
   return (
     <Card>
       <CardHeader title="Skills" subtitle="Capabilities used by skill-based call routing."
-        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>} />
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={CALLCENTER_MSG.skillSearchPlaceholder} className="w-64" />
+            <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>
+          </div>
+        } />
       <CardBody className="pt-0">
         {isLoading ? (
           <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : !list || list.length === 0 ? (
           <EmptyState icon={<Icon name="star" size={20} />} title={CALLCENTER_MSG.noSkillsTitle} description={CALLCENTER_MSG.noSkillsBody}
             action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New skill</Button></Can>} />
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={<Icon name="search" size={20} />} title={CALLCENTER_MSG.noSkillsMatchTitle}
+            description={CALLCENTER_MSG.tryDifferentSearch} />
         ) : (
           <ul className="divide-y divide-ink-100">
-            {list.map((s) => (
+            {filtered.map((s) => (
               <li key={s.id} className="py-2.5 flex items-center gap-3 transition-colors hover:bg-ink-50/50">
                 <Badge tone="info" variant="soft" className="font-mono whitespace-nowrap">{s.code}</Badge>
                 <span className="flex-1 min-w-0 truncate text-ink-800">{s.name}</span>
@@ -343,7 +401,14 @@ function WrapUpCodesSection() {
   const [isContact, setIsContact] = useState(true);
   const [isRetry, setIsRetry] = useState(false);
 
-  const { sorted, dirFor, toggle } = useTableSort(list);
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return list ?? [];
+    return (list ?? []).filter((w) => [w.code, w.label].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [list, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -357,7 +422,13 @@ function WrapUpCodesSection() {
   return (
     <Card>
       <CardHeader title="Wrap-up codes" subtitle="Dispositions agents pick after every call."
-        action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>} />
+        action={
+          <div className="flex items-center gap-2">
+            <SearchInput value={search} onChange={setSearch}
+              placeholder={CALLCENTER_MSG.wrapUpSearchPlaceholder} className="w-64" />
+            <Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>
+          </div>
+        } />
       <CardBody className="pt-0 px-0">
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -365,6 +436,11 @@ function WrapUpCodesSection() {
           <div className="px-5 pb-5">
             <EmptyState icon={<Icon name="check" size={20} />} title={CALLCENTER_MSG.noWrapUpCodesTitle} description={CALLCENTER_MSG.noWrapUpCodesBody}
               action={<Can permission={Perm.CampaignsManage}><Button leftIcon={<Icon name="plus" size={16} />} onClick={() => setOpen(true)}>New code</Button></Can>} />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="px-5 pb-5">
+            <EmptyState icon={<Icon name="search" size={20} />} title={CALLCENTER_MSG.noWrapUpCodesMatchTitle}
+              description={CALLCENTER_MSG.tryDifferentSearch} />
           </div>
         ) : (
           <Table className="border-0 shadow-none rounded-none">

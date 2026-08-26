@@ -3,6 +3,8 @@
  * full-sentence empty states. Short UI labels (buttons, headers, placeholders) stay inline.
  */
 export const USERS_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search by name, email, or role…",
   exportReady: "Export ready",
   exportReadyDesc: (n: number) => `${n} rows downloaded.`,
   loadFailedTitle: "Couldn't load users",

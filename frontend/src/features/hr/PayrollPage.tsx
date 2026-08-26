@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
@@ -10,7 +10,7 @@ import {
 import type { PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -66,6 +66,7 @@ export function PayrollPage() {
   const scopedCallCenter = useSelector((s: RootState) => s.auth.user?.callCenterId) ?? "";
   const [callCenterId, setCallCenterId] = useState(scopedCallCenter);
   useEffect(() => { setCallCenterId(scopedCallCenter); }, [scopedCallCenter]);
+  const [search, setSearch] = useState("");
   const monthValue = `${year}-${String(month).padStart(2, "0")}`;
 
   const { data: rows, isLoading } = useListPayrollQuery({ year, month, callCenterId: callCenterId || undefined });
@@ -143,10 +144,21 @@ export function PayrollPage() {
 
   const list = rows ?? [];
   const totalNet = list.reduce((s, r) => s + r.netPay, 0);
-  const sel = useRowSelection(list.map((r) => r.employeeId));
+
+  // Client-side search over the month's already-loaded rows — the query above is untouched.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const all = rows ?? [];
+    if (!q) return all;
+    return all.filter((r) =>
+      [r.fullName, r.agentCode, r.callCenterName].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [rows, search]);
+
+  // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
+  const sel = useRowSelection(filtered.map((r) => r.employeeId));
 
   function exportSelected() {
-    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    const chosen = filtered.filter((r) => sel.isSelected(r.employeeId));
     exportRowsToCsv(chosen, [
       { header: "Name", value: (r) => r.fullName },
       { header: "Agent ID", value: (r) => r.agentCode },
@@ -167,7 +179,7 @@ export function PayrollPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => setBulkForm((f) => ({ ...f, [k]: e.target.value }));
 
   async function applyBulk() {
-    const chosen = list.filter((r) => sel.isSelected(r.employeeId));
+    const chosen = filtered.filter((r) => sel.isSelected(r.employeeId));
     const editable = chosen.filter((r) => !r.finalized);
     const skipped = chosen.length - editable.length;
     const numOrUndef = (s: string) => (s.trim() === "" ? undefined : Number(s));
@@ -238,6 +250,7 @@ export function PayrollPage() {
             <option value="">All call centres</option>
             {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
+          <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.payrollSearchPlaceholder} className="w-64" />
           <Button variant="outline" leftIcon={<Icon name="cog" size={15} />} onClick={() => setConfigOpen(true)}>Deduction rules</Button>
           <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "employee" : "employees"}</span>
         </CardBody>
@@ -286,6 +299,8 @@ export function PayrollPage() {
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
       ) : list.length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.payrollEmptyDesc} /></CardBody></Card>
+      ) : filtered.length === 0 ? (
+        <Card><CardBody><EmptyState icon={<Icon name="search" size={20} />} title={HR_MSG.noMatchesTitle} description={HR_MSG.noEmployeeSearchMatchesDesc} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>
@@ -325,7 +340,7 @@ export function PayrollPage() {
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
-              {list.map((r) => (
+              {filtered.map((r) => (
                 <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />

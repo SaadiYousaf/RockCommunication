@@ -260,7 +260,7 @@ export function LeadsPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search by name, phone, or email…"
+              placeholder={LEADS_MSG.leadsSearchPlaceholder}
             />
           </div>
           <Select value={sort} onChange={(e) => setSort(e.target.value)} className="h-10 w-56">

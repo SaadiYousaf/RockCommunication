@@ -3,6 +3,10 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const CHAT_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchConversations: "Search conversations...",
+  searchInConversation: "Search in conversation…",
+  searchPeople: "Search people…",
   // Message actions
   editFailed: "Couldn't edit",
   deleteMessageTitle: "Delete message?",

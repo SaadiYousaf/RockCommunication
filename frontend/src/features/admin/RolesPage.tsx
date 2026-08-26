@@ -180,7 +180,7 @@ export function RolesPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search roles…"
+              placeholder={ADMIN_MSG.search.roles}
             />
           </div>
           <CardBody className="p-2">

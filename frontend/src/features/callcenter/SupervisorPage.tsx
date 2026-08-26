@@ -134,7 +134,7 @@ export function SupervisorPage() {
         <CardBody className="flex flex-wrap gap-3 items-center">
           <div className="flex-1 min-w-[260px]">
             <SearchInput
-              placeholder="Search by agent name…"
+              placeholder={CALLCENTER_MSG.agentSearchPlaceholder}
               value={search} onChange={setSearch}
             />
           </div>

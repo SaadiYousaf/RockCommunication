@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import {
@@ -7,7 +7,7 @@ import {
 import type { CarrierRule } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import { CARRIER_RULES_MSG } from "./messages";
 
@@ -21,6 +21,15 @@ export function CarrierRulesPage() {
   const [remove] = useDeleteCarrierRuleMutation();
   const [editing, setEditing] = useState<CarrierRule | null>(null);
   const [creating, setCreating] = useState(false);
+
+  // Client-side search over the already-loaded rules (carrier / notes).
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rules ?? [];
+    return (rules ?? []).filter((r) =>
+      [r.carrier, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [rules, search]);
 
   async function del(rule: CarrierRule) {
     if (!window.confirm(CARRIER_RULES_MSG.confirmDelete(rule.carrier))) return;
@@ -45,7 +54,9 @@ export function CarrierRulesPage() {
 
       <Card>
         <CardHeader title={CARRIER_RULES_MSG.title}
-          subtitle={rules ? `${rules.length} rule${rules.length === 1 ? "" : "s"}` : undefined} />
+          subtitle={rules ? `${rules.length} rule${rules.length === 1 ? "" : "s"}` : undefined}
+          action={<SearchInput value={search} onChange={setSearch}
+            placeholder={CARRIER_RULES_MSG.searchPlaceholder} className="w-64" />} />
         <CardBody>
           {isLoading ? (
             <Skeleton className="h-40" />
@@ -54,6 +65,9 @@ export function CarrierRulesPage() {
               description={CARRIER_RULES_MSG.emptyDesc}
               action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setCreating(true)}>
                 {CARRIER_RULES_MSG.newRule}</Button>} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Icon name="search" size={20} />} title={CARRIER_RULES_MSG.noMatchTitle}
+              description={CARRIER_RULES_MSG.noMatchDesc} />
           ) : (
             <Table>
               <THead>
@@ -67,7 +81,7 @@ export function CarrierRulesPage() {
                 </TR>
               </THead>
               <TBody>
-                {rules.map((r) => (
+                {filtered.map((r) => (
                   <TR key={r.id} className="hover:bg-ink-50/60 transition-colors">
                     <TD className="font-medium text-ink-900">{r.carrier}</TD>
                     <TD numeric className="tabular-nums">{r.commissionRate}%</TD>

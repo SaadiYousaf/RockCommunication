@@ -148,7 +148,7 @@ export function UserManagementPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search by name, email, or role…"
+              placeholder={ADMIN_MSG.search.users}
             />
           </div>
           {users && (

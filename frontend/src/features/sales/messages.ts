@@ -25,6 +25,9 @@ export const SALES_MSG = {
   createPayrollRunFailed: "Couldn't create payroll run",
   noCommissionsTitle: "No commissions in this range",
   noCommissionsBody: "Earn commissions by closing and funding sales, then check back here.",
+  commissionsSearchPlaceholder: "Search by rule, note or status…",
+  noCommissionsMatchTitle: "No matches",
+  noCommissionsMatchBody: "No commissions match your search. Try a different term.",
   noPayrollRunsTitle: "No payroll runs yet",
   noPayrollRunsBody: "Run payroll to summarize and freeze commissions for a period.",
 
@@ -32,6 +35,9 @@ export const SALES_MSG = {
   noSalesAssignedTitle: "No sales assigned yet",
   noSalesAssignedBody:
     "When a submission agent assigns a sale to you, it'll appear here — and you'll get a notification.",
+  assignedSalesSearchPlaceholder: "Search by customer, phone, carrier or policy…",
+  noAssignedSalesMatchTitle: "No matches",
+  noAssignedSalesMatchBody: "No assigned sales match your search. Try a different term.",
 
   // SaleDetailPage
   saleNotFoundTitle: "Sale not found",
@@ -68,4 +74,7 @@ export const SALES_MSG = {
   noClosedLeadsBody: "Closed leads will appear here once they're transitioned to Closed.",
   noSalesMatchTitle: "No sales match",
   noSalesMatchBody: "Try a different filter or date range.",
+  salesSearchPlaceholder: "Search by customer, phone, carrier or policy…",
+  noSalesSearchMatchTitle: "No matches",
+  noSalesSearchMatchBody: "No sales on this page match your search. Try a different term.",
 } as const;

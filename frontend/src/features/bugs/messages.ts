@@ -13,9 +13,13 @@ export const BUGS_MSG = {
   couldntBeUpdated: (n: number) => `${n} couldn't be updated`,
   stillSelected: "They're still selected.",
 
+  searchPlaceholder: "Search title, reporter, assignee…",
+
   noBugsTitle: "No bugs here",
   noBugsFilterDesc: "Nothing matches this filter.",
   noBugsDesc: "Nothing reported yet. Use the “Report a bug” button anytime you hit a problem.",
+  noMatchTitle: "No matches",
+  noMatchDesc: "No bug matches your search. Try a different title, reporter or assignee.",
 
   updateStatusFailed: "Couldn't update status",
   assignFailed: "Couldn't assign",

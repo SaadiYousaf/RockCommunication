@@ -17,4 +17,8 @@ export const CALLBACKS_MSG = {
 
   noCallbacksTitle: "No callbacks scheduled",
   noCallbacksBody: "Schedule a callback to keep customer follow-ups on track.",
+
+  searchPlaceholder: "Search by lead, phone or reason…",
+  noMatchTitle: "No matches",
+  noMatchDesc: "No callbacks match your search. Try a different term.",
 } as const;

@@ -9,6 +9,13 @@
  * (permission codes, raw role names, GUIDs) to end users.
  */
 export const ADMIN_MSG = {
+  /** Search placeholders across the admin pages (no user-facing copy inline). */
+  search: {
+    chatOversight: "Search rooms or people…",
+    users: "Search by name, email, or role…",
+    audit: "Search entity, user, changes, IP…",
+    roles: "Search roles…",
+  },
   /** Wording repeated across several admin pages — kept in one place. */
   common: {
     exportReady: "Export ready",
@@ -87,6 +94,9 @@ export const ADMIN_MSG = {
     agentDeactivated: "Agent deactivated",
     agentAdded: "Submission agent added",
     agentAddFailed: "Couldn't add submission agent",
+    searchPlaceholder: "Search by name or email…",
+    noMatchTitle: "No matching agents",
+    noMatchDesc: "No submission agents match your search. Try a different name or email.",
   },
 
   // ── Agencies (AgenciesPage) ──────────────────────────────────────────────
@@ -161,6 +171,9 @@ export const ADMIN_MSG = {
     createFailedDesc: "Check the name and try again.",
     emptyTitle: "No call centers yet",
     emptyDesc: "Create one, then assign agents to it from User Management.",
+    searchPlaceholder: "Search by name or code…",
+    noMatchTitle: "No matching call centers",
+    noMatchDesc: "No call centers match your search. Try a different name or code.",
   },
 
   // ── Call center detail (CallCenterDetailPage) ────────────────────────────

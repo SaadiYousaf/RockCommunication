@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useListCallsQuery, useListUsersQuery, type CallsQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -21,7 +21,17 @@ export function CallsHistoryPage() {
   const { data: users } = useListUsersQuery();
   const toast = useToast();
 
-  const rows = data?.items ?? [];
+  // Client-side search across the page of calls already fetched — never touches the query above.
+  const [search, setSearch] = useState("");
+  const rows = useMemo(() => {
+    const all = data?.items ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((c) =>
+      [c.leadName, c.leadPhone, c.agentName, c.wrapUpCode, c.status, c.direction]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [data, search]);
+
   const sel = useRowSelection(rows.map((c) => c.id));
 
   function exportSelected() {
@@ -68,6 +78,11 @@ export function CallsHistoryPage() {
 
       <Card className="mb-4">
         <CardBody className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder={CALLCENTER_MSG.callsSearchPlaceholder}
+            containerClassName="md:col-span-3 lg:col-span-2"
+          />
           <Select
             aria-label="Filter by agent"
             value={filters.agentUserId ?? ""}
@@ -119,7 +134,7 @@ export function CallsHistoryPage() {
           <div className="md:col-span-3 lg:col-span-6 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500 pt-1">
             <div className="tabular-nums">{pageInfo} {isFetching && <span className="ml-2 text-ink-400">refreshing…</span>}</div>
             <Button variant="ghost" size="sm" leftIcon={<Icon name="refresh" size={13} />}
-              onClick={() => setFilters({ skip: 0, take: 50, sort: "initiatedAt-desc" })}>
+              onClick={() => { setSearch(""); setFilters({ skip: 0, take: 50, sort: "initiatedAt-desc" }); }}>
               Reset filters
             </Button>
           </div>
@@ -134,6 +149,14 @@ export function CallsHistoryPage() {
             icon={<Icon name="phone" size={20} />}
             title={CALLCENTER_MSG.noCallsMatchTitle}
             description={CALLCENTER_MSG.noCallsMatchBody}
+          />
+        </CardBody></Card>
+      ) : rows.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={CALLCENTER_MSG.noCallsSearchMatchTitle}
+            description={CALLCENTER_MSG.tryDifferentSearch}
           />
         </CardBody></Card>
       ) : (
@@ -174,7 +197,7 @@ export function CallsHistoryPage() {
               </TR>
             </THead>
             <TBody>
-              {data.items.map((c) => (
+              {rows.map((c) => (
                 <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select call ${c.leadName}`} {...sel.checkboxProps(c.id)} />

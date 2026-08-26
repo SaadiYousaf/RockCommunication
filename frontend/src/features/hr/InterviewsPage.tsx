@@ -194,7 +194,7 @@ export function InterviewsPage() {
 
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder="Search candidate, phone, position…" /></div>
+          <div className="flex-1 min-w-[220px]"><SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.interviewSearchPlaceholder} /></div>
           <Select aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-44">
             <option value="">All statuses</option>
             {OFFER_STATUSES.map((s) => <option key={s} value={s}>{hrLabel(s)}</option>)}

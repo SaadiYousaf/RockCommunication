@@ -3,6 +3,8 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const KB_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search articles…",
   // Article mutations
   articleSaved: "Article saved",
   saveArticleFailed: "Couldn't save article",

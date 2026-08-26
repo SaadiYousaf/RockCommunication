@@ -12,7 +12,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -354,11 +354,22 @@ function SalesList() {
   const { data: carriers } = useCarriersQuery();
   const toast = useToast();
 
-  const rows = data?.items ?? [];
-  const sel = useRowSelection(rows.map((s) => s.id));
+  // Free-text search over the rows already fetched for this page (the server-side filters,
+  // sorting, paging and the stats above are untouched).
+  const [search, setSearch] = useState("");
+  const filteredRows = useMemo(() => {
+    const all = data?.items ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((s) =>
+      [s.leadName, s.leadPhone, s.carrier, s.policyNumber, s.closerName, s.planApproved]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [data?.items, search]);
+
+  const sel = useRowSelection(filteredRows.map((s) => s.id));
 
   function exportSelected() {
-    const chosen = rows.filter((s) => sel.isSelected(s.id));
+    const chosen = filteredRows.filter((s) => sel.isSelected(s.id));
     exportRowsToCsv(chosen, [
       { header: "Customer", value: (s) => s.leadName },
       { header: "Carrier", value: (s) => s.carrier },
@@ -401,6 +412,11 @@ function SalesList() {
 
       <Card className="mb-4">
         <CardBody className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <SearchInput
+            value={search} onChange={setSearch}
+            placeholder={SALES_MSG.salesSearchPlaceholder}
+            containerClassName="md:col-span-3 lg:col-span-2"
+          />
           <Select
             value={filters.closerUserId ?? ""}
             onChange={(e) => update("closerUserId", e.target.value || undefined)}
@@ -465,6 +481,14 @@ function SalesList() {
             description={SALES_MSG.noSalesMatchBody}
           />
         </CardBody></Card>
+      ) : filteredRows.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={SALES_MSG.noSalesSearchMatchTitle}
+            description={SALES_MSG.noSalesSearchMatchBody}
+          />
+        </CardBody></Card>
       ) : (
         <>
           <Table>
@@ -496,7 +520,7 @@ function SalesList() {
               </TR>
             </THead>
             <TBody>
-              {data.items.map((s) => (
+              {filteredRows.map((s) => (
                 <TR key={s.id} className={sel.isSelected(s.id) ? "cursor-pointer bg-brand-50/40" : "cursor-pointer"} onClick={() => navigate(`/sales/${s.id}`)}>
                   <TD onClick={(e) => e.stopPropagation()}>
                     <Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.id)} />

@@ -146,7 +146,7 @@ export function MyQueuePage() {
         <CardBody>
           <SearchInput
             value={search} onChange={setSearch}
-            placeholder="Search my queue by name, phone, or email…"
+            placeholder={LEADS_MSG.myQueueSearchPlaceholder}
           />
         </CardBody>
         <div className="px-5 -mt-2 pb-1 overflow-x-auto">

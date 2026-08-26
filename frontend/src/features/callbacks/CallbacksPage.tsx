@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -75,9 +75,18 @@ export function CallbacksPage() {
     return items.filter((c) => bucketOf(c.scheduledFor, c.completed) === tab);
   }, [callbacks, tab]);
 
+  // Client-side search on top of the tab filter — narrows the rows already loaded.
+  const [search, setSearch] = useState("");
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return filtered;
+    return filtered.filter((c) =>
+      [c.leadName, c.leadPhone, c.reason].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [filtered, search]);
+
   const stats = { overdue: buckets.overdue, upcoming: buckets.today + buckets.upcoming, done: buckets.completed };
 
-  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+  const { sorted, dirFor, toggle } = useTableSort(searched, {
     accessors: { status: (c) => (c.completed ? "Completed" : "Pending") },
   });
 
@@ -142,17 +151,21 @@ export function CallbacksPage() {
       </div>
 
       <Card className="mb-4">
-        <div className="px-2 pt-2 pb-1 overflow-x-auto">
-          <Tabs<Bucket>
-            value={tab} onChange={setTab}
-            items={[
-              { value: "today",     label: "Today",     count: buckets.today },
-              { value: "overdue",   label: "Overdue",   count: buckets.overdue },
-              { value: "upcoming",  label: "Upcoming",  count: buckets.upcoming },
-              { value: "completed", label: "Completed", count: buckets.completed },
-              { value: "all",       label: "All" },
-            ]}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-2 pb-1">
+          <div className="overflow-x-auto">
+            <Tabs<Bucket>
+              value={tab} onChange={setTab}
+              items={[
+                { value: "today",     label: "Today",     count: buckets.today },
+                { value: "overdue",   label: "Overdue",   count: buckets.overdue },
+                { value: "upcoming",  label: "Upcoming",  count: buckets.upcoming },
+                { value: "completed", label: "Completed", count: buckets.completed },
+                { value: "all",       label: "All" },
+              ]}
+            />
+          </div>
+          <SearchInput value={search} onChange={setSearch}
+            placeholder={CALLBACKS_MSG.searchPlaceholder} className="w-64" />
         </div>
       </Card>
 
@@ -177,6 +190,14 @@ export function CallbacksPage() {
                 Schedule callback
               </Button>
             }
+          />
+        </CardBody></Card>
+      ) : searched.length === 0 ? (
+        <Card><CardBody>
+          <EmptyState
+            icon={<Icon name="search" size={20} />}
+            title={CALLBACKS_MSG.noMatchTitle}
+            description={CALLBACKS_MSG.noMatchDesc}
           />
         </CardBody></Card>
       ) : (

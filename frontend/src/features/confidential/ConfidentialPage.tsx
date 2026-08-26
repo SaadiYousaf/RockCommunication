@@ -120,7 +120,7 @@ export function ConfidentialPage() {
       <Card className="mb-4">
         <CardBody className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[240px]">
-            <SearchInput value={q} onChange={setQ} placeholder="Search portals, usernames…" />
+            <SearchInput value={q} onChange={setQ} placeholder={CONFIDENTIAL_MSG.searchPlaceholder} />
           </div>
           {creds && (
             <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">

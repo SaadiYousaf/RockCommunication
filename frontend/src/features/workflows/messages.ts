@@ -3,6 +3,8 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const WORKFLOWS_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  searchPlaceholder: "Search by name, event, description…",
   // Rule mutations
   ruleUpdated: "Rule updated",
   ruleCreated: "Rule created",

@@ -132,7 +132,7 @@ export function LeadListsPage() {
         <CardBody>
           <SearchInput
             value={search} onChange={setSearch}
-            placeholder="Search lists by name…"
+            placeholder={LISTS_MSG.searchPlaceholder}
           />
         </CardBody>
       </Card>

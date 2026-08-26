@@ -7,6 +7,10 @@
  * what the user can/can't do; lean on the shared MESSAGES helpers for read-only / permission copy.
  */
 export const CALLCENTER_MSG = {
+  // Search placeholders (kept here so no user-facing copy lives inline).
+  scriptsSearchPlaceholder: "Search scripts by name, content, stage, or role…",
+  dncSearchPlaceholder: "Search by phone or reason…",
+  agentSearchPlaceholder: "Search by agent name…",
   // Shared across call-center pages
   exportReadyTitle: "Export ready",
   rowsDownloaded: (count: number) => `${count} rows downloaded.`,
@@ -47,6 +51,8 @@ export const CALLCENTER_MSG = {
   // CallsHistoryPage
   noCallsMatchTitle: "No calls match",
   noCallsMatchBody: "Try removing a filter or expanding the date range.",
+  callsSearchPlaceholder: "Search by lead, phone, agent or wrap-up…",
+  noCallsSearchMatchTitle: "No calls match your search",
 
   // DncPage
   removeDncConfirmTitle: (count: number) =>
@@ -85,9 +91,13 @@ export const CALLCENTER_MSG = {
   campaignEnabled: "Campaign enabled",
   noCampaignsTitle: "No campaigns yet",
   noCampaignsBody: "Create a campaign to group dialer activity and lead sources.",
+  campaignSearchPlaceholder: "Search campaigns by code or name…",
+  noCampaignsMatchTitle: "No campaigns match",
   leadSourceSavedTitle: "Lead source saved",
   noLeadSourcesTitle: "No lead sources",
   noLeadSourcesBody: "Track how leads enter your pipeline.",
+  leadSourceSearchPlaceholder: "Search sources by code, name or campaign…",
+  noLeadSourcesMatchTitle: "No lead sources match",
   skillSavedTitle: "Skill saved",
   disableSkillConfirmBody:
     "This skill will stop being used for skill-based call routing until you re-enable it.",
@@ -95,9 +105,13 @@ export const CALLCENTER_MSG = {
   skillEnabled: "Skill enabled",
   noSkillsTitle: "No skills",
   noSkillsBody: "Add skills to enable skill-based routing.",
+  skillSearchPlaceholder: "Search skills by code or name…",
+  noSkillsMatchTitle: "No skills match",
   wrapUpCodeSavedTitle: "Wrap-up code saved",
   noWrapUpCodesTitle: "No wrap-up codes",
   noWrapUpCodesBody: "Add codes for agents to use after calls.",
+  wrapUpSearchPlaceholder: "Search codes by code or label…",
+  noWrapUpCodesMatchTitle: "No wrap-up codes match",
 
   // SupervisorPage
   forceApplied: (label: string) => `${label} applied`,

@@ -1,10 +1,11 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useListSalesQuery } from "../../shared/api/baseApi";
 import type { SaleListItem } from "../../shared/api/baseApi";
 import type { BadgeTone } from "../../shared/ui";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatUsd } from "../../shared/lib/format";
@@ -30,7 +31,18 @@ export function LicenseAgentQueuePage() {
   const totalCommission = items.reduce((sum, s) => sum + (s.commissionEarned ?? 0), 0);
   const fundedCount = items.filter((s) => s.fundedAt).length;
   const inReviewCount = items.length - fundedCount;
-  const { sorted, dirFor, toggle } = useTableSort(items, {
+
+  // Free-text search over the rows already loaded (the stats above stay on the full queue).
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((s) =>
+      [s.leadName, s.leadPhone, s.carrier, s.policyNumber, s.closerName]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [items, search]);
+
+  const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => statusOf(s).label },
   });
   const toast = useToast();
@@ -73,7 +85,16 @@ export function LicenseAgentQueuePage() {
       )}
 
       <Card>
-        <CardHeader title="Assigned to me" />
+        <CardHeader
+          title="Assigned to me"
+          action={
+            <SearchInput
+              value={search} onChange={setSearch}
+              placeholder={SALES_MSG.assignedSalesSearchPlaceholder}
+              className="w-64"
+            />
+          }
+        />
         <CardBody>
           {isLoading ? (
             <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12" />)}</div>
@@ -82,6 +103,12 @@ export function LicenseAgentQueuePage() {
               icon={<Icon name="briefcase" size={20} />}
               title={SALES_MSG.noSalesAssignedTitle}
               description={SALES_MSG.noSalesAssignedBody}
+            />
+          ) : sorted.length === 0 ? (
+            <EmptyState
+              icon={<Icon name="search" size={20} />}
+              title={SALES_MSG.noAssignedSalesMatchTitle}
+              description={SALES_MSG.noAssignedSalesMatchBody}
             />
           ) : (
             <Table>

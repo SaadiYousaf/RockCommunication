@@ -8,6 +8,9 @@ import { MESSAGES } from "../../shared/constants/messages";
  * stays consistent app-wide.
  */
 export const LEADS_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  myQueueSearchPlaceholder: "Search my queue by name, phone, or email…",
+  leadsSearchPlaceholder: "Search by name, phone, or email…",
   // ---- Shared across leads pages ----
   exportReadyTitle: "Export ready",
   exportRows: (rows: number) => `${rows} rows downloaded.`,

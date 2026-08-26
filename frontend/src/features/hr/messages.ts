@@ -6,6 +6,11 @@
  * Short UI labels (buttons, headers, placeholders) stay in the components — this holds messages.
  */
 export const HR_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  interviewSearchPlaceholder: "Search candidate, phone, position…",
+  // Search placeholders (kept here so no user-facing copy lives inline).
+  socialSearchPlaceholder: "Search platform, notes…",
+  employeeSearchPlaceholder: "Search name, agent ID, phone, email…",
   // ── Shared toast fragments ────────────────────────────────────────────────
   saveFailed: "Couldn't save",
   removeFailed: "Couldn't remove",
@@ -14,6 +19,7 @@ export const HR_MSG = {
   exportReady: "Export ready",
   rowsDownloaded: (n: number) => `${n} rows downloaded.`,
   noMatchesTitle: "No matches",
+  noEmployeeSearchMatchesDesc: "No employee matches your search.",
   removeLabel: "Remove",
   deleteLabel: "Delete",
   stillSelectedRetry: "They're still selected — try again.",
@@ -41,6 +47,7 @@ export const HR_MSG = {
   uploadFailedRetry: "Upload failed. Try again.",
 
   // ── Attendance ────────────────────────────────────────────────────────────
+  attendanceSearchPlaceholder: "Search name, agent ID, call centre…",
   noEmployeesTitle: "No employees",
   addEmployeesFirst: "Add employees in HR → Employees first.",
   applyFailed: "Couldn't apply",
@@ -77,6 +84,7 @@ export const HR_MSG = {
   interviewsEmptyDesc: "Add a candidate to start tracking the hiring pipeline.",
 
   // ── Payroll ───────────────────────────────────────────────────────────────
+  payrollSearchPlaceholder: "Search name, agent ID, call centre…",
   payrollSaved: "Payroll saved",
   nameMonth: (name: string, month: string) => `${name} — ${month}`,
   generateSlipFailed: "Couldn't generate slip",

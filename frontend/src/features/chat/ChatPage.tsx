@@ -524,7 +524,7 @@ export function ChatPage() {
           </div>
           <Input
             leftIcon={<Icon name="search" size={14} />}
-            placeholder="Search conversations..."
+            placeholder={CHAT_MSG.searchConversations}
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="h-9"
           />
@@ -656,7 +656,7 @@ export function ChatPage() {
                 </div>
               </div>
               {showMsgSearch && (
-                <Input autoFocus leftIcon={<Icon name="search" size={14} />} placeholder="Search in conversation…"
+                <Input autoFocus leftIcon={<Icon name="search" size={14} />} placeholder={CHAT_MSG.searchInConversation}
                   value={msgSearch} onChange={(e) => setMsgSearch(e.target.value)} className="h-9 w-40 sm:w-56" />
               )}
               <Button variant="ghost" size="icon" aria-label="Search messages"
@@ -880,7 +880,7 @@ function DirectMessageModal({
       <Input
         autoFocus
         leftIcon={<Icon name="search" size={14} />}
-        placeholder="Search people…"
+        placeholder={CHAT_MSG.searchPeople}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         containerClassName="mb-3"

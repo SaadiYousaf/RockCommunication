@@ -174,7 +174,7 @@ function RoomBrowser({ agencyId, callCenter }: {
     <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
       <Card className="lg:h-[68vh] flex flex-col overflow-hidden">
         <div className="p-3 border-b hairline">
-          <SearchInput placeholder="Search rooms or people…" value={q} onChange={setQ} />
+          <SearchInput placeholder={ADMIN_MSG.search.chatOversight} value={q} onChange={setQ} />
         </div>
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (

@@ -4,6 +4,8 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  // Search placeholders (no user-facing copy inline).
+  queueSearchPlaceholder: "Search this queue…",
   // ---- Shared across intake pages ----
   exportReadyTitle: "Export ready",
   exportRows: (rows: number) => `${rows} rows downloaded.`,
