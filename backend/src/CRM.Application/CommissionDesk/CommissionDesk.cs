@@ -41,6 +41,17 @@ public static class CommissionDeskStatuses
     };
 
     public static bool GoesToRetention(ValidatorStatus s) => MovesToRetention.Contains(s);
+
+    /// <summary>
+    /// The amount an unpaid commission line should hold for an outcome: negative once the carrier
+    /// claws the advance back, positive again when the policy recovers. Idempotent in BOTH
+    /// directions — applying it twice is the same as applying it once — so re-saving a status can
+    /// never double a clawback or re-flip a restored line.
+    /// </summary>
+    public static decimal SignedAmount(decimal amount, bool clawedBack) =>
+        clawedBack
+            ? (amount > 0 ? -amount : amount)
+            : (amount < 0 ? -amount : amount);
 }
 
 /// <summary>One money line on a sale (a <see cref="CommissionEntry"/>), editable after a chargeback.</summary>
@@ -201,15 +212,18 @@ public class CommissionDeskHandler :
         {
             case ValidatorStatus.ChargedBack:
                 sale.ChargedBackAt ??= DateTime.UtcNow;
-                await NegateCommissionsAsync(sale, ct);
+                await FlipCommissionSignAsync(sale, negative: true, ct);
                 break;
             case ValidatorStatus.ActivePaid:
                 sale.ValidatedAt ??= DateTime.UtcNow;
                 sale.FundedAt ??= DateTime.UtcNow;
                 sale.ChargedBackAt = null;      // recovered — no longer charged back
+                await FlipCommissionSignAsync(sale, negative: false, ct);
                 break;
             case ValidatorStatus.Approved:
                 sale.ValidatedAt ??= DateTime.UtcNow;
+                sale.ChargedBackAt = null;
+                await FlipCommissionSignAsync(sale, negative: false, ct);
                 break;
         }
 
@@ -277,17 +291,25 @@ public class CommissionDeskHandler :
     }
 
     /// <summary>
-    /// Flip every UNPAID commission line on the sale negative (a clawback). Idempotent: a line that
-    /// is already negative stays as-is, so re-marking a chargeback never doubles it. Paid lines are
-    /// untouched history — the desk edits those by hand if the carrier reverses them.
+    /// Drive every UNPAID commission line on the sale to the sign the outcome implies: negative for a
+    /// charge-back (the carrier clawed the advance back), positive again when the policy recovers.
+    /// Both directions are IDEMPOTENT — a line already on the right sign is left alone — so
+    /// re-saving a status never doubles or re-flips an amount.
+    ///
+    /// The restore direction matters as much as the clawback: without it a sale taken
+    /// ChargedBack -> Active/Paid kept its negative amounts forever, so a healthy policy still read
+    /// as money owed on the desk, the dashboard and payroll.
+    ///
+    /// Paid lines are untouched history — payroll already paid them out; the desk reconciles those
+    /// by hand through the amounts editor.
     /// </summary>
-    private async Task NegateCommissionsAsync(Sale sale, CancellationToken ct)
+    private async Task FlipCommissionSignAsync(Sale sale, bool negative, CancellationToken ct)
     {
         var lines = await _db.CommissionEntries.IgnoreQueryFilters()
             .Where(c => c.SaleId == sale.Id && !c.IsDeleted && !c.Paid)
             .ToListAsync(ct);
         foreach (var line in lines)
-            if (line.Amount > 0) line.Amount = -line.Amount;
+            line.Amount = CommissionDeskStatuses.SignedAmount(line.Amount, negative);
     }
 
     /// <summary>Maps sales onto the desk DTO, joining lead, agency, call centre, amounts and carrier rule.</summary>

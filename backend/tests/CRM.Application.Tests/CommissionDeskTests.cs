@@ -78,6 +78,52 @@ public class CommissionDeskTests
         result.ShouldHaveValidationErrorFor(x => x.Status);
     }
 
+    // ── Charge-back / recovery sign handling ────────────────────────────────────
+    // Regression: a sale taken ChargedBack -> Active/Paid kept its NEGATIVE commission amounts, so a
+    // healthy policy still read as money owed on the desk, the dashboard and payroll.
+
+    [Fact]
+    public void Chargeback_makes_a_positive_amount_negative()
+        => Assert.Equal(-1000m, CommissionDeskStatuses.SignedAmount(1000m, clawedBack: true));
+
+    [Fact]
+    public void Recovery_restores_a_negative_amount_to_positive()
+        => Assert.Equal(1000m, CommissionDeskStatuses.SignedAmount(-1000m, clawedBack: false));
+
+    [Fact]
+    public void Chargeback_is_idempotent_and_never_doubles()
+    {
+        var once = CommissionDeskStatuses.SignedAmount(1000m, clawedBack: true);
+        var twice = CommissionDeskStatuses.SignedAmount(once, clawedBack: true);
+        Assert.Equal(once, twice);
+        Assert.Equal(-1000m, twice);
+    }
+
+    [Fact]
+    public void Recovery_is_idempotent()
+    {
+        var once = CommissionDeskStatuses.SignedAmount(-500m, clawedBack: false);
+        Assert.Equal(once, CommissionDeskStatuses.SignedAmount(once, clawedBack: false));
+        Assert.Equal(500m, once);
+    }
+
+    [Fact]
+    public void A_full_chargeback_then_recovery_round_trip_returns_the_original_amount()
+    {
+        const decimal original = 175m;
+        var clawed = CommissionDeskStatuses.SignedAmount(original, clawedBack: true);
+        var restored = CommissionDeskStatuses.SignedAmount(clawed, clawedBack: false);
+        Assert.Equal(-175m, clawed);
+        Assert.Equal(original, restored);
+    }
+
+    [Fact]
+    public void Zero_is_unaffected_in_either_direction()
+    {
+        Assert.Equal(0m, CommissionDeskStatuses.SignedAmount(0m, clawedBack: true));
+        Assert.Equal(0m, CommissionDeskStatuses.SignedAmount(0m, clawedBack: false));
+    }
+
     [Theory]
     [InlineData(-1, 6)]      // negative rate
     [InlineData(250, 6)]     // > 200%

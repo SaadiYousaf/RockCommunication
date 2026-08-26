@@ -20,7 +20,11 @@ export function StatusModal({ sale, onClose, onDone, onError }: {
   onError: (detail?: string) => void;
 }) {
   const [setStatus, { isLoading }] = useSetCommissionStatusMutation();
-  const [status, setStatus_] = useState<string>("ActivePaid");
+  // Start on the sale's CURRENT status so the dropdown reflects reality when the modal opens.
+  // (Defaulting to "ActivePaid" made a just-saved change look like it hadn't stuck.) A status the
+  // desk can't set — e.g. "Completed", still awaiting review — falls back to the usual next step.
+  const [status, setStatus_] = useState<string>(() =>
+    (COMMISSION_SETTABLE_STATUSES as readonly string[]).includes(sale.status) ? sale.status : "ActivePaid");
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState(false);
 
