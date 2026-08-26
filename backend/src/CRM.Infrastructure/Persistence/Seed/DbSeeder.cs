@@ -282,6 +282,16 @@ public static class DbSeeder
                 Permissions.LeadsRead, Permissions.SalesRead,
                 Permissions.RetentionRead, Permissions.RetentionWork,
                 Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
+            },
+            // Commission Agent: the cross-agency commission desk only. Deliberately NO user/role
+            // administration — it is a financial desk, not an admin role.
+            [Roles.CommissionAgent] = new[]
+            {
+                Permissions.DashboardView,
+                Permissions.SalesRead, Permissions.CommissionsView,
+                Permissions.CommissionDeskView, Permissions.CommissionDeskWork,
+                Permissions.CarrierRulesManage,
+                Permissions.KnowledgeView, Permissions.ChatRead, Permissions.ChatWrite
             }
         };
 
@@ -361,7 +371,7 @@ public static class DbSeeder
             Modules.Leads, Modules.LeadsSearch,
             Modules.Sales, Modules.Retention, Modules.Callbacks,
             Modules.Supervisor, Modules.Attendance, Modules.CallCenter, Modules.Qa,
-            Modules.Commissions,
+            Modules.Commissions, Modules.CommissionDesk,
             Modules.Knowledge, Modules.Chat, Modules.Reports,
             Modules.Campaigns, Modules.Scripts, Modules.Dnc,
         };
@@ -395,6 +405,13 @@ public static class DbSeeder
             [Domain.Enums.Roles.Winbacks] = agent,
             // Retention agent: their worklist + the surfaces they need to work a case.
             [Domain.Enums.Roles.Retention] = new[] { Modules.Dashboard, Modules.Retention, Modules.Leads, Modules.Knowledge, Modules.Chat },
+            // Commission agent: the commission desk (their landing screen), carrier rules, and the
+            // read-only sales/commissions surfaces they reconcile against.
+            [Domain.Enums.Roles.CommissionAgent] = new[]
+            {
+                Modules.Dashboard, Modules.CommissionDesk, Modules.CarrierRules,
+                Modules.Sales, Modules.Commissions, Modules.Knowledge, Modules.Chat,
+            },
         };
 
         // Reconcile (add missing AND remove grants that aren't in the spec) so role

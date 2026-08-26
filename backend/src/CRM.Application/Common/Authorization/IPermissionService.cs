@@ -28,6 +28,14 @@ public static class Permissions
     /// <summary>Work a retention policy — update its status (e.g. mark recovered) and add a note.</summary>
     public const string RetentionWork = "retention.work";
 
+    // Commission desk (cross-agency financial role)
+    /// <summary>View the commission desk: the cross-agency sales list and its dashboard.</summary>
+    public const string CommissionDeskView = "commission-desk.view";
+    /// <summary>Set a sale's financial status and edit chargeback amounts from the commission desk.</summary>
+    public const string CommissionDeskWork = "commission-desk.work";
+    /// <summary>Manage carrier advancing rules (carrier / rate / advanced months).</summary>
+    public const string CarrierRulesManage = "carrier-rules.manage";
+
     public const string CallbacksRead = "callbacks.read";
     public const string CallbacksWrite = "callbacks.write";
 

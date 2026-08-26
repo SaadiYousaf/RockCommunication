@@ -56,7 +56,13 @@ public enum ValidatorStatus
     /// The application has an error the closer must fix. The specific error (e.g.
     /// "Wrong banking / Payor issue", "Identity Error") is captured in the reason field.
     /// </summary>
-    ErrorInApplicationInformation = 8
+    ErrorInApplicationInformation = 8,
+    /// <summary>
+    /// The carrier clawed the advanced commission back (policy lapsed/cancelled after payout).
+    /// Set by the Commission Agent: the sale's commission entries are negated and become editable
+    /// so the desk can reconcile the true amounts. See CommissionDesk.
+    /// </summary>
+    ChargedBack = 9
 }
 
 /// <summary>Sub-reason for <see cref="ValidatorStatus.ErrorInApplicationInformation"/>.</summary>

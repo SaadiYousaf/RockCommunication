@@ -18,6 +18,7 @@ import type {
   Interview, InterviewInput, PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput,
   FeedPost, FeedComment,
   RetentionPolicy, RetentionResolveResult,
+  CommissionSale, CommissionDeskResult, CarrierRule, CommissionDeskDashboard,
   BugReport, BugActivity, BugReportDetail,
   SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
@@ -98,7 +99,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1312,6 +1313,43 @@ export const baseApi = createApi({
       query: () => "/api/retention",
       providesTags: ["Retention"],
     }),
+    // Commission desk — cross-agency sales, status/chargeback work, carrier rules, dashboard.
+    listCommissionSales: b.query<CommissionDeskResult, {
+      agencyId?: string; callCenterId?: string; carrier?: string; status?: string;
+      from?: string; to?: string; search?: string; skip?: number; take?: number;
+    } | void>({
+      query: (p) => ({ url: "/api/commission-desk/sales", params: p ?? undefined }),
+      providesTags: ["CommissionDesk"],
+    }),
+    setCommissionStatus: b.mutation<CommissionSale, { saleId: string; status: string; note?: string | null }>({
+      query: ({ saleId, ...body }) => ({ url: `/api/commission-desk/sales/${saleId}/status`, method: "POST", body }),
+      // A status change can move the sale to Retention and rewrites its commission lines.
+      invalidatesTags: ["CommissionDesk", "Retention", "Sales", "Commissions", "Leads"],
+    }),
+    updateCommissionAmount: b.mutation<CommissionSale, { saleId: string; entryId: string; amount: number; note?: string | null }>({
+      query: ({ saleId, entryId, ...body }) => ({
+        url: `/api/commission-desk/sales/${saleId}/amounts/${entryId}`, method: "PUT", body,
+      }),
+      invalidatesTags: ["CommissionDesk", "Commissions"],
+    }),
+    commissionDeskDashboard: b.query<CommissionDeskDashboard, { year: number; month: number }>({
+      query: (p) => ({ url: "/api/commission-desk/dashboard", params: p }),
+      providesTags: ["CommissionDesk"],
+    }),
+    listCarrierRules: b.query<CarrierRule[], void>({
+      query: () => "/api/commission-desk/carrier-rules",
+      providesTags: ["CarrierRules"],
+    }),
+    upsertCarrierRule: b.mutation<CarrierRule, { id?: string | null; carrier: string; commissionRate: number; advancedMonths: number; notes?: string | null; isActive?: boolean }>({
+      query: (body) => ({ url: "/api/commission-desk/carrier-rules", method: "POST", body }),
+      // Rules feed the desk's advancing columns, so the sales list must re-read too.
+      invalidatesTags: ["CarrierRules", "CommissionDesk"],
+    }),
+    deleteCarrierRule: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/commission-desk/carrier-rules/${id}`, method: "DELETE" }),
+      invalidatesTags: ["CarrierRules", "CommissionDesk"],
+    }),
+
     resolveRetention: b.mutation<RetentionResolveResult, { saleId: string; newStatus: string; note?: string | null; leadId?: string }>({
       // leadId is client-only (for cache invalidation); the backend endpoint takes status + note.
       query: ({ saleId, newStatus, note }) => ({ url: `/api/retention/${saleId}/resolve`, method: "POST", body: { newStatus, note } }),
@@ -1535,6 +1573,9 @@ export const {
   useListMeetingsQuery, useGetMeetingQuery, useCreateMeetingMutation,
   useUpdateMeetingMutation, useCancelMeetingMutation, useRespondMeetingMutation,
   useListRetentionPoliciesQuery, useResolveRetentionMutation,
+  useListCommissionSalesQuery, useSetCommissionStatusMutation, useUpdateCommissionAmountMutation,
+  useCommissionDeskDashboardQuery, useListCarrierRulesQuery, useUpsertCarrierRuleMutation,
+  useDeleteCarrierRuleMutation,
   useRegisterMutation,
   useChangePasswordMutation,
   useLeadListsQuery, useUpsertLeadListMutation, useImportLeadsCsvMutation, useListImportBatchesQuery,

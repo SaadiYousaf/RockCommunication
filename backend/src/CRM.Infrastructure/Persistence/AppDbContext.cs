@@ -139,6 +139,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<MeetingAttendee> MeetingAttendees => Set<MeetingAttendee>();
     public DbSet<BugReport> BugReports => Set<BugReport>();
     public DbSet<BugReportActivity> BugReportActivities => Set<BugReportActivity>();
+    public DbSet<CarrierAdvancingRule> CarrierAdvancingRules => Set<CarrierAdvancingRule>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -502,6 +503,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.RuleName).HasMaxLength(80).IsRequired();
             e.Property(x => x.Amount).HasPrecision(18, 4);
             e.Property(x => x.Threshold).HasPrecision(18, 4);
+        });
+
+        // Carrier advancing rules are GLOBAL (one per carrier name, across all agencies) — the
+        // Commission Agent works cross-agency. Unique on the carrier so a sale resolves exactly one.
+        b.Entity<CarrierAdvancingRule>(e =>
+        {
+            e.Property(x => x.Carrier).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            e.Property(x => x.CommissionRate).HasPrecision(9, 4);
+            e.HasIndex(x => x.Carrier).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<Vertical>(e =>

@@ -52,6 +52,15 @@ public static class Roles
     /// </summary>
     public const string Retention = "Retention";
 
+    /// <summary>
+    /// Commission agent — a CROSS-AGENCY financial role that works submitted sales after the
+    /// Submission Agent and before Retention: sets the financial status (Approved / Active Paid /
+    /// Charged Back / NSF / Declined / Cancelled / Bad Bank), edits chargeback amounts, and manages
+    /// carrier advancing rules. Sees sales across every agency/call centre (like a central Submission
+    /// Agent). Holds no administrative power beyond the commission desk.
+    /// </summary>
+    public const string CommissionAgent = "CommissionAgent";
+
     // ── Back-office / support ─────────────────────────────────────────────────
     /// <summary>Human-resources staff: manage employee records, attendance, payroll, hiring.</summary>
     public const string HR = "HR";
@@ -69,6 +78,7 @@ public static class Roles
         LicenseAgent,
         Followups, Correspondence, Winbacks,
         Retention,
+        CommissionAgent,
         HR, OfficeBoy
     };
 

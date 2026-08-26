@@ -17,6 +17,8 @@ public static class Modules
     public const string LeadsSearch = "leads.search";
     public const string Sales = "sales";
     public const string Retention = "retention";
+    public const string CommissionDesk = "commission-desk";
+    public const string CarrierRules = "carrier-rules";
     public const string Callbacks = "callbacks";
     public const string Supervisor = "supervisor";
     public const string Attendance = "attendance";
@@ -46,6 +48,8 @@ public static class Modules
         new(LeadsSearch,       "Search & Dedup",     "Pipeline",       "/leads/search",   "search",    50),
         new(Sales,             "Sales",              "Pipeline",       "/sales",          "briefcase", 60),
         new(Retention,         "Retention",          "Pipeline",       "/retention",      "refresh",   65),
+        new(CommissionDesk,    "Commission Desk",    "Finance",        "/commission-desk","dollar",   105),
+        new(CarrierRules,      "Carrier Rules",      "Finance",        "/carrier-rules",  "doc",      107),
         new(Callbacks,         "Callbacks",          "Pipeline",       "/callbacks",      "clock",     70),
         new(Supervisor,        "Supervisor",         "Operations",     "/supervisor",     "shield",    80),
         new(Attendance,        "Attendance",         "Operations",     "/attendance",     "clock",     85),

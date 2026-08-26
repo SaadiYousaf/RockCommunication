@@ -137,4 +137,10 @@ public class Sale : CallCenterEntity
     /// sale that passes through Approved → ActivePaid (or is re-saved) only ever mails the customer once.
     /// </summary>
     public DateTime? WelcomeEmailSentAt { get; set; }
+
+    /// <summary>
+    /// When the Commission Agent marked this sale charged back (the carrier clawed the advance back).
+    /// Non-null is what makes the sale's commission amounts editable on the commission desk.
+    /// </summary>
+    public DateTime? ChargedBackAt { get; set; }
 }

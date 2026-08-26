@@ -8,6 +8,7 @@ export const ALL_ROLES = [
   "LicenseAgent",
   "Followups", "Correspondence", "Winbacks",
   "Retention",
+  "CommissionAgent",
   "HR", "OfficeBoy",
 ] as const;
 
@@ -18,6 +19,7 @@ export const ROLE_LABELS: Record<string, string> = {
   Validator: "Submission Agent",
   LicenseAgent: "License Agent",
   OfficeBoy: "Office Boy",
+  CommissionAgent: "Commission Agent",
 };
 export const roleLabel = (r: string): string => ROLE_LABELS[r] ?? r;
 
@@ -28,6 +30,7 @@ export const ROLE_TONES: Record<string, BadgeTone> = {
   Validator: "info", LicenseAgent: "info", Fronter: "brand", Verifier: "brand",
   Followups: "neutral", Correspondence: "neutral", Winbacks: "neutral",
   Retention: "warning",
+  CommissionAgent: "accent",
   HR: "accent", OfficeBoy: "neutral",
 };
 

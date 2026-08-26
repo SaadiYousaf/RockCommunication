@@ -87,6 +87,7 @@ public interface IApplicationDbContext
     DbSet<MeetingAttendee> MeetingAttendees { get; }
     DbSet<BugReport> BugReports { get; }
     DbSet<BugReportActivity> BugReportActivities { get; }
+    DbSet<CarrierAdvancingRule> CarrierAdvancingRules { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

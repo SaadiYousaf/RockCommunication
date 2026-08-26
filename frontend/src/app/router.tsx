@@ -104,6 +104,9 @@ const BugsPage = lazyWithReload(() => import("../features/bugs/BugsPage").then(m
 const SelectContextPage = lazyWithReload(() => import("../features/context/SelectContextPage").then(m => ({ default: m.SelectContextPage })));
 const LicenseAgentQueuePage = lazyWithReload(() => import("../features/sales/LicenseAgentQueuePage").then(m => ({ default: m.LicenseAgentQueuePage })));
 const RetentionPage = lazyWithReload(() => import("../features/retention/RetentionPage").then(m => ({ default: m.RetentionPage })));
+const CommissionDeskPage = lazyWithReload(() => import("../features/commission/CommissionDeskPage").then(m => ({ default: m.CommissionDeskPage })));
+const CarrierRulesPage = lazyWithReload(() => import("../features/commission/CarrierRulesPage").then(m => ({ default: m.CarrierRulesPage })));
+const CommissionDashboardPage = lazyWithReload(() => import("../features/commission/CommissionDashboardPage").then(m => ({ default: m.CommissionDashboardPage })));
 
 const adminRoles = ["Admin", "ProgramManager"];
 
@@ -116,6 +119,8 @@ const M = {
   LeadsSearch: "leads.search",
   Sales: "sales",
   Retention: "retention",
+  CommissionDesk: "commission-desk",
+  CarrierRules: "carrier-rules",
   Callbacks: "callbacks",
   Commissions: "commissions",
   Reports: "reports",
@@ -238,6 +243,17 @@ const router = createBrowserRouter([
           {
             element: <ProtectedRoute modules={[M.Retention]} />,
             children: [{ path: "/retention", element: <RetentionPage /> }],
+          },
+          {
+            element: <ProtectedRoute modules={[M.CommissionDesk]} />,
+            children: [
+              { path: "/commission-desk", element: <CommissionDeskPage /> },
+              { path: "/commission-desk/dashboard", element: <CommissionDashboardPage /> },
+            ],
+          },
+          {
+            element: <ProtectedRoute modules={[M.CarrierRules]} />,
+            children: [{ path: "/carrier-rules", element: <CarrierRulesPage /> }],
           },
           {
             element: <ProtectedRoute modules={[M.Commissions]} />,

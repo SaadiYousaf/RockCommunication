@@ -1157,3 +1157,89 @@ export interface RetentionResolveResult {
   status: string;
   leadStage: string;
 }
+
+// ---- Commission Desk (cross-agency financial role) --------------------------
+
+/** One money line on a sale — editable once the sale is charged back (unpaid lines only). */
+export interface CommissionAmount {
+  id: string;
+  ruleName: string;
+  agentUserId: string;
+  agentName: string | null;
+  amount: number;
+  paid: boolean;
+  note: string | null;
+}
+
+/** A sale as shown on the cross-agency commission desk. */
+export interface CommissionSale {
+  saleId: string;
+  saleNumber: number;
+  leadId: string;
+  customerName: string;
+  phoneNumber: string;
+  agencyId: string;
+  agencyName: string;
+  callCenterId: string | null;
+  callCenterName: string | null;
+  carrier: string;
+  carrierApproved: string | null;
+  policyNumber: string | null;
+  monthlyPremium: number;
+  coverageApproved: number | null;
+  premiumApproved: number | null;
+  planApproved: string | null;
+  status: string;
+  /** Sum of the sale's commission entries — negative once charged back. */
+  fundedAmount: number;
+  amounts: CommissionAmount[];
+  /** Joined read-only from the global carrier advancing rules. */
+  advanceRate: number | null;
+  advancedMonths: number | null;
+  expectedAdvance: number | null;
+  soldAt: string;
+  validatedAt: string | null;
+  fundedAt: string | null;
+  chargedBackAt: string | null;
+}
+
+export interface CommissionDeskResult {
+  items: CommissionSale[];
+  total: number;
+  totalFunded: number;
+  totalPremium: number;
+}
+
+/** A carrier's advancing terms (global — one rule per carrier name). */
+export interface CarrierRule {
+  id: string;
+  carrier: string;
+  commissionRate: number;
+  advancedMonths: number;
+  notes: string | null;
+  isActive: boolean;
+}
+
+export interface CommissionDeskBreakdownRow {
+  id: string;
+  name: string;
+  saleCount: number;
+  premium: number;
+  funded: number;
+  expectedAdvance: number;
+  chargedBackCount: number;
+  chargedBackAmount: number;
+}
+
+export interface CommissionDeskDashboard {
+  year: number;
+  month: number;
+  totalSales: number;
+  totalPremium: number;
+  totalFunded: number;
+  totalExpectedAdvance: number;
+  chargedBackCount: number;
+  chargedBackAmount: number;
+  byAgency: CommissionDeskBreakdownRow[];
+  byCallCenter: CommissionDeskBreakdownRow[];
+}
