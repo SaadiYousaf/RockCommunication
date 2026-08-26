@@ -39,10 +39,17 @@ export interface PortalCredential {
   portalName: string;
   url?: string | null;
   username: string;
-  password: string;
+  /** True when a password is stored. The secret itself is fetched one at a time via reveal. */
+  hasPassword: boolean;
   notes?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+}
+
+/** The decrypted secret for a single credential (from the audited reveal endpoint). */
+export interface RevealedCredential {
+  id: string;
+  password: string;
 }
 export interface PortalCredentialInput {
   portalName: string;

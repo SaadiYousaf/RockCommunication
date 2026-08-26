@@ -13,7 +13,7 @@ import type {
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
-  PortalCredential, PortalCredentialInput,
+  PortalCredential, PortalCredentialInput, RevealedCredential,
   Employee, EmployeeListItem, EmployeeInput, HrAttendanceRow, HrAttendanceSummaryRow,
   Interview, InterviewInput, PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput,
   FeedPost, FeedComment,
@@ -1089,6 +1089,10 @@ export const baseApi = createApi({
       query: () => "/api/confidential/portal-credentials",
       providesTags: ["PortalCredentials"],
     }),
+    // A mutation, not a query: revealing writes an audit entry and must never sit in the cache.
+    revealPortalCredential: b.mutation<RevealedCredential, string>({
+      query: (id) => ({ url: `/api/confidential/portal-credentials/${id}/reveal`, method: "GET" }),
+    }),
     createPortalCredential: b.mutation<PortalCredential, PortalCredentialInput>({
       query: (body) => ({ url: "/api/confidential/portal-credentials", method: "POST", body }),
       invalidatesTags: ["PortalCredentials"],
@@ -1555,7 +1559,7 @@ export const {
   useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation, useUpdateCallCenterInAgencyMutation,
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useOrgTreeQuery, useSetUserTeamMutation, useSetTeamLeadMutation,
-  useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
+  useListPortalCredentialsQuery, useRevealPortalCredentialMutation, useCreatePortalCredentialMutation,
   useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
   useListEmployeesQuery, useGetEmployeeQuery, useCreateEmployeeMutation,
   useUpdateEmployeeMutation, useDeleteEmployeeMutation, useSyncEmployeesFromUsersMutation,

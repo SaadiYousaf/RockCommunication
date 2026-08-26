@@ -24,9 +24,18 @@ public class ConfidentialController : ControllerBase
 
     public record CredentialBody(string PortalName, string? Url, string Username, string Password, string? Notes);
 
+    /// <summary>The vault WITHOUT secrets — passwords are fetched one at a time via reveal.</summary>
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
         => Ok(await _mediator.Send(new ListPortalCredentialsQuery(), ct));
+
+    /// <summary>
+    /// Reveal ONE credential's password. Deliberately a separate call so the whole vault is never
+    /// sent in a single response, and so each disclosure is recorded in the audit trail.
+    /// </summary>
+    [HttpGet("{id:guid}/reveal")]
+    public async Task<IActionResult> Reveal(Guid id, CancellationToken ct)
+        => Ok(await _mediator.Send(new RevealPortalCredentialQuery(id), ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CredentialBody body, CancellationToken ct)

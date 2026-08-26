@@ -4,7 +4,7 @@ import { CONFIDENTIAL_MSG } from "./messages";
 import { useMemo, useState } from "react";
 import {
   useListPortalCredentialsQuery, useCreatePortalCredentialMutation,
-  useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation,
+  useUpdatePortalCredentialMutation, useDeletePortalCredentialMutation, useRevealPortalCredentialMutation,
 } from "../../shared/api/baseApi";
 import type { PortalCredential, PortalCredentialInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -25,6 +25,7 @@ export function ConfidentialPage() {
   const [create, { isLoading: creating }] = useCreatePortalCredentialMutation();
   const [update, { isLoading: updating }] = useUpdatePortalCredentialMutation();
   const [remove] = useDeletePortalCredentialMutation();
+  const [reveal] = useRevealPortalCredentialMutation();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -32,7 +33,9 @@ export function ConfidentialPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PortalCredential | null>(null);
   const [form, setForm] = useState<PortalCredentialInput>(EMPTY);
-  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  // id -> plaintext, fetched one at a time from the audited reveal endpoint. The list
+  // response never carries secrets, so nothing is exposed until an admin asks for it.
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
 
   const filtered = useMemo(() => {
     const list = creds ?? [];
@@ -42,9 +45,14 @@ export function ConfidentialPage() {
   }, [creds, q]);
 
   function openAdd() { setEditing(null); setForm(EMPTY); setOpen(true); }
-  function openEdit(c: PortalCredential) {
+  async function openEdit(c: PortalCredential) {
+    // The list has no password, and saving a blank one would wipe the stored secret — so fetch it
+    // (audited) to prefill the form, exactly as the old inline value did.
+    let password = "";
+    try { password = (await reveal(c.id).unwrap()).password; }
+    catch (err: unknown) { toast.error(CONFIDENTIAL_MSG.revealFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); return; }
     setEditing(c);
-    setForm({ portalName: c.portalName, url: c.url ?? "", username: c.username, password: c.password, notes: c.notes ?? "" });
+    setForm({ portalName: c.portalName, url: c.url ?? "", username: c.username, password, notes: c.notes ?? "" });
     setOpen(true);
   }
 
@@ -73,8 +81,27 @@ export function ConfidentialPage() {
     catch (err: unknown) { toast.error(CONFIDENTIAL_MSG.deleteFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
 
-  function toggleReveal(id: string) {
-    setRevealed((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  async function toggleReveal(id: string) {
+    if (revealed[id] !== undefined) {           // already open -> hide (and drop it from memory)
+      setRevealed(({ [id]: _drop, ...rest }) => rest);
+      return;
+    }
+    try {
+      const res = await reveal(id).unwrap();
+      setRevealed((r) => ({ ...r, [id]: res.password }));
+    } catch (err: unknown) {
+      toast.error(CONFIDENTIAL_MSG.revealFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  /** Copy a secret without needing it on screen — fetches it if it isn't already revealed. */
+  async function copyPassword(id: string) {
+    try {
+      const pw = revealed[id] ?? (await reveal(id).unwrap()).password;
+      await copy(pw, "Password");
+    } catch (err: unknown) {
+      toast.error(CONFIDENTIAL_MSG.revealFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
   }
   async function copy(text: string, label: string) {
     try { await navigator.clipboard.writeText(text); toast.success(CONFIDENTIAL_MSG.copied, CONFIDENTIAL_MSG.copiedDesc(label)); }
@@ -144,12 +171,12 @@ export function ConfidentialPage() {
                   </TD>
                   <TD>
                     <div className="inline-flex items-center gap-2">
-                      <span className="font-mono text-sm text-ink-800 tabular-nums">{revealed.has(c.id) ? c.password : "••••••••"}</span>
+                      <span className="font-mono text-sm text-ink-800 tabular-nums">{revealed[c.id] ?? (c.hasPassword ? "••••••••" : "—")}</span>
                       <button type="button" onClick={() => toggleReveal(c.id)} className="text-ink-400 hover:text-ink-700"
-                        title={revealed.has(c.id) ? "Hide" : "Reveal"} aria-label={revealed.has(c.id) ? "Hide password" : "Reveal password"}>
-                        <Icon name={revealed.has(c.id) ? "eyeOff" : "eye"} size={14} />
+                        title={revealed[c.id] !== undefined ? "Hide" : "Reveal"} aria-label={revealed[c.id] !== undefined ? "Hide password" : "Reveal password"}>
+                        <Icon name={revealed[c.id] !== undefined ? "eyeOff" : "eye"} size={14} />
                       </button>
-                      <button type="button" onClick={() => copy(c.password, "Password")} className="text-ink-400 hover:text-brand-700"
+                      <button type="button" onClick={() => copyPassword(c.id)} className="text-ink-400 hover:text-brand-700"
                         title="Copy password" aria-label="Copy password">
                         <Icon name="copy" size={13} />
                       </button>

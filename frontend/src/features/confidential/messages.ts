@@ -15,6 +15,7 @@ export const CONFIDENTIAL_MSG = {
   deleteFailed: "Couldn't delete",
   copied: "Copied",
   copiedDesc: (label: string) => `${label} copied to clipboard.`,
+  revealFailed: "Couldn't reveal the password",
   copyFailed: "Couldn't copy",
   copyFailedDesc: "Your browser blocked clipboard access.",
   emptyNoMatchTitle: "No matches",

@@ -9,13 +9,23 @@ using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.Confidential;
 
-/// <summary>A stored portal login. Password is returned decrypted — the whole point of the
-/// vault is to retrieve it — so every endpoint is gated to Admin / SuperAdmin.</summary>
+/// <summary>
+/// A stored portal login WITHOUT its secret. The password is deliberately not part of this shape:
+/// returning every vault password in one list response meant a single request (or a cached
+/// response, or an open DevTools tab) exposed the whole vault. Fetch one secret at a time through
+/// <see cref="RevealPortalCredentialQuery"/>, which is audited.
+/// </summary>
 public record PortalCredentialDto(
-    Guid Id, string PortalName, string? Url, string Username, string Password, string? Notes,
-    DateTime CreatedAt, DateTime? UpdatedAt);
+    Guid Id, string PortalName, string? Url, string Username, string? Notes,
+    bool HasPassword, DateTime CreatedAt, DateTime? UpdatedAt);
+
+/// <summary>The decrypted secret for ONE credential. Every reveal writes an audit entry.</summary>
+public record RevealedCredentialDto(Guid Id, string Password);
 
 public record ListPortalCredentialsQuery : IRequest<IReadOnlyList<PortalCredentialDto>>;
+
+/// <summary>Reveal a single credential's password. Audited — this is the sensitive read.</summary>
+public record RevealPortalCredentialQuery(Guid Id) : IRequest<RevealedCredentialDto>;
 
 public record CreatePortalCredentialCommand(
     string PortalName, string? Url, string Username, string Password, string? Notes) : IRequest<PortalCredentialDto>;
@@ -51,6 +61,7 @@ public class UpdatePortalCredentialValidator : AbstractValidator<UpdatePortalCre
 
 public class PortalCredentialHandlers :
     IRequestHandler<ListPortalCredentialsQuery, IReadOnlyList<PortalCredentialDto>>,
+    IRequestHandler<RevealPortalCredentialQuery, RevealedCredentialDto>,
     IRequestHandler<CreatePortalCredentialCommand, PortalCredentialDto>,
     IRequestHandler<UpdatePortalCredentialCommand, PortalCredentialDto>,
     IRequestHandler<DeletePortalCredentialCommand, Unit>
@@ -69,6 +80,34 @@ public class PortalCredentialHandlers :
     {
         if (_user.IsSuperAdmin || _user.Roles.Contains(DomainRoles.Admin)) return;
         throw new ForbiddenAccessException();
+    }
+
+    /// <summary>
+    /// Reveal one password, and RECORD it. Viewing a vault secret is the single most sensitive read
+    /// in the app, and the write-path audit interceptor never sees a read — so the entry is written
+    /// here explicitly, giving "who opened which credential, when, from where".
+    /// </summary>
+    public async Task<RevealedCredentialDto> Handle(RevealPortalCredentialQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureAdmin();
+        var entity = await _db.PortalCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.Id, ct)
+            ?? throw new NotFoundException(nameof(PortalCredential), request.Id);
+
+        _db.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = entity.AgencyId == Guid.Empty ? null : entity.AgencyId,
+            EntityName = nameof(PortalCredential),
+            EntityId = entity.Id.ToString(),
+            Action = "Reveal",
+            UserId = _user.UserId?.ToString(),
+            UserName = _user.UserName,
+            Changes = null,                 // never log the secret itself
+            IpAddress = _user.IpAddress,
+        });
+        await _db.SaveChangesAsync(ct);
+
+        return new RevealedCredentialDto(entity.Id, entity.Password);
     }
 
     public async Task<IReadOnlyList<PortalCredentialDto>> Handle(ListPortalCredentialsQuery request, CancellationToken ct)
@@ -127,5 +166,6 @@ public class PortalCredentialHandlers :
     }
 
     private static PortalCredentialDto Map(PortalCredential c) =>
-        new(c.Id, c.PortalName, c.Url, c.Username, c.Password, c.Notes, c.CreatedAt, c.UpdatedAt);
+        new(c.Id, c.PortalName, c.Url, c.Username, c.Notes,
+            !string.IsNullOrEmpty(c.Password), c.CreatedAt, c.UpdatedAt);
 }
