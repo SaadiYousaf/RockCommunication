@@ -1,5 +1,6 @@
 using CRM.Application.Hr;
 using CRM.Domain.Common;
+using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,8 @@ namespace CRM.Api.Controllers;
 
 /// <summary>HR social-media handling reports — posts made + queries answered. HR/Admin/SuperAdmin.</summary>
 [ApiController]
-[Authorize]
+// Mirror HrAccess.EnsureHr at the door (defense in depth).
+[Authorize(Roles = Roles.HR + "," + Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/hr/social-reports")]
 public class HrSocialController : ControllerBase
 {

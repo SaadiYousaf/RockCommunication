@@ -10,7 +10,8 @@ namespace CRM.Api.Controllers;
 /// <summary>HR attendance register — mark daily status, view a day, or roll up a month.
 /// HR / Admin / SuperAdmin only (enforced in the handlers).</summary>
 [ApiController]
-[Authorize]
+// Employee attendance PII — mirror HrAccess.EnsureHr at the door (defense in depth).
+[Authorize(Roles = Roles.HR + "," + Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/hr/attendance")]
 public class HrAttendanceController : ControllerBase
 {

@@ -1,5 +1,6 @@
 using CRM.Application.Confidential;
 using CRM.Domain.Common;
+using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,9 @@ namespace CRM.Api.Controllers;
 /// stored passwords are encrypted at rest.
 /// </summary>
 [ApiController]
-[Authorize]
+// Defense in depth: the handler's EnsureAdmin() is the business rule, but without a class-level
+// gate a future handler that forgets it would expose the credential vault to any logged-in user.
+[Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/confidential/portal-credentials")]
 public class ConfidentialController : ControllerBase
 {

@@ -9,7 +9,8 @@ namespace CRM.Api.Controllers;
 
 /// <summary>HR recruitment — interview / candidate records. HR / Admin / SuperAdmin only.</summary>
 [ApiController]
-[Authorize]
+// Candidate PII (CNIC, salary expectations) — mirror HrAccess.EnsureHr (defense in depth).
+[Authorize(Roles = Roles.HR + "," + Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/hr/interviews")]
 public class HrInterviewsController : ControllerBase
 {

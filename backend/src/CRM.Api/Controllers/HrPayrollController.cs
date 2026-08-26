@@ -3,6 +3,7 @@ using CRM.Api.Services;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Hr;
 using CRM.Domain.Common;
+using CRM.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,8 @@ namespace CRM.Api.Controllers;
 /// <summary>HR payroll — per-employee monthly pay (attendance + commission auto-derived, money
 /// components entered by HR) and PDF salary slips. HR / Admin / SuperAdmin only.</summary>
 [ApiController]
-[Authorize]
+// Salary data — mirror HrAccess.EnsureHr at the door (defense in depth).
+[Authorize(Roles = Roles.HR + "," + Roles.Admin + "," + Roles.SuperAdmin)]
 [Route("api/hr/payroll")]
 public class HrPayrollController : ControllerBase
 {
