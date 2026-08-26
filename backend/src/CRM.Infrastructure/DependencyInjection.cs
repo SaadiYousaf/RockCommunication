@@ -141,6 +141,10 @@ public static class DependencyInjection
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwt.Issuer,
                     ValidAudience = jwt.Audience,
+                    // Default ClockSkew is FIVE MINUTES — on a 15-minute access token that is a 33%
+                    // free extension, and it delays every revocation (deactivate/kill-switch) by the
+                    // same margin. 30s is ample for real clock drift between the box and a client.
+                    ClockSkew = TimeSpan.FromSeconds(30),
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                         string.IsNullOrEmpty(jwt.Secret) ? new string('X', 64) : jwt.Secret))
                 };
