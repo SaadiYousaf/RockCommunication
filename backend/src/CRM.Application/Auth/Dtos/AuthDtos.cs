@@ -29,7 +29,11 @@ public record UserSummaryDto(
     string? CallCenterName = null,
     /// <summary>True when this user's onboarding invitation lapsed (never accepted within the
     /// policy window). The UI shows "Expired" instead of "Pending" and prompts an admin resend.</summary>
-    bool InvitationExpired = false);
+    bool InvitationExpired = false,
+    /// <summary>Currency the UI formats sale/commission money in ("USD" / "PKR") — an agency setting.</summary>
+    string DisplayCurrency = "USD",
+    /// <summary>Units of DisplayCurrency per 1 USD (1 = show stored USD figures unchanged).</summary>
+    decimal ExchangeRate = 1m);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 

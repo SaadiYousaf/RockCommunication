@@ -158,6 +158,18 @@ export const ADMIN_MSG = {
     brandingSaved: "Branding saved",
     brandingSaveFailed: "Couldn't save branding",
     noLogoYet: "No logo uploaded yet",
+
+    // Money display (sales/commissions are stored in USD; payroll is PKR-native and untouched)
+    currencyTitle: "Money display",
+    currencySubtitle:
+      "How sale and commission figures are shown across the app. Salary and payroll are handled separately in PKR and are not affected.",
+    currencyLabel: "Show sale amounts in",
+    rateLabel: "Exchange rate",
+    rateHint: (code: string) => `How many ${code} equal 1 US dollar. Sales are stored in USD and converted for display only.`,
+    rateNoConversion: "No conversion — figures are shown exactly as stored.",
+    currencyPreview: (sample: string) => `A $400.00 sale will show as ${sample}.`,
+    currencySaved: "Money display updated",
+    currencySaveFailed: "Couldn't update the money display",
   },
 
   // ── Call centers list (CallCentersPage) ──────────────────────────────────

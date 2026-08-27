@@ -792,7 +792,7 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/agencies", method: "POST", body }),
       invalidatesTags: ["Agencies"],
     }),
-    updateAgency: b.mutation<AgencyDto, { id: string; name: string; code?: string | null; isActive: boolean; senderEmail?: string | null }>({
+    updateAgency: b.mutation<AgencyDto, { id: string; name: string; code?: string | null; isActive: boolean; senderEmail?: string | null; displayCurrency?: string; exchangeRate?: number }>({
       query: ({ id, ...body }) => ({ url: `/api/agencies/${id}`, method: "PUT", body }),
       invalidatesTags: (_r, _e, arg) => ["Agencies", { type: "Agencies", id: arg.id }],
     }),

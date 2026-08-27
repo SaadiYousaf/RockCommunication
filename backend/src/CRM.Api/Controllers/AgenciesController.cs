@@ -53,14 +53,16 @@ public class AgenciesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
-    public record UpdateAgencyBody(string Name, string? Code, bool IsActive, string? SenderEmail = null);
+    public record UpdateAgencyBody(string Name, string? Code, bool IsActive, string? SenderEmail = null,
+        string? DisplayCurrency = null, decimal? ExchangeRate = null);
 
     [HttpPut("{id:guid}")]
     [HasPermission(Permissions.AgenciesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAgencyBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive, body.SenderEmail), ct));
+        return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive, body.SenderEmail,
+            body.DisplayCurrency, body.ExchangeRate), ct));
     }
 
     /// <summary>Upload / replace the agency logo shown in customer emails. Images only, under 2 MB.</summary>

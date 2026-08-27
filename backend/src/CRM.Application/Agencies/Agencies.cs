@@ -23,7 +23,11 @@ public record AgencyDto(
     /// <summary>Reply-to address for customer mail (welcome email). Null = not configured.</summary>
     string? SenderEmail = null,
     /// <summary>True when a logo has been uploaded (fetch it from /api/agencies/{id}/logo).</summary>
-    bool HasLogo = false);
+    bool HasLogo = false,
+    /// <summary>Currency the UI formats sale money in ("USD" / "PKR").</summary>
+    string DisplayCurrency = "USD",
+    /// <summary>Units of DisplayCurrency per 1 USD (1 = no conversion).</summary>
+    decimal ExchangeRate = 1m);
 
 public record ListAgenciesQuery(bool IncludeInactive = false) : IRequest<IReadOnlyList<AgencyDto>>;
 public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
@@ -33,7 +37,8 @@ public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
 /// appended to this record without changing the handler's control flow.
 /// </summary>
 public record CreateAgencyCommand(string Name, string? Code, string CeoName, string CeoEmail) : IRequest<AgencyDto>;
-public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive, string? SenderEmail = null) : IRequest<AgencyDto>;
+public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive, string? SenderEmail = null,
+    string? DisplayCurrency = null, decimal? ExchangeRate = null) : IRequest<AgencyDto>;
 public record AssignCeoCommand(Guid AgencyId, Guid UserId) : IRequest<AgencyDto>;
 /// <summary>Point the agency's logo at an already-stored file key (uploaded via the controller).</summary>
 public record SetAgencyLogoCommand(Guid Id, string LogoKey) : IRequest<Unit>;
@@ -59,6 +64,12 @@ public class UpdateAgencyValidator : AbstractValidator<UpdateAgencyCommand>
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Code).MaximumLength(40);
+        When(x => !string.IsNullOrWhiteSpace(x.DisplayCurrency), () =>
+            RuleFor(x => x.DisplayCurrency).Must(c => c is "USD" or "PKR")
+                .WithMessage("Choose either USD or PKR."));
+        When(x => x.ExchangeRate is not null, () =>
+            RuleFor(x => x.ExchangeRate).GreaterThan(0m)
+                .WithMessage("The exchange rate must be greater than zero."));
         When(x => !string.IsNullOrWhiteSpace(x.SenderEmail), () =>
             RuleFor(x => x.SenderEmail).EmailAddress().MaximumLength(200)
                 .WithMessage("Enter a valid sender email address."));
@@ -173,6 +184,10 @@ public class AgenciesHandler :
         agency.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim();
         agency.IsActive = request.IsActive;
         agency.SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? null : request.SenderEmail!.Trim();
+        if (!string.IsNullOrWhiteSpace(request.DisplayCurrency))
+            agency.DisplayCurrency = request.DisplayCurrency!.Trim().ToUpperInvariant();
+        // A non-positive rate would zero out or invert every figure on screen — ignore it.
+        if (request.ExchangeRate is { } rate && rate > 0) agency.ExchangeRate = rate;
         await _db.SaveChangesAsync(ct);
 
         // Disabling an agency is a kill switch: force-logout every user underneath it so they
@@ -246,7 +261,8 @@ public class AgenciesHandler :
             a.Id, a.Name, a.Code, a.IsActive,
             ceo?.Id, ceo?.UserName,
             users.Count, a.CreatedAt,
-            a.SenderEmail, !string.IsNullOrWhiteSpace(a.LogoKey));
+            a.SenderEmail, !string.IsNullOrWhiteSpace(a.LogoKey),
+            a.DisplayCurrency, a.ExchangeRate);
     }
 
     public async Task<Unit> Handle(SetAgencyLogoCommand request, CancellationToken ct)

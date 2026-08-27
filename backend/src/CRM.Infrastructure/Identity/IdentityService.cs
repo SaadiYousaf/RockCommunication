@@ -374,16 +374,30 @@ public class IdentityService : IIdentityService
         if (user is null) return null;
         var roles = await _users.GetRolesAsync(user);
         var modules = await _moduleAccess.GetCodesForUserAsync(user.Id, ct);
+        var money = await ResolveMoneyAsync(user.AgencyId, ct);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), modules,
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
             CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: _enforce2Fa && !user.TwoFactorEnabled && DomainRoles.TwoFactorMandatory(roles),
             AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
+            DisplayCurrency: money.Currency, ExchangeRate: money.Rate,
             CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct),
             InvitationExpired: InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow));
     }
 
     /// <summary>Agency display name for a user, or null for SuperAdmin / central users (Guid.Empty).</summary>
+
+    /// <summary>The agency's money-display settings, so every screen formats the same way.</summary>
+    private async Task<(string Currency, decimal Rate)> ResolveMoneyAsync(Guid agencyId, CancellationToken ct)
+    {
+        if (agencyId == Guid.Empty) return ("USD", 1m);
+        var row = await _db.Agencies.AsNoTracking()
+            .Where(a => a.Id == agencyId)
+            .Select(a => new { a.DisplayCurrency, a.ExchangeRate })
+            .FirstOrDefaultAsync(ct);
+        return row is null ? ("USD", 1m) : (row.DisplayCurrency, row.ExchangeRate);
+    }
+
     private Task<string?> ResolveAgencyNameAsync(Guid agencyId, CancellationToken ct)
         => agencyId == Guid.Empty
             ? Task.FromResult<string?>(null)
@@ -449,10 +463,12 @@ public class IdentityService : IIdentityService
         var require2Fa = extra?.ContainsKey(CustomJwtClaims.TwoFactorSetupRequired) ?? false;
 
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, user.AgencyId, roles, user.CallCenterId, extra, ct: ct);
+        var money = await ResolveMoneyAsync(user.AgencyId, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles, modules,
             MustChangePassword: user.MustChangePassword, CallCenterId: user.CallCenterId,
             TwoFactorSetupRequired: require2Fa,
             AgencyName: await ResolveAgencyNameAsync(user.AgencyId, ct),
+            DisplayCurrency: money.Currency, ExchangeRate: money.Rate,
             CallCenterName: await ResolveCallCenterNameAsync(user.CallCenterId, ct));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);
     }
@@ -520,11 +536,13 @@ public class IdentityService : IIdentityService
 
         var token = await _jwt.IssueAsync(user.Id, user.UserName!, effAgency, roles, effCallCenter, extra,
             scopeAgency, scopeCallCenter, ct);
+        var money = await ResolveMoneyAsync(effAgency, ct);
         var summary = new UserSummaryDto(user.Id, user.UserName!, user.Email!, effAgency, roles, modules,
             MustChangePassword: user.MustChangePassword, TeamId: user.TeamId, IsActive: user.IsActive,
             CallCenterId: effCallCenter,
             TwoFactorSetupRequired: require2Fa,
             AgencyName: await ResolveAgencyNameAsync(effAgency, ct),
+            DisplayCurrency: money.Currency, ExchangeRate: money.Rate,
             CallCenterName: await ResolveCallCenterNameAsync(effCallCenter, ct),
             InvitationExpired: InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow));
         return new LoginResponse(token.AccessToken, token.RefreshToken, token.ExpiresAt, false, null, summary);

@@ -23,6 +23,10 @@ export interface UserSummary {
   twoFactorSetupRequired?: boolean;
   /** When the onboarding invitation was accepted (null = still pending). */
   invitationAcceptedAt?: string | null;
+  /** Currency the UI formats sale/commission money in ("USD" / "PKR") — an agency setting. */
+  displayCurrency?: string;
+  /** Units of displayCurrency per 1 USD (1 = show stored USD figures unchanged). */
+  exchangeRate?: number;
 }
 
 export interface CallCenterDto {
@@ -418,6 +422,10 @@ export interface AgencyDto {
   senderEmail: string | null;
   /** True when a logo has been uploaded (fetch from /api/agencies/{id}/logo). */
   hasLogo: boolean;
+  /** Currency the UI formats sale money in ("USD" / "PKR"). */
+  displayCurrency: string;
+  /** Units of displayCurrency per 1 USD (1 = no conversion). */
+  exchangeRate: number;
 }
 
 // ---- Org tree (Team hierarchy page) -----------------------------------------

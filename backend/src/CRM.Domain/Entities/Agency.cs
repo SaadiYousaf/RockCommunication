@@ -17,6 +17,20 @@ public class Agency : BaseEntity
     /// <summary>Storage key of the agency logo shown in customer emails. Null = no logo uploaded.</summary>
     public string? LogoKey { get; set; }
 
+    // ---- Money display ------------------------------------------------------
+    /// <summary>
+    /// ISO code the UI formats sale/commission money in ("USD" or "PKR"). Sales figures are STORED
+    /// in USD, so this is a display choice applied together with <see cref="ExchangeRate"/>.
+    /// Payroll is PKR-native and is never converted by this setting.
+    /// </summary>
+    public string DisplayCurrency { get; set; } = "USD";
+
+    /// <summary>
+    /// Units of <see cref="DisplayCurrency"/> per 1 USD. 1 = show the stored figure unchanged
+    /// (correct when the display currency is USD). e.g. 280 shows a $400 sale as PKR 112,000.
+    /// </summary>
+    public decimal ExchangeRate { get; set; } = 1m;
+
     /// <summary>
     /// Highest sale serial issued for this agency. Incremented atomically when a sale is created
     /// so each agency's sales are numbered 1, 2, 3… independently. See Sale.SaleNumber.

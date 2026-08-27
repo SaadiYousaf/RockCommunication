@@ -15,7 +15,7 @@ import {
 import type { AgencyDto, CallCenterDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { formatUsd } from "../../shared/lib/format";
 
@@ -129,6 +129,9 @@ export function AgencyDetailPage() {
 
       {/* Customer-email branding (welcome email) */}
       {agency && <AgencyBrandingCard agency={agency} />}
+
+      {/* Money display (sale/commission currency) */}
+      {agency && <AgencyCurrencyCard agency={agency} />}
 
       {/* Call centres */}
       <Card className="mb-4">
@@ -251,6 +254,74 @@ export function AgencyDetailPage() {
  * welcome email a customer receives when their policy is approved. The logo preview streams through
  * the authorized endpoint (bearer → blob), mirroring the avatar pattern.
  */
+/**
+ * Money display for the agency: which currency sale/commission figures are shown in, and the rate
+ * used to convert them. Sales are STORED in USD, so this is presentation only — and payroll, which
+ * is PKR-native, is deliberately left out of it so it can never be double-converted.
+ */
+function AgencyCurrencyCard({ agency }: { agency: AgencyDto }) {
+  const toast = useToast();
+  const [updateAgency, { isLoading }] = useUpdateAgencyMutation();
+  const [currency, setCurrency] = useState(agency.displayCurrency || "USD");
+  const [rate, setRate] = useState(String(agency.exchangeRate ?? 1));
+  useEffect(() => {
+    setCurrency(agency.displayCurrency || "USD");
+    setRate(String(agency.exchangeRate ?? 1));
+  }, [agency.displayCurrency, agency.exchangeRate]);
+
+  const parsedRate = Number(rate);
+  const rateValid = Number.isFinite(parsedRate) && parsedRate > 0;
+  // Show exactly what the change does to a familiar figure before it's saved.
+  const preview = rateValid
+    ? (400 * parsedRate).toLocaleString(undefined, { style: "currency", currency })
+    : "—";
+
+  async function save() {
+    if (!rateValid) return;
+    try {
+      await updateAgency({
+        id: agency.id, name: agency.name, code: agency.code, isActive: agency.isActive,
+        senderEmail: agency.senderEmail,
+        displayCurrency: currency,
+        // USD is the storage currency, so it must never carry a conversion factor.
+        exchangeRate: currency === "USD" ? 1 : parsedRate,
+      }).unwrap();
+      toast.success(ADMIN_MSG.agencyDetail.currencySaved);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.agencyDetail.currencySaveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  return (
+    <Card className="mb-4">
+      <CardHeader title={ADMIN_MSG.agencyDetail.currencyTitle} subtitle={ADMIN_MSG.agencyDetail.currencySubtitle} />
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Select label={ADMIN_MSG.agencyDetail.currencyLabel} value={currency}
+              onChange={(e) => setCurrency(e.target.value)}>
+              <option value="USD">US Dollar ($)</option>
+              <option value="PKR">Pakistani Rupee (PKR)</option>
+            </Select>
+          </div>
+          <div>
+            <Input label={ADMIN_MSG.agencyDetail.rateLabel} type="number" min={0} step="0.0001"
+              value={rate} onChange={(e) => setRate(e.target.value)} disabled={currency === "USD"} />
+            <p className="text-xs text-ink-500 mt-1">
+              {currency === "USD" ? ADMIN_MSG.agencyDetail.rateNoConversion : ADMIN_MSG.agencyDetail.rateHint(currency)}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
+          <p className="text-sm text-ink-600">{ADMIN_MSG.agencyDetail.currencyPreview(preview)}</p>
+          <Button size="sm" loading={isLoading} disabled={!rateValid}
+            leftIcon={<Icon name="save" size={14} />} onClick={save}>Save</Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 function AgencyBrandingCard({ agency }: { agency: AgencyDto }) {
   const toast = useToast();
   const [updateAgency, { isLoading: saving }] = useUpdateAgencyMutation();

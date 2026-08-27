@@ -1,6 +1,7 @@
 import { configureStore, createListenerMiddleware, isAnyOf } from "@reduxjs/toolkit";
 import { baseApi } from "../shared/api/baseApi";
 import authReducer, { setAuth, clearAuth } from "./authSlice";
+import { setMoneyDisplay } from "../shared/lib/format";
 
 export { setAuth, clearAuth } from "./authSlice";
 export type { AuthState } from "./authSlice";
@@ -15,6 +16,9 @@ authListener.startListening({
   effect: async (_action, api) => {
     const prev = (api.getOriginalState() as RootState).auth.user;
     const next = (api.getState() as RootState).auth.user;
+    // Money display follows the agency, so refresh it on EVERY auth change — including a silent
+    // token refresh and a context switch into another agency — before the early-return below.
+    setMoneyDisplay(next?.displayCurrency, next?.exchangeRate);
     // A silent /api/auth/refresh re-dispatches setAuth for the SAME user+scope just to rotate
     // tokens — don't nuke the cache then (it drops every live query, e.g. the softphone's
     // active-call, into a blank/loading state and triggers a refetch stampede). Wipe on an actual
@@ -38,3 +42,10 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+// A page reload rehydrates auth from localStorage WITHOUT dispatching setAuth, so seed the money
+// display from that persisted user — otherwise the first paint would fall back to USD.
+{
+  const u = store.getState().auth.user;
+  setMoneyDisplay(u?.displayCurrency, u?.exchangeRate);
+}
