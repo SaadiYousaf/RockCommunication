@@ -13,7 +13,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -72,6 +72,10 @@ export function UserManagementPage() {
     key: "userName",
     accessors: { role: (u) => u.roles[0] ?? "" },
   });
+
+  // Paging is purely presentational: it slices the already-filtered+sorted list for display.
+  // Selection, bulk deactivate and CSV export still work off the FULL filtered list.
+  const pg = usePagination(sorted);
 
   const sel = useRowSelection(sorted.map((u) => u.id));
 
@@ -191,7 +195,7 @@ export function UserManagementPage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((u) => {
+            {pg.pageItems.map((u) => {
               // Backend now returns isActive on every UserSummary. We default to
               // `true` for older payloads so we don't accidentally grey out everyone.
               const active = u.isActive ?? true;
@@ -304,6 +308,7 @@ export function UserManagementPage() {
             })}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="users" />
         <BulkActionBar
           count={sel.selectedCount} itemNoun="user" onClear={sel.clear}
           actions={[

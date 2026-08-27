@@ -4,7 +4,7 @@ import type { CommissionDeskBreakdownRow } from "../../shared/api/types";
 import { formatUsd } from "../../shared/lib/format";
 import {
   Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader, Skeleton, Stat,
-  Table, TBody, TD, TH, THead, TR,
+  Table, TBody, TD, TH, THead, TR, Pager, usePagination,
 } from "../../shared/ui";
 import { COMMISSION_DASH_MSG } from "./messages";
 
@@ -64,6 +64,7 @@ export function CommissionDashboardPage() {
 
 function BreakdownCard({ title, rows }: { title: string; rows: CommissionDeskBreakdownRow[] }) {
   const max = Math.max(1, ...rows.map((r) => r.expectedAdvance));
+  const pg = usePagination(rows);
   return (
     <Card>
       <CardHeader title={title} subtitle={`${rows.length} ${rows.length === 1 ? "entry" : "entries"}`} />
@@ -84,7 +85,7 @@ function BreakdownCard({ title, rows }: { title: string; rows: CommissionDeskBre
                 </TR>
               </THead>
               <TBody>
-                {rows.map((r) => (
+                {pg.pageItems.map((r) => (
                   <TR key={r.id} className="hover:bg-ink-50/60 transition-colors">
                     <TD>
                       <div className="font-medium text-ink-900 truncate max-w-[12rem]">{r.name || "—"}</div>
@@ -109,6 +110,7 @@ function BreakdownCard({ title, rows }: { title: string; rows: CommissionDeskBre
                 ))}
               </TBody>
             </Table>
+            <Pager {...pg} onPage={pg.setPage} unit="entries" />
           </div>
         )}
       </CardBody>

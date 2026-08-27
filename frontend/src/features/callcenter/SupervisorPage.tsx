@@ -5,8 +5,7 @@ import { useCoachAgentMutation, useForceAgentStatusMutation, useLiveAgentsQuery 
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
-} from "../../shared/ui";
+  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn, Pager, usePagination,} from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -72,6 +71,8 @@ export function SupervisorPage() {
     accessors: { duration: (a) => parseDuration(a.duration) },
   });
 
+  // Presentational paging over the final (filtered + sorted) agent list.
+  const pg = usePagination(sorted);
   const sel = useRowSelection(sorted.map((a) => a.userId));
 
   function exportSelected() {
@@ -201,7 +202,7 @@ export function SupervisorPage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((a) => (
+            {pg.pageItems.map((a) => (
               <TR key={a.userId} className={sel.isSelected(a.userId) ? "bg-brand-50/40" : undefined}>
                 <TD>
                   <Checkbox aria-label={`Select ${a.userName}`} {...sel.checkboxProps(a.userId)} />
@@ -267,6 +268,7 @@ export function SupervisorPage() {
             ))}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="agents" />
         <BulkActionBar
           count={sel.selectedCount} itemNoun="agent" onClear={sel.clear}
           actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}

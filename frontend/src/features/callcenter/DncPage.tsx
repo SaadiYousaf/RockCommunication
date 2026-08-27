@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useAddDncMutation, useListDncQuery, useRemoveDncMutation } from "../../shared/api/baseApi";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -38,6 +38,10 @@ export function DncPage() {
   }, [list, search]);
 
   const { sorted, dirFor, toggle } = useTableSort(filtered);
+
+  // Paging is purely presentational — it slices the already-filtered+sorted list for display.
+  // Selection, bulk remove and CSV export below still work off the FULL filtered list.
+  const pg = usePagination(sorted);
 
   const sel = useRowSelection(sorted.map((e) => e.id));
 
@@ -168,7 +172,7 @@ export function DncPage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((e) => {
+            {pg.pageItems.map((e) => {
               const expired = e.expiresAt && new Date(e.expiresAt) <= new Date();
               return (
                 <TR key={e.id} className={sel.isSelected(e.id) ? "bg-brand-50/40" : undefined}>
@@ -203,6 +207,7 @@ export function DncPage() {
             })}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="numbers" />
         <BulkActionBar
           count={sel.selectedCount} itemNoun="number" onClear={sel.clear}
           actions={[

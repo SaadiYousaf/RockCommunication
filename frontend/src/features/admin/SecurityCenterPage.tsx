@@ -1,6 +1,7 @@
 import { roleLabel } from "../../shared/constants/roles";
 import {
-  Badge, Card, CardBody, CardHeader, Icon, InfoHint, PageHeader, Stat, Table, TBody, TD, TH, THead, TR,
+  Badge, Card, CardBody, CardHeader, Icon, InfoHint, PageHeader, Pager, Stat, Table, TBody, TD, TH, THead, TR,
+  usePagination,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
 import type { IconName } from "../../shared/ui/Icon";
@@ -21,7 +22,14 @@ interface RoleRow {
   twoFactor?: boolean;
 }
 
-const TIERS: { tier: Tier; tone: BadgeTone; blurb: string; roles: RoleRow[] }[] = [
+interface TierSection {
+  tier: Tier;
+  tone: BadgeTone;
+  blurb: string;
+  roles: RoleRow[];
+}
+
+const TIERS: TierSection[] = [
   {
     tier: "Company", tone: "danger",
     blurb: "Cross-agency. The only roles that can see more than one agency.",
@@ -112,35 +120,7 @@ export function SecurityCenterPage() {
       </Card>
 
       {TIERS.map((t) => (
-        <Card key={t.tier} className="mb-4">
-          <CardHeader
-            title={`${t.tier} level`}
-            subtitle={t.blurb}
-            bordered
-            action={<Badge tone={t.tone} variant="soft"><span className="tabular-nums">{t.roles.length}</span> role{t.roles.length === 1 ? "" : "s"}</Badge>}
-          />
-          <CardBody>
-            <div className="overflow-x-auto">
-              <Table>
-                <THead>
-                  <TR><TH>Role</TH><TH>Data it can access</TH><TH>Key capabilities</TH><TH><span className="inline-flex items-center gap-1">2FA<InfoHint title="Two-factor authentication" side="left">Whether this role must complete a second verification step (2FA) at login.</InfoHint></span></TH></TR>
-                </THead>
-                <TBody>
-                  {t.roles.map((r) => (
-                    <TR key={r.role}>
-                      <TD className="whitespace-nowrap"><Badge tone={t.tone} variant="soft">{roleLabel(r.role)}</Badge></TD>
-                      <TD className="text-sm text-ink-700">{r.scope}</TD>
-                      <TD className="text-sm text-ink-600">{r.can}</TD>
-                      <TD className="whitespace-nowrap">{r.twoFactor
-                        ? <Badge tone="success" variant="soft"><Icon name="lock" size={11} className="-ml-0.5" /> Required</Badge>
-                        : <span className="text-xs text-ink-400">Optional</span>}</TD>
-                    </TR>
-                  ))}
-                </TBody>
-              </Table>
-            </div>
-          </CardBody>
-        </Card>
+        <TierCard key={t.tier} tier={t} />
       ))}
 
       <p className="text-xs text-ink-500 mt-2">
@@ -148,5 +128,46 @@ export function SecurityCenterPage() {
         to move a user between agency-level and a specific call centre, use <strong>User Management</strong>.
       </p>
     </>
+  );
+}
+
+/**
+ * One access-level card. Split out of the map so each tier's role table gets its own
+ * pagination state — hooks can't be called inside a `.map` callback.
+ */
+function TierCard({ tier: t }: { tier: TierSection }) {
+  const pg = usePagination(t.roles);
+
+  return (
+    <Card className="mb-4">
+      <CardHeader
+        title={`${t.tier} level`}
+        subtitle={t.blurb}
+        bordered
+        action={<Badge tone={t.tone} variant="soft"><span className="tabular-nums">{t.roles.length}</span> role{t.roles.length === 1 ? "" : "s"}</Badge>}
+      />
+      <CardBody>
+        <div className="overflow-x-auto">
+          <Table>
+            <THead>
+              <TR><TH>Role</TH><TH>Data it can access</TH><TH>Key capabilities</TH><TH><span className="inline-flex items-center gap-1">2FA<InfoHint title="Two-factor authentication" side="left">Whether this role must complete a second verification step (2FA) at login.</InfoHint></span></TH></TR>
+            </THead>
+            <TBody>
+              {pg.pageItems.map((r) => (
+                <TR key={r.role}>
+                  <TD className="whitespace-nowrap"><Badge tone={t.tone} variant="soft">{roleLabel(r.role)}</Badge></TD>
+                  <TD className="text-sm text-ink-700">{r.scope}</TD>
+                  <TD className="text-sm text-ink-600">{r.can}</TD>
+                  <TD className="whitespace-nowrap">{r.twoFactor
+                    ? <Badge tone="success" variant="soft"><Icon name="lock" size={11} className="-ml-0.5" /> Required</Badge>
+                    : <span className="text-xs text-ink-400">Optional</span>}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </div>
+        <Pager {...pg} onPage={pg.setPage} unit="roles" />
+      </CardBody>
+    </Card>
   );
 }

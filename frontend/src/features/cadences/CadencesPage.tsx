@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { useCadenceEnrollmentsQuery, useListCadencesQuery, useUpsertCadenceMutation } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, type IconName,
+  Pager, SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
+  type IconName,
 } from "../../shared/ui";
 import type { Cadence, CadenceStep } from "../../shared/api/types";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -66,6 +67,10 @@ export function CadencesPage() {
 
   const { sorted: sortedEnrollments, dirFor, toggle } = useTableSort(filteredEnrollments);
 
+  // Each list pages independently — presentational only, wrapping the final filtered/sorted rows.
+  const cadencePg = usePagination(filteredCadences);
+  const enrollmentPg = usePagination(sortedEnrollments);
+
   function openNew() {
     setEditing({
       id: null, name: "", campaignId: null, isActive: true, description: "",
@@ -122,7 +127,7 @@ export function CadencesPage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-4 mb-8">
-          {filteredCadences.map((c) => (
+          {cadencePg.pageItems.map((c) => (
             <Card key={c.id} className="hover:shadow-card-hover transition-shadow">
               <CardBody>
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -165,6 +170,7 @@ export function CadencesPage() {
               </CardBody>
             </Card>
           ))}
+          <Pager {...cadencePg} onPage={cadencePg.setPage} unit="cadences" />
         </div>
       )}
 
@@ -196,6 +202,7 @@ export function CadencesPage() {
               />
             </div>
           ) : (
+            <>
             <Table className="border-0 shadow-none rounded-none">
               <THead>
                 <TR>
@@ -213,7 +220,7 @@ export function CadencesPage() {
                 </TR>
               </THead>
               <TBody>
-                {sortedEnrollments.map((e) => (
+                {enrollmentPg.pageItems.map((e) => (
                   <TR key={e.id}>
                     <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.enrolledAt).toLocaleString()}</TD>
                     <TD className="font-mono text-xs text-ink-700 tabular-nums">{e.leadId.slice(0, 8)}…</TD>
@@ -228,6 +235,8 @@ export function CadencesPage() {
                 ))}
               </TBody>
             </Table>
+            <Pager {...enrollmentPg} onPage={enrollmentPg.setPage} unit="enrollments" className="px-5" />
+            </>
           )}
         </CardBody>
       </Card>

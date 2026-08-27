@@ -7,7 +7,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Pager, SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -75,6 +75,9 @@ function CampaignsSection() {
     accessors: { status: (c) => (c.isActive ? "Active" : "Inactive") },
   });
 
+  // Presentational paging over the final filtered + sorted list.
+  const pg = usePagination(sorted);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -130,6 +133,7 @@ function CampaignsSection() {
             />
           </div>
         ) : (
+          <>
           <Table className="border-0 shadow-none rounded-none">
             <THead><TR>
               <TH sortDir={dirFor("code")} onClick={() => sortToggle("code")}>Code</TH>
@@ -145,7 +149,7 @@ function CampaignsSection() {
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
-              {sorted.map((c) => (
+              {pg.pageItems.map((c) => (
                 <TR key={c.id}>
                   <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{c.code}</TD>
                   <TD className="font-medium text-ink-900 max-w-[280px] truncate">{c.name}</TD>
@@ -169,6 +173,8 @@ function CampaignsSection() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="campaigns" className="px-5" />
+          </>
         )}
       </CardBody>
 
@@ -213,6 +219,9 @@ function LeadSourcesSection() {
     accessors: { campaign: (s) => campaigns?.find((c) => c.id === s.campaignId)?.name ?? "" },
   });
 
+  // Presentational paging over the final filtered + sorted list.
+  const pg = usePagination(sorted);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -249,6 +258,7 @@ function LeadSourcesSection() {
               description={CALLCENTER_MSG.tryDifferentSearch} />
           </div>
         ) : (
+          <>
           <Table className="border-0 shadow-none rounded-none">
             <THead><TR>
               <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
@@ -257,7 +267,7 @@ function LeadSourcesSection() {
               <TH sortDir={dirFor("campaign")} onClick={() => toggle("campaign")}>Campaign</TH>
             </TR></THead>
             <TBody>
-              {sorted.map((s) => {
+              {pg.pageItems.map((s) => {
                 const camp = campaigns?.find((c) => c.id === s.campaignId);
                 return (
                   <TR key={s.id}>
@@ -270,6 +280,8 @@ function LeadSourcesSection() {
               })}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="lead sources" className="px-5" />
+          </>
         )}
       </CardBody>
 
@@ -310,6 +322,9 @@ function SkillsSection() {
     if (!q) return list ?? [];
     return (list ?? []).filter((s) => [s.code, s.name].some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [list, search]);
+
+  // Presentational paging over the final filtered list.
+  const pg = usePagination(filtered);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -353,8 +368,9 @@ function SkillsSection() {
           <EmptyState icon={<Icon name="search" size={20} />} title={CALLCENTER_MSG.noSkillsMatchTitle}
             description={CALLCENTER_MSG.tryDifferentSearch} />
         ) : (
+          <>
           <ul className="divide-y divide-ink-100">
-            {filtered.map((s) => (
+            {pg.pageItems.map((s) => (
               <li key={s.id} className="py-2.5 flex items-center gap-3 transition-colors hover:bg-ink-50/50">
                 <Badge tone="info" variant="soft" className="font-mono whitespace-nowrap">{s.code}</Badge>
                 <span className="flex-1 min-w-0 truncate text-ink-800">{s.name}</span>
@@ -371,6 +387,8 @@ function SkillsSection() {
               </li>
             ))}
           </ul>
+          <Pager {...pg} onPage={pg.setPage} unit="skills" />
+          </>
         )}
       </CardBody>
 
@@ -410,6 +428,9 @@ function WrapUpCodesSection() {
 
   const { sorted, dirFor, toggle } = useTableSort(filtered);
 
+  // Presentational paging over the final filtered + sorted list.
+  const pg = usePagination(sorted);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -443,6 +464,7 @@ function WrapUpCodesSection() {
               description={CALLCENTER_MSG.tryDifferentSearch} />
           </div>
         ) : (
+          <>
           <Table className="border-0 shadow-none rounded-none">
             <THead><TR>
               <TH sortDir={dirFor("code")} onClick={() => toggle("code")}>Code</TH>
@@ -450,7 +472,7 @@ function WrapUpCodesSection() {
               <TH><span className="inline-flex items-center gap-1">Flags<InfoHint title="Flags" side="left">Sale counts the call as a sale, Contact as a live contact reached, and Retry queues the lead to be dialed again.</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {sorted.map((w) => (
+              {pg.pageItems.map((w) => (
                 <TR key={w.id}>
                   <TD className="font-mono text-xs text-ink-700 whitespace-nowrap">{w.code}</TD>
                   <TD className="font-medium text-ink-900 max-w-[280px] truncate">{w.label}</TD>
@@ -466,6 +488,8 @@ function WrapUpCodesSection() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="wrap-up codes" className="px-5" />
+          </>
         )}
       </CardBody>
 

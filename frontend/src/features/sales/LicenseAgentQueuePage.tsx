@@ -5,7 +5,7 @@ import type { SaleListItem } from "../../shared/api/baseApi";
 import type { BadgeTone } from "../../shared/ui";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatUsd } from "../../shared/lib/format";
@@ -45,6 +45,9 @@ export function LicenseAgentQueuePage() {
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => statusOf(s).label },
   });
+  // Paging is purely presentational — it wraps the final (filtered + sorted) list, while selection
+  // and CSV export below stay on that full list so the user can act on everything they filtered.
+  const pg = usePagination(sorted);
   const toast = useToast();
   const sel = useRowSelection(sorted.map((s) => s.id));
 
@@ -111,60 +114,63 @@ export function LicenseAgentQueuePage() {
               description={SALES_MSG.noAssignedSalesMatchBody}
             />
           ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH className="w-10"><Checkbox aria-label="Select all sales" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("saleNumber")} onClick={() => toggle("saleNumber")}>#</TH><TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH>
-                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
-                    <span className="inline-flex items-center gap-1">Status
-                      <InfoHint title="Sale status" side="bottom">Pending (awaiting approval), Approved (validated by the carrier), or Funded (first draft cleared — commission payable).</InfoHint>
-                    </span>
-                  </TH>
-                  <TH sortDir={dirFor("commissionEarned")} onClick={() => toggle("commissionEarned")}>
-                    <span className="inline-flex items-center gap-1">Commission
-                      <InfoHint title="Your commission" side="bottom">The approval commission you earn on this sale.</InfoHint>
-                    </span>
-                  </TH>
-                  <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>
-                    <span className="inline-flex items-center gap-1">Sold
-                      <InfoHint title="When it was sold" side="bottom">How long ago the sale was recorded.</InfoHint>
-                    </span>
-                  </TH>
-                  <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {sorted.map((s) => {
-                  const st = statusOf(s);
-                  return (
-                    <TR key={s.id} className={sel.isSelected(s.id) ? "bg-brand-50/40" : undefined}>
-                      <TD>
-                        <Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.id)} />
-                      </TD>
-                      <TD className="tabular-nums text-ink-500">#{s.saleNumber}</TD>
-                      <TD>
-                        <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
-                        <div className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</div>
-                      </TD>
-                      <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
-                      <TD className="text-sm tabular-nums whitespace-nowrap">{formatUsd(s.monthlyPremium)}/mo</TD>
-                      <TD><Badge tone={st.tone} variant="soft">{st.label}</Badge></TD>
-                      <TD className="text-sm tabular-nums font-medium text-ink-800">{formatUsd(s.commissionEarned ?? 0)}</TD>
-                      <TD className="whitespace-nowrap">
-                        <span title={new Date(s.soldAt).toLocaleString()}>
-                          <Badge tone={waitTone(s.soldAt)} variant="soft">{timeAgoShort(s.soldAt)}</Badge>
-                        </span>
-                      </TD>
-                      <TD className="text-right whitespace-nowrap sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
-                        <Link to={`/sales/${s.id}`}>
-                          <Button size="sm" leftIcon={<Icon name="eye" size={14} />}>Open</Button>
-                        </Link>
-                      </TD>
-                    </TR>
-                  );
-                })}
-              </TBody>
-            </Table>
+            <>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH className="w-10"><Checkbox aria-label="Select all sales" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("saleNumber")} onClick={() => toggle("saleNumber")}>#</TH><TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}>Premium</TH>
+                    <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
+                      <span className="inline-flex items-center gap-1">Status
+                        <InfoHint title="Sale status" side="bottom">Pending (awaiting approval), Approved (validated by the carrier), or Funded (first draft cleared — commission payable).</InfoHint>
+                      </span>
+                    </TH>
+                    <TH sortDir={dirFor("commissionEarned")} onClick={() => toggle("commissionEarned")}>
+                      <span className="inline-flex items-center gap-1">Commission
+                        <InfoHint title="Your commission" side="bottom">The approval commission you earn on this sale.</InfoHint>
+                      </span>
+                    </TH>
+                    <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>
+                      <span className="inline-flex items-center gap-1">Sold
+                        <InfoHint title="When it was sold" side="bottom">How long ago the sale was recorded.</InfoHint>
+                      </span>
+                    </TH>
+                    <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {pg.pageItems.map((s) => {
+                    const st = statusOf(s);
+                    return (
+                      <TR key={s.id} className={sel.isSelected(s.id) ? "bg-brand-50/40" : undefined}>
+                        <TD>
+                          <Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.id)} />
+                        </TD>
+                        <TD className="tabular-nums text-ink-500">#{s.saleNumber}</TD>
+                        <TD>
+                          <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
+                          <div className="font-mono text-xs text-ink-500 tabular-nums whitespace-nowrap">{s.leadPhone}</div>
+                        </TD>
+                        <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
+                        <TD className="text-sm tabular-nums whitespace-nowrap">{formatUsd(s.monthlyPremium)}/mo</TD>
+                        <TD><Badge tone={st.tone} variant="soft">{st.label}</Badge></TD>
+                        <TD className="text-sm tabular-nums font-medium text-ink-800">{formatUsd(s.commissionEarned ?? 0)}</TD>
+                        <TD className="whitespace-nowrap">
+                          <span title={new Date(s.soldAt).toLocaleString()}>
+                            <Badge tone={waitTone(s.soldAt)} variant="soft">{timeAgoShort(s.soldAt)}</Badge>
+                          </span>
+                        </TD>
+                        <TD className="text-right whitespace-nowrap sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
+                          <Link to={`/sales/${s.id}`}>
+                            <Button size="sm" leftIcon={<Icon name="eye" size={14} />}>Open</Button>
+                          </Link>
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
+              <Pager {...pg} onPage={pg.setPage} unit="sales" />
+            </>
           )}
           <BulkActionBar
             count={sel.selectedCount} itemNoun="sale" onClear={sel.clear}

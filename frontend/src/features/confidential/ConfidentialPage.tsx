@@ -9,8 +9,8 @@ import {
 import type { PortalCredential, PortalCredentialInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
-  Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Pager, SearchInput,
+  Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, usePagination,
 } from "../../shared/ui";
 
 const EMPTY: PortalCredentialInput = { portalName: "", url: "", username: "", password: "", notes: "" };
@@ -43,6 +43,9 @@ export function ConfidentialPage() {
     if (!s) return list;
     return list.filter((c) => `${c.portalName} ${c.username} ${c.url ?? ""} ${c.notes ?? ""}`.toLowerCase().includes(s));
   }, [creds, q]);
+
+  // Display-only paging over the filtered list (10 per page).
+  const pg = usePagination(filtered);
 
   function openAdd() { setEditing(null); setForm(EMPTY); setOpen(true); }
   async function openEdit(c: PortalCredential) {
@@ -142,6 +145,7 @@ export function ConfidentialPage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <div className="overflow-x-auto">
           <Table>
             <THead>
@@ -152,7 +156,7 @@ export function ConfidentialPage() {
               </TR>
             </THead>
             <TBody>
-              {filtered.map((c) => (
+              {pg.pageItems.map((c) => (
                 <TR key={c.id}>
                   <TD>
                     <div className="font-medium text-ink-900">{c.portalName}</div>
@@ -198,6 +202,8 @@ export function ConfidentialPage() {
             </TBody>
           </Table>
         </div>
+        <Pager {...pg} onPage={pg.setPage} unit="credentials" />
+        </>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)}

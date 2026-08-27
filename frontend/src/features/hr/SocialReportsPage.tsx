@@ -7,8 +7,8 @@ import {
 import type { SocialMediaReport, SocialMediaInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Pager,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast, usePagination,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -67,6 +67,9 @@ export function SocialReportsPage() {
   const totalPosts = rows.reduce((s, r) => s + r.postsMade, 0);
   const totalQueries = rows.reduce((s, r) => s + r.queriesAnswered, 0);
   const sel = useRowSelection(rows.map((r) => r.id));
+  // Paginate the searched/filtered reports (10 a page); selection, bulk delete and CSV export still
+  // act on every filtered row, not just the visible page.
+  const pg = usePagination(rows);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   function exportSelected() {
@@ -191,7 +194,7 @@ export function SocialReportsPage() {
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
-              {rows.map((r) => (
+              {pg.pageItems.map((r) => (
                 <TR key={r.id} className={sel.isSelected(r.id) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${dateOnly(r.date)} report`} {...sel.checkboxProps(r.id)} />
@@ -217,6 +220,7 @@ export function SocialReportsPage() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="reports" />
           <BulkActionBar
             count={sel.selectedCount} itemNoun="report" onClear={sel.clear}
             actions={[

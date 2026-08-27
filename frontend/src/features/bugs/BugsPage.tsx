@@ -12,8 +12,8 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 import { timeAgoShort } from "../../shared/lib/time";
 import { BUGS_MSG } from "./messages";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader, Pager,
+  SearchInput, Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast, usePagination,
 } from "../../shared/ui";
 
 /**
@@ -38,6 +38,9 @@ export function BugsPage() {
         .some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [bugs, search]);
 
+  // Paginate the searched list (10 a page); selection, bulk status and CSV export still cover every
+  // searched row, not just the visible page.
+  const pg = usePagination(filtered);
   // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
   const sel = useRowSelection(filtered.map((b) => b.id));
   const canManage = list.some((b) => b.canManage);
@@ -135,7 +138,7 @@ export function BugsPage() {
               <TH numeric>Reported</TH>
             </TR></THead>
             <TBody>
-              {filtered.map((b) => (
+              {pg.pageItems.map((b) => (
                 <TR key={b.id}
                   className={cn("cursor-pointer border-l-[3px]", bugSeverityMeta(b.severity).accent, sel.isSelected(b.id) && "bg-brand-50/40")}
                   onClick={() => setOpenId(b.id)}>
@@ -155,6 +158,7 @@ export function BugsPage() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="bugs" />
           <BulkActionBar
             count={sel.selectedCount} itemNoun="bug" onClear={sel.clear}
             extra={canManage ? (

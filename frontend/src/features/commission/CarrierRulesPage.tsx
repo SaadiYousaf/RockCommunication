@@ -6,8 +6,8 @@ import {
 } from "../../shared/api/baseApi";
 import type { CarrierRule } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader, Pager,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
 } from "../../shared/ui";
 import { CARRIER_RULES_MSG } from "./messages";
 
@@ -30,6 +30,9 @@ export function CarrierRulesPage() {
     return (rules ?? []).filter((r) =>
       [r.carrier, r.notes].some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [rules, search]);
+
+  // Presentational paging over the filtered rules (10 per page, the app-wide default).
+  const pg = usePagination(filtered);
 
   async function del(rule: CarrierRule) {
     if (!window.confirm(CARRIER_RULES_MSG.confirmDelete(rule.carrier))) return;
@@ -69,38 +72,41 @@ export function CarrierRulesPage() {
             <EmptyState icon={<Icon name="search" size={20} />} title={CARRIER_RULES_MSG.noMatchTitle}
               description={CARRIER_RULES_MSG.noMatchDesc} />
           ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>{CARRIER_RULES_MSG.carrier}</TH>
-                  <TH numeric>{CARRIER_RULES_MSG.rate}</TH>
-                  <TH numeric>{CARRIER_RULES_MSG.months}</TH>
-                  <TH>{CARRIER_RULES_MSG.notes}</TH>
-                  <TH>Status</TH>
-                  <TH></TH>
-                </TR>
-              </THead>
-              <TBody>
-                {filtered.map((r) => (
-                  <TR key={r.id} className="hover:bg-ink-50/60 transition-colors">
-                    <TD className="font-medium text-ink-900">{r.carrier}</TD>
-                    <TD numeric className="tabular-nums">{r.commissionRate}%</TD>
-                    <TD numeric className="tabular-nums">{r.advancedMonths}</TD>
-                    <TD className="text-sm text-ink-500 max-w-[16rem] truncate" title={r.notes ?? undefined}>{r.notes || "—"}</TD>
-                    <TD>{r.isActive
-                      ? <Badge tone="success" variant="soft">Active</Badge>
-                      : <Badge tone="neutral" variant="soft">Inactive</Badge>}</TD>
-                    <TD className="text-right whitespace-nowrap">
-                      <div className="inline-flex gap-1.5">
-                        <Button size="sm" variant="outline" leftIcon={<Icon name="edit" size={13} />}
-                          onClick={() => setEditing(r)}>Edit</Button>
-                        <Button size="sm" variant="ghost" onClick={() => del(r)}>Delete</Button>
-                      </div>
-                    </TD>
+            <>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>{CARRIER_RULES_MSG.carrier}</TH>
+                    <TH numeric>{CARRIER_RULES_MSG.rate}</TH>
+                    <TH numeric>{CARRIER_RULES_MSG.months}</TH>
+                    <TH>{CARRIER_RULES_MSG.notes}</TH>
+                    <TH>Status</TH>
+                    <TH></TH>
                   </TR>
-                ))}
-              </TBody>
-            </Table>
+                </THead>
+                <TBody>
+                  {pg.pageItems.map((r) => (
+                    <TR key={r.id} className="hover:bg-ink-50/60 transition-colors">
+                      <TD className="font-medium text-ink-900">{r.carrier}</TD>
+                      <TD numeric className="tabular-nums">{r.commissionRate}%</TD>
+                      <TD numeric className="tabular-nums">{r.advancedMonths}</TD>
+                      <TD className="text-sm text-ink-500 max-w-[16rem] truncate" title={r.notes ?? undefined}>{r.notes || "—"}</TD>
+                      <TD>{r.isActive
+                        ? <Badge tone="success" variant="soft">Active</Badge>
+                        : <Badge tone="neutral" variant="soft">Inactive</Badge>}</TD>
+                      <TD className="text-right whitespace-nowrap">
+                        <div className="inline-flex gap-1.5">
+                          <Button size="sm" variant="outline" leftIcon={<Icon name="edit" size={13} />}
+                            onClick={() => setEditing(r)}>Edit</Button>
+                          <Button size="sm" variant="ghost" onClick={() => del(r)}>Delete</Button>
+                        </div>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+              <Pager {...pg} onPage={pg.setPage} unit="rules" />
+            </>
           )}
         </CardBody>
       </Card>

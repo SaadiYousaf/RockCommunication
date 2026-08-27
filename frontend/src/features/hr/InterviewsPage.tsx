@@ -8,8 +8,8 @@ import type { Interview, InterviewInput } from "../../shared/api/types";
 import { OFFER_STATUSES, OFFER_TONE, hrLabel } from "../../shared/constants/hr";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Pager,
+  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast, usePagination,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -107,6 +107,9 @@ export function InterviewsPage() {
   const hired = rows.filter((r) => r.status === "Hired").length;
   const offered = rows.filter((r) => r.status === "Offered").length;
   const sel = useRowSelection(rows.map((r) => r.id));
+  // Paginate the filtered candidate list (10 a page); selection, bulk status, delete and CSV export
+  // still act on every filtered row, not just the visible page.
+  const pg = usePagination(rows);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkSetStatus, { isLoading: settingStatus }] = useBulkSetInterviewStatusMutation();
   const [bulkStatus, setBulkStatus] = useState<string>(OFFER_STATUSES[0]);
@@ -239,7 +242,7 @@ export function InterviewsPage() {
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
-              {rows.map((i) => (
+              {pg.pageItems.map((i) => (
                 <TR key={i.id} className={sel.isSelected(i.id) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${i.candidateName}`} {...sel.checkboxProps(i.id)} />
@@ -264,6 +267,7 @@ export function InterviewsPage() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="candidates" />
           <BulkActionBar
             count={sel.selectedCount} itemNoun="interview" onClear={sel.clear}
             extra={

@@ -6,8 +6,8 @@ import { useListRetentionPoliciesQuery, useResolveRetentionMutation } from "../.
 import type { RetentionPolicy } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Modal, PageHeader, SearchInput,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Modal, PageHeader, Pager, SearchInput,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
 } from "../../shared/ui";
 import {
   RETENTION_MSG, RETENTION_TARGET_STATUSES, retentionStatusLabel, retentionStatusTone,
@@ -39,6 +39,10 @@ export function RetentionPage() {
     key: "soldAt", dir: "desc",
     accessors: { premium: (p: RetentionPolicy) => p.monthlyPremium, status: (p: RetentionPolicy) => p.status },
   });
+
+  // Presentational paging over the final (filtered + sorted) worklist — the stats below stay on the
+  // full set, so the page never changes what the desk is looking at.
+  const pg = usePagination(sorted);
 
   const stats = useMemo(() => {
     const list = policies ?? [];
@@ -72,49 +76,52 @@ export function RetentionPage() {
           ) : sorted.length === 0 ? (
             <EmptyState icon={<Icon name="search" size={20} />} title={RETENTION_MSG.noMatchTitle} description={RETENTION_MSG.noMatchDesc} />
           ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>{RETENTION_MSG.colPolicy}</TH>
-                  <TH>{RETENTION_MSG.colCustomer}</TH>
-                  <TH>{RETENTION_MSG.colCarrier}</TH>
-                  <TH numeric sortDir={dirFor("premium")} onClick={() => toggle("premium")}>{RETENTION_MSG.colPremium}</TH>
-                  <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>{RETENTION_MSG.colStatus}</TH>
-                  <TH>{RETENTION_MSG.colCloser}</TH>
-                  <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>{RETENTION_MSG.colSold}</TH>
-                  <TH></TH>
-                </TR>
-              </THead>
-              <TBody>
-                {sorted.map((p) => (
-                  <TR key={p.saleId} className="hover:bg-ink-50/60 transition-colors">
-                    <TD className="whitespace-nowrap">
-                      <div className="font-medium text-ink-900">#{p.saleNumber}</div>
-                      {p.policyNumber && <div className="text-xs text-ink-500 font-mono">{p.policyNumber}</div>}
-                    </TD>
-                    <TD>
-                      <button type="button" onClick={() => navigate(`/leads/${p.leadId}`)}
-                        className="text-left font-medium text-brand-600 hover:text-brand-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 rounded">
-                        {p.leadName || "—"}
-                      </button>
-                      <div className="text-xs text-ink-500">{[p.leadPhone, p.state].filter(Boolean).join(" · ") || "—"}</div>
-                    </TD>
-                    <TD className="text-sm text-ink-700">{p.carrier}</TD>
-                    <TD numeric className="tabular-nums">{money(p.monthlyPremium)}</TD>
-                    <TD>
-                      <Badge tone={retentionStatusTone(p.status)} variant="soft">{retentionStatusLabel(p.status)}</Badge>
-                      {p.declineReason && <div className="text-xs text-ink-500 mt-0.5 max-w-[14rem] truncate" title={p.declineReason}>{p.declineReason}</div>}
-                    </TD>
-                    <TD className="text-sm text-ink-600">{p.closerName ?? "—"}</TD>
-                    <TD className="text-sm text-ink-500 whitespace-nowrap">{shortDate(p.soldAt)}</TD>
-                    <TD className="text-right">
-                      <Button size="sm" variant="outline" leftIcon={<Icon name="refresh" size={14} />}
-                        onClick={() => setWorking(p)}>{RETENTION_MSG.workCta}</Button>
-                    </TD>
+            <>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>{RETENTION_MSG.colPolicy}</TH>
+                    <TH>{RETENTION_MSG.colCustomer}</TH>
+                    <TH>{RETENTION_MSG.colCarrier}</TH>
+                    <TH numeric sortDir={dirFor("premium")} onClick={() => toggle("premium")}>{RETENTION_MSG.colPremium}</TH>
+                    <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>{RETENTION_MSG.colStatus}</TH>
+                    <TH>{RETENTION_MSG.colCloser}</TH>
+                    <TH sortDir={dirFor("soldAt")} onClick={() => toggle("soldAt")}>{RETENTION_MSG.colSold}</TH>
+                    <TH></TH>
                   </TR>
-                ))}
-              </TBody>
-            </Table>
+                </THead>
+                <TBody>
+                  {pg.pageItems.map((p) => (
+                    <TR key={p.saleId} className="hover:bg-ink-50/60 transition-colors">
+                      <TD className="whitespace-nowrap">
+                        <div className="font-medium text-ink-900">#{p.saleNumber}</div>
+                        {p.policyNumber && <div className="text-xs text-ink-500 font-mono">{p.policyNumber}</div>}
+                      </TD>
+                      <TD>
+                        <button type="button" onClick={() => navigate(`/leads/${p.leadId}`)}
+                          className="text-left font-medium text-brand-600 hover:text-brand-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 rounded">
+                          {p.leadName || "—"}
+                        </button>
+                        <div className="text-xs text-ink-500">{[p.leadPhone, p.state].filter(Boolean).join(" · ") || "—"}</div>
+                      </TD>
+                      <TD className="text-sm text-ink-700">{p.carrier}</TD>
+                      <TD numeric className="tabular-nums">{money(p.monthlyPremium)}</TD>
+                      <TD>
+                        <Badge tone={retentionStatusTone(p.status)} variant="soft">{retentionStatusLabel(p.status)}</Badge>
+                        {p.declineReason && <div className="text-xs text-ink-500 mt-0.5 max-w-[14rem] truncate" title={p.declineReason}>{p.declineReason}</div>}
+                      </TD>
+                      <TD className="text-sm text-ink-600">{p.closerName ?? "—"}</TD>
+                      <TD className="text-sm text-ink-500 whitespace-nowrap">{shortDate(p.soldAt)}</TD>
+                      <TD className="text-right">
+                        <Button size="sm" variant="outline" leftIcon={<Icon name="refresh" size={14} />}
+                          onClick={() => setWorking(p)}>{RETENTION_MSG.workCta}</Button>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+              <Pager {...pg} onPage={pg.setPage} unit="policies" />
+            </>
           )}
         </CardBody>
       </Card>

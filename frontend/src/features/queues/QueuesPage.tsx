@@ -8,7 +8,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -52,6 +52,8 @@ function QueueSection() {
   }, [queues, search]);
 
   const { sorted, dirFor, toggle } = useTableSort(filtered);
+  // Paging is purely presentational — selection and CSV export below stay on the FULL filtered list.
+  const pg = usePagination(sorted);
   const sel = useRowSelection(sorted.map((q) => q.id));
 
   function exportSelected() {
@@ -131,7 +133,7 @@ function QueueSection() {
               </TR>
             </THead>
             <TBody>
-              {sorted.map((q) => (
+              {pg.pageItems.map((q) => (
                 <TR key={q.id} className={sel.isSelected(q.id) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${q.name}`} {...sel.checkboxProps(q.id)} />
@@ -150,6 +152,7 @@ function QueueSection() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="queues" className="px-5" />
           <BulkActionBar
             count={sel.selectedCount} itemNoun="queue" onClear={sel.clear}
             actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}
@@ -199,6 +202,9 @@ function VoicemailSection() {
     return (vms ?? []).filter((v) => (v.name ?? "").toLowerCase().includes(q));
   }, [vms, search]);
 
+  // Presentational paging over the final filtered list.
+  const pg = usePagination(filtered);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -243,8 +249,9 @@ function VoicemailSection() {
             description={QUEUES_MSG.noMatchesDesc}
           />
         ) : (
+          <>
           <ul className="divide-y divide-ink-100">
-            {filtered.map((v) => (
+            {pg.pageItems.map((v) => (
               <li key={v.id} className="py-3 px-2 -mx-2 rounded-lg flex items-center gap-3 hover:bg-ink-50/50 transition-colors">
                 <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-600 grid place-items-center shrink-0">
                   <Icon name="chat" size={16} />
@@ -257,6 +264,8 @@ function VoicemailSection() {
               </li>
             ))}
           </ul>
+          <Pager {...pg} onPage={pg.setPage} unit="voicemails" />
+          </>
         )}
       </CardBody>
 
@@ -297,6 +306,9 @@ function PublicEndpointsSection() {
   }, [endpoints, search]);
 
   const { sorted, dirFor, toggle } = useTableSort(filtered);
+
+  // Presentational paging over the final filtered + sorted list.
+  const pg = usePagination(sorted);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -372,6 +384,7 @@ function PublicEndpointsSection() {
             />
           </div>
         ) : (
+          <>
           <Table className="border-0 shadow-none rounded-none">
             <THead>
               <TR>
@@ -381,7 +394,7 @@ function PublicEndpointsSection() {
               </TR>
             </THead>
             <TBody>
-              {sorted.map((e) => (
+              {pg.pageItems.map((e) => (
                 <TR key={e.id}>
                   <TD className="font-mono text-xs text-ink-800 whitespace-nowrap">/api/public/leads/{e.slug}</TD>
                   <TD className="font-semibold text-ink-900 tabular-nums">{e.leadCount}</TD>
@@ -394,6 +407,8 @@ function PublicEndpointsSection() {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="endpoints" className="px-5" />
+          </>
         )}
       </CardBody>
 

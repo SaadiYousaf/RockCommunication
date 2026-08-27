@@ -7,7 +7,7 @@ import {
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
@@ -79,6 +79,10 @@ export function MyQueuePage() {
       stage: (l) => stageOf(l.stage),
     },
   });
+
+  // Paging is purely presentational — it slices the already-filtered+sorted list for display.
+  // Selection and CSV export below still work off the FULL filtered list.
+  const pg = usePagination(sorted);
 
   const sel = useRowSelection(sorted.map((l) => l.id));
 
@@ -175,6 +179,7 @@ export function MyQueuePage() {
           />
         </CardBody></Card>
       ) : (
+        <>
         <Table>
           <THead>
             <TR>
@@ -203,7 +208,7 @@ export function MyQueuePage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((l) => {
+            {pg.pageItems.map((l) => {
               const stage = stageOf(l.stage);
               const name = `${l.firstName} ${l.lastName}`.trim();
               const next = NEXT_STAGES[stage];
@@ -258,6 +263,8 @@ export function MyQueuePage() {
             })}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="leads" />
+        </>
       )}
       <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
         actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -89,6 +89,10 @@ export function CallbacksPage() {
   const { sorted, dirFor, toggle } = useTableSort(searched, {
     accessors: { status: (c) => (c.completed ? "Completed" : "Pending") },
   });
+
+  // Paging is purely presentational — it slices the already-filtered+sorted list for display.
+  // Selection and CSV export below still work off the FULL filtered list.
+  const pg = usePagination(sorted);
 
   const sel = useRowSelection(sorted.map((c) => c.id));
 
@@ -214,7 +218,7 @@ export function CallbacksPage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((c) => {
+            {pg.pageItems.map((c) => {
               const w = formatWhen(c.scheduledFor);
               return (
                 <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
@@ -254,6 +258,7 @@ export function CallbacksPage() {
             })}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="callbacks" />
         <BulkActionBar
           count={sel.selectedCount} itemNoun="callback" onClear={sel.clear}
           actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]}

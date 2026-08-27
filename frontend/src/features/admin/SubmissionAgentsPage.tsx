@@ -12,7 +12,7 @@ import {
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
@@ -50,6 +50,10 @@ export function SubmissionAgentsPage() {
     key: "name",
     accessors: { status: (a) => (a.isActive ? "Active" : "Inactive") },
   });
+
+  // Display-only paging over the filtered+sorted list; selection, bulk deactivate and CSV
+  // export deliberately stay on the FULL filtered list, not just the visible page.
+  const pg = usePagination(sorted);
 
   const sel = useRowSelection(sorted.map((a) => a.id));
 
@@ -149,7 +153,7 @@ export function SubmissionAgentsPage() {
                 <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
               </THead>
               <TBody>
-                {sorted.map((a) => (
+                {pg.pageItems.map((a) => (
                   <TR key={a.id} className={sel.isSelected(a.id) ? "bg-brand-50/40" : (a.isActive ? "transition-colors hover:bg-ink-50/60" : "bg-rose-50/30")}>
                     <TD><Checkbox aria-label={`Select ${a.name}`} {...sel.checkboxProps(a.id)} /></TD>
                     <TD className={"font-medium truncate max-w-[16rem] " + (a.isActive ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")}>{a.name}</TD>
@@ -198,6 +202,7 @@ export function SubmissionAgentsPage() {
                 ))}
               </TBody>
             </Table>
+            <Pager {...pg} onPage={pg.setPage} unit="agents" />
             <BulkActionBar
               count={sel.selectedCount} itemNoun="agent" onClear={sel.clear}
               actions={[

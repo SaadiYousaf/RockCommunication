@@ -9,8 +9,8 @@ import {
 } from "../../shared/api/baseApi";
 import { ATTENDANCE_STATUSES, hrLabel } from "../../shared/constants/hr";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader, SearchInput,
-  Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader, Pager,
+  SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Tabs, useToast, usePagination,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -78,6 +78,9 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
       [r.fullName, r.agentCode, hrLabel(r.designation), r.callCenterName]
         .some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [rows, search]);
+  // Paginate the searched register (10 rows a page); selection/bulk actions still cover every
+  // searched row, not just the visible page.
+  const pg = usePagination(filtered);
   // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
   const sel = useRowSelection(filtered.map((r) => r.employeeId));
   const [applying, setApplying] = useState(false);
@@ -180,7 +183,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
               <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Attendance status" side="left">Late = arrived after start; Half day = half a shift worked; Leave = pre-approved time off; NCNS = no call, no show (an unexcused absence).</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {filtered.map((r) => (
+              {pg.pageItems.map((r) => (
                 <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />
@@ -199,6 +202,7 @@ function DailyRegister({ callCenterId }: { callCenterId?: string }) {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="employees" />
           <BulkActionBar
             count={sel.selectedCount} itemNoun="employee" onClear={sel.clear}
             extra={
@@ -237,6 +241,8 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
       [r.fullName, r.agentCode, hrLabel(r.designation), r.callCenterName]
         .some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [rows, search]);
+  // Paginate the searched roll-up (10 rows a page) — this tab pages independently of the daily one.
+  const pg = usePagination(filtered);
 
   return (
     <>
@@ -267,7 +273,7 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
               <TH numeric><span className="inline-flex items-center gap-1">Marked<InfoHint title="Days marked" side="left">Total days with any attendance status recorded this month — the base rolled up to payroll.</InfoHint></span></TH>
             </TR></THead>
             <TBody>
-              {filtered.map((r) => (
+              {pg.pageItems.map((r) => (
                 <TR key={r.employeeId}>
                   <TD className="font-medium text-ink-900">{r.fullName}</TD>
                   <TD className="font-mono text-xs text-ink-600">{r.agentCode}</TD>
@@ -282,6 +288,7 @@ function MonthlySummary({ callCenterId }: { callCenterId?: string }) {
               ))}
             </TBody>
           </Table>
+          <Pager {...pg} onPage={pg.setPage} unit="employees" />
         </div>
       )}
     </>

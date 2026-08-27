@@ -2,6 +2,7 @@ import { roleLabel } from "../constants/roles";
 import { getErrorDetail } from "../api/apiError";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { NAV, type NavNode } from "../constants/nav";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, type RootState } from "../../app/store";
 import {
@@ -29,10 +30,33 @@ interface PaletteItem {
   icon: IconName;
   /** Module code from the backend ModuleCatalog — used to filter. Omit for items everyone can access. */
   module?: string;
+  /** Same role gate the sidebar uses, so the palette never offers a page the user can't open. */
+  roles?: string[];
+  superAdminOnly?: boolean;
   keywords?: string[];
 }
 
-const ALL_ITEMS: PaletteItem[] = [
+/**
+ * Every navigable page, derived from the SHARED nav tree. This is why a newly-added page shows up
+ * in ⌘K automatically: add it to NAV once and both the sidebar and this palette pick it up. The
+ * hand-written list below only supplies extra search keywords and the non-nav actions.
+ */
+function itemsFromNav(nodes: NavNode[], section = "", out: PaletteItem[] = []): PaletteItem[] {
+  for (const n of nodes) {
+    const group = section || n.label;
+    if (n.to) {
+      out.push({
+        id: n.key, label: n.label, to: n.to, group,
+        icon: n.icon ?? "list",
+        module: n.module, roles: n.roles, superAdminOnly: n.superAdminOnly,
+      });
+    }
+    if (n.children) itemsFromNav(n.children, group, out);
+  }
+  return out;
+}
+
+const CURATED: PaletteItem[] = [
   // Workspace
   { id: "dashboard", label: "Go to Dashboard", to: "/dashboard", group: "Workspace", icon: "dashboard", module: "dashboard", keywords: ["home", "overview"] },
   { id: "agent",     label: "Open Agent Panel", to: "/agent", group: "Workspace", icon: "phone", module: "agent" },
@@ -72,6 +96,22 @@ const ALL_ITEMS: PaletteItem[] = [
   { id: "2fa",     label: "Security & 2FA", to: "/2fa", group: "Account", icon: "shield" },
   { id: "search",  label: "Search results", to: "/search", group: "Account", icon: "search", keywords: ["find", "lookup"] },
 ];
+
+/**
+ * The full page index: every page in the nav tree, with the curated entries layered on top so a
+ * page can keep a friendlier label ("Go to Dashboard") and extra search terms ("home", "overview").
+ * Anything in NAV but not curated still appears — that's the point.
+ */
+const ALL_ITEMS: PaletteItem[] = (() => {
+  const byId = new Map<string, PaletteItem>();
+  for (const item of itemsFromNav(NAV)) byId.set(item.id, item);
+  for (const c of CURATED) {
+    const existing = byId.get(c.id);
+    // Keep the nav's gates (they're the source of truth) but take the curated label/keywords.
+    byId.set(c.id, existing ? { ...existing, ...c, module: existing.module ?? c.module } : c);
+  }
+  return Array.from(byId.values());
+})();
 
 /* -------------------- score / filter -------------------- */
 
@@ -193,6 +233,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   // stale) module list, so freshly-added modules like Retention wouldn't surface until re-login.
   const roles = auth.user?.roles ?? [];
   const isAdmin = roles.includes("Admin") || roles.includes("SuperAdmin");
+  const isSuperAdmin = roles.includes("SuperAdmin");
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const toast = useToast();
@@ -326,7 +367,12 @@ function Palette({ onClose }: { onClose: () => void }) {
 
   // Filter to what the user can reach + score by query.
   const items = useMemo<PaletteItem[]>(() => {
-    const accessible = ALL_ITEMS.filter((i) => !i.module || isAdmin || userModules.includes(i.module));
+    // Mirror the sidebar's visibility rules so we never offer a page that would 403.
+    const accessible = ALL_ITEMS.filter((i) => {
+      if (i.superAdminOnly) return isSuperAdmin;
+      if (i.roles) return isAdmin || i.roles.some((r) => roles.includes(r));
+      return !i.module || isAdmin || userModules.includes(i.module);
+    });
     const accessibleActions = actionItems; // actions are not module-gated; backend will reject if forbidden
     const navAndAct = [...accessibleActions, ...accessible];
     const scored = navAndAct
@@ -335,7 +381,7 @@ function Palette({ onClose }: { onClose: () => void }) {
       .sort((a, b) => b.score - a.score);
     // Prepend live results when present (they came from the server keyed on the query)
     return [...liveItems, ...scored.map((x) => x.item)];
-  }, [q, userModules, isAdmin, liveItems, actionItems]);
+  }, [q, userModules, isAdmin, isSuperAdmin, roles, liveItems, actionItems]);
 
   // Group preserving sort order (group as items first appear).
   const groups = useMemo<[string, PaletteItem[]][]>(() => {

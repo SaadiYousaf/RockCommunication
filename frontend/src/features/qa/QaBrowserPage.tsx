@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useListQaReviewsQuery, useQaScorecardsQuery, useUserDirectoryQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -38,7 +38,12 @@ export function QaBrowserPage() {
     },
   });
 
+  // Each table pages on its own (10 rows a page), over the sorted list so paging follows the sort.
+  const cardsPg = usePagination(sortedScorecards);
+  const reviewsPg = usePagination(sortedReviews);
+
   const toast = useToast();
+  // Selection and CSV export stay on the full sorted review list, not just the visible page.
   const sel = useRowSelection(sortedReviews.map((r) => r.id));
 
   function exportSelected() {
@@ -100,7 +105,7 @@ export function QaBrowserPage() {
                 </TR>
               </THead>
               <TBody>
-                {sortedScorecards.map((s) => (
+                {cardsPg.pageItems.map((s) => (
                   <TR key={s.agentUserId}>
                     <TD>
                       <div className="flex items-center gap-3 min-w-0">
@@ -129,6 +134,7 @@ export function QaBrowserPage() {
               </TBody>
             </Table>
           )}
+          <Pager {...cardsPg} onPage={cardsPg.setPage} unit="agents" className="px-5" />
         </CardBody>
       </Card>
 
@@ -163,7 +169,7 @@ export function QaBrowserPage() {
                 </TR>
               </THead>
               <TBody>
-                {sortedReviews.map((r) => (
+                {reviewsPg.pageItems.map((r) => (
                   <TR key={r.id} className={sel.isSelected(r.id) ? "bg-brand-50/40" : undefined}>
                     <TD>
                       <Checkbox aria-label={`Select review by ${nameOf(r.agentUserId)}`} {...sel.checkboxProps(r.id)} />
@@ -181,6 +187,7 @@ export function QaBrowserPage() {
               </TBody>
             </Table>
           )}
+          <Pager {...reviewsPg} onPage={reviewsPg.setPage} unit="reviews" className="px-5" />
         </CardBody>
       </Card>
 

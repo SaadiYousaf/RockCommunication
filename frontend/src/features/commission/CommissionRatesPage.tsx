@@ -3,8 +3,8 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import { useListCommissionConfigQuery, useUpsertCommissionConfigMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
-  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader, Pager,
+  SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { COMMISSION_RATES_MSG } from "./messages";
 import { COMMISSION_RATES, type CommissionRateMeta } from "./rates";
@@ -28,6 +28,9 @@ export function CommissionRatesPage() {
       [r.label, r.earnedBy, r.description].some((v) => v.toLowerCase().includes(q)));
   }, [search]);
 
+  // Presentational paging over the filtered rules (10 per page, the app-wide default).
+  const pg = usePagination(rows);
+
   return (
     <>
       <PageHeader
@@ -50,47 +53,50 @@ export function CommissionRatesPage() {
             <EmptyState icon={<Icon name="search" size={20} />} title={COMMISSION_RATES_MSG.noMatchTitle}
               description={COMMISSION_RATES_MSG.noMatchDesc} />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>{COMMISSION_RATES_MSG.colRate}</TH>
-                    <TH>{COMMISSION_RATES_MSG.colEarnedBy}</TH>
-                    <TH>
-                      <span className="inline-flex items-center gap-1">
-                        {COMMISSION_RATES_MSG.colAmount}
-                        <InfoHint title={COMMISSION_RATES_MSG.colAmount} side="top">{COMMISSION_RATES_MSG.amountHint}</InfoHint>
-                      </span>
-                    </TH>
-                    <TH>
-                      <span className="inline-flex items-center gap-1">
-                        {COMMISSION_RATES_MSG.colThreshold}
-                        <InfoHint title={COMMISSION_RATES_MSG.colThreshold} side="top">{COMMISSION_RATES_MSG.thresholdHint}</InfoHint>
-                      </span>
-                    </TH>
-                    <TH>
-                      <span className="inline-flex items-center gap-1">
-                        {COMMISSION_RATES_MSG.colEnabled}
-                        <InfoHint title={COMMISSION_RATES_MSG.colEnabled} side="top">{COMMISSION_RATES_MSG.enabledHint}</InfoHint>
-                      </span>
-                    </TH>
-                    <TH></TH>
-                  </TR>
-                </THead>
-                <TBody>
-                  {rows.map((meta) => (
-                    // Keyed by the stored value too, so the row re-seeds its inputs once data lands
-                    // (otherwise a row mounted before the fetch would show blanks and a save would
-                    // wipe a real override back to the default).
-                    <RateRow
-                      key={meta.key + (stored ? "-loaded" : "")}
-                      meta={meta}
-                      stored={stored?.find((s) => s.ruleName === meta.key)}
-                    />
-                  ))}
-                </TBody>
-              </Table>
-            </div>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>{COMMISSION_RATES_MSG.colRate}</TH>
+                      <TH>{COMMISSION_RATES_MSG.colEarnedBy}</TH>
+                      <TH>
+                        <span className="inline-flex items-center gap-1">
+                          {COMMISSION_RATES_MSG.colAmount}
+                          <InfoHint title={COMMISSION_RATES_MSG.colAmount} side="top">{COMMISSION_RATES_MSG.amountHint}</InfoHint>
+                        </span>
+                      </TH>
+                      <TH>
+                        <span className="inline-flex items-center gap-1">
+                          {COMMISSION_RATES_MSG.colThreshold}
+                          <InfoHint title={COMMISSION_RATES_MSG.colThreshold} side="top">{COMMISSION_RATES_MSG.thresholdHint}</InfoHint>
+                        </span>
+                      </TH>
+                      <TH>
+                        <span className="inline-flex items-center gap-1">
+                          {COMMISSION_RATES_MSG.colEnabled}
+                          <InfoHint title={COMMISSION_RATES_MSG.colEnabled} side="top">{COMMISSION_RATES_MSG.enabledHint}</InfoHint>
+                        </span>
+                      </TH>
+                      <TH></TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {pg.pageItems.map((meta) => (
+                      // Keyed by the stored value too, so the row re-seeds its inputs once data lands
+                      // (otherwise a row mounted before the fetch would show blanks and a save would
+                      // wipe a real override back to the default).
+                      <RateRow
+                        key={meta.key + (stored ? "-loaded" : "")}
+                        meta={meta}
+                        stored={stored?.find((s) => s.ruleName === meta.key)}
+                      />
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+              <Pager {...pg} onPage={pg.setPage} unit="rates" />
+            </>
           )}
         </CardBody>
       </Card>

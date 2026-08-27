@@ -7,7 +7,7 @@ import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
   Avatar, Badge, BulkActionBar, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 
 const roleTones: Record<string, "brand" | "info" | "success" | "warning" | "danger" | "neutral"> = {
@@ -46,6 +46,9 @@ export function UsersPage() {
   });
 
   const toast = useToast();
+  // Display-only paging over the filtered+sorted list; selection and CSV export stay on the
+  // FULL filtered list so an export still covers everything the user filtered to.
+  const pg = usePagination(sorted);
   const sel = useRowSelection(sorted.map((u) => u.id));
 
   function exportSelected() {
@@ -152,7 +155,7 @@ export function UsersPage() {
             </TR>
           </THead>
           <TBody>
-            {sorted.map((u) => (
+            {pg.pageItems.map((u) => (
               <TR key={u.id} className={sel.isSelected(u.id) ? "bg-brand-50/40" : undefined}>
                 <TD><Checkbox aria-label={`Select ${u.userName}`} {...sel.checkboxProps(u.id)} /></TD>
                 <TD>
@@ -175,6 +178,7 @@ export function UsersPage() {
             ))}
           </TBody>
         </Table>
+        <Pager {...pg} onPage={pg.setPage} unit="users" />
         <BulkActionBar
           count={sel.selectedCount} itemNoun="user" onClear={sel.clear}
           actions={[

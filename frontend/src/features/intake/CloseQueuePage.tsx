@@ -6,8 +6,7 @@ import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput, Stepper,
-  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
-} from "../../shared/ui";
+  Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, Pager, usePagination,} from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { INTAKE_MSG } from "./messages";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
@@ -34,6 +33,9 @@ export function CloseQueuePage() {
       application: (l) => (l.hasApplication ? "Started" : "New"),
     },
   });
+
+  // Presentational paging over the final (filtered + sorted) queue.
+  const pg = usePagination(sorted);
   const total = queue?.length ?? 0;
   const started = (queue ?? []).filter((l) => l.hasApplication).length;
   const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
@@ -91,6 +93,7 @@ export function CloseQueuePage() {
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.closeEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.closeEmptyDesc}
               action={!q ? <Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setOpen(true)}>Add lead</Button> : undefined} />
           ) : (
+            <>
             <Table>
               <THead>
                 <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("phoneNumber")} onClick={() => toggle("phoneNumber")}>Phone</TH><TH sortDir={dirFor("location")} onClick={() => toggle("location")}>Location</TH><TH sortDir={dirFor("ageYears")} onClick={() => toggle("ageYears")}>Age</TH>
@@ -114,7 +117,7 @@ export function CloseQueuePage() {
                 </TH><TH></TH></TR>
               </THead>
               <TBody>
-                {sorted.map((l) => (
+                {pg.pageItems.map((l) => (
                   <TR key={l.id} className={cn("cursor-pointer", sel.isSelected(l.id) && "bg-brand-50/40")} onClick={() => navigate(`/close-queue/${l.id}`)}>
                     <TD><Checkbox aria-label={`Select ${l.firstName} ${l.lastName}`} {...sel.checkboxProps(l.id)} /></TD>
                     <TD className="font-medium text-ink-900 whitespace-nowrap">{l.firstName} {l.lastName}</TD>
@@ -137,6 +140,8 @@ export function CloseQueuePage() {
                 ))}
               </TBody>
             </Table>
+            <Pager {...pg} onPage={pg.setPage} unit="leads" />
+            </>
           )}
           <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
             actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />

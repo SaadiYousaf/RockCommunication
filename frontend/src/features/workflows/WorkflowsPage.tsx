@@ -6,8 +6,8 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, useToast, cn,
-  type IconName,
+  Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea,
+  usePagination, useToast, cn, type IconName,
 } from "../../shared/ui";
 import type { WorkflowRule } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -88,6 +88,10 @@ export function WorkflowsPage() {
   const { sorted: sortedExecutions, dirFor: executionDir, toggle: sortExecution } = useTableSort(executions, {
     accessors: { when: (e) => Date.parse(e.startedAt) },
   });
+
+  // Each tab's list pages independently — presentational only, wrapping the final filtered/sorted rows.
+  const rulePg = usePagination(filtered);
+  const executionPg = usePagination(sortedExecutions);
 
   function openNew() {
     setEditing({
@@ -171,7 +175,7 @@ export function WorkflowsPage() {
         </CardBody></Card>
       ) : (
         <div className="space-y-3">
-          {filtered.map((r) => (
+          {rulePg.pageItems.map((r) => (
             <RuleCard
               key={r.id}
               rule={r}
@@ -179,6 +183,7 @@ export function WorkflowsPage() {
               onDelete={() => setConfirmDelete({ id: r.id, name: r.name })}
             />
           ))}
+          <Pager {...rulePg} onPage={rulePg.setPage} unit="rules" />
         </div>
       ))}
 
@@ -198,6 +203,7 @@ export function WorkflowsPage() {
                 />
               </div>
             ) : (
+              <>
               <Table className="border-0 shadow-none rounded-none">
                 <THead>
                   <TR>
@@ -208,7 +214,7 @@ export function WorkflowsPage() {
                   </TR>
                 </THead>
                 <TBody>
-                  {sortedExecutions.map((e) => (
+                  {executionPg.pageItems.map((e) => (
                     <TR key={e.id}>
                       <TD className="text-ink-600 text-xs whitespace-nowrap tabular-nums">{new Date(e.startedAt).toLocaleString()}</TD>
                       <TD><Badge tone={eventTone[e.eventType] ?? "neutral"} variant="soft" dot>{e.eventType}</Badge></TD>
@@ -222,6 +228,8 @@ export function WorkflowsPage() {
                   ))}
                 </TBody>
               </Table>
+              <Pager {...executionPg} onPage={executionPg.setPage} unit="executions" className="px-5" />
+              </>
             )}
           </CardBody>
         </Card>

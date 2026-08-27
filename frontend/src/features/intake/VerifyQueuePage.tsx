@@ -10,8 +10,7 @@ import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/type
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
-  Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, useToast,
-} from "../../shared/ui";
+  Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, useToast, Pager, usePagination,} from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection, type RowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -33,6 +32,9 @@ export function VerifyQueuePage() {
       location: (l) => [l.city, l.state].filter(Boolean).join(", "),
     },
   });
+
+  // Presentational paging over the final (filtered + sorted) queue.
+  const pg = usePagination(sorted);
   const total = queue?.length ?? 0;
   const stale = (queue ?? []).filter((l) => waitTone(l.createdAt) === "danger").length;
   const topScore = total ? Math.max(...(queue ?? []).map((l) => l.score)) : 0;
@@ -68,6 +70,7 @@ export function VerifyQueuePage() {
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.verifyEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.verifyEmptyDesc} />
           ) : (
+            <>
             <Table>
               <THead>
                 <TR>
@@ -94,9 +97,11 @@ export function VerifyQueuePage() {
                 </TR>
               </THead>
               <TBody>
-                {sorted.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} selected={sel.isSelected(l.id)} checkboxProps={sel.checkboxProps(l.id)} />)}
+                {pg.pageItems.map((l) => <VerifyRow key={l.id} lead={l} onEdit={() => setEditingId(l.id)} selected={sel.isSelected(l.id)} checkboxProps={sel.checkboxProps(l.id)} />)}
               </TBody>
             </Table>
+            <Pager {...pg} onPage={pg.setPage} unit="leads" />
+            </>
           )}
           <BulkActionBar count={sel.selectedCount} itemNoun="lead" onClear={sel.clear}
             actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
