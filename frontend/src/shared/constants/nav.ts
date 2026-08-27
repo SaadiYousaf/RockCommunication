@@ -74,11 +74,18 @@ export const NAV: NavNode[] = [
       },
       { key: "sales",       to: "/sales",       label: "Sales",       icon: "briefcase", module: "sales" },
       { key: "retention",   to: "/retention",   label: "Retention",   icon: "refresh",   module: "retention" },
-      { key: "commissions", to: "/commissions", label: "Commissions", icon: "doc",       module: "commissions" },
-      { key: "commission-desk", to: "/commission-desk", label: "Commission Desk", icon: "dollar", module: "commission-desk" },
-      { key: "commission-dash", to: "/commission-desk/dashboard", label: "Commission Dashboard", icon: "chart", module: "commission-desk" },
-      { key: "carrier-rules",   to: "/carrier-rules",  label: "Carrier Rules",    icon: "doc",    module: "carrier-rules" },
-      { key: "commission-rates", to: "/commission-rates", label: "Commission Rates", icon: "dollar", module: "commission-rates" },
+      {
+        // Everything commission-related lives under one heading. Labels drop the redundant
+        // "Commission" prefix here — the parent already says it.
+        key: "commission", label: "Commission", icon: "dollar",
+        children: [
+          { key: "commission-desk",  to: "/commission-desk",           label: "Commission Desk", icon: "dollar", module: "commission-desk" },
+          { key: "commission-dash",  to: "/commission-desk/dashboard", label: "Dashboard",       icon: "chart",  module: "commission-desk" },
+          { key: "commissions",      to: "/commissions",               label: "My Commissions",  icon: "doc",    module: "commissions" },
+          { key: "commission-rates", to: "/commission-rates",          label: "Rates",           icon: "dollar", module: "commission-rates" },
+          { key: "carrier-rules",    to: "/carrier-rules",             label: "Carrier Rules",   icon: "doc",    module: "carrier-rules" },
+        ],
+      },
       { key: "calls",       to: "/calls",       label: "Call History", icon: "phone",    module: "callcenter" },
     ],
   },

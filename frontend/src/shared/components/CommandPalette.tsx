@@ -71,7 +71,13 @@ const CURATED: PaletteItem[] = [
   { id: "cadences",       label: "Cadences", to: "/cadences", group: "Pipeline", icon: "filter", module: "campaigns" },
   { id: "sales",          label: "Sales", to: "/sales", group: "Pipeline", icon: "briefcase", module: "sales" },
   { id: "retention",      label: "Retention", to: "/retention", group: "Pipeline", icon: "refresh", module: "retention", keywords: ["bad bank", "nsf", "cancelled", "declined", "recover", "policy"] },
-  { id: "commissions",    label: "Commissions", to: "/commissions", group: "Pipeline", icon: "doc", module: "commissions", keywords: ["pay", "earnings"] },
+  { id: "commissions",    label: "My Commissions", to: "/commissions", group: "Pipeline", icon: "doc", module: "commissions", keywords: ["pay", "earnings", "commission"] },
+  // Nested under the Commission heading in the sidebar, so the palette spells them out in full —
+  // a bare "Rates" or "Dashboard" would be ambiguous in a flat search list.
+  { id: "commission-desk",  label: "Commission Desk", to: "/commission-desk", group: "Pipeline", icon: "dollar", module: "commission-desk", keywords: ["chargeback", "charged back", "nsf", "funded", "approve"] },
+  { id: "commission-dash",  label: "Commission Dashboard", to: "/commission-desk/dashboard", group: "Pipeline", icon: "chart", module: "commission-desk", keywords: ["advance", "expected", "by agency", "month"] },
+  { id: "commission-rates", label: "Commission Rates", to: "/commission-rates", group: "Pipeline", icon: "dollar", module: "commission-rates", keywords: ["rate", "closer flat", "kicker", "override", "bonus", "payout"] },
+  { id: "carrier-rules",    label: "Carrier Rules", to: "/carrier-rules", group: "Pipeline", icon: "doc", module: "carrier-rules", keywords: ["advancing", "advance months", "carrier", "rate"] },
 
   // Operations
   { id: "supervisor", label: "Supervisor View", to: "/supervisor", group: "Operations", icon: "shield", module: "supervisor" },
