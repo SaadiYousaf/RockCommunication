@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { roleLabel, canManageUser } from "../../shared/constants/roles";
+import { hrLabel } from "../../shared/constants/hr";
 import {
   Badge, Button, Card, CardBody, EmptyState, Icon, type IconName, InfoHint, Input, Modal, PageHeader, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
@@ -154,7 +155,7 @@ export function ProfilePage() {
                 <LockedField label="Code" value={profile.userName}
                   hint="Your agent code — also your sign-in username. Admins assign it, and it identifies you across leads, sales and reports." />
                 <LockedField label="Email" value={profile.email} />
-                <LockedField label="Designation" value={profile.designation}
+                <LockedField label="Designation" value={hrLabel(profile.designation)}
                   hint="Your job title within the organization. It's for display only and doesn't affect what you can access." />
                 <LockedField label="Team" value={profile.teamName} />
                 <LockedField label="Call centre" value={profile.callCenterName} />

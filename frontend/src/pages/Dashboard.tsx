@@ -10,7 +10,8 @@ import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUp
 import { useDashboardLayout } from "./useDashboardLayout";
 import { usePermission, Perm } from "../shared/auth/permissions";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage, TeamStatusRow, TeamLiveStatus } from "../shared/api/types";
-import { STAGE_TONE as stageTone } from "../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageLabel } from "../shared/constants/leadStage";
+import { roleLabel } from "../shared/constants/roles";
 import type { WallboardSnapshot, AgentLeaderboard } from "../shared/api/types";
 
 const stageOrder: WorkflowStage[] = [
@@ -428,7 +429,7 @@ function Hero({
               Welcome back, {userName}
             </h1>
             <p className="text-ink-500 text-sm mt-1.5">
-              {role ? `${role} · ` : ""}{dateStr} · {timeStr}
+              {role ? `${roleLabel(role)} · ` : ""}{dateStr} · {timeStr}
             </p>
           </div>
 
@@ -632,7 +633,7 @@ function PipelineCard({ data, loading }: { data?: DashboardSummary; loading: boo
   return (
     <Card className="xl:col-span-2 overflow-hidden">
       <CardHeader
-        title={<span className="inline-flex items-center gap-1">Pipeline overview<InfoHint title="Pipeline stages" side="bottom">Where each active lead sits in the sales flow: New, Fronted, Verified, Closed, Validated, Funded, then Followup, Winback or Lost.</InfoHint></span>}
+        title={<span className="inline-flex items-center gap-1">Pipeline overview<InfoHint title="Pipeline stages" side="bottom">Where each active lead sits in the sales flow: New, Fronted, Verified, Closed, Validated, Funded, then Follow-up, Win-back or Lost.</InfoHint></span>}
         subtitle="Stage distribution across all active leads"
         action={
           <Link to="/leads">
@@ -683,7 +684,7 @@ function PipelineFunnel({ pipeline }: { pipeline: DashboardStageBucket[] }) {
           >
             <div className="flex items-center gap-4">
               <div className="w-32 shrink-0">
-                <Badge tone={tone} variant="soft" dot>{b.stage}</Badge>
+                <Badge tone={tone} variant="soft" dot>{stageLabel(b.stage)}</Badge>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="relative h-9 bg-ink-100/70 rounded-lg overflow-hidden">
@@ -838,12 +839,12 @@ function ActivityCard({ data, loading }: { data?: DashboardSummary; loading: boo
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="font-semibold text-ink-900 truncate">{a.leadName}</span>
-                        <Badge tone={tone} variant="soft" dot className="shrink-0">{a.toStage}</Badge>
+                        <Badge tone={tone} variant="soft" dot className="shrink-0">{stageLabel(a.toStage)}</Badge>
                       </div>
                       <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-ink-600">{a.fromStage}</span>
+                        <span className="text-ink-600">{stageLabel(a.fromStage)}</span>
                         <Icon name="arrowRight" size={11} className="text-ink-400" />
-                        <span className="text-ink-700 font-medium">{a.toStage}</span>
+                        <span className="text-ink-700 font-medium">{stageLabel(a.toStage)}</span>
                         <span className="text-ink-300">·</span>
                         <span className="whitespace-nowrap tabular-nums">{timeAgo(a.occurredAt)}</span>
                         {a.userName && (

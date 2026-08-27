@@ -1,3 +1,4 @@
+using CRM.Application.Common.Commission;
 using CRM.Application.CommissionDesk;
 using CRM.Application.Retention;
 using CRM.Domain.Enums;
@@ -122,6 +123,18 @@ public class CommissionDeskTests
     {
         Assert.Equal(0m, CommissionDeskStatuses.SignedAmount(0m, clawedBack: true));
         Assert.Equal(0m, CommissionDeskStatuses.SignedAmount(0m, clawedBack: false));
+    }
+
+    [Theory]
+    [InlineData(1000)]
+    [InlineData(-1000)]
+    [InlineData(0)]
+    public void The_desk_and_the_shared_ledger_agree_on_sign(decimal amount)
+    {
+        // The desk delegates to CommissionLedger; if the two ever diverge, a charge-back would mean
+        // one thing on the desk and another in the validator queue.
+        Assert.Equal(CommissionLedger.SignedAmount(amount, true), CommissionDeskStatuses.SignedAmount(amount, true));
+        Assert.Equal(CommissionLedger.SignedAmount(amount, false), CommissionDeskStatuses.SignedAmount(amount, false));
     }
 
     [Theory]

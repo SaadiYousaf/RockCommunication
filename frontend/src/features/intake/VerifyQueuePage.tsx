@@ -1,4 +1,4 @@
-import { VERIFIER_STATUSES as STATUSES, MARITAL_STATUSES as MARITAL } from "../../shared/constants/intake";
+import { VERIFIER_STATUSES as STATUSES, MARITAL_STATUSES as MARITAL, verifierStatusLabel } from "../../shared/constants/intake";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { formatPhone } from "../../shared/lib/format";
 import { useEffect, useState } from "react";
@@ -46,7 +46,7 @@ export function VerifyQueuePage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
       { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
-      { header: "Status", value: (l) => l.verifierStatus },
+      { header: "Status", value: (l) => verifierStatusLabel(l.verifierStatus) },
       { header: "Date", value: (l) => new Date(l.createdAt).toLocaleDateString() },
     ], `verifier-queue-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(INTAKE_MSG.exportReadyTitle, INTAKE_MSG.exportRows(chosen.length));
@@ -124,7 +124,7 @@ function VerifyRow({ lead, onEdit, selected, checkboxProps }: {
     if (!status) { toast.error(INTAKE_MSG.pickStatus); return; }
     try {
       const r = await setStatus({ leadId: lead.id, status }).unwrap();
-      toast.success(INTAKE_MSG.statusSavedTitle, r.status === "Verified" ? INTAKE_MSG.leadSentToCloser : INTAKE_MSG.marked(r.status));
+      toast.success(INTAKE_MSG.statusSavedTitle, r.status === "Verified" ? INTAKE_MSG.leadSentToCloser : INTAKE_MSG.marked(verifierStatusLabel(r.status)));
     } catch (err: unknown) {
       toast.error(INTAKE_MSG.saveFailedTitle, getErrorDetail(err) ?? INTAKE_MSG.retry);
     }
@@ -151,7 +151,7 @@ function VerifyRow({ lead, onEdit, selected, checkboxProps }: {
             {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </Select>
           <Button size="sm" loading={isLoading} leftIcon={<Icon name="save" size={14} />} onClick={apply}>Save</Button>
-          {lead.verifierStatus !== "None" && <Badge tone="neutral" variant="soft" className="whitespace-nowrap">{lead.verifierStatus}</Badge>}
+          {lead.verifierStatus !== "None" && <Badge tone="neutral" variant="soft" className="whitespace-nowrap">{verifierStatusLabel(lead.verifierStatus)}</Badge>}
         </div>
       </TD>
     </TR>

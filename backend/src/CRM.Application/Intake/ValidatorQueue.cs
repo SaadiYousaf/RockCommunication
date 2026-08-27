@@ -270,15 +270,21 @@ public class ValidatorQueueHandler :
                 case ValidatorStatus.Approved:
                     lead.Stage = WorkflowStage.Validated;
                     sale.ValidatedAt ??= DateTime.UtcNow;
+                    // A sale that is good again is no longer charged back (mirrors the commission desk).
+                    sale.ChargedBackAt = null;
                     break;
                 case ValidatorStatus.ActivePaid:
                     lead.Stage = WorkflowStage.Funded;
                     sale.ValidatedAt ??= DateTime.UtcNow;
                     sale.FundedAt ??= DateTime.UtcNow;
+                    sale.ChargedBackAt = null;
                     break;
                 case ValidatorStatus.Decline:
                 case ValidatorStatus.ClientCancelled:
                     lead.Stage = WorkflowStage.Lost;
+                    // Clear the funded stamp: ListSales and the dashboard derive "Funded" purely from
+                    // FundedAt != null, so leaving it set kept counting a dead policy as revenue.
+                    sale.FundedAt = null;
                     break;
                 default:
                     lead.Stage = WorkflowStage.Closed; // Completed / NoUpdate / BadBank / NSF stay in the queue

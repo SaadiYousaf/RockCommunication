@@ -12,7 +12,7 @@ import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint,
   PageHeader, SearchInput, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
-import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageLabel } from "../../shared/constants/leadStage";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -112,7 +112,7 @@ export function GlobalSearchPage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
       { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
-      { header: "Stage", value: (l) => String(l.stage) },
+      { header: "Stage", value: (l) => stageLabel(l.stage) },
     ], `search-leads-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(SEARCH_MSG.exportReadyTitle, SEARCH_MSG.exportReadyDesc(chosen.length));
   }
@@ -246,7 +246,7 @@ export function GlobalSearchPage() {
                         <TD className="font-mono text-sm tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
                         <TD className="text-sm text-ink-700 truncate max-w-[220px]">{l.email ?? "—"}</TD>
                         <TD>
-                          <Badge tone={stageTone[l.stage] ?? "neutral"} variant="soft">{l.stage}</Badge>
+                          <Badge tone={stageTone[l.stage] ?? "neutral"} variant="soft">{stageLabel(l.stage)}</Badge>
                         </TD>
                         <TD className="text-sm text-ink-700">{l.state ?? "—"}</TD>
                         <TD onClick={(e) => e.stopPropagation()} className="text-right sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">

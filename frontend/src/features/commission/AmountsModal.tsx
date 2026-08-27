@@ -5,6 +5,7 @@ import type { CommissionAmount, CommissionSale } from "../../shared/api/types";
 import { formatUsd } from "../../shared/lib/format";
 import { Badge, Button, Icon, Input, Modal, Table, TBody, TD, TH, THead, TR } from "../../shared/ui";
 import { COMMISSION_MSG } from "./messages";
+import { commissionRuleLabel, commissionRuleEarnedBy } from "./rates";
 
 /**
  * The money lines on a sale. Read-only normally — the commission engine owns them. Once the sale is
@@ -90,7 +91,12 @@ function AmountRow({ saleId, amount, editable, onSaved, onError }: {
 
   return (
     <TR>
-      <TD className="text-sm text-ink-800">{amount.ruleName}</TD>
+      <TD>
+        <div className="text-sm text-ink-800">{commissionRuleLabel(amount.ruleName)}</div>
+        {commissionRuleEarnedBy(amount.ruleName) && (
+          <div className="text-xs text-ink-500">{commissionRuleEarnedBy(amount.ruleName)}</div>
+        )}
+      </TD>
       <TD className="text-sm text-ink-600">{amount.agentName ?? "—"}</TD>
       <TD numeric>
         {editing ? (

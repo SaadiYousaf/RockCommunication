@@ -37,6 +37,18 @@ export const VALIDATOR_STATUSES: { value: ValidatorStatusValue; label: string }[
 ];
 
 /** Sub-reasons for the "Error in application information" submission status. */
+/** Verifier outcome -> what users see (the enum names are internal). */
+export const VERIFIER_STATUS_LABEL: Record<string, string> = Object.fromEntries(
+  VERIFIER_STATUSES.map((s) => [s.value, s.label]));
+export const verifierStatusLabel = (s: string | null | undefined): string =>
+  !s ? "—" : VERIFIER_STATUS_LABEL[s] ?? s;
+
+/** Closer outcome -> what users see. */
+export const CLOSER_STATUS_LABEL: Record<string, string> = Object.fromEntries(
+  CLOSER_STATUSES.map((s) => [s.value, s.label]));
+export const closerStatusLabel = (s: string | null | undefined): string =>
+  !s ? "—" : CLOSER_STATUS_LABEL[s] ?? s;
+
 export const VALIDATOR_ERROR_REASONS = ["Wrong banking / Payor issue", "Identity Error"] as const;
 
 export const VALIDATOR_STATUS_LABEL: Record<ValidatorStatusValue, string> = Object.fromEntries(

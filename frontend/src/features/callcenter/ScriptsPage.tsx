@@ -7,7 +7,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Select, Skeleton, Stat, Textarea, useToast,
 } from "../../shared/ui";
-import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageLabel } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { MESSAGES } from "../../shared/constants/messages";
@@ -138,8 +138,8 @@ export function ScriptsPage() {
                   }
                   subtitle={
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      {s.stage && <Badge tone={stageTone[s.stage] ?? "neutral"} variant="soft" dot>{s.stage}</Badge>}
-                      {s.role && <Badge tone="info" variant="soft">{s.role}</Badge>}
+                      {s.stage && <Badge tone={stageTone[s.stage] ?? "neutral"} variant="soft" dot>{stageLabel(s.stage)}</Badge>}
+                      {s.role && <Badge tone="info" variant="soft">{roleLabel(s.role)}</Badge>}
                       {camp && <Badge tone="brand" variant="soft">{camp.name}</Badge>}
                       {!s.stage && !s.role && !camp && <span className="inline-flex items-center gap-1 text-xs text-ink-400">Universal<InfoHint title="Universal script" side="top">Not tied to any stage, role, or campaign — agents can use it on every call.</InfoHint></span>}
                     </div>
@@ -190,7 +190,7 @@ export function ScriptsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Select label="Stage" value={editing.stage ?? ""} onChange={(e) => setEditing({ ...editing, stage: e.target.value })}>
                 <option value="">— Any stage —</option>
-                {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {STAGES.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
               </Select>
               <Select label="Role" value={editing.role ?? ""} onChange={(e) => setEditing({ ...editing, role: e.target.value })}>
                 <option value="">— Any role —</option>

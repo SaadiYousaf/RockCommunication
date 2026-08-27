@@ -11,6 +11,7 @@ import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { MESSAGES } from "../../shared/constants/messages";
 import { SALES_MSG } from "./messages";
+import { commissionRuleLabel } from "../commission/rates";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
@@ -62,7 +63,7 @@ export function CommissionsPage() {
     const q = search.trim().toLowerCase();
     if (!q) return commissions ?? [];
     return (commissions ?? []).filter((c) =>
-      [c.ruleName, c.note, c.paid ? "Paid" : "Unpaid"]
+      [commissionRuleLabel(c.ruleName), c.note, c.paid ? "Paid" : "Unpaid"]
         .some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [commissions, search]);
 
@@ -190,7 +191,7 @@ export function CommissionsPage() {
                 const pct = total > 0 ? Math.round((r.amount / total) * 100) : 0;
                 return (
                   <div key={r.rule} className="flex items-center gap-3">
-                    <div className="font-mono text-xs text-ink-700 w-44 truncate">{r.rule}</div>
+                    <div className="text-xs text-ink-700 w-44 truncate" title={commissionRuleLabel(r.rule)}>{commissionRuleLabel(r.rule)}</div>
                     <div className="flex-1 h-2 rounded-full bg-ink-100 overflow-hidden">
                       <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
                     </div>
@@ -250,10 +251,10 @@ export function CommissionsPage() {
             {sorted.map((c) => (
               <TR key={c.id} className={sel.isSelected(c.id) ? "bg-brand-50/40" : undefined}>
                 <TD>
-                  <Checkbox aria-label={`Select commission ${c.ruleName}`} {...sel.checkboxProps(c.id)} />
+                  <Checkbox aria-label={`Select commission ${commissionRuleLabel(c.ruleName)}`} {...sel.checkboxProps(c.id)} />
                 </TD>
                 <TD className="text-ink-600 whitespace-nowrap tabular-nums">{new Date(c.earnedAt).toLocaleString()}</TD>
-                <TD className="font-mono text-xs text-ink-700">{c.ruleName}</TD>
+                <TD className="text-sm text-ink-700">{commissionRuleLabel(c.ruleName)}</TD>
                 <TD numeric className="font-semibold text-ink-900 tabular-nums whitespace-nowrap">${c.amount.toFixed(2)}</TD>
                 <TD>
                   {c.paid

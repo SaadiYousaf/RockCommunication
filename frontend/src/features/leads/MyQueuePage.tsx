@@ -9,7 +9,7 @@ import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
   Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
-import { STAGE_TONE as stageTone, stageOf } from "../../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageOf, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatPhone } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -91,8 +91,8 @@ export function MyQueuePage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (l) => `${l.firstName} ${l.lastName}`.trim() },
       { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
-      { header: "Stage", value: (l) => stageOf(l.stage) },
-      { header: "Next action", value: (l) => String(l.disposition) },
+      { header: "Stage", value: (l) => stageLabel(l.stage) },
+      { header: "Next action", value: (l) => dispositionLabel(l.disposition) },
     ], `my-queue-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(LEADS_MSG.exportReadyTitle, LEADS_MSG.exportRows(chosen.length));
   }
@@ -114,7 +114,7 @@ export function MyQueuePage() {
     setBusyId(id);
     try {
       await transition({ id, toStage, disposition }).unwrap();
-      toast.success(LEADS_MSG.dispositionSavedTitle, LEADS_MSG.dispositionSavedDesc(name, disposition));
+      toast.success(LEADS_MSG.dispositionSavedTitle, LEADS_MSG.dispositionSavedDesc(name, dispositionLabel(disposition)));
       refetch();
     } catch (err: unknown) {
       toast.error(LEADS_MSG.queueUpdateFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
@@ -128,7 +128,7 @@ export function MyQueuePage() {
     { value: "All", label: "All", count: counts.All },
     { value: "Fronted", label: "Fronted", count: counts.Fronted ?? 0 },
     { value: "Verified", label: "Verified", count: counts.Verified ?? 0 },
-    { value: "Followup", label: "Followup", count: counts.Followup ?? 0 },
+    { value: "Followup", label: stageLabel("Followup"), count: counts.Followup ?? 0 },
   ];
 
   return (
@@ -143,7 +143,7 @@ export function MyQueuePage() {
         <Stat label="Active"   value={counts.Active}        icon={<Icon name="inbox" size={16} />}    tone="brand"    hint="Still in play — excludes Lost & Funded" onClick={() => setFilter("Active")} />
         <Stat label="Total"    value={counts.All}           icon={<Icon name="rows" size={16} />}     tone="neutral"  onClick={() => setFilter("All")} />
         <Stat label="Fronted"  value={counts.Fronted ?? 0}  icon={<Icon name="phoneOut" size={16} />} tone="success"  onClick={() => setFilter("Fronted")} />
-        <Stat label="Followup" value={counts.Followup ?? 0} icon={<Icon name="clock" size={16} />}    tone="warning"  onClick={() => setFilter("Followup")} />
+        <Stat label={stageLabel("Followup")} value={counts.Followup ?? 0} icon={<Icon name="clock" size={16} />} tone="warning"  onClick={() => setFilter("Followup")} />
       </div>
 
       <Card className="mb-4">
@@ -189,7 +189,7 @@ export function MyQueuePage() {
               <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>
                 <span className="inline-flex items-center gap-1">Stage
                   <InfoHint title="Pipeline stage" side="bottom">
-                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Follow-up / Win-back / Lost).
                   </InfoHint>
                 </span>
               </TH>
@@ -227,7 +227,7 @@ export function MyQueuePage() {
                     </div>
                   </TD>
                   <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
-                  <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
+                  <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stageLabel(stage)}</Badge></TD>
                   <TD className="whitespace-nowrap">
                     <span title={new Date(l.createdAt).toLocaleString()}>
                       <Badge tone={waitTone(l.createdAt)} variant="soft">{timeAgoShort(l.createdAt)}</Badge>

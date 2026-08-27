@@ -6,7 +6,7 @@ import {
   Skeleton, Table, TBody, TD, TH, THead, TR, cn, type IconName,
 } from "../../shared/ui";
 import type { LeadDiagnostics } from "../../shared/api/types";
-import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageLabel } from "../../shared/constants/leadStage";
 import { timeAgo } from "../../shared/lib/time";
 import { LEADS_MSG } from "./messages";
 
@@ -76,7 +76,7 @@ const ISSUE_DETAILS: Record<string, IssueDetail> = {
   STALE: {
     what: "The lead has sat in its current stage well beyond the expected age.",
     impact: "Stale leads skew pipeline metrics and rarely convert without intervention.",
-    fix: "Move it forward, or send it to Followup/Lost so the pipeline stays accurate.",
+    fix: "Move it forward, or send it to Follow-up/Lost so the pipeline stays accurate.",
     cta: "Open lead to update stage", to: (id) => `/leads/${id}`,
   },
   WORKFLOW_FAILURE: {
@@ -625,7 +625,7 @@ function Diagnostic({ data, leadId }: { data: LeadDiagnostics; leadId: string })
         <div className="text-[10px] uppercase tracking-[0.16em] text-white/70">{label}</div>
         <div className="text-lg font-semibold mt-1 tabular-nums">
           {label === "Stage"
-            ? <Badge tone={stageTone[value] ?? "neutral"} variant="solid" dot>{value}</Badge>
+            ? <Badge tone={stageTone[value] ?? "neutral"} variant="solid" dot>{stageLabel(value)}</Badge>
             : value}
         </div>
       </div>

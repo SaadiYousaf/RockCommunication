@@ -24,6 +24,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
   ALLOWED_TRANSITIONS, TERMINAL_STAGES, STAGE_DESCRIPTIONS, DISPOSITION_DESCRIPTIONS, WORKFLOW_STAGES,
+  stageLabel, dispositionLabel,
 } from "../../shared/constants/leadStage";
 import { formatPhone } from "../../shared/lib/format";
 import { LEADS_MSG } from "./messages";
@@ -115,12 +116,12 @@ export function LeadDetailPage() {
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {
-      const ok = await confirm({ title: LEADS_MSG.moveConfirmTitle(toStage), description: LEADS_MSG.moveConfirmDesc, danger: true, confirmLabel: LEADS_MSG.moveConfirmLabel(toStage) });
+      const ok = await confirm({ title: LEADS_MSG.moveConfirmTitle(stageLabel(toStage)), description: LEADS_MSG.moveConfirmDesc, danger: true, confirmLabel: LEADS_MSG.moveConfirmLabel(stageLabel(toStage)) });
       if (!ok) return;
     }
     try {
       await transition({ id, toStage, disposition: lead!.disposition as LeadDisposition }).unwrap();
-      toast.success(LEADS_MSG.stageUpdatedTitle, LEADS_MSG.movedTo(toStage));
+      toast.success(LEADS_MSG.stageUpdatedTitle, LEADS_MSG.movedTo(stageLabel(toStage)));
       refetchLead();
     } catch (err: unknown) {
       toast.error(LEADS_MSG.moveStageFailedTitle, getErrorDetail(err) ?? LEADS_MSG.transitionNotAllowed);
@@ -140,7 +141,7 @@ export function LeadDetailPage() {
   async function doDisposition(disposition: LeadDisposition) {
     try {
       await setDisposition({ id, disposition }).unwrap();
-      toast.success(LEADS_MSG.dispositionSetTitle, disposition);
+      toast.success(LEADS_MSG.dispositionSetTitle, dispositionLabel(disposition));
       refetchLead();
     } catch (err: unknown) {
       toast.error(LEADS_MSG.setDispositionFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
@@ -280,7 +281,7 @@ export function LeadDetailPage() {
               <InfoHint title="Pipeline stages" side="bottom">
                 <ul className="space-y-0.5">
                   {WORKFLOW_STAGES.map((s) => (
-                    <li key={s}><strong className="text-ink-800">{s}</strong> — {STAGE_DESCRIPTIONS[s]}</li>
+                    <li key={s}><strong className="text-ink-800">{stageLabel(s)}</strong> — {STAGE_DESCRIPTIONS[s]}</li>
                   ))}
                 </ul>
               </InfoHint>
@@ -290,11 +291,11 @@ export function LeadDetailPage() {
                 className={`px-3 py-2 rounded-lg text-xs border transition-colors ${TERMINAL_STAGES.includes(s)
                   ? "bg-white border-rose-300 text-rose-700 hover:bg-rose-50"
                   : "bg-white border-ink-300 hover:bg-ink-50 hover:border-ink-400"}`}>
-                → {s}
+                → {stageLabel(s)}
               </button>
             ))}
             {(ALLOWED_TRANSITIONS[lead.stage as WorkflowStage] ?? []).length === 0 && (
-              <span className="text-xs text-ink-400 self-center">No further moves from {lead.stage}</span>
+              <span className="text-xs text-ink-400 self-center">No further moves from {stageLabel(lead.stage)}</span>
             )}
           </Can>
         </div>
@@ -334,7 +335,7 @@ export function LeadDetailPage() {
                   The outcome of the last contact attempt (doesn't change the pipeline stage).
                   <ul className="mt-1 space-y-0.5">
                     {Object.entries(DISPOSITION_DESCRIPTIONS).map(([d, desc]) => (
-                      <li key={d}><strong className="text-ink-800">{d}</strong> — {desc}</li>
+                      <li key={d}><strong className="text-ink-800">{dispositionLabel(d)}</strong> — {desc}</li>
                     ))}
                   </ul>
                 </InfoHint>
@@ -344,7 +345,7 @@ export function LeadDetailPage() {
                   <button key={d}
                     onClick={() => doDisposition(d)}
                     className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${d === lead.disposition ? "bg-brand-700 text-white shadow-sm" : "bg-ink-100 hover:bg-ink-200 text-ink-700"}`}>
-                    {d}
+                    {dispositionLabel(d)}
                   </button>
                 ))}
               </div>
@@ -372,7 +373,7 @@ export function LeadDetailPage() {
           {/* Script */}
           {scripts && scripts.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="text-xs uppercase tracking-wider text-amber-800 mb-1">Script — {lead.stage}</div>
+              <div className="text-xs uppercase tracking-wider text-amber-800 mb-1">Script — {stageLabel(lead.stage)}</div>
               <div className="font-medium text-amber-900 mb-2">{scripts[0].name}</div>
               <pre className="whitespace-pre-wrap text-sm text-ink-800">{scripts[0].body}</pre>
             </div>
@@ -586,7 +587,7 @@ function Stepper({ current }: { current: WorkflowStage }) {
               active ? "bg-brand-600 text-white"
                 : done ? "bg-emerald-100 text-emerald-800"
                 : "bg-ink-100 text-ink-500"}`}>
-              {done && <Icon name="success" size={11} />}{s}
+              {done && <Icon name="success" size={11} />}{stageLabel(s)}
             </span>
             {i < PIPELINE.length - 1 && <span className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-ink-200"}`} />}
           </div>
@@ -595,7 +596,7 @@ function Stepper({ current }: { current: WorkflowStage }) {
       {offTrack && (
         <span className={`ml-2 shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full ${
           current === "Lost" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>
-          {current} · off the main pipeline
+          {stageLabel(current)} · off the main pipeline
         </span>
       )}
     </div>
@@ -606,7 +607,7 @@ function StageBadge({ stage }: { stage: string }) {
   const tone: BadgeTone = stage === "Funded" ? "success" : stage === "Lost" ? "danger"
     : stage === "Closed" || stage === "Validated" ? "info"
     : stage === "Followup" || stage === "Winback" ? "warning" : "default";
-  return <Badge tone={tone}>{stage}</Badge>;
+  return <Badge tone={tone}>{stageLabel(stage)}</Badge>;
 }
 
 function DispositionBadge({ disposition }: { disposition: string }) {
@@ -614,7 +615,7 @@ function DispositionBadge({ disposition }: { disposition: string }) {
   const tone: BadgeTone = disposition === "Sold" ? "success"
     : disposition === "DoNotCall" || disposition === "NotInterested" ? "danger"
     : disposition === "Interested" ? "info" : "default";
-  return <Badge tone={tone}>{disposition}</Badge>;
+  return <Badge tone={tone}>{dispositionLabel(disposition)}</Badge>;
 }
 
 function Row({ label, value, mono }: { label: ReactNode; value: ReactNode; mono?: boolean }) {

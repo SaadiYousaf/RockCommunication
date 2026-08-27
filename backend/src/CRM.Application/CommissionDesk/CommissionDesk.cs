@@ -43,15 +43,12 @@ public static class CommissionDeskStatuses
     public static bool GoesToRetention(ValidatorStatus s) => MovesToRetention.Contains(s);
 
     /// <summary>
-    /// The amount an unpaid commission line should hold for an outcome: negative once the carrier
-    /// claws the advance back, positive again when the policy recovers. Idempotent in BOTH
-    /// directions — applying it twice is the same as applying it once — so re-saving a status can
-    /// never double a clawback or re-flip a restored line.
+    /// The amount an unpaid commission line should hold for an outcome. Delegates to the shared
+    /// <see cref="CommissionLedger"/> so the rule lives in exactly one place; kept here as the name
+    /// the desk's tests and callers already use.
     /// </summary>
     public static decimal SignedAmount(decimal amount, bool clawedBack) =>
-        clawedBack
-            ? (amount > 0 ? -amount : amount)
-            : (amount < 0 ? -amount : amount);
+        CommissionLedger.SignedAmount(amount, clawedBack);
 }
 
 /// <summary>One money line on a sale (a <see cref="CommissionEntry"/>), editable after a chargeback.</summary>
@@ -218,12 +215,26 @@ public class CommissionDeskHandler :
                 sale.ValidatedAt ??= DateTime.UtcNow;
                 sale.FundedAt ??= DateTime.UtcNow;
                 sale.ChargedBackAt = null;      // recovered — no longer charged back
+                sale.DeclineReason = null;      // and the old rejection note no longer applies
+                // Revive BEFORE flipping: a prior decline soft-deleted these lines, and the sign
+                // flip only touches live rows — so without this the money never comes back.
+                await CommissionLedger.ReviveUnpaidAsync(_db, sale, ct);
                 await FlipCommissionSignAsync(sale, negative: false, ct);
                 break;
             case ValidatorStatus.Approved:
                 sale.ValidatedAt ??= DateTime.UtcNow;
                 sale.ChargedBackAt = null;
+                sale.DeclineReason = null;
+                await CommissionLedger.ReviveUnpaidAsync(_db, sale, ct);
                 await FlipCommissionSignAsync(sale, negative: false, ct);
+                break;
+            case ValidatorStatus.Decline:
+            case ValidatorStatus.ClientCancelled:
+                // A terminal negative outcome: void the still-unpaid commission so payroll never
+                // pays out on a dead policy, and stop it counting as funded revenue (the sales list
+                // and dashboard derive "Funded" purely from FundedAt). Mirrors ValidatorQueue.
+                await CommissionLedger.VoidUnpaidAsync(_db, sale, ct);
+                sale.FundedAt = null;
                 break;
         }
 

@@ -27,6 +27,52 @@ export const stageOf = (s: number | string): WorkflowStage => STAGE_MAP[s] ?? "N
 export const dispOf = (d: number | string): string => DISPOSITION_MAP[d] ?? "None";
 
 /**
+ * What users SEE for a pipeline stage. The enum names are internal (`JrClosed`, `Followup`) and
+ * must never reach the screen — always render through `stageLabel`.
+ */
+export const STAGE_LABEL: Record<string, string> = {
+  New: "New",
+  Fronted: "Fronted",
+  Verified: "Verified",
+  JrClosed: "Jr Closed",
+  Closed: "Closed",
+  Validated: "Validated",
+  Funded: "Funded",
+  Followup: "Follow-up",
+  Winback: "Win-back",
+  Lost: "Lost",
+};
+
+/** Friendly stage name. Accepts the numeric or string form the API may send. */
+export const stageLabel = (s: number | string | null | undefined): string => {
+  if (s === null || s === undefined) return "—";
+  const name = STAGE_MAP[s] ?? String(s);
+  return STAGE_LABEL[name] ?? name;
+};
+
+/** What users SEE for a lead disposition — the enum names are internal. */
+export const DISPOSITION_LABEL: Record<string, string> = {
+  None: "None",
+  Interested: "Interested",
+  NotInterested: "Not interested",
+  CallBack: "Call back",
+  DoNotCall: "Do not call",
+  Sold: "Sold",
+  NotQualified: "Not qualified",
+  Voicemail: "Voicemail",
+  NoAnswer: "No answer",
+  WrongNumber: "Wrong number",
+};
+
+/** Friendly disposition name. Accepts the numeric or string form the API may send. */
+export const dispositionLabel = (d: number | string | null | undefined): string => {
+  if (d === null || d === undefined) return "—";
+  const name = DISPOSITION_MAP[d] ?? String(d);
+  return DISPOSITION_LABEL[name] ?? name;
+};
+
+
+/**
  * Valid next stages per current stage — mirrors the backend TransitionLeadHandler.Allowed map
  * (backend/src/CRM.Application/Leads/Commands/TransitionLead.cs). Used to show only the moves
  * that will succeed instead of every stage button (invalid ones 409).

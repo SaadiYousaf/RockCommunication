@@ -69,3 +69,26 @@ export const COMMISSION_RATES: CommissionRateMeta[] = [
     defaultAmount: 10,
   },
 ];
+
+/** Internal rule code -> the label users see. Falls back to the code only if a rule is unknown. */
+const RATE_LABEL_BY_KEY: Record<string, string> =
+  Object.fromEntries(COMMISSION_RATES.map((r) => [r.key, r.label]));
+
+/**
+ * Friendly name for a commission line. Commission entries are stored under their internal rule
+ * code ("closer-flat-rate"), which must never reach the screen.
+ */
+export function commissionRuleLabel(ruleName: string): string {
+  if (RATE_LABEL_BY_KEY[ruleName]) return RATE_LABEL_BY_KEY[ruleName];
+  // Unknown rule (e.g. one added backend-side before this table caught up): de-kebab it so the
+  // user still sees words rather than a raw code.
+  return ruleName
+    .split("-")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+/** Which role earns a given rule, for context next to the amount. Empty when unknown. */
+export function commissionRuleEarnedBy(ruleName: string): string {
+  return COMMISSION_RATES.find((r) => r.key === ruleName)?.earnedBy ?? "";
+}

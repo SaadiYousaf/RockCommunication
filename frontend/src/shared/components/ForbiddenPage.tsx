@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { Button, Icon, Card, CardBody } from "../ui";
+import { roleLabel } from "../constants/roles";
 
 /**
  * 403 / "no access" screen rendered when a route guard rejects the current user.
@@ -30,7 +31,7 @@ export function ForbiddenPage() {
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             {(auth.user?.roles ?? []).map((r) => (
               <span key={r} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-ink-100 text-ink-700">
-                {r}
+                {roleLabel(r)}
               </span>
             ))}
           </div>

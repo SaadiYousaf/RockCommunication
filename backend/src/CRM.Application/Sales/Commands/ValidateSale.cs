@@ -1,3 +1,4 @@
+using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
@@ -56,6 +57,13 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
             sale.ValidatorUserId = _user.UserId;
             sale.ValidatedAt = DateTime.UtcNow;
             lead.Stage = WorkflowStage.Validated;
+
+            // Symmetry with the reject branch below: a sale rejected earlier had its unpaid
+            // commission voided, so approving it must bring that money back. Without this the
+            // agent was silently paid nothing on a sale that ultimately passed. Also clear the
+            // rejection's disposition so the lead doesn't stay marked Not Qualified.
+            await CommissionLedger.ReviveUnpaidAsync(_db, sale, ct);
+            if (lead.Disposition == LeadDisposition.NotQualified) lead.Disposition = LeadDisposition.Sold;
         }
         else
         {
@@ -66,8 +74,7 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
 
             // A rejected sale didn't pass validation — void its still-unpaid commission so payroll
             // never pays out for it. Already-paid entries are left untouched.
-            var unpaid = await _db.CommissionEntries.Where(c => c.SaleId == sale.Id && !c.Paid).ToListAsync(ct);
-            _db.CommissionEntries.RemoveRange(unpaid);
+            await CommissionLedger.VoidUnpaidAsync(_db, sale, ct);
         }
 
         _db.LeadActivities.Add(new LeadActivity

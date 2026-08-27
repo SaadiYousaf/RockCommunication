@@ -1,6 +1,7 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import { ADMIN_MSG } from "./messages";
+import { commissionRuleLabel } from "../commission/rates";
 import { useState } from "react";
 import {
   useAddIpAllowlistMutation, useCreateVerticalMutation, useListCommissionConfigQuery,
@@ -15,11 +16,12 @@ import {
 
 const RULES = ["closer-flat-rate", "jr-closer-split", "validator-bonus", "high-premium-kicker", "team-lead-override"];
 
-/** Plain-language explanation of each commission rule, shown as an info-hint next to its code. */
+/** Plain-language explanation of each commission rule, shown as an info-hint next to its name.
+ *  Keyed by the internal rule code — the code itself is never rendered. */
 const RULE_HINTS: Record<string, string> = {
   "closer-flat-rate":   "A fixed amount paid to the closer for every closed sale.",
   "jr-closer-split":    "The amount a junior closer earns for assisting on a close.",
-  "validator-bonus":    "A bonus paid to the validator for each sale they review and approve.",
+  "validator-bonus":    "A bonus paid to the submission agent for each sale they review and approve.",
   "high-premium-kicker":"Extra commission added when a sale's premium is at or above the threshold.",
   "team-lead-override": "An override the team lead earns on top of sales closed by their team.",
 };
@@ -260,13 +262,16 @@ function RuleRow({ ruleName, initial, onSave }: {
   const [threshold, setThreshold] = useState(initial?.threshold?.toString() ?? "");
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
   const toast = useToast();
+  // The rule's internal code ("closer-flat-rate") is what we send to the API; users only ever see
+  // the friendly label.
+  const label = commissionRuleLabel(ruleName);
 
   return (
     <tr className="border-t hairline hover:bg-ink-50/40 transition-colors">
       <td className="px-5 py-2 whitespace-nowrap">
         <span className="inline-flex items-center gap-1.5">
-          <span className="font-mono text-xs">{ruleName}</span>
-          {RULE_HINTS[ruleName] && <InfoHint title={ruleName} side="right">{RULE_HINTS[ruleName]}</InfoHint>}
+          <span className="text-xs">{label}</span>
+          {RULE_HINTS[ruleName] && <InfoHint title={label} side="right">{RULE_HINTS[ruleName]}</InfoHint>}
         </span>
       </td>
       <td className="px-5 py-2">
@@ -291,9 +296,9 @@ function RuleRow({ ruleName, initial, onSave }: {
                 threshold: threshold === "" ? null : parseFloat(threshold),
                 enabled,
               });
-              toast.success(ADMIN_MSG.system.ruleSaved, ruleName);
+              toast.success(ADMIN_MSG.system.ruleSaved, label);
             } catch {
-              toast.error(ADMIN_MSG.system.ruleSaveFailed, ruleName);
+              toast.error(ADMIN_MSG.system.ruleSaveFailed, label);
             }
           }}>Save</Button>
       </td>

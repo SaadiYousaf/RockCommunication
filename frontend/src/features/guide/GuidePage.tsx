@@ -92,7 +92,7 @@ const BRANCHES: { label: string; tone: BadgeTone; text: string }[] = [
   { label: "Call me later", tone: "info", text: "The lead gets a Callback scheduled and comes back to the queue at the right time." },
   { label: "Bad Bank / NSF", tone: "danger", text: "The bank account is invalid or the draft bounces — the sale is reworked or marked lost." },
   { label: "Declined", tone: "danger", text: "The carrier declines the application; the sale is closed out as lost." },
-  { label: "Winback", tone: "warning", text: "A lapsed or lost customer is re-worked later through a winback cadence." },
+  { label: "Win-back", tone: "warning", text: "A lapsed or lost customer is re-worked later through a win-back cadence." },
 ];
 
 // ── Roles & responsibilities ──────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export function GuidePage() {
             <span className="inline-flex items-center gap-1.5">
               The pipeline at a glance
               <InfoHint title="Stages" side="bottom">
-                Every lead moves left-to-right through these stages. Some branch off to Callback, Winback or Lost along the way.
+                Every lead moves left-to-right through these stages. Some branch off to Callback, Win-back or Lost along the way.
               </InfoHint>
             </span>
           }

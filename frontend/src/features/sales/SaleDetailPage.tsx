@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { commissionRuleLabel } from "../commission/rates";
 import type { ReactNode } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -12,6 +13,8 @@ import {
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
 import { SALE_LIFECYCLE, saleLifecycleIndex } from "../../shared/constants/pipeline";
+import { VALIDATOR_STATUS_LABEL } from "../../shared/constants/intake";
+import type { ValidatorStatusValue } from "../../shared/api/types";
 import { usePermission, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
@@ -91,7 +94,9 @@ export function SaleDetailPage() {
               hint="What the policy costs over a full year (12 × the monthly premium)." />
         <Stat label="Total commission" value={money(sale.totalCommission)} icon={<Icon name="card" size={16} />} tone="success"
               hint={sale.licenseAgentName ? `License agent: ${sale.licenseAgentName}` : "No license agent"} />
-        <Stat label="Validator status" value={sale.validatorStatus} icon={<Icon name="shield" size={16} />} tone="warning"
+        <Stat label="Submission status"
+              value={VALIDATOR_STATUS_LABEL[sale.validatorStatus as ValidatorStatusValue] ?? sale.validatorStatus}
+              icon={<Icon name="shield" size={16} />} tone="warning"
               hint="Where the sale sits in QA review before it's submitted to the carrier." />
       </div>
 
@@ -218,7 +223,7 @@ export function SaleDetailPage() {
                     <Avatar name={c.agentName ?? "?"} size={28} />
                     <div className="min-w-0">
                       <div className="font-medium text-ink-900 truncate">{c.agentName ?? "Unknown agent"}</div>
-                      <div className="text-xs text-ink-500 truncate">{c.ruleName} · <span className="tabular-nums whitespace-nowrap">{dateTime(c.createdAt)}</span></div>
+                      <div className="text-xs text-ink-500 truncate">{commissionRuleLabel(c.ruleName)} · <span className="tabular-nums whitespace-nowrap">{dateTime(c.createdAt)}</span></div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">

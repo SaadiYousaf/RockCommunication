@@ -1,3 +1,4 @@
+using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Notifications;
@@ -161,6 +162,11 @@ public class RetentionHandler :
                     lead.Stage = WorkflowStage.Funded;
                     sale.ValidatedAt ??= DateTime.UtcNow;
                     sale.FundedAt ??= DateTime.UtcNow;
+                    // The outcome that sent this policy to retention voided its unpaid commission.
+                    // Recovering it must bring that money back, or the closer gets a "Policy
+                    // recovered" notification for a sale they are still paid nothing on.
+                    await CommissionLedger.ReviveUnpaidAsync(_db, sale, ct);
+                    sale.DeclineReason = null;   // the old failure reason no longer applies
                     break;
                 case ValidatorStatus.Decline:
                 case ValidatorStatus.ClientCancelled:

@@ -88,7 +88,7 @@ export function UsersPage() {
         <Stat label="Total users" value={stats.total}     icon={<Icon name="users" size={16} />}     tone="brand" />
         <Stat label="Managers"    value={stats.managers}  icon={<Icon name="shield" size={16} />}    tone="danger" hint="Admin / PM / TL" />
         <Stat label="Agents"      value={stats.agents}    icon={<Icon name="phoneCall" size={16} />} tone="success" hint="Front / Verify / Close" />
-        <Stat label="Retention"   value={stats.retention} icon={<Icon name="refresh" size={16} />}   tone="accent" hint="Followup / Winback" />
+        <Stat label="Retention"   value={stats.retention} icon={<Icon name="refresh" size={16} />}   tone="accent" hint="Follow-up / Win-back" />
       </div>
 
       <Card className="mb-4">

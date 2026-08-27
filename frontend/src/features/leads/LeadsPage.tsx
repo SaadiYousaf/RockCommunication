@@ -20,7 +20,7 @@ import {
   Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
-import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, dispOf } from "../../shared/constants/leadStage";
+import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
 import { Can, Perm } from "../../shared/auth/permissions";
 import { formatPhone } from "../../shared/lib/format";
 import { LEADS_MSG } from "./messages";
@@ -138,7 +138,7 @@ export function LeadsPage() {
   async function transition(id: string, toStage: string, name: string) {
     try {
       await transitionLead({ id, toStage: toStage as WorkflowStage, disposition: "Interested" }).unwrap();
-      toast.success(LEADS_MSG.leadTransitionedTitle, LEADS_MSG.leadTransitionedDesc(name, toStage));
+      toast.success(LEADS_MSG.leadTransitionedTitle, LEADS_MSG.leadTransitionedDesc(name, stageLabel(toStage)));
     } catch (err: unknown) {
       toast.error(LEADS_MSG.transitionFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
@@ -218,7 +218,7 @@ export function LeadsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const tabItems: { value: WorkflowStage | "All"; label: string }[] = [
     { value: "All", label: `All${filter === "All" && total ? ` · ${total}` : ""}` },
-    ...stages.map((s) => ({ value: s, label: s })),
+    ...stages.map((s) => ({ value: s, label: stageLabel(s) })),
   ];
 
   return (
@@ -251,7 +251,7 @@ export function LeadsPage() {
         <Stat label="Selected" value={selected.size} icon={<Icon name="check" size={16} />}
               tone={selected.size > 0 ? "success" : "neutral"}
               hint={selected.size > 0 ? "Bulk actions available" : "Tick rows to bulk-edit"} />
-        <Stat label="Stage filter" value={filter === "All" ? "All stages" : filter} icon={<Icon name="filter" size={16} />} tone="warning" />
+        <Stat label="Stage filter" value={filter === "All" ? "All stages" : stageLabel(filter)} icon={<Icon name="filter" size={16} />} tone="warning" />
       </div>
 
       <Card className="mb-4">
@@ -312,7 +312,7 @@ export function LeadsPage() {
             </Can>
             {bulkAction === "stage" && (
               <Select className="h-9 w-44 text-sm" value={bulkStageVal} onChange={(e) => setBulkStageVal(e.target.value as WorkflowStage)}>
-                {stages.map((s) => <option key={s} value={s}>{s}</option>)}
+                {stages.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
               </Select>
             )}
             <Can permission={Perm.LeadsAssign}>
@@ -381,7 +381,7 @@ export function LeadsPage() {
               <TH>
                 <span className="inline-flex items-center gap-1">Stage
                   <InfoHint title="Pipeline stage" side="bottom">
-                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                    The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Follow-up / Win-back / Lost).
                   </InfoHint>
                 </span>
               </TH>
@@ -419,8 +419,8 @@ export function LeadsPage() {
                     </div>
                   </TD>
                   <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
-                  <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stage}</Badge></TD>
-                  <TD className="text-ink-600 text-xs">{dispOf(l.disposition)}</TD>
+                  <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stageLabel(stage)}</Badge></TD>
+                  <TD className="text-ink-600 text-xs">{dispositionLabel(l.disposition)}</TD>
                   <TD className="text-ink-500 text-xs tabular-nums whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</TD>
                   <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                     <div className="flex items-center justify-end gap-1.5">
@@ -439,7 +439,7 @@ export function LeadsPage() {
                         aria-label="Move to stage"
                       >
                         <option value="">Move to…</option>
-                        {stages.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {stages.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
                       </Select>
                       <Link to={`/leads/${l.id}`}>
                         <Button variant="ghost" size="sm" rightIcon={<Icon name="chevronRight" size={13} />}>Open</Button>

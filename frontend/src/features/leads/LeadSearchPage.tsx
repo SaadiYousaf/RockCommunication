@@ -12,7 +12,7 @@ import {
   EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
-import { STAGE_TONE as stageTone } from "../../shared/constants/leadStage";
+import { STAGE_TONE as stageTone, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -81,7 +81,7 @@ export function LeadSearchPage() {
       { header: "Name", value: (l) => `${l.firstName} ${l.lastName}` },
       { header: "Phone", value: (l) => formatPhone(l.phoneNumber) },
       { header: "Email", value: (l) => l.email ?? "" },
-      { header: "Stage", value: (l) => String(l.stage) },
+      { header: "Stage", value: (l) => stageLabel(l.stage) },
     ], `lead-search-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(LEADS_MSG.exportReadyTitle, LEADS_MSG.exportRows(chosen.length));
   }
@@ -158,7 +158,7 @@ export function LeadSearchPage() {
                   onChange={(e) => setFilters({ ...filters, stage: e.target.value })}
                   aria-label="Filter by stage"
                 >
-                  {STAGES.map((s) => <option key={s} value={s}>{s || "Any stage"}</option>)}
+                  {STAGES.map((s) => <option key={s} value={s}>{s ? stageLabel(s) : "Any stage"}</option>)}
                 </Select>
                 <input
                   className="border border-ink-200 rounded-lg px-2 py-1 text-xs bg-white w-24 tabular-nums uppercase focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition-shadow"
@@ -217,7 +217,7 @@ export function LeadSearchPage() {
                       <TH sortDir={dirFor("stage")} onClick={() => toggle("stage")}>
                         <span className="inline-flex items-center gap-1">Stage
                           <InfoHint title="Pipeline stage" side="bottom">
-                            The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Followup / Winback / Lost).
+                            The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Follow-up / Win-back / Lost).
                           </InfoHint>
                         </span>
                       </TH>
@@ -249,10 +249,10 @@ export function LeadSearchPage() {
                         <TD className="text-ink-600">{l.state ?? <span className="text-ink-400">—</span>}</TD>
                         <TD>
                           <Badge tone={stageTone[String(l.stage)] ?? "neutral"} variant="soft" dot>
-                            {String(l.stage)}
+                            {stageLabel(l.stage)}
                           </Badge>
                         </TD>
-                        <TD className="text-xs text-ink-600">{String(l.disposition)}</TD>
+                        <TD className="text-xs text-ink-600">{dispositionLabel(l.disposition)}</TD>
                         <TD className="text-xs text-ink-500 tabular-nums whitespace-nowrap">
                           {new Date(l.createdAt).toLocaleDateString()}
                         </TD>
@@ -357,7 +357,7 @@ function DuplicateGroup({
               </div>
             </div>
             <Badge tone={stageTone[String(l.stage)] ?? "neutral"} variant="soft">
-              {String(l.stage)}
+              {stageLabel(l.stage)}
             </Badge>
             <Button variant="ghost" size="sm" leftIcon={<Icon name="phone" size={14} />}
               onClick={() => onDial(l.id)}>

@@ -143,7 +143,11 @@ function WorkPolicyModal({ policy, onClose, onResolved, onError }: {
   onError: (detail: string) => void;
 }) {
   const [resolve, { isLoading }] = useResolveRetentionMutation();
-  const [newStatus, setNewStatus] = useState<string>("ActivePaid");
+  // Seed from the policy's CURRENT status, never a hardcoded "ActivePaid". Defaulting to recovered
+  // meant an agent who opened this just to log a note and hit Save silently marked a still-broken
+  // policy as funded, dropped it out of the worklist and told the closer it was recovered.
+  const [newStatus, setNewStatus] = useState<string>(() =>
+    (RETENTION_TARGET_STATUSES as readonly string[]).includes(policy.status) ? policy.status : "ActivePaid");
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState(false);
 

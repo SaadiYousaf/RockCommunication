@@ -437,7 +437,6 @@ export function RolesPage() {
                                     className="rounded border-ink-300 text-brand-600 focus:ring-brand-500"
                                   />
                                   <span className="text-sm text-ink-800 truncate flex-1">{m.name}</span>
-                                  <span className="text-[10px] text-ink-400 font-mono shrink-0">{m.code}</span>
                                 </label>
                               );
                             })}

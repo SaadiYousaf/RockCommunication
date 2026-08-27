@@ -19,11 +19,20 @@ import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { MESSAGES } from "../../shared/constants/messages";
+import { stageLabel } from "../../shared/constants/leadStage";
 import { SALES_MSG } from "./messages";
 
 const statusTone: Record<string, "success" | "info" | "warning" | "neutral" | "brand"> = {
   funded: "success", validated: "info", pending: "warning", internal: "brand",
 };
+
+/** What users SEE for a sale status — the API sends the raw lowercase code. */
+const STATUS_LABEL: Record<string, string> = {
+  funded: "Funded", validated: "Validated", pending: "Pending",
+  internal: "Internal", rejected: "Rejected",
+};
+const statusLabel = (s: string | null | undefined): string =>
+  s ? (STATUS_LABEL[s] ?? s) : "—";
 
 type ViewTab = "record" | "list";
 
@@ -289,7 +298,7 @@ export function SalesPage() {
                         </div>
                       </TD>
                       <TD className="text-ink-600 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
-                      <TD><Badge tone="warning" variant="soft" dot>{String(l.stage)}</Badge></TD>
+                      <TD><Badge tone="warning" variant="soft" dot>{stageLabel(l.stage)}</Badge></TD>
                       <TD>
                         <div className="flex justify-end">
                           <Button variant="outline" size="sm" leftIcon={<Icon name="arrowRight" size={13} className="-rotate-90" />}
@@ -376,7 +385,7 @@ function SalesList() {
       { header: "Plan", value: (s) => s.planApproved ?? "" },
       { header: "Premium", value: (s) => s.monthlyPremium },
       { header: "Commission", value: (s) => s.commissionEarned ?? "" },
-      { header: "Status", value: (s) => s.status },
+      { header: "Status", value: (s) => statusLabel(s.status) },
     ], `sales-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(SALES_MSG.exportReadyTitle, SALES_MSG.rowsDownloaded(chosen.length));
   }
@@ -554,7 +563,7 @@ function SalesList() {
                   <TD>
                     <span className="inline-flex items-center gap-1">
                       <Badge tone={statusTone[s.status] ?? "neutral"} variant="soft" dot>
-                        {s.status}{s.isInternalSale ? " · internal" : ""}
+                        {statusLabel(s.status)}{s.isInternalSale ? " · internal" : ""}
                       </Badge>
                       {s.isInternalSale && (
                         <InfoHint title="Internal sale" side="left">
