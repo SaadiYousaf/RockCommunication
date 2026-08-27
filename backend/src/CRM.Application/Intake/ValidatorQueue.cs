@@ -90,6 +90,11 @@ public class ValidatorQueueHandler :
     IRequestHandler<ValidatorQueueQuery, IReadOnlyList<ValidatorQueueItem>>,
     IRequestHandler<SetValidatorStatusCommand, ValidatorStatusResult>
 {
+    // User-facing notification copy. Kept as constants next to the sender and free of internal
+    // status names — the closer is told what happened in plain language.
+    private const string DeclinedTitle = "Your sale was declined";
+    private const string NeedsCorrectionTitle = "Your sale needs correcting";
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
@@ -313,7 +318,45 @@ public class ValidatorQueueHandler :
         // Best-effort and idempotent (WelcomeEmailSentAt), so it never blocks or double-sends.
         await MaybeSendWelcomeEmailAsync(sale, lead, request.Status, ct);
 
+        // A negative outcome is the closer's problem to act on — a decline kills their sale and its
+        // commission, an application error needs them to correct and resubmit. Tell them, with the
+        // reason the validator recorded.
+        await NotifyCloserOfProblemAsync(sale, lead, request.Status, ct);
+
         return new ValidatorStatusResult(sale.Id, sale.ValidatorStatus, lead?.Stage ?? WorkflowStage.Closed);
+    }
+
+    /// <summary>
+    /// Best-effort in-app notice to the closer when the validator sets an outcome that needs their
+    /// attention, carrying the recorded reason. Never notifies the validator about their own action.
+    /// </summary>
+    private async Task NotifyCloserOfProblemAsync(Sale sale, Lead? lead, ValidatorStatus status, CancellationToken ct)
+    {
+        if (sale.CloserUserId == _user.UserId || sale.CloserUserId == Guid.Empty) return;
+
+        var customer = lead is null ? "a customer" : $"{lead.FirstName} {lead.LastName}".Trim();
+        if (customer.Length == 0) customer = "a customer";
+        var reason = sale.DeclineReason?.Trim();
+        var (title, body) = status switch
+        {
+            ValidatorStatus.Decline =>
+                (DeclinedTitle,
+                 $"Your sale for {customer} was declined, and the commission still owed on it was cancelled."),
+            ValidatorStatus.ErrorInApplicationInformation =>
+                (NeedsCorrectionTitle,
+                 $"There is an error in the application information on your sale for {customer}. Please correct it and resubmit."),
+            _ => (string.Empty, string.Empty),
+        };
+        if (title.Length == 0) return;   // every other outcome needs nothing from the closer
+        if (!string.IsNullOrWhiteSpace(reason)) body = $"{body} Reason: {reason}";
+
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(sale.AgencyId, sale.CloserUserId, title, body, $"/sales/{sale.Id}"),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch { /* advisory only — never fail the status change */ }
     }
 
     private async Task MaybeSendWelcomeEmailAsync(Sale sale, Lead? lead, ValidatorStatus status, CancellationToken ct)

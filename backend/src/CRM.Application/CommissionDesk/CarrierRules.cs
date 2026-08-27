@@ -5,6 +5,7 @@ using CRM.Domain.Entities;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.CommissionDesk;
 
@@ -47,6 +48,19 @@ public class CarrierRulesHandler :
     public CarrierRulesHandler(IApplicationDbContext db, ICurrentUser user)
     { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
 
+    /// <summary>
+    /// Carrier rules are GLOBAL — one row drives the advancing figures on EVERY agency's desk. So a
+    /// write here is a platform-wide change and must not be reachable by an agency-scoped holder of
+    /// the permission; only a cross-agency commission agent or a SuperAdmin may make one. Reads stay
+    /// open to anyone with the permission, since the desk needs them to render.
+    /// </summary>
+    private void EnsureMayWriteGlobalRules()
+    {
+        if (_user.IsSuperAdmin) return;
+        if (DomainRoles.IsCentralCommissionAgent(_user.AgencyId, _user.Roles)) return;
+        throw new ForbiddenAccessException();
+    }
+
     public async Task<IReadOnlyList<CarrierRuleDto>> Handle(ListCarrierRulesQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
@@ -63,6 +77,7 @@ public class CarrierRulesHandler :
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
+        EnsureMayWriteGlobalRules();
 
         var carrier = request.Carrier.Trim();
 
@@ -99,6 +114,7 @@ public class CarrierRulesHandler :
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
+        EnsureMayWriteGlobalRules();
 
         var rule = await _db.CarrierAdvancingRules.FirstOrDefaultAsync(r => r.Id == request.Id && !r.IsDeleted, ct);
         if (rule is null) return Unit.Value;      // already gone — idempotent

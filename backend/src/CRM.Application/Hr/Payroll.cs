@@ -55,12 +55,52 @@ public class GetPayrollSlipValidator : AbstractValidator<GetPayrollSlipQuery>
         RuleFor(x => x.Year).InclusiveBetween(2000, 9999);
     }
 }
+/// <summary>
+/// Bounds on a saved payslip. Only the identifiers and dates used to be checked, so every money and
+/// day-count field was unbounded: a negative basic salary or an inflated advance produced a negative
+/// net pay, and a zero/negative WorkingDays either zeroed every per-day deduction or inverted the
+/// per-day wage so deductions became credits. Finalising then froze the junk as an authoritative
+/// snapshot. Ranges are generous on purpose — they catch typos and sign errors, not policy choices.
+/// </summary>
 public class SavePayrollValidator : AbstractValidator<SavePayrollCommand>
 {
+    private const decimal MaxMoney = 100_000_000m;   // far above any real monthly figure
+
     public SavePayrollValidator()
     {
         RuleFor(x => x.Month).InclusiveBetween(1, 12);
         RuleFor(x => x.Year).InclusiveBetween(2000, 9999);
+
+        // Money — never negative, and sane at the top end.
+        RuleFor(x => x.Input.BasicSalary).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.Punctuality).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.DailyBonus).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.MonthlyCommissions).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.TransportAllowance).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.SpecialAllowance).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.AdvanceSalary).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.Docks).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.LateComingAmount).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.HalfDaysAmount).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.AbsentDaysAmount).InclusiveBetween(0m, MaxMoney);
+        RuleFor(x => x.Input.NcnsAmount).InclusiveBetween(0m, MaxMoney);
+
+        // A month must have working days — 0 silently zeroes every per-day deduction.
+        RuleFor(x => x.Input.WorkingDays).InclusiveBetween(1, 31)
+            .WithMessage("Working days must be between 1 and 31.");
+
+        // Day counts: non-negative and within a month.
+        RuleFor(x => x.Input.PresentDays).InclusiveBetween(0, 31);
+        RuleFor(x => x.Input.LeavesApproved).InclusiveBetween(0, 31);
+        RuleFor(x => x.Input.LateComing).InclusiveBetween(0, 31);
+        RuleFor(x => x.Input.HalfDays).InclusiveBetween(0, 31);
+        RuleFor(x => x.Input.AbsentDays).InclusiveBetween(0, 31);
+        RuleFor(x => x.Input.Ncns).InclusiveBetween(0, 31);
+
+        // The attendance breakdown can't exceed the month it belongs to.
+        RuleFor(x => x.Input)
+            .Must(i => i.PresentDays + i.LeavesApproved + i.AbsentDays + i.Ncns <= i.WorkingDays)
+            .WithMessage("Present, leave, absent and no-show days can't add up to more than the working days.");
     }
 }
 

@@ -3,6 +3,7 @@ using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
+using DomainRoles = CRM.Domain.Enums.Roles;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Application.CommissionDesk;
@@ -53,9 +54,18 @@ public class CommissionDeskDashboardHandler : IRequestHandler<CommissionDeskDash
         var from = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var to = from.AddMonths(1);
 
-        // How many sales the month holds — so the page size below covers them all.
-        var count = await _db.Sales.AsNoTracking().IgnoreQueryFilters()
-            .CountAsync(s => !s.IsDeleted && s.SoldAt >= from && s.SoldAt < to, ct);
+        // How many sales the month holds — so the page size below covers them all. Scoped to the
+        // caller's own agency unless they are a genuine cross-agency commission agent, matching the
+        // list query this dashboard pages through.
+        var central = DomainRoles.IsCentralCommissionAgent(_user.AgencyId, _user.Roles) || _user.IsSuperAdmin;
+        var countQ = _db.Sales.AsNoTracking().IgnoreQueryFilters()
+            .Where(s => !s.IsDeleted && s.SoldAt >= from && s.SoldAt < to);
+        if (!central)
+        {
+            var own = _user.AgencyId is { } a && a != Guid.Empty ? a : throw new ForbiddenAccessException();
+            countQ = countQ.Where(s => s.AgencyId == own);
+        }
+        var count = await countQ.CountAsync(ct);
 
         var sales = new List<CommissionSaleDto>(count);
         const int page = 200;                       // the desk query's max take

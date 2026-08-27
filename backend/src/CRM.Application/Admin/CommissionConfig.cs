@@ -18,6 +18,15 @@ public class UpsertCommissionConfigValidator : AbstractValidator<UpsertCommissio
     {
         RuleFor(x => x.Input.RuleName).NotEmpty();
         RuleFor(x => x.Input.Amount).GreaterThanOrEqualTo(0).When(x => x.Input.Amount.HasValue);
+        // A rule pays this amount on every qualifying sale, agency-wide — cap it so a typo can't
+        // mint payouts. Threshold had NO rule at all: a negative one made a gated rule fire on
+        // every sale.
+        RuleFor(x => x.Input.Amount).LessThanOrEqualTo(1_000_000m)
+            .When(x => x.Input.Amount.HasValue)
+            .WithMessage("That commission amount looks too large — check the figure.");
+        RuleFor(x => x.Input.Threshold).InclusiveBetween(0m, 10_000_000m)
+            .When(x => x.Input.Threshold.HasValue)
+            .WithMessage("The threshold must be zero or more.");
     }
 }
 

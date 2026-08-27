@@ -13,6 +13,8 @@ import type { RootState } from "../../app/store";
 import { Avatar, Badge, Button, Icon, Tooltip, useToast, cn } from "../ui";
 import { useAgentHub } from "../hooks/useAgentHub";
 import { timeAgo } from "../lib/time";
+import { getErrorDetail } from "../api/apiError";
+import { MESSAGES } from "../constants/messages";
 
 /**
  * Header notifications bell — shows live unread count + a dropdown of rooms with unread.
@@ -218,7 +220,12 @@ export function NotificationsBell() {
               </div>
               {notifUnread > 0 && (
                 <button
-                  onClick={async () => { try { await markAllNotifRead().unwrap(); } catch { /* best-effort */ } }}
+                  onClick={async () => {
+                    try { await markAllNotifRead().unwrap(); }
+                    catch (err: unknown) {
+                      toast.error(MESSAGES.markAllReadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+                    }
+                  }}
                   className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1 rounded transition-colors"
                 >Mark all read</button>
               )}

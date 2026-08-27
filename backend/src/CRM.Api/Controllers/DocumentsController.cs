@@ -59,11 +59,20 @@ public class DocumentsController : ControllerBase
     public async Task<IActionResult> Content(Guid id, CancellationToken ct)
     {
         var info = await _mediator.Send(new GetDocumentContentQuery(id), ct);
-        var stream = await _files.OpenReadAsync(info.StorageKey, ct);
-        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, private";
-        Response.Headers.Pragma = "no-cache";
-        // inline (not attachment) — the viewer fetches & renders; it never offers "Save as".
-        return File(stream, info.ContentType, enableRangeProcessing: false);
+        try
+        {
+            var stream = await _files.OpenReadAsync(info.StorageKey, ct);
+            Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, private";
+            Response.Headers.Pragma = "no-cache";
+            // inline (not attachment) — the viewer fetches & renders; it never offers "Save as".
+            return File(stream, info.ContentType, enableRangeProcessing: false);
+        }
+        catch (FileNotFoundException)
+        {
+            // The row still points at a blob that is gone (cleanup, DB-only restore,
+            // redeploy under a different content root) — 404 rather than a 500.
+            return NotFound();
+        }
     }
 
     [HttpDelete("{id:guid}")]

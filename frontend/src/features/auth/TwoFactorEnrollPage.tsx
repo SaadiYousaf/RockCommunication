@@ -9,6 +9,7 @@ import {
 import { clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
 import { Input, useToast } from "../../shared/ui";
+import { MESSAGES } from "../../shared/constants/messages";
 
 type Method = "Totp" | "EmailOtp";
 
@@ -110,7 +111,10 @@ export function TwoFactorEnrollPage() {
       await navigator.clipboard.writeText(totpData.secret);
       setSecretCopied(true);
       setTimeout(() => setSecretCopied(false), 1800);
-    } catch {}
+    } catch {
+      // Clipboard blocked (insecure origin / denied permission) — tell them so they type it in.
+      toast.error(MESSAGES.copyFailed, MESSAGES.copyBlocked);
+    }
   }
 
   return (

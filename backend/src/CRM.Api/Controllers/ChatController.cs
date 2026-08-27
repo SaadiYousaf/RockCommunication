@@ -119,10 +119,19 @@ public class ChatController : ControllerBase
     public async Task<IActionResult> DownloadAttachment(Guid messageId, CancellationToken ct)
     {
         var info = await _mediator.Send(new GetAttachmentQuery(messageId), ct);
-        var stream = await _storage.OpenReadAsync(info.StorageKey, ct);
-        // inline so images render in the bubble; the original filename is still
-        // surfaced via Content-Disposition for "Save as".
-        return File(stream, info.ContentType, info.FileName);
+        try
+        {
+            var stream = await _storage.OpenReadAsync(info.StorageKey, ct);
+            // inline so images render in the bubble; the original filename is still
+            // surfaced via Content-Disposition for "Save as".
+            return File(stream, info.ContentType, info.FileName);
+        }
+        catch (FileNotFoundException)
+        {
+            // The row still points at a blob that is gone (cleanup, DB-only restore,
+            // redeploy under a different content root) — 404 rather than a 500.
+            return NotFound();
+        }
     }
 
     [HttpGet("unread")]

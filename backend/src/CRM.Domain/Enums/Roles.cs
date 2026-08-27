@@ -97,7 +97,7 @@ public static class Roles
     /// SuperAdmin / Admin / CEO may grant them. Enforced on BOTH the create (register) and the
     /// update-roles paths so a plain <c>users.manage</c> holder can never mint agency-admin power.
     /// </summary>
-    public static readonly string[] Elevated = { Admin, CEO, ProgramManager, CallCenterAdmin };
+    public static readonly string[] Elevated = { Admin, CEO, ProgramManager, CallCenterAdmin, CommissionAgent };
 
     /// <summary>True if the given roles include an agency-admin-equivalent (elevated) role.</summary>
     public static bool GrantsElevated(IEnumerable<string> roles) =>
@@ -143,6 +143,19 @@ public static class Roles
     public static bool IsCentralSubmissionAgent(Guid? agencyId, IEnumerable<string> roles) =>
         (agencyId is null || agencyId == Guid.Empty) &&
         roles.Contains(Validator, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A CROSS-AGENCY Commission Agent: holds <see cref="CommissionAgent"/> and is bound to no
+    /// agency. Only such a user may read or work sales outside their own tenant — an agency-scoped
+    /// Commission Agent stays confined to their own agency like everyone else.
+    ///
+    /// Without this distinction the commission desk's filter bypass let ANY holder of the permission
+    /// reach another tenant's sales and money by id, and the role is grantable by an agency-level
+    /// user manager (hence it is also in <see cref="Elevated"/> now).
+    /// </summary>
+    public static bool IsCentralCommissionAgent(Guid? agencyId, IEnumerable<string> roles) =>
+        (agencyId is null || agencyId == Guid.Empty) &&
+        roles.Contains(CommissionAgent, StringComparer.OrdinalIgnoreCase);
 }
 
 public enum WorkflowStage

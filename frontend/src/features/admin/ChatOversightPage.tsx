@@ -41,7 +41,7 @@ export function ChatOversightPage() {
         {agency && callCenter && (
           <>
             <Icon name="chevronRight" size={13} className="text-ink-400" />
-            <Crumb label={callCenter.name} active onClick={() => {}} />
+            <Crumb label={callCenter.name} active />
           </>
         )}
       </div>
@@ -61,12 +61,18 @@ export function ChatOversightPage() {
   );
 }
 
-function Crumb({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+/**
+ * A breadcrumb step. The current (active) step is where you already are, so it renders as plain
+ * text — never a button that looks clickable but does nothing.
+ */
+function Crumb({ label, active, onClick }: { label: string; active?: boolean; onClick?: () => void }) {
+  if (active || !onClick) {
+    return <span aria-current="page" className="px-2 py-1 rounded-md font-medium text-ink-900">{label}</span>;
+  }
   return (
     <button
-      type="button" onClick={onClick} disabled={active}
-      className={cn("px-2 py-1 rounded-md font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
-        active ? "text-ink-900" : "text-brand-600 hover:bg-brand-50")}
+      type="button" onClick={onClick}
+      className="px-2 py-1 rounded-md font-medium text-brand-600 hover:bg-brand-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
     >{label}</button>
   );
 }

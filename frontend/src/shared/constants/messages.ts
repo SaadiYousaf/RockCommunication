@@ -26,4 +26,11 @@ export const MESSAGES = {
   genericError: "Something went wrong. Please try again.",
   tryAgain: "Please try again.",
   savedOk: "Saved.",
+
+  /** Clipboard copy — shared by SensitiveValue, the 2FA secret, and anywhere else we offer "Copy". */
+  copyFailed: "Couldn't copy",
+  copyBlocked: "Your browser blocked clipboard access. Select the value and copy it manually.",
+
+  /** Shared chrome: the header notifications bell (no feature messages.ts owns it). */
+  markAllReadFailed: "Couldn't mark everything as read",
 } as const;

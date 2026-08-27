@@ -90,8 +90,17 @@ public class HrController : ControllerBase
     {
         var key = await _mediator.Send(new GetEmployeeImageKeyQuery(id, kind), ct);
         if (string.IsNullOrEmpty(key)) return NotFound();
-        var stream = await _files.OpenReadAsync(key, ct);
-        return File(stream, ContentTypeFor(key));
+        try
+        {
+            var stream = await _files.OpenReadAsync(key, ct);
+            return File(stream, ContentTypeFor(key));
+        }
+        catch (FileNotFoundException)
+        {
+            // The row still points at a blob that is gone (cleanup, DB-only restore,
+            // redeploy under a different content root) — 404 rather than a 500.
+            return NotFound();
+        }
     }
 
     private static string ContentTypeFor(string key) => System.IO.Path.GetExtension(key).ToLowerInvariant() switch

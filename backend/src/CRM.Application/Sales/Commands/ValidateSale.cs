@@ -2,6 +2,7 @@ using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
@@ -21,20 +22,26 @@ public class ValidateSaleValidator : AbstractValidator<ValidateSaleCommand>
 
 public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
 {
+    // User-facing notification copy, kept next to the sender and free of internal status names.
+    private const string RejectedTitle = "Your sale was rejected";
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IFundingProvider _funding;
+    private readonly INotificationDispatcher _notify;
     private readonly ILogger<ValidateSaleHandler> _logger;
 
     public ValidateSaleHandler(
         IApplicationDbContext db,
         ICurrentUser user,
         IFundingProvider funding,
+        INotificationDispatcher notify,
         ILogger<ValidateSaleHandler> logger)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _funding = Guard.AgainstNull(funding);
+        _notify = Guard.AgainstNull(notify);
         _logger = Guard.AgainstNull(logger);
     }
 
@@ -90,6 +97,10 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
 
         await _db.SaveChangesAsync(ct);
 
+        // A rejection kills someone else's sale and voids the commission on it — they must hear about
+        // it. Self-validation is blocked above, so the closer is always another user.
+        if (!request.Approve) await NotifyCloserOfRejectionAsync(sale, lead, request.Notes, ct);
+
         // Policy Funding Automation — when a sale is approved, immediately submit
         // it to the funding provider unless config has Sales:AutoFundOnValidate=false.
         // Funding failures must NOT roll back the validation, so we wrap the call
@@ -141,5 +152,27 @@ public class ValidateSaleHandler : IRequestHandler<ValidateSaleCommand, SaleDto>
             sale.Carrier, sale.PolicyNumber, sale.MonthlyPremium, sale.AnnualPremium,
             sale.SoldAt, sale.ValidatedAt, sale.FundedAt, sale.IsInternalSale, sale.InternalSaleReason,
             sale.BankingCode, sale.BankName, sale.BankAccountLast4, sale.LyonsReference);
+    }
+
+    /// <summary>
+    /// Best-effort in-app notice to the closer that their sale did not pass validation, carrying the
+    /// validator's note as the reason when one was given. Never notifies the validator themselves.
+    /// </summary>
+    private async Task NotifyCloserOfRejectionAsync(Sale sale, Lead lead, string? notes, CancellationToken ct)
+    {
+        if (sale.CloserUserId == _user.UserId || sale.CloserUserId == Guid.Empty) return;
+        var customer = $"{lead.FirstName} {lead.LastName}".Trim();
+        if (customer.Length == 0) customer = "a customer";
+        var reason = notes?.Trim();
+        var body = string.IsNullOrWhiteSpace(reason)
+            ? $"Your sale for {customer} did not pass validation, and the commission on it was cancelled."
+            : $"Your sale for {customer} did not pass validation, and the commission on it was cancelled. Reason: {reason}";
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(sale.AgencyId, sale.CloserUserId, RejectedTitle, body, $"/sales/{sale.Id}"),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch { /* graceful — the validation already succeeded */ }
     }
 }

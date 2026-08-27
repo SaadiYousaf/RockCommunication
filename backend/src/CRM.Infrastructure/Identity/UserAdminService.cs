@@ -20,6 +20,27 @@ public class UserAdminService : IUserAdminService
     private const string AccessChangedBody =
         "An administrator updated your access. Sign out and back in for the changes to take effect.";
 
+    private const string DeactivatedTitle = "Your account was deactivated";
+    private const string DeactivatedBody =
+        "An administrator deactivated your account. You have been signed out and can't sign in again until it is reactivated.";
+    private const string ReactivatedTitle = "Your account was reactivated";
+    private const string ReactivatedBody =
+        "An administrator reactivated your account. You can sign in again.";
+
+    private const string TeamChangedTitle = "Your team was changed";
+    private const string TeamMovedBodyFormat = "An administrator moved you to the {0} team.";
+    private const string TeamRemovedBody = "An administrator removed you from your team.";
+
+    private const string CallCenterChangedTitle = "Your call center was changed";
+    private const string CallCenterMovedBodyFormat = "An administrator moved you to the {0} call center.";
+    private const string CallCenterRemovedBody = "An administrator removed you from your call center.";
+
+    private const string PasswordResetTitle = "Your password was reset";
+    private const string PasswordResetBody =
+        "An administrator reset your password and signed you out everywhere. You'll be asked to choose a new password the next time you sign in. If this wasn't expected, contact your administrator straight away.";
+    private const string PasswordResetWith2FaBody =
+        "An administrator reset your password, turned off your two-step verification and signed you out everywhere. You'll be asked to choose a new password the next time you sign in, and you'll need to set two-step verification up again. If this wasn't expected, contact your administrator straight away.";
+
     private readonly UserManager<ApplicationUser> _users;
     private readonly RoleManager<ApplicationRole> _roles;
     private readonly AppDbContext _db;
@@ -45,17 +66,20 @@ public class UserAdminService : IUserAdminService
 
     // Best-effort in-app notice to the affected user — never notify yourself, and never let a
     // notification failure fail the admin action that triggered it. Deep-links to their profile.
-    private async Task NotifyAccessChangedAsync(ApplicationUser target, CancellationToken ct)
+    private async Task NotifyTargetAsync(ApplicationUser target, string title, string body, CancellationToken ct)
     {
         if (target.Id == _current.UserId) return;
         try
         {
             await _notify.DispatchAsync(
-                new NotificationPayload(target.AgencyId, target.Id, AccessChangedTitle, AccessChangedBody, "/profile"),
+                new NotificationPayload(target.AgencyId, target.Id, title, body, "/profile"),
                 new[] { NotificationChannelType.InApp }, ct);
         }
-        catch { /* graceful — notification is not critical to the role change */ }
+        catch { /* graceful — notification is not critical to the admin action */ }
     }
+
+    private Task NotifyAccessChangedAsync(ApplicationUser target, CancellationToken ct)
+        => NotifyTargetAsync(target, AccessChangedTitle, AccessChangedBody, ct);
 
     private bool CallerIsSuperAdmin => _current.Roles?.Contains(Roles.SuperAdmin) == true;
 
@@ -176,6 +200,14 @@ public class UserAdminService : IUserAdminService
             await _users.UpdateSecurityStampAsync(user);
         }
 
+        // Being switched off mid-shift (or back on) is something the user must be told about.
+        // NOTE: a deactivated user can no longer sign in, so they won't SEE this in-app notice until
+        // they are reactivated — we still record it so the notice is waiting for them, and so the
+        // event is on their notification history either way. Reactivation is delivered normally.
+        await NotifyTargetAsync(user,
+            isActive ? ReactivatedTitle : DeactivatedTitle,
+            isActive ? ReactivatedBody : DeactivatedBody, ct);
+
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
             roles.ToList(), Array.Empty<string>(), IsActive: user.IsActive);
@@ -195,6 +227,7 @@ public class UserAdminService : IUserAdminService
         // a code we can't obtain — a lockout. So clear the existing enrolment; the new password alone
         // gets them in. If their role still mandates 2FA they'll enrol a FRESH device after login
         // (a new QR / OTP target they control), which re-secures the account without the lockout.
+        var twoFactorCleared = user.TwoFactorEnabled;
         if (user.TwoFactorEnabled)
         {
             await _users.SetTwoFactorEnabledAsync(user, false);
@@ -207,6 +240,11 @@ public class UserAdminService : IUserAdminService
         user.MustChangePassword = true;
         await _users.UpdateAsync(user);
         await _jwt.RevokeAllForUserAsync(userId, ct);
+
+        // A password reset (and the two-step verification that went with it) is a security event on
+        // the user's own account — they must hear about it so an unexpected one can be challenged.
+        await NotifyTargetAsync(user, PasswordResetTitle,
+            twoFactorCleared ? PasswordResetWith2FaBody : PasswordResetBody, ct);
     }
 
     public async Task<UserSummaryDto> SetPreferred2FaAsync(Guid userId, string method, CancellationToken ct = default)
@@ -227,6 +265,7 @@ public class UserAdminService : IUserAdminService
         // Cross-tenant guard covers the unassign (teamId == null) path too.
         await AuthorizeTargetAsync(user);
 
+        string? teamName = null;   // for the user-facing notice below
         if (teamId is { } tid)
         {
             // Reject cross-tenant moves: the team must live in the user's agency.
@@ -234,8 +273,10 @@ public class UserAdminService : IUserAdminService
                 ?? throw new NotFoundException(nameof(Team), tid);
             if (team.AgencyId != user.AgencyId)
                 throw new ConflictException("Team belongs to a different agency.");
+            teamName = team.Name;
         }
 
+        var previousTeamId = user.TeamId;
         user.TeamId = teamId;
         var result = await _users.UpdateAsync(user);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
@@ -248,6 +289,12 @@ public class UserAdminService : IUserAdminService
         foreach (var t in oldLeads) t.TeamLeadUserId = null;
         if (oldLeads.Count > 0) await _db.SaveChangesAsync(ct);
 
+        // Being moved between teams changes who they report to and what they see — tell them.
+        // Only on a real move, so a no-op save stays silent (mirrors UpdateRolesAsync).
+        if (previousTeamId != teamId)
+            await NotifyTargetAsync(user, TeamChangedTitle,
+                teamName is null ? TeamRemovedBody : string.Format(TeamMovedBodyFormat, teamName), ct);
+
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), Array.Empty<string>(),
             TeamId: user.TeamId);
@@ -259,6 +306,7 @@ public class UserAdminService : IUserAdminService
             ?? throw new NotFoundException("User", userId);
         await AuthorizeTargetAsync(user);
 
+        string? callCenterName = null;   // for the user-facing notice below
         if (callCenterId is { } ccId)
         {
             // The call center must live in the user's own agency — no cross-tenant pinning.
@@ -266,11 +314,19 @@ public class UserAdminService : IUserAdminService
                 ?? throw new NotFoundException(nameof(CallCenter), ccId);
             if (cc.AgencyId != user.AgencyId)
                 throw new ConflictException("Call center belongs to a different agency.");
+            callCenterName = cc.Name;
         }
 
+        var previousCallCenterId = user.CallCenterId;
         user.CallCenterId = callCenterId;
         var result = await _users.UpdateAsync(user);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        // Being pinned to a different call center changes the whole scope of what they can work on.
+        // Only on a real move, so a no-op save stays silent.
+        if (previousCallCenterId != callCenterId)
+            await NotifyTargetAsync(user, CallCenterChangedTitle,
+                callCenterName is null ? CallCenterRemovedBody : string.Format(CallCenterMovedBodyFormat, callCenterName), ct);
 
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, roles.ToList(), Array.Empty<string>(),

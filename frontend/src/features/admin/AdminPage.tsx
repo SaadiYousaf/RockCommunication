@@ -13,6 +13,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Tabs, useToast,
 } from "../../shared/ui";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
 
 const RULES = ["closer-flat-rate", "jr-closer-split", "validator-bonus", "high-premium-kicker", "team-lead-override"];
 
@@ -57,8 +58,26 @@ function IpAllowlistSection() {
   const [add, { isLoading: adding }] = useAddIpAllowlistMutation();
   const [remove] = useRemoveIpAllowlistMutation();
   const toast = useToast();
+  const confirm = useConfirm();
   const [cidr, setCidr] = useState("");
   const [note, setNote] = useState("");
+
+  // Removing an entry can lock a whole office out of the app — confirm first, then report the result.
+  async function removeEntry(id: string, cidrOrIp: string) {
+    const ok = await confirm({
+      title: ADMIN_MSG.system.ipRemoveConfirmTitle(cidrOrIp),
+      description: ADMIN_MSG.system.ipRemoveConfirmDesc,
+      confirmLabel: ADMIN_MSG.system.ipRemoveConfirmLabel,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await remove(id).unwrap();
+      toast.success(ADMIN_MSG.system.ipRemoved, cidrOrIp);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.system.ipRemoveFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
 
   return (
     <Card>
@@ -94,7 +113,7 @@ function IpAllowlistSection() {
                 <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{e.note ?? "—"}</span>
                 <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50"
                   leftIcon={<Icon name="x" size={14} />}
-                  onClick={() => remove(e.id)}>Remove</Button>
+                  onClick={() => { void removeEntry(e.id, e.cidrOrIp); }}>Remove</Button>
               </li>
             ))}
           </ul>
@@ -111,6 +130,15 @@ function VerticalsSection() {
   const toast = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  async function toggleActive(v: { id: string; name: string; description?: string | null; isActive: boolean }) {
+    try {
+      await update({ id: v.id, name: v.name, description: v.description ?? undefined, isActive: !v.isActive }).unwrap();
+      toast.success(v.isActive ? ADMIN_MSG.system.verticalDisabled : ADMIN_MSG.system.verticalEnabled, v.name);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
 
   return (
     <Card>
@@ -144,7 +172,7 @@ function VerticalsSection() {
                   ? <Badge tone="success" variant="soft">Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
                 <Button variant="ghost" size="sm"
-                  onClick={() => update({ id: v.id, name: v.name, description: v.description ?? undefined, isActive: !v.isActive })}>
+                  onClick={() => { void toggleActive(v); }}>
                   {v.isActive ? "Disable" : "Enable"}
                 </Button>
               </li>
@@ -163,6 +191,15 @@ function HorizontalsSection() {
   const toast = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  async function toggleActive(h: { id: string; name: string; description?: string | null; isActive: boolean }) {
+    try {
+      await update({ id: h.id, name: h.name, description: h.description ?? undefined, isActive: !h.isActive }).unwrap();
+      toast.success(h.isActive ? ADMIN_MSG.system.horizontalDisabled : ADMIN_MSG.system.horizontalEnabled, h.name);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
 
   return (
     <Card>
@@ -196,7 +233,7 @@ function HorizontalsSection() {
                   ? <Badge tone="success" variant="soft">Active</Badge>
                   : <Badge tone="neutral" variant="soft">Inactive</Badge>}
                 <Button variant="ghost" size="sm"
-                  onClick={() => update({ id: v.id, name: v.name, description: v.description ?? undefined, isActive: !v.isActive })}>
+                  onClick={() => { void toggleActive(v); }}>
                   {v.isActive ? "Disable" : "Enable"}
                 </Button>
               </li>

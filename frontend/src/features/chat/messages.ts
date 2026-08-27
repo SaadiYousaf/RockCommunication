@@ -12,6 +12,7 @@ export const CHAT_MSG = {
   deleteMessageTitle: "Delete message?",
   deleteMessageDesc: "This removes the message for everyone.",
   deleteFailed: "Couldn't delete",
+  reactionFailed: "Couldn't update your reaction",
   sendFailed: "Couldn't send message",
   fileTooLargeTitle: "File too large",
   fileTooLargeDesc: (maxMb: number) => `Max ${maxMb} MB.`,

@@ -1,12 +1,14 @@
 using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using CRM.Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.CommissionDesk;
 
@@ -129,19 +131,40 @@ public class CommissionDeskHandler :
     IRequestHandler<SetCommissionStatusCommand, CommissionSaleDto>,
     IRequestHandler<UpdateCommissionAmountCommand, CommissionSaleDto>
 {
+    // User-facing notification copy. Kept as constants next to the sender and deliberately free of
+    // internal status names — the agent is told what happened to their money in plain language.
+    private const string ChargedBackTitle = "Commission charged back";
+    private const string PolicyClosedTitle = "Policy closed";
+    private const string AmountChangedTitle = "Commission amount changed";
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
     private readonly ICommissionEngine _commission;
+    private readonly INotificationDispatcher _notify;
 
     public CommissionDeskHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
-        ICommissionEngine commission)
+        ICommissionEngine commission, INotificationDispatcher notify)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _commission = Guard.AgainstNull(commission);
+        _notify = Guard.AgainstNull(notify);
     }
+
+    /// <summary>
+    /// True only for a CROSS-AGENCY commission agent (holds the role, bound to no agency). Everyone
+    /// else — including an agency-scoped commission agent — stays inside their own tenant. Mirrors
+    /// the central Submission Agent rule; without it the filter bypass below let any holder of the
+    /// permission read and rewrite another agency's sales and money by id.
+    /// </summary>
+    private bool IsCentral =>
+        DomainRoles.IsCentralCommissionAgent(_user.AgencyId, _user.Roles) || _user.IsSuperAdmin;
+
+    /// <summary>The agency a non-central caller is confined to. Throws if they have none.</summary>
+    private Guid OwnAgency =>
+        _user.AgencyId is { } a && a != Guid.Empty ? a : throw new ForbiddenAccessException();
 
     public async Task<CommissionDeskResult> Handle(ListCommissionSalesQuery request, CancellationToken ct)
     {
@@ -149,6 +172,8 @@ public class CommissionDeskHandler :
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
         var q = _db.Sales.AsNoTracking().IgnoreQueryFilters().Where(s => !s.IsDeleted);
+        // Confine a non-central caller to their own agency BEFORE any caller-supplied filter.
+        if (!IsCentral) { var own = OwnAgency; q = q.Where(s => s.AgencyId == own); }
 
         if (request.AgencyId is { } aid) q = q.Where(s => s.AgencyId == aid);
         if (request.CallCenterId is { } ccid) q = q.Where(s => s.CallCenterId == ccid);
@@ -194,8 +219,12 @@ public class CommissionDeskHandler :
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
+        // Scope by agency unless the caller is a genuine cross-agency commission agent — an id
+        // alone would otherwise let one tenant rewrite another tenant's sale and its commission.
         var sale = await _db.Sales.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
+            .Where(s => s.Id == request.SaleId && !s.IsDeleted)
+            .Where(s => IsCentral || s.AgencyId == _user.AgencyId)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Sale), request.SaleId);
 
         var previous = sale.ValidatorStatus;
@@ -241,7 +270,7 @@ public class CommissionDeskHandler :
         // Keep the lead's pipeline stage consistent. Negative outcomes go Lost, which is also what
         // puts the policy in front of Retention (Retention lists by status, see CommissionDeskStatuses).
         var lead = await _db.Leads.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(l => l.Id == sale.LeadId && !l.IsDeleted, ct);
+            .FirstOrDefaultAsync(l => l.Id == sale.LeadId && l.AgencyId == sale.AgencyId && !l.IsDeleted, ct);
         if (lead is not null)
         {
             var from = lead.Stage;
@@ -269,6 +298,12 @@ public class CommissionDeskHandler :
         }
 
         await _db.SaveChangesAsync(ct);
+
+        // The desk just moved someone else's money: a charge-back turns their commission negative and
+        // a decline / client cancellation voids it outright. Tell the closer — best-effort, plain
+        // language, and never a notice to the agent about their own action.
+        await NotifyCloserAsync(sale, lead, request.Status, ct);
+
         return (await BuildAsync(new[] { sale }, ct)).Single();
     }
 
@@ -278,7 +313,9 @@ public class CommissionDeskHandler :
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
         var sale = await _db.Sales.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
+            .Where(s => s.Id == request.SaleId && !s.IsDeleted)
+            .Where(s => IsCentral || s.AgencyId == _user.AgencyId)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Sale), request.SaleId);
 
         // Amounts are only editable once the sale is charged back — otherwise the commission engine
@@ -287,7 +324,8 @@ public class CommissionDeskHandler :
             throw new ConflictException("Amounts can only be edited on a charged-back sale.");
 
         var entry = await _db.CommissionEntries.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(c => c.Id == request.EntryId && c.SaleId == sale.Id && !c.IsDeleted, ct)
+            .FirstOrDefaultAsync(c => c.Id == request.EntryId && c.SaleId == sale.Id
+                                   && c.AgencyId == sale.AgencyId && !c.IsDeleted, ct)
             ?? throw new NotFoundException(nameof(CommissionEntry), request.EntryId);
 
         // A paid line is history — payroll already paid it out; never rewrite it.
@@ -298,7 +336,70 @@ public class CommissionDeskHandler :
         if (!string.IsNullOrWhiteSpace(request.Note)) entry.Note = request.Note.Trim();
 
         await _db.SaveChangesAsync(ct);
+
+        // The edited line is somebody's pay — tell the agent it holds a different amount now.
+        await NotifyAmountChangedAsync(sale, entry, ct);
+
         return (await BuildAsync(new[] { sale }, ct)).Single();
+    }
+
+    /// <summary>
+    /// Best-effort in-app notice to the sale's closer when the desk's outcome hits their commission.
+    /// Only the outcomes that actually cost them money are worth a ping; an approval or recovery is
+    /// already announced elsewhere. Never notifies the acting agent about their own action.
+    /// </summary>
+    private async Task NotifyCloserAsync(Sale sale, Lead? lead, ValidatorStatus status, CancellationToken ct)
+    {
+        if (sale.CloserUserId == _user.UserId || sale.CloserUserId == Guid.Empty) return;
+        var (title, body) = status switch
+        {
+            ValidatorStatus.ChargedBack =>
+                (ChargedBackTitle,
+                 $"The carrier clawed back the advance on your sale for {LeadName(lead)}. Your commission on it is now owed back."),
+            ValidatorStatus.Decline or ValidatorStatus.ClientCancelled =>
+                (PolicyClosedTitle,
+                 $"Your sale for {LeadName(lead)} was closed on the commission desk, and the commission still owed on it was cancelled."),
+            _ => (string.Empty, string.Empty),
+        };
+        if (title.Length == 0) return;   // any other outcome doesn't cost the closer anything
+        try
+        {
+            await _notify.DispatchAsync(
+                new NotificationPayload(sale.AgencyId, sale.CloserUserId, title, body, $"/sales/{sale.Id}"),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch { /* graceful — the status change already succeeded */ }
+    }
+
+    /// <summary>
+    /// Best-effort in-app notice to the agent whose commission line was hand-edited. The whole body
+    /// build is inside the try: the customer-name lookup must never be able to fail the edit.
+    /// </summary>
+    private async Task NotifyAmountChangedAsync(Sale sale, CommissionEntry entry, CancellationToken ct)
+    {
+        if (entry.AgentUserId == _user.UserId || entry.AgentUserId == Guid.Empty) return;
+        try
+        {
+            var body = $"Your commission on the sale for {await LeadNameAsync(sale, ct)} was changed to {entry.Amount:C}.";
+            await _notify.DispatchAsync(
+                new NotificationPayload(sale.AgencyId, entry.AgentUserId, AmountChangedTitle, body, "/commissions"),
+                new[] { NotificationChannelType.InApp }, ct);
+        }
+        catch { /* graceful — the amount change already succeeded */ }
+    }
+
+    private static string LeadName(Lead? lead)
+        => lead is null ? "a customer" : $"{lead.FirstName} {lead.LastName}".Trim();
+
+    /// <summary>The sale's customer name for notification copy. Filter-bypassing: a central desk
+    /// agent has an empty tenant, so the scoped read would never find the real agency's lead.</summary>
+    private async Task<string> LeadNameAsync(Sale sale, CancellationToken ct)
+    {
+        var lead = await _db.Leads.AsNoTracking().IgnoreQueryFilters()
+            .Where(l => l.Id == sale.LeadId && l.AgencyId == sale.AgencyId && !l.IsDeleted)
+            .Select(l => new { l.FirstName, l.LastName })
+            .FirstOrDefaultAsync(ct);
+        return lead is null ? "a customer" : $"{lead.FirstName} {lead.LastName}".Trim();
     }
 
     /// <summary>
@@ -314,14 +415,10 @@ public class CommissionDeskHandler :
     /// Paid lines are untouched history — payroll already paid them out; the desk reconciles those
     /// by hand through the amounts editor.
     /// </summary>
-    private async Task FlipCommissionSignAsync(Sale sale, bool negative, CancellationToken ct)
-    {
-        var lines = await _db.CommissionEntries.IgnoreQueryFilters()
-            .Where(c => c.SaleId == sale.Id && !c.IsDeleted && !c.Paid)
-            .ToListAsync(ct);
-        foreach (var line in lines)
-            line.Amount = CommissionDeskStatuses.SignedAmount(line.Amount, negative);
-    }
+    private Task FlipCommissionSignAsync(Sale sale, bool negative, CancellationToken ct) =>
+        // Delegates to the shared ledger, which scopes by the sale's agency — the private copy
+        // this replaced filtered on SaleId alone.
+        CommissionLedger.FlipSignAsync(_db, sale, negative, ct);
 
     /// <summary>Maps sales onto the desk DTO, joining lead, agency, call centre, amounts and carrier rule.</summary>
     private async Task<List<CommissionSaleDto>> BuildAsync(IReadOnlyList<Sale> sales, CancellationToken ct)

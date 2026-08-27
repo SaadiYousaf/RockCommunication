@@ -316,6 +316,9 @@ function PublicEndpointsSection() {
       const result = await create({ slug }).unwrap();
       setRevealedSecret(result.secret);
       setSlug("");
+      // Close only AFTER the await resolves — closing synchronously in onSubmit hid the loading
+      // state and toasted errors over an already-dismissed dialog.
+      setOpen(false);
       toast.success(QUEUES_MSG.endpointCreated, QUEUES_MSG.endpointCreatedDesc(result.slug));
     } catch (err: unknown) {
       toast.error(QUEUES_MSG.createEndpointFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
@@ -423,7 +426,7 @@ function PublicEndpointsSection() {
           </>
         }
       >
-        <form id="ep-form" onSubmit={(e) => { submit(e); setOpen(false); }} className="grid grid-cols-1 gap-3">
+        <form id="ep-form" onSubmit={submit} className="grid grid-cols-1 gap-3">
           <Input label="Slug" required value={slug} onChange={(e) => setSlug(e.target.value)}
             placeholder="contact-form-2024" autoFocus />
         </form>

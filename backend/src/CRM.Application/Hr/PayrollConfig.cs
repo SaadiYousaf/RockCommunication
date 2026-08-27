@@ -2,6 +2,7 @@ using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CcEntity = CRM.Domain.Entities.CallCenter;   // 'CallCenter' unqualified is a namespace here
@@ -24,6 +25,35 @@ public record SavePayrollConfigInput(
 
 public record GetPayrollConfigQuery(Guid CallCenterId) : IRequest<PayrollConfigDto>;
 public record SavePayrollConfigCommand(Guid CallCenterId, SavePayrollConfigInput Input) : IRequest<PayrollConfigDto>;
+
+/// <summary>
+/// Bounds on the deduction rules. These factors multiply a day's pay for EVERY non-finalized payroll
+/// row in the call centre and are re-applied on each read, so one bad value silently re-prices a
+/// whole month for the whole centre. A negative factor would turn a deduction into a credit.
+/// </summary>
+public class SavePayrollConfigValidator : AbstractValidator<SavePayrollConfigCommand>
+{
+    public SavePayrollConfigValidator()
+    {
+        RuleFor(x => x.CallCenterId).NotEmpty();
+
+        // NOTE: deliberately UPPER bounds only. The handler already floors a negative to zero
+        // (Math.Max(0m, ...)), a forgiving behaviour covered by an integration test — rejecting
+        // negatives here would break that contract. The real hazard was the top end: these factors
+        // multiply a day's pay for every non-finalized row in the centre and are re-applied on each
+        // read, so a mistyped 500 silently re-prices a whole month.
+        RuleFor(x => x.Input.LateComingFine).LessThanOrEqualTo(1_000_000m)
+            .WithMessage("That late-coming fine looks too large — check the figure.");
+        // A factor is a fraction of one day's pay: 1 = a full day. A little above 1 is a legitimate
+        // policy (a punitive no-show); 5 days' pay for one absence is a typo.
+        RuleFor(x => x.Input.HalfDayFactor).LessThanOrEqualTo(5m)
+            .WithMessage("The half-day factor can't exceed 5 days' pay.");
+        RuleFor(x => x.Input.AbsentDayFactor).LessThanOrEqualTo(5m)
+            .WithMessage("The absent-day factor can't exceed 5 days' pay.");
+        RuleFor(x => x.Input.NcnsFactor).LessThanOrEqualTo(5m)
+            .WithMessage("The no-call-no-show factor can't exceed 5 days' pay.");
+    }
+}
 
 // ── Access ────────────────────────────────────────────────────────────────────
 

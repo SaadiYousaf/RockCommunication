@@ -411,9 +411,10 @@ export function ChatPage() {
     : typingNames.length === 2 ? `${typingNames[0]} and ${typingNames[1]} are typing…`
     : "Several people are typing…";
 
-  function toggleReaction(messageId: string, emoji: string) {
+  async function toggleReaction(messageId: string, emoji: string) {
     if (!activeRoom) return;
-    toggleReactionMut({ messageId, emoji, roomId: activeRoom }).unwrap().catch(() => {});
+    try { await toggleReactionMut({ messageId, emoji, roomId: activeRoom }).unwrap(); }
+    catch (err: unknown) { toast.error(CHAT_MSG.reactionFailed, getErrorDetail(err) ?? MESSAGES.tryAgain); }
   }
   function startEdit(m: ChatMessage) { setEditingId(m.id); setEditBody(m.body); }
   function cancelEdit() { setEditingId(null); setEditBody(""); }
@@ -750,7 +751,7 @@ export function ChatPage() {
                                   {m.reactions.filter((r) => r.userIds.length > 0).map((r) => {
                                     const mine = r.userIds.includes(auth.user?.id ?? "");
                                     return (
-                                      <button key={r.emoji} type="button" onClick={() => toggleReaction(m.id, r.emoji)}
+                                      <button key={r.emoji} type="button" onClick={() => { void toggleReaction(m.id, r.emoji); }}
                                         className={cn("inline-flex items-center gap-1 px-1.5 h-6 rounded-full text-xs border transition-colors",
                                           mine ? "bg-brand-50 border-brand-300 text-brand-700" : "bg-white border-ink-200 text-ink-600 hover:border-ink-300")}>
                                         <span>{r.emoji}</span><span className="tabular-nums">{r.userIds.length}</span>
@@ -780,7 +781,7 @@ export function ChatPage() {
                                 isMe ? "right-1" : "left-10",
                               )}>
                                 {QUICK_REACTIONS.map((e) => (
-                                  <button key={e} type="button" onClick={() => toggleReaction(m.id, e)}
+                                  <button key={e} type="button" onClick={() => { void toggleReaction(m.id, e); }}
                                     className="h-6 w-6 grid place-items-center hover:bg-ink-100 rounded text-sm" aria-label={`React ${e}`}>{e}</button>
                                 ))}
                                 {isMe && !m.attachmentName && (

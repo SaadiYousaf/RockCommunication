@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Icon } from "./Icon";
 import { cn } from "./cn";
+// Imported from the module (not the barrel) to keep this component out of an index.ts import cycle.
+import { useToast } from "./Toast";
+import { MESSAGES } from "../constants/messages";
 
 /**
  * Displays a sensitive value (SSN, bank account, driver's licence, CNIC, IBAN…) MASKED by default,
@@ -19,6 +22,7 @@ export function SensitiveValue({
 }) {
   const [shown, setShown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
   const text = value == null ? "" : String(value).trim();
   if (text === "") return <span className="text-ink-400">—</span>;
 
@@ -27,7 +31,11 @@ export function SensitiveValue({
       await navigator.clipboard.writeText(text);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
-    } catch { /* clipboard blocked — no-op */ }
+    } catch {
+      // A blocked clipboard (insecure origin / denied permission) used to fail silently — the tick
+      // never appeared and the operator had no idea why. Say so.
+      toast.error(MESSAGES.copyFailed, MESSAGES.copyBlocked);
+    }
   }
 
   return (

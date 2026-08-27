@@ -106,7 +106,9 @@ public class InterviewHandlers :
     {
         HrAccess.EnsureHr(_user);
         var now = DateTime.UtcNow;
-        var until = now.AddDays(request.Days);
+        // Clamp the window — an unbounded `days` (or a huge/negative one) threw on AddDays.
+        // Mirrors Dashboard/UpcomingEvents, which clamps the identical parameter.
+        var until = now.AddDays(Math.Clamp(request.Days, 1, 365));
         return await _db.Interviews.AsNoTracking()
             .Where(i => i.TrainingScheduledAt != null && i.TrainingScheduledAt >= now && i.TrainingScheduledAt <= until)
             .OrderBy(i => i.TrainingScheduledAt)

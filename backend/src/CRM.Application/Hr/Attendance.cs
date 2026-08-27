@@ -115,7 +115,11 @@ public class AttendanceHandlers :
     public async Task<IReadOnlyList<AttendanceSummaryRowDto>> Handle(AttendanceSummaryQuery request, CancellationToken ct)
     {
         HrAccess.EnsureHr(_user);
-        var start = new DateTime(request.Year, request.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        // Clamp before constructing the date: the controller binds year/month straight from the
+        // query string with no defaults, so an omitted `month` arrived as 0 and threw a 500.
+        var year = request.Year is >= 2000 and <= 2999 ? request.Year : DateTime.UtcNow.Year;
+        var month = request.Month is >= 1 and <= 12 ? request.Month : DateTime.UtcNow.Month;
+        var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(1);
         var employees = await EmployeesQuery(request.CallCenterId).ToListAsync(ct);
         var empIds = employees.Select(e => e.Id).ToList();

@@ -8,7 +8,10 @@ import {
   useSendQuickSmsMutation,
 } from "../../shared/api/baseApi";
 import { useAgentHub } from "../../shared/hooks/useAgentHub";
+import { getErrorDetail } from "../../shared/api/apiError";
+import { MESSAGES } from "../../shared/constants/messages";
 import { Button, Icon, useToast } from "../../shared/ui";
+import { SOFTPHONE_MSG } from "./messages";
 
 /**
  * Sticky bottom-right call dock. Shows the agent's current call with full controls.
@@ -49,7 +52,7 @@ export function CallDock() {
         playRing();
         navigate(`/leads/${payload.leadId}`);
         refetch();
-        toast.info("Incoming call", payload.phone);
+        toast.info(SOFTPHONE_MSG.incomingCall, payload.phone);
         break;
       case "call-ringing":
       case "call-answered":
@@ -81,6 +84,48 @@ export function CallDock() {
   });
 
   if (!call) return null;
+
+  // Every live-call control is safety-critical: a rejected hang-up/hold must never fail silently,
+  // or the agent believes the call ended when it's still connected. Success is visible in the dock
+  // itself (status chip / button state), so only failures toast.
+  const callId = call.id;
+
+  async function onAnswer() {
+    try { await answer(callId).unwrap(); }
+    catch (err: unknown) {
+      toast.error(SOFTPHONE_MSG.answerFailed, getErrorDetail(err) ?? SOFTPHONE_MSG.answerFailedDesc);
+    }
+  }
+
+  async function onHangup() {
+    try { await hangup(callId).unwrap(); }
+    catch (err: unknown) {
+      toast.error(SOFTPHONE_MSG.hangupFailed, getErrorDetail(err) ?? SOFTPHONE_MSG.hangupFailedDesc);
+    }
+  }
+
+  async function onMute(next: boolean) {
+    try { await mute({ id: callId, mute: next }).unwrap(); }
+    catch (err: unknown) {
+      toast.error(next ? SOFTPHONE_MSG.muteFailed : SOFTPHONE_MSG.unmuteFailed,
+        getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function onHold(next: boolean) {
+    try { await hold({ id: callId, hold: next }).unwrap(); }
+    catch (err: unknown) {
+      toast.error(next ? SOFTPHONE_MSG.holdFailed : SOFTPHONE_MSG.resumeFailed,
+        getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function onDtmf(digits: string) {
+    try { await dtmf({ id: callId, digits }).unwrap(); }
+    catch (err: unknown) {
+      toast.error(SOFTPHONE_MSG.dtmfFailed, getErrorDetail(err) ?? SOFTPHONE_MSG.dtmfFailedDesc);
+    }
+  }
 
   const isInbound = call.direction === "Inbound";
   const elapsed = call.answeredAt
@@ -121,17 +166,17 @@ export function CallDock() {
             fullWidth
             className="mb-2"
             leftIcon={<Icon name="phone" size={16} />}
-            onClick={() => answer(call.id)}>
+            onClick={onAnswer}>
             Answer
           </Button>
         )}
 
         <div className="grid grid-cols-3 gap-2 mb-2">
-          <DockBtn active={call.isMuted} onClick={() => mute({ id: call.id, mute: !call.isMuted })}>
+          <DockBtn active={call.isMuted} onClick={() => { void onMute(!call.isMuted); }}>
             <Icon name={call.isMuted ? "micOff" : "mic"} size={16} />
             {call.isMuted ? "Unmute" : "Mute"}
           </DockBtn>
-          <DockBtn active={call.isHeld} onClick={() => hold({ id: call.id, hold: !call.isHeld })}>
+          <DockBtn active={call.isHeld} onClick={() => { void onHold(!call.isHeld); }}>
             <Icon name={call.isHeld ? "play" : "pause"} size={16} />
             {call.isHeld ? "Resume" : "Hold"}
           </DockBtn>
@@ -146,7 +191,7 @@ export function CallDock() {
             {["1","2","3","4","5","6","7","8","9","*","0","#"].map(d => (
               <button key={d}
                 className="bg-ink-800 hover:bg-ink-700 rounded-lg py-2 font-mono tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                onClick={() => dtmf({ id: call.id, digits: d })}>{d}</button>
+                onClick={() => { void onDtmf(d); }}>{d}</button>
             ))}
           </div>
         )}
@@ -157,9 +202,9 @@ export function CallDock() {
           try {
             await sendSms({ leadId: call.leadId, body: smsBody }).unwrap();
             setSmsBody("");
-            toast.success("SMS sent");
-          } catch {
-            toast.error("SMS not sent", "Try again.");
+            toast.success(SOFTPHONE_MSG.smsSent);
+          } catch (err: unknown) {
+            toast.error(SOFTPHONE_MSG.smsFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
           }
         }}>
           <input className="flex-1 min-w-0 bg-ink-800 border border-ink-700 rounded-lg px-2 py-1 text-sm placeholder-ink-400 transition-colors focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/40"
@@ -174,7 +219,7 @@ export function CallDock() {
           size="md"
           fullWidth
           leftIcon={<Icon name="phoneOff" size={16} />}
-          onClick={() => hangup(call.id)}>
+          onClick={onHangup}>
           Hang up
         </Button>
       </div>
