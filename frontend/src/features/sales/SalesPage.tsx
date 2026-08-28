@@ -2,7 +2,7 @@ import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { formatPhone, formatUsd } from "../../shared/lib/format";
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import {
@@ -100,7 +100,12 @@ export function SalesPage() {
     }
   }
 
-  const [tab, setTab] = useState<ViewTab>("record");
+  // Arriving with a filter in the URL (e.g. from the wallboard's "Sales closed today") means the
+  // caller wants the LIST, not the record form — landing on the form would look broken.
+  const [pageParams] = useSearchParams();
+  const [tab, setTab] = useState<ViewTab>(
+    pageParams.has("from") || pageParams.has("status") ? "list" : "record",
+  );
 
   return (
     <>
@@ -357,7 +362,15 @@ export function SalesPage() {
 
 function SalesList() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<SalesQuery>({ skip: 0, take: 50, sort: "soldAt-desc" });
+  // Seed from the URL so a link that counted a subset (e.g. the wallboard's "Sales closed today")
+  // opens exactly those rows. Without this the tile said 28 and the page showed every sale ever.
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<SalesQuery>(() => ({
+    skip: 0, take: 50, sort: "soldAt-desc",
+    from: searchParams.get("from") ?? undefined,
+    to: searchParams.get("to") ?? undefined,
+    status: searchParams.get("status") ?? undefined,
+  }));
   const { data, isLoading, isFetching, isError, error, refetch } = useListSalesQuery(filters);
   const { data: users } = useListUsersQuery();
   const { data: carriers } = useCarriersQuery();

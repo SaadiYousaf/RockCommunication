@@ -72,6 +72,10 @@ export function LeadsPage() {
   }, [search]);
   useEffect(() => { setPage(0); }, [filter, sort, debouncedSearch]);
 
+  // ?createdAfter= lets a link open exactly the rows it counted — the wallboard's "Leads created
+  // today" tile would otherwise land on every lead ever and contradict its own number.
+  const createdAfter = searchParams.get("createdAfter") ?? undefined;
+
   const queryParams = {
     stage: filter === "All" ? undefined : filter,
     sort,
@@ -79,6 +83,7 @@ export function LeadsPage() {
     take: PAGE_SIZE,
     // Search server-side so it spans every page, not just the loaded one.
     search: debouncedSearch.trim() || undefined,
+    createdAfter,
   } as const;
 
   const { data: leadsResult, isLoading, isFetching, refetch } = useListLeadsQuery(queryParams);

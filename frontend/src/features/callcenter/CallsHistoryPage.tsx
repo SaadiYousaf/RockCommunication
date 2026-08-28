@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useListCallsQuery, useListUsersQuery, type CallsQuery } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
@@ -16,7 +16,15 @@ const statusTone: Record<string, "brand" | "info" | "success" | "warning" | "dan
 };
 
 export function CallsHistoryPage() {
-  const [filters, setFilters] = useState<CallsQuery>({ skip: 0, take: 50, sort: "initiatedAt-desc" });
+  // Seed from the URL so a wallboard tile ("Calls answered today") opens the same rows it counted.
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<CallsQuery>(() => ({
+    skip: 0, take: 50, sort: "initiatedAt-desc",
+    from: searchParams.get("from") ?? undefined,
+    to: searchParams.get("to") ?? undefined,
+    status: searchParams.get("status") ?? undefined,
+    direction: searchParams.get("direction") ?? undefined,
+  }));
   const { data, isLoading, isFetching } = useListCallsQuery(filters);
   const { data: users } = useListUsersQuery();
   const toast = useToast();

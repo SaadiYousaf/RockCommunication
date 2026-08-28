@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useLeaderboardQuery, useWallboardQuery } from "../../shared/api/baseApi";
 import { Spinner, type IconName, Icon, InfoHint } from "../../shared/ui";
 import { formatUsdCompact } from "../../shared/lib/format";
+import { WALLBOARD_MSG } from "./messages";
 
 function ClockNow() {
   const [now, setNow] = useState(new Date());
@@ -39,6 +41,10 @@ function LivePulse() {
 export function WallboardPage() {
   const { data: w, isLoading } = useWallboardQuery(undefined, { pollingInterval: 5_000 });
   const { data: leaders } = useLeaderboardQuery("today", { pollingInterval: 30_000 });
+
+  // The "today" tiles count today's rows, so the list they open must be filtered the same way —
+  // otherwise the destination shows a different number than the tile the user just clicked.
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const answerRate = useMemo(() => {
     if (!w) return 0;
@@ -122,19 +128,19 @@ export function WallboardPage() {
             {/* Agents */}
             <SectionHeading label="Agents" right={`${w.agentsClockedIn} on the floor`} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-              <BigTile label="Clocked In"  value={w.agentsClockedIn} icon="users"   accent="brand"   total={w.agentsClockedIn} />
-              <BigTile label="Available"   value={w.agentsAvailable} icon="check"   accent="emerald" total={w.agentsClockedIn} />
-              <BigTile label="On Call"     value={w.agentsOnCall}    icon="phone"   accent="amber"   total={w.agentsClockedIn} />
-              <BigTile label="On Break"    value={w.agentsOnBreak}   icon="clock"   accent="ink"     total={w.agentsClockedIn} />
+              <BigTile label="Clocked In"  value={w.agentsClockedIn} icon="users"   accent="brand"   total={w.agentsClockedIn} to="/attendance" hint={WALLBOARD_MSG.seeAttendance} />
+              <BigTile label="Available"   value={w.agentsAvailable} icon="check"   accent="emerald" total={w.agentsClockedIn} to="/supervisor" hint={WALLBOARD_MSG.seeAgents} />
+              <BigTile label="On Call"     value={w.agentsOnCall}    icon="phone"   accent="amber"   total={w.agentsClockedIn} to="/supervisor" hint={WALLBOARD_MSG.seeAgents} />
+              <BigTile label="On Break"    value={w.agentsOnBreak}   icon="clock"   accent="ink"     total={w.agentsClockedIn} to="/supervisor" hint={WALLBOARD_MSG.seeAgents} />
             </div>
 
             {/* Today */}
             <SectionHeading label="Today" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-              <BigTile label="Calls Answered"   value={w.callsAnsweredToday}  icon="phone"     accent="emerald" />
-              <BigTile label="Calls Abandoned"  value={w.callsAbandonedToday} icon="x"         accent="rose" />
-              <BigTile label="Leads Created"    value={w.leadsCreatedToday}   icon="list"      accent="brand" />
-              <BigTile label="Sales Closed"     value={w.salesClosedToday}    icon="briefcase" accent="emerald" />
+              <BigTile label="Calls Answered"   value={w.callsAnsweredToday}  icon="phone"     accent="emerald" to={`/calls?status=answered&from=${todayIso}`} hint={WALLBOARD_MSG.seeCalls} />
+              <BigTile label="Calls Abandoned"  value={w.callsAbandonedToday} icon="x"         accent="rose" to={`/calls?status=abandoned&from=${todayIso}`} hint={WALLBOARD_MSG.seeCalls} />
+              <BigTile label="Leads Created"    value={w.leadsCreatedToday}   icon="list"      accent="brand" to={`/leads?createdAfter=${todayIso}`} hint={WALLBOARD_MSG.seeLeads} />
+              <BigTile label="Sales Closed"     value={w.salesClosedToday}    icon="briefcase" accent="emerald" to={`/sales?from=${todayIso}`} hint={WALLBOARD_MSG.seeSales} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
@@ -142,8 +148,8 @@ export function WallboardPage() {
               <div className="lg:col-span-1">
                 <SectionHeading label="Queue" />
                 <div className="grid grid-cols-2 gap-4">
-                  <BigTile label="Waiting"          value={w.callsWaitingNow}    icon="inbox" accent="amber" />
-                  <BigTile label="Longest Wait"     value={`${w.longestWaitSeconds}s`} icon="clock" accent="rose" />
+                  <BigTile label="Waiting"          value={w.callsWaitingNow}    icon="inbox" accent="amber" to="/queues" hint={WALLBOARD_MSG.seeQueues} />
+                  <BigTile label="Longest Wait"     value={`${w.longestWaitSeconds}s`} icon="clock" accent="rose" to="/queues" hint={WALLBOARD_MSG.seeQueues} />
                 </div>
               </div>
 
@@ -223,15 +229,23 @@ const accentClasses: Record<string, { glow: string; text: string; ring: string; 
 };
 
 function BigTile({
-  label, value, icon, accent, total,
+  label, value, icon, accent, total, to, hint,
 }: {
   label: string; value: number | string; icon: IconName; accent: keyof typeof accentClasses; total?: number;
+  /** Where this number can be broken down. Omit to render a plain, non-interactive tile. */
+  to?: string;
+  /** What the viewer will find after clicking — shown under the label so the tile isn't a mystery. */
+  hint?: string;
 }) {
   const a = accentClasses[accent];
   const numericValue = typeof value === "number" ? value : null;
   const pct = total && numericValue != null && total > 0 ? Math.round((numericValue / total) * 100) : null;
-  return (
-    <div className={`relative overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ${a.ring} backdrop-blur p-5 group hover:bg-white/[0.05] transition-all`}>
+
+  // A number on a wallboard raises the question "which ones?" — every tile that CAN answer that
+  // links to the page holding the underlying rows, pre-filtered. Tiles with nowhere useful to go
+  // stay inert rather than pretending to be interactive.
+  const body = (
+    <div className={`relative overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ${a.ring} backdrop-blur p-5 group transition-all ${to ? "hover:bg-white/[0.07] hover:ring-white/25 cursor-pointer" : "hover:bg-white/[0.05]"}`}>
       <div className={`absolute -top-16 -right-16 w-40 h-40 rounded-full bg-gradient-to-br ${a.glow} opacity-20 blur-3xl group-hover:opacity-30 transition-opacity`} />
       <div className="relative flex items-start justify-between mb-3">
         <div className="text-[10px] font-semibold tracking-[0.2em] uppercase text-white/60">{label}</div>
@@ -253,7 +267,20 @@ function BigTile({
           <div className="text-[10px] text-white/40 mt-1.5 font-mono tabular-nums">{pct}% of clocked-in</div>
         </div>
       )}
+      {to && (
+        <div className="relative mt-3 flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/35 group-hover:text-white/70 transition-colors">
+          {hint ?? WALLBOARD_MSG.viewDetail}
+          <Icon name="chevronRight" size={11} />
+        </div>
+      )}
     </div>
+  );
+
+  if (!to) return body;
+  return (
+    <Link to={to} aria-label={`${label}: ${value}. ${hint ?? WALLBOARD_MSG.viewDetail}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-2xl">
+      {body}
+    </Link>
   );
 }
 
