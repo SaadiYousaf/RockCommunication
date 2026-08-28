@@ -146,6 +146,7 @@ public class PayrollHandlers :
 
     public async Task<PayrollRowDto> Handle(GetPayrollSlipQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         HrAccess.EnsureHr(_user);
         var e = await _db.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.EmployeeId, ct)
             ?? throw new NotFoundException(nameof(Employee), request.EmployeeId);

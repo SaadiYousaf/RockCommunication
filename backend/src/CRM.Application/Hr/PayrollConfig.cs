@@ -112,6 +112,7 @@ public class PayrollConfigHandlers :
 
     public async Task<PayrollConfigDto> Handle(GetPayrollConfigQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         PayrollConfigAccess.EnsureCanConfigure(_user, request.CallCenterId);
         var cc = await _db.CallCenters.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.CallCenterId, ct)
             ?? throw new NotFoundException("CallCenter", request.CallCenterId);

@@ -30,3 +30,10 @@ Thumbs.db
 
 # Local production build output (created by scripts/deploy.sh)
 /api-publish/
+
+# macOS / cloud-sync duplicate artifacts ("Program 2.cs", "CRM 2.sln", "Dockerfile 2").
+# 224 of these once appeared next to the real files and broke the build with duplicate-class
+# errors; they must never be committed either.
+* 2.*
+* 2
+*\ 2.*

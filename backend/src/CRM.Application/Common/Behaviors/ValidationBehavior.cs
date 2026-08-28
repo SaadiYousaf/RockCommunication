@@ -14,6 +14,9 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
+        // `request` is already guaranteed by the `where TRequest : notnull` constraint;
+        // `next` is the one reference we dereference and must not be null.
+        Guard.AgainstNull(next);
         if (!_validators.Any()) return await next(cancellationToken);
 
         var context = new ValidationContext<TRequest>(request);

@@ -225,6 +225,7 @@ public class FeedHandlers :
 
     public async Task<string?> Handle(GetPostImageKeyQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (_, aid) = Ctx();
         // Agency-scoped: a post id from another tenant simply isn't found, so its image can't be fetched.
         var post = await _db.FeedPosts.AsNoTracking()
@@ -235,6 +236,7 @@ public class FeedHandlers :
 
     public async Task<Unit> Handle(DeletePostCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (uid, aid) = Ctx();
         var post = await _db.FeedPosts.FirstOrDefaultAsync(p => p.Id == request.PostId && p.AgencyId == aid, ct)
             ?? throw new NotFoundException(nameof(FeedPost), request.PostId);
@@ -298,6 +300,7 @@ public class FeedHandlers :
 
     public async Task<Unit> Handle(DeleteCommentCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (uid, aid) = Ctx();
         var comment = await _db.FeedComments.FirstOrDefaultAsync(c => c.Id == request.CommentId && c.AgencyId == aid, ct)
             ?? throw new NotFoundException(nameof(FeedComment), request.CommentId);

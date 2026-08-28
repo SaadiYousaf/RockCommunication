@@ -141,6 +141,7 @@ public class EmployeeHandlers :
 
     public async Task<EmployeeDto> Handle(GetEmployeeQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureHr();
         var e = await _db.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Employee), request.Id);
@@ -191,6 +192,7 @@ public class EmployeeHandlers :
 
     public async Task<int> Handle(SyncEmployeesFromUsersCommand request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureHr();
         var agencyId = _user.AgencyId ?? Guid.Empty;
         var users = await _identity.ListUsersAsync(agencyId, ct);
@@ -260,6 +262,7 @@ public class EmployeeHandlers :
 
     public async Task<string?> Handle(GetEmployeeImageKeyQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         EnsureHr();
         var e = await _db.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Employee), request.Id);

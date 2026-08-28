@@ -152,6 +152,7 @@ public class BugReportHandlers :
 
     public async Task<BugReportDetailDto> Handle(GetBugReportQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         var (_, aid) = Ctx();
         var bug = await _db.BugReports.AsNoTracking().FirstOrDefaultAsync(b => b.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(BugReport), request.Id);

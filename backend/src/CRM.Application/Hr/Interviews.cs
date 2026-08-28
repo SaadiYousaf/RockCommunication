@@ -118,6 +118,7 @@ public class InterviewHandlers :
 
     public async Task<InterviewDto> Handle(GetInterviewQuery request, CancellationToken ct)
     {
+        Guard.AgainstNull(request);
         HrAccess.EnsureHr(_user);
         var i = await _db.Interviews.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Interview), request.Id);

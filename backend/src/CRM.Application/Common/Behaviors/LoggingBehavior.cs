@@ -14,6 +14,9 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
+        // `request` is already guaranteed by the `where TRequest : notnull` constraint;
+        // `next` is the one reference we dereference and must not be null.
+        Guard.AgainstNull(next);
         var name = typeof(TRequest).Name;
         var sw = Stopwatch.StartNew();
         _logger.LogInformation("Handling {RequestName}", name);
