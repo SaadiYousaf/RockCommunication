@@ -9,6 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import { useAgentHub } from "../../shared/hooks/useAgentHub";
 import { getErrorDetail } from "../../shared/api/apiError";
+import { usePermission, Perm } from "../../shared/auth/permissions";
 import { MESSAGES } from "../../shared/constants/messages";
 import { Button, Icon, useToast } from "../../shared/ui";
 import { SOFTPHONE_MSG } from "./messages";
@@ -20,7 +21,14 @@ import { SOFTPHONE_MSG } from "./messages";
 export function CallDock() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { data: initial, refetch } = useActiveCallQuery(undefined, { pollingInterval: 30000 });
+  // The dock is mounted in the app shell, so it renders for EVERY signed-in user — but its endpoint
+  // requires the agent-panel permission. Anyone without it (HR, commission, admin staff) was polling
+  // a 403 every 30 seconds for their whole shift. Only ask when the user can actually take calls.
+  const canTakeCalls = usePermission(Perm.AgentPanelUse);
+  const { data: initial, refetch } = useActiveCallQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !canTakeCalls,
+  });
   const [call, setCall] = useState<ActiveCall | null>(initial ?? null);
   const [answer] = useAnswerCallMutation();
   const [hangup] = useHangupCallMutation();

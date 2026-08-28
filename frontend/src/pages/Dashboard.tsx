@@ -10,6 +10,7 @@ import { formatUsdCompact } from "../shared/lib/format";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery, useTeamStatusQuery } from "../shared/api/baseApi";
 import { useDashboardLayout } from "./useDashboardLayout";
 import { usePermission, Perm } from "../shared/auth/permissions";
+import { useIsSupervisor } from "../shared/auth/rank";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage, TeamStatusRow, TeamLiveStatus } from "../shared/api/types";
 import { STAGE_TONE as stageTone, stageLabel } from "../shared/constants/leadStage";
 import { roleLabel } from "../shared/constants/roles";
@@ -1089,9 +1090,17 @@ const livePresence: Record<TeamLiveStatus, "online" | "busy" | "away" | "offline
 };
 
 function TeamStatusCard() {
+  // The server gates this widget to HR and TeamLead-and-above. Asking for it as an agent returned
+  // 403 on every poll — hundreds a day — and rendered an empty "Floor health" panel that looked
+  // like the floor was deserted. Don't request what this user may not have; hide the card instead.
+  const isSupervisor = useIsSupervisor();
+
   // Refresh hourly so attendance/status stays current without hammering the endpoint.
   // 60s so the live work-state column (On call/Available/On break) tracks the floor, not an hour behind.
-  const { data, isLoading, isError } = useTeamStatusQuery(undefined, { pollingInterval: 60_000 });
+  const { data, isLoading, isError } = useTeamStatusQuery(undefined, {
+    pollingInterval: 60_000,
+    skip: !isSupervisor,
+  });
   // Cap the widget at 10 people per page; group the current page by call centre for display.
   const { page, setPage, pageItems, pageCount, total, from, to } = usePagination(data, 10);
 
@@ -1115,6 +1124,9 @@ function TeamStatusCard() {
     return m;
   }, [data]);
   const multi = centreTotals.size > 1;
+
+  // Not a supervisor: render nothing at all rather than an empty card implying an empty floor.
+  if (!isSupervisor) return null;
 
   return (
     <Card className="mb-5 overflow-hidden">
