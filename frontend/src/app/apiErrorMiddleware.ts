@@ -20,7 +20,9 @@ import { LOAD_ERROR } from "../shared/constants/messages";
 function isHandledElsewhere(status: unknown): boolean {
   // 401 → the baseQuery already refreshes the token or signs the user out. Toasting here would
   // flash a scary error during a perfectly routine silent token rotation.
-  return status === 401;
+  // 429 → the baseQuery retries it with backoff. It is throttling, not failure; by the time the
+  //       user could read a toast the request has usually already succeeded.
+  return status === 401 || status === 429;
 }
 
 function describe(status: unknown): { title: string; description: string } {
@@ -34,20 +36,22 @@ function describe(status: unknown): { title: string; description: string } {
 }
 
 /**
- * Collapses repeats. A page mounting eight queries against a down server would otherwise stack eight
- * identical toasts over the UI; the user needs to be told once.
+ * At most ONE error toast on screen at a time, whatever is failing.
+ *
+ * The first version of this keyed the cooldown by endpoint, which was wrong: a dashboard mounts a
+ * dozen different queries, so when the server was throttling, twelve DIFFERENT keys each earned
+ * their own toast and a stack of them covered the page. Nobody needs to be told twelve times that
+ * the network is unhappy — they need to be told once, and to still be able to see the app.
+ *
+ * The window is deliberately long. A broken backend keeps failing for as long as it is broken; the
+ * toast is a notification, not a running log.
  */
-const recent = new Map<string, number>();
-const REPEAT_WINDOW_MS = 6000;
+const QUIET_WINDOW_MS = 15_000;
+let lastReportedAt = 0;
 
-function shouldReport(key: string, now: number): boolean {
-  const last = recent.get(key);
-  if (last !== undefined && now - last < REPEAT_WINDOW_MS) return false;
-  recent.set(key, now);
-  // Keep the map from growing without bound over a long session.
-  if (recent.size > 50) {
-    for (const [k, t] of recent) if (now - t > REPEAT_WINDOW_MS) recent.delete(k);
-  }
+function shouldReport(now: number): boolean {
+  if (now - lastReportedAt < QUIET_WINDOW_MS) return false;
+  lastReportedAt = now;
   return true;
 }
 
@@ -60,12 +64,9 @@ export const apiErrorMiddleware: Middleware = () => (next) => (action) => {
       // toasts in its catch), so only report QUERY failures here — the silent ones.
       const isQuery = (action.meta as { arg?: { type?: string } } | undefined)?.arg?.type === "query";
 
-      if (isQuery && !isHandledElsewhere(status)) {
-        const endpoint = (action.meta as { arg?: { endpointName?: string } } | undefined)?.arg?.endpointName ?? "?";
-        if (shouldReport(`${endpoint}:${String(status)}`, Date.now())) {
-          const { title, description } = describe(status);
-          emitToast({ title, description, tone: "danger", duration: 7000 });
-        }
+      if (isQuery && !isHandledElsewhere(status) && shouldReport(Date.now())) {
+        const { title, description } = describe(status);
+        emitToast({ title, description, tone: "danger", duration: 6000 });
       }
     } catch {
       // Reporting an error must never itself break the dispatch chain.

@@ -152,11 +152,22 @@ builder.Services.AddRateLimiter(options =>
             });
         }
 
+        // FALLBACK BUCKET — shared by everyone we cannot attribute to a user account.
+        //
+        // Sizing this like a single visitor was wrong and caused a production incident: an entire
+        // call centre reaches us through ONE public IP, and every access token expires on a fixed
+        // lifetime, so each expiry drops that user's whole round of polling queries into this
+        // bucket for a moment. Thirty agents doing that together blew a 120-request budget
+        // instantly and the floor got 429s on notifications, chat, queues and the dashboard.
+        //
+        // Per-account lockout (5 attempts / 15 min) is what actually stops password guessing, and
+        // credential endpoints keep their own stricter bucket below, so a generous ceiling here
+        // costs no real security.
         var ip = ClientIp.Resolve(httpContext);
         return RateLimitPartition.GetTokenBucketLimiter("ip:" + ip, _ => new TokenBucketRateLimiterOptions
         {
-            TokenLimit         = builder.Configuration.GetValue("RateLimits:Anon:Burst", 120),
-            TokensPerPeriod    = builder.Configuration.GetValue("RateLimits:Anon:Refill", 60),
+            TokenLimit         = builder.Configuration.GetValue("RateLimits:Anon:Burst", 1200),
+            TokensPerPeriod    = builder.Configuration.GetValue("RateLimits:Anon:Refill", 600),
             ReplenishmentPeriod = TimeSpan.FromSeconds(builder.Configuration.GetValue("RateLimits:Anon:RefillSeconds", 60)),
             QueueLimit         = 0,
             AutoReplenishment  = true,
@@ -172,7 +183,10 @@ builder.Services.AddRateLimiter(options =>
         var ip = ClientIp.Resolve(httpContext);
         return RateLimitPartition.GetFixedWindowLimiter("auth-ip:" + ip, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = builder.Configuration.GetValue("RateLimits:Auth:PerMinute", 10),
+            // Also per-IP, so it is shared by a whole office: at shift change dozens of agents sign
+            // in within the same minute and a limit of 10 locked the floor out of its own product.
+            // Online password guessing is stopped by per-account lockout, not by this number.
+            PermitLimit = builder.Configuration.GetValue("RateLimits:Auth:PerMinute", 60),
             Window      = TimeSpan.FromMinutes(1),
             QueueLimit  = 0,
         });

@@ -45,8 +45,35 @@ let inFlightRefresh: Promise<{ accessToken: string; refreshToken: string } | nul
 // signs in again. Set on a failed refresh, reset by setAuth (login).
 let sessionInvalid = false;
 
+/**
+ * A 429 means the server throttled us, not that anything is wrong. It is transient by definition,
+ * so retry with backoff instead of surfacing it: a whole call centre shares one public IP, and a
+ * burst (several tabs, a token expiring so a round of polls briefly counts as anonymous) can clip
+ * the limit for a second or two. Without this the user just sees "Couldn't load this".
+ *
+ * Honours Retry-After when the server sends it. Capped at 3 attempts so a genuinely exhausted quota
+ * still fails fast rather than hammering the server that just asked us to slow down.
+ */
+const THROTTLE_RETRIES = 3;
+
+function retryDelayMs(result: { error?: unknown }, attempt: number): number {
+  const headers = (result.error as { data?: unknown; headers?: Headers } | undefined)?.headers;
+  const retryAfter = headers?.get?.("Retry-After");
+  const seconds = retryAfter ? Number(retryAfter) : NaN;
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds * 1000, 10_000);
+  // 400ms, 800ms, 1600ms — plus jitter so a page's queries don't all retry in lockstep and
+  // recreate the very burst that got throttled.
+  return 400 * 2 ** attempt + Math.random() * 250;
+}
+
 const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extra) => {
   let result = await rawBaseQuery(args, api, extra);
+
+  for (let attempt = 0; result.error?.status === 429 && attempt < THROTTLE_RETRIES; attempt++) {
+    await new Promise((r) => setTimeout(r, retryDelayMs(result, attempt)));
+    result = await rawBaseQuery(args, api, extra);
+  }
+
   if (result.error && result.error.status === 401) {
     // Backend signals "account deactivated" with a structured 401 body
     // (`{ status: 401, detail: "Your account has been deactivated…" }`).
