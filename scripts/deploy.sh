@@ -16,17 +16,19 @@
 #
 # Overridable via env:
 #   SSH_KEY   path to the Lightsail private key   (default: ~/.ssh/lightsail.pem)
-#   SSH_HOST  ubuntu@<box-ip>                      (default: ubuntu@13.207.198.3)
+#   SSH_HOST  ubuntu@<box-ip>                      (default: ubuntu@15.207.95.101)
 #   API_URL   prod API origin baked into the SPA   (default: https://api.smhachieverslifegroup.com)
 #   APP_URL   prod app origin (edge verify)        (default: https://app.smhachieverslifegroup.com)
 #
 set -euo pipefail
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/lightsail.pem}"
-# NOTE: this Lightsail instance has a DYNAMIC public IP, so it CHANGES on every stop/start
-# (13.127.227.148 -> 13.207.198.3 after the Aug-2026 outage). Attach a static IP in
-# Lightsail -> Networking to stop this recurring, and keep the SSH_HOST GitHub secret in sync.
-SSH_HOST="${SSH_HOST:-ubuntu@13.207.198.3}"
+# The box now has a STATIC IP (15.207.95.101), attached Aug 2026 after a dynamic address twice
+# moved under us (13.127.227.148 -> 13.207.198.3 -> static) and broke every deploy while the site
+# itself stayed up — the Cloudflare tunnel dials outward, so only inbound SSH was affected.
+# A static IP is free while attached and does NOT change on stop/start, so this value should now
+# be stable. Keep the SSH_HOST GitHub secret pointed at the same address.
+SSH_HOST="${SSH_HOST:-ubuntu@15.207.95.101}"
 API_URL="${API_URL:-https://api.smhachieverslifegroup.com}"
 APP_URL="${APP_URL:-https://app.smhachieverslifegroup.com}"
 BOX_REPO="/home/ubuntu/CRM"
