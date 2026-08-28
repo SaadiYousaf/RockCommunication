@@ -16,14 +16,17 @@
 #
 # Overridable via env:
 #   SSH_KEY   path to the Lightsail private key   (default: ~/.ssh/lightsail.pem)
-#   SSH_HOST  ubuntu@<box-ip>                      (default: ubuntu@13.127.227.148)
+#   SSH_HOST  ubuntu@<box-ip>                      (default: ubuntu@13.207.198.3)
 #   API_URL   prod API origin baked into the SPA   (default: https://api.smhachieverslifegroup.com)
 #   APP_URL   prod app origin (edge verify)        (default: https://app.smhachieverslifegroup.com)
 #
 set -euo pipefail
 
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/lightsail.pem}"
-SSH_HOST="${SSH_HOST:-ubuntu@13.127.227.148}"
+# NOTE: this Lightsail instance has a DYNAMIC public IP, so it CHANGES on every stop/start
+# (13.127.227.148 -> 13.207.198.3 after the Aug-2026 outage). Attach a static IP in
+# Lightsail -> Networking to stop this recurring, and keep the SSH_HOST GitHub secret in sync.
+SSH_HOST="${SSH_HOST:-ubuntu@13.207.198.3}"
 API_URL="${API_URL:-https://api.smhachieverslifegroup.com}"
 APP_URL="${APP_URL:-https://app.smhachieverslifegroup.com}"
 BOX_REPO="/home/ubuntu/CRM"
