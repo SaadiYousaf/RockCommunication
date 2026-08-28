@@ -12,11 +12,12 @@ import {
 } from "../../shared/api/baseApi";
 import type { CallCenterDto, UserSummary } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /**
@@ -66,7 +67,10 @@ export function CallCentersPage() {
       [c.name, c.code].some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [list, search]);
 
-  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+  // Disabled centres are kept out of the working list but stay one click away.
+  const statusTabs = useStatusTabs(filtered, (c) => c.isActive);
+
+  const { sorted, dirFor, toggle } = useTableSort(statusTabs.visible, {
     key: "name",
     accessors: { status: (c) => (c.isActive ? 1 : 0) },
   });
@@ -209,6 +213,12 @@ export function CallCentersPage() {
           }
         />
         <CardBody>
+          {/* Disabled centres are kept out of the working list but stay one click away. */}
+          {list && list.length > 0 && (
+            <div className="mb-3">
+              <Tabs value={statusTabs.tab} onChange={statusTabs.setTab} items={statusTabs.items} />
+            </div>
+          )}
           {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
             <EmptyState icon={<Icon name="building" size={20} />} title={ADMIN_MSG.callCenters.emptyTitle}
               description={ADMIN_MSG.callCenters.emptyDesc}

@@ -14,7 +14,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
+  Pager, SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -22,6 +22,7 @@ import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser } from "..
 import { RolePicker } from "../../shared/components/RolePicker";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { CreateUserModal } from "./CreateUserModal";
+import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
 
 
 
@@ -123,8 +124,6 @@ export function UserManagementPage() {
       if (ccFilter === "none" ? !!u.callCenterId : ccFilter && u.callCenterId !== ccFilter) return false;
       if (teamFilter === "none" ? !!u.teamId : teamFilter && u.teamId !== teamFilter) return false;
 
-      if (statusFilter === "active" && !(u.isActive ?? true)) return false;
-      if (statusFilter === "inactive" && (u.isActive ?? true)) return false;
       if (statusFilter === "pending" && !u.mustChangePassword) return false;
       if (statusFilter === "noroles" && u.roles.length > 0) return false;
 
@@ -132,7 +131,10 @@ export function UserManagementPage() {
     });
   }, [users, search, roleFilter, ccFilter, teamFilter, statusFilter]);
 
-  const { sorted, dirFor, toggle } = useTableSort(filtered, {
+  // Deactivated accounts are kept out of the working list but stay one click away.
+  const statusTabs = useStatusTabs(filtered, (u) => u.isActive ?? true);
+
+  const { sorted, dirFor, toggle } = useTableSort(statusTabs.visible, {
     key: "userName",
     accessors: { role: (u) => u.roles[0] ?? "" },
   });
@@ -288,8 +290,6 @@ export function UserManagementPage() {
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs min-w-[8rem]" aria-label={ADMIN_MSG.userMgmt.filterStatus}>
             <option value="">{ADMIN_MSG.userMgmt.allStatuses}</option>
-            <option value="active">{ADMIN_MSG.userMgmt.statusActive}</option>
-            <option value="inactive">{ADMIN_MSG.userMgmt.statusInactive}</option>
             <option value="pending">{ADMIN_MSG.userMgmt.statusPending}</option>
             <option value="noroles">{ADMIN_MSG.userMgmt.statusNoRoles}</option>
           </Select>
@@ -301,6 +301,14 @@ export function UserManagementPage() {
           )}
         </CardBody>
       </Card>
+
+      {/* Deactivated accounts are kept out of the working list but stay one click away — the counts
+          make it obvious they're disabled rather than missing. */}
+      {users && users.length > 0 && (
+        <div className="mb-3">
+          <Tabs value={statusTabs.tab} onChange={statusTabs.setTab} items={statusTabs.items} />
+        </div>
+      )}
 
       {isLoading ? (
         <Card><CardBody>

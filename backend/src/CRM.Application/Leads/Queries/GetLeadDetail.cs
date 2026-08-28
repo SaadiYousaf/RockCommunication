@@ -61,10 +61,14 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
     public async Task<LeadDetailDto> Handle(GetLeadDetailQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // A SuperAdmin who hasn't picked a working context has no agency of their own, so comparing
+        // AgencyId to theirs matched nothing and every lead came back 404. ConfinedTo returns null
+        // for that caller (they legitimately span agencies) and throws for a non-SuperAdmin with a
+        // malformed token, so this stays fail-closed for everyone else.
+        var scope = TenantScope.ConfinedTo(_user);
 
         var lead = await _db.Leads
-            .FirstOrDefaultAsync(l => l.Id == request.Id && l.AgencyId == _user.AgencyId, ct)
+            .FirstOrDefaultAsync(l => l.Id == request.Id && (scope == null || l.AgencyId == scope), ct)
             ?? throw new NotFoundException(nameof(Lead), request.Id);
 
         // Front-line agents may only open leads assigned to them; managers see any lead in
@@ -92,7 +96,7 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
             .ToListAsync(ct);
         var openCallbacks = callbacks.Count(cb => !cb.Completed);
 
-        var users = await _identity.ListUsersAsync(_user.AgencyId, ct);
+        var users = await _identity.ListUsersAsync(lead.AgencyId, ct);
         var byId = users.ToDictionary(u => u.Id);
         string? AssignedName(Guid? id) => id is null ? null
             : byId.TryGetValue(id.Value, out var u) ? u.UserName : null;
@@ -158,9 +162,9 @@ public class UpdateLeadNotesHandler : IRequestHandler<UpdateLeadNotesCommand, Un
     public async Task<Unit> Handle(UpdateLeadNotesCommand request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        var scope = TenantScope.ConfinedTo(_user);
         var lead = await _db.Leads.FirstOrDefaultAsync(
-            l => l.Id == request.Id && l.AgencyId == _user.AgencyId, ct)
+            l => l.Id == request.Id && (scope == null || l.AgencyId == scope), ct)
             ?? throw new NotFoundException(nameof(Lead), request.Id);
         lead.Notes = request.Notes;
         lead.UpdatedAt = DateTime.UtcNow;

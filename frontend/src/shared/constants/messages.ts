@@ -37,6 +37,17 @@ export const MESSAGES = {
 } as const;
 
 /**
+ * Tab labels for admin lists that separate live records from disabled ones.
+ * "Disabled" rather than "Inactive": it names the action an admin took, and pairs with the
+ * Enable/Disable buttons on the rows themselves.
+ */
+export const STATUS_TABS = {
+  active: "Active",
+  disabled: "Disabled",
+  all: "All",
+} as const;
+
+/**
  * Copy for a request that FAILED to load, used by <ErrorState> and the global API-error toast.
  *
  * Deliberately says nothing about status codes, roles or permissions by name — the reader is a

@@ -1,6 +1,7 @@
 import { getErrorDetail, getErrorStatus } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import { ADMIN_MSG } from "./messages";
+import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAssignAgencyCeoMutation,
@@ -14,7 +15,7 @@ import type { AgencyDto, UserSummary } from "../../shared/api/types";
 import { Link } from "react-router-dom";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, useToast,
+  Select, Skeleton, Stat, Tabs, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 
@@ -40,6 +41,9 @@ export function AgenciesPage() {
   const [ceoName, setCeoName] = useState("");
   const [ceoEmail, setCeoEmail] = useState("");
   // Optional contact details captured at creation so nobody has to chase them later.
+  // Live tenants are the working set; disabled ones stay reachable on their own tab.
+  const statusTabs = useStatusTabs(agencies ?? [], (a) => a.isActive);
+
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [website, setWebsite] = useState("");
@@ -254,6 +258,12 @@ export function AgenciesPage() {
             ) : undefined
           }
         />
+        {/* Disabled tenants are kept out of the working list but stay one click away. */}
+        {agencies && agencies.length > 0 && (
+          <div className="px-5 pt-3">
+            <Tabs value={statusTabs.tab} onChange={statusTabs.setTab} items={statusTabs.items} />
+          </div>
+        )}
         <CardBody className="px-0 pt-0">
           {isLoading ? (
             <div className="px-5 py-4">
@@ -267,9 +277,17 @@ export function AgenciesPage() {
                 description={ADMIN_MSG.agencies.emptyDesc}
               />
             </div>
+          ) : statusTabs.visible.length === 0 ? (
+            <div className="px-5 py-4">
+              <EmptyState
+                icon={<Icon name="building" size={20} />}
+                title={ADMIN_MSG.agencies.noneInTabTitle}
+                description={ADMIN_MSG.agencies.noneInTabDesc}
+              />
+            </div>
           ) : (
             <ul className="divide-y hairline">
-              {agencies.map((a) => (
+              {statusTabs.visible.map((a) => (
                 <li key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3 transition-colors hover:bg-ink-50/50">
                   <div
                     className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${

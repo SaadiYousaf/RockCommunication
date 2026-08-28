@@ -165,6 +165,8 @@ export const ADMIN_MSG = {
 
   // ── Agencies (AgenciesPage) ──────────────────────────────────────────────
   agencies: {
+    noneInTabTitle: "Nothing here",
+    noneInTabDesc: "No agencies with this status. Try another tab.",
     // ── Contact details (optional on create/edit) ─────────────────────────────
     contactDetails: "Contact details",
     fieldPhone: "Phone",

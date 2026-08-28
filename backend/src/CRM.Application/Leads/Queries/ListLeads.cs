@@ -41,9 +41,11 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
     public async Task<PagedLeadsResult> Handle(ListLeadsQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // null == spans agencies (an unscoped SuperAdmin); otherwise confined to one. See TenantScope.
+        var scope = TenantScope.ConfinedTo(_user);
 
-        var q = _db.Leads.AsNoTracking().Where(l => l.AgencyId == _user.AgencyId);
+        var q = _db.Leads.AsNoTracking();
+        if (scope is { } agencyId) q = q.Where(l => l.AgencyId == agencyId);
         // Front-line agents only browse their own assigned leads; managers see the whole
         // call center. (The global filter already limits rows to the caller's call center.)
         if (!AccessScope.SeesAllRecords(_user.Roles))

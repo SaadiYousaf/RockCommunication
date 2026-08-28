@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -30,10 +31,11 @@ public class LeadTimelineHandler : IRequestHandler<LeadTimelineQuery, LeadTimeli
     public async Task<LeadTimelineDto> Handle(LeadTimelineQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.AgencyId is null) throw new ForbiddenAccessException();
+        // null == "spans agencies" (an unscoped SuperAdmin). See TenantScope.
+        var scope = TenantScope.ConfinedTo(_user);
 
         var lead = await _db.Leads.FirstOrDefaultAsync(
-            l => l.Id == request.LeadId && l.AgencyId == _user.AgencyId, ct)
+            l => l.Id == request.LeadId && (scope == null || l.AgencyId == scope), ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
 
         var idStr = lead.Id.ToString();
