@@ -37,6 +37,16 @@ public class Agency : BaseEntity
     /// </summary>
     public int LastSaleNumber { get; set; }
 
+    // ---- Contact details ----------------------------------------------------
+    // Held on the agency because support, finance and compliance all need to reach a real person,
+    // and "who do we call about this agency?" previously lived only in someone's phone.
+    /// <summary>Main contact number for the agency (free-form; formats vary by country).</summary>
+    public string? Phone { get; set; }
+    /// <summary>Postal/registered address, one field — splitting it invites half-filled forms.</summary>
+    public string? Address { get; set; }
+    /// <summary>Public website, if any.</summary>
+    public string? Website { get; set; }
+
     public ICollection<Team> Teams { get; set; } = new List<Team>();
     public ICollection<CallCenter> CallCenters { get; set; } = new List<CallCenter>();
 }
@@ -53,6 +63,23 @@ public class CallCenter : TenantEntity
     public string Name { get; set; } = string.Empty;
     public string? Code { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // ---- Site details -------------------------------------------------------
+    // A BPO runs several physical sites; knowing where one is, who to ring and what hours it keeps
+    // is basic operational information that had nowhere to live.
+    /// <summary>Site contact number.</summary>
+    public string? Phone { get; set; }
+    /// <summary>Street address of the site.</summary>
+    public string? Address { get; set; }
+    /// <summary>City the site operates from — the label people actually use for a centre.</summary>
+    public string? City { get; set; }
+    /// <summary>
+    /// IANA zone (e.g. "Asia/Karachi") the site works in. Sites in different countries keep
+    /// different hours, so attendance and shift reporting need this rather than assuming one clock.
+    /// </summary>
+    public string? TimeZone { get; set; }
+    /// <summary>Number of agent seats, for capacity planning. Null = not recorded.</summary>
+    public int? SeatCapacity { get; set; }
 }
 
 public class Team : TenantEntity

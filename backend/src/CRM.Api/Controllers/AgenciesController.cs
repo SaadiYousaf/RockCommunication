@@ -42,19 +42,23 @@ public class AgenciesController : ControllerBase
         => Ok(await _mediator.Send(new GetAgencyQuery(id), ct));
 
     /// <summary>CEO name + email are mandatory — the Agency CEO is provisioned with the agency.</summary>
-    public record CreateAgencyBody(string Name, string? Code, string CeoName, string CeoEmail);
+    public record CreateAgencyBody(string Name, string? Code, string CeoName, string CeoEmail,
+        string? Phone = null, string? Address = null, string? Website = null);
 
     [HttpPost]
     [HasPermission(Permissions.AgenciesCreate)]
     public async Task<IActionResult> Create([FromBody] CreateAgencyBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        var dto = await _mediator.Send(new CreateAgencyCommand(body.Name, body.Code, body.CeoName, body.CeoEmail), ct);
+        var dto = await _mediator.Send(new CreateAgencyCommand(
+            body.Name, body.Code, body.CeoName, body.CeoEmail,
+            body.Phone, body.Address, body.Website), ct);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
     public record UpdateAgencyBody(string Name, string? Code, bool IsActive, string? SenderEmail = null,
-        string? DisplayCurrency = null, decimal? ExchangeRate = null);
+        string? DisplayCurrency = null, decimal? ExchangeRate = null,
+        string? Phone = null, string? Address = null, string? Website = null);
 
     [HttpPut("{id:guid}")]
     [HasPermission(Permissions.AgenciesManage)]
@@ -62,7 +66,8 @@ public class AgenciesController : ControllerBase
     {
         Guard.AgainstNull(body);
         return Ok(await _mediator.Send(new UpdateAgencyCommand(id, body.Name, body.Code, body.IsActive, body.SenderEmail,
-            body.DisplayCurrency, body.ExchangeRate), ct));
+            body.DisplayCurrency, body.ExchangeRate,
+            body.Phone, body.Address, body.Website), ct));
     }
 
     /// <summary>Upload / replace the agency logo shown in customer emails. Images only, under 2 MB.</summary>

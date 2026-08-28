@@ -13,7 +13,10 @@ namespace CRM.Application.Admin;
 
 public record CallCenterDto(Guid Id, string Name, string? Code, bool IsActive, int LeadCount,
     /// <summary>Owning agency — set so a SuperAdmin's cross-agency list can be grouped/filtered.</summary>
-    Guid AgencyId = default, string? AgencyName = null);
+    Guid AgencyId = default, string? AgencyName = null,
+    // Site details. Optional so existing centres keep working; shown on the detail/edit screens.
+    string? Phone = null, string? Address = null, string? City = null,
+    string? TimeZone = null, int? SeatCapacity = null);
 
 public record ListCallCentersQuery() : IRequest<IReadOnlyList<CallCenterDto>>;
 /// <summary>
@@ -21,8 +24,14 @@ public record ListCallCentersQuery() : IRequest<IReadOnlyList<CallCenterDto>>;
 /// onboarding contract as agency creation. Admin name + email are mandatory. Extra call
 /// center fields can be appended here without changing the handler's control flow.
 /// </summary>
-public record CreateCallCenterCommand(string Name, string? Code, string AdminName, string AdminEmail) : IRequest<CallCenterDto>;
-public record UpdateCallCenterCommand(Guid Id, string Name, string? Code, bool IsActive) : IRequest<CallCenterDto>;
+public record CreateCallCenterCommand(
+    string Name, string? Code, string AdminName, string AdminEmail,
+    string? Phone = null, string? Address = null, string? City = null,
+    string? TimeZone = null, int? SeatCapacity = null) : IRequest<CallCenterDto>;
+public record UpdateCallCenterCommand(
+    Guid Id, string Name, string? Code, bool IsActive,
+    string? Phone = null, string? Address = null, string? City = null,
+    string? TimeZone = null, int? SeatCapacity = null) : IRequest<CallCenterDto>;
 
 public class CreateCallCenterValidator : AbstractValidator<CreateCallCenterCommand>
 {
@@ -33,6 +42,13 @@ public class CreateCallCenterValidator : AbstractValidator<CreateCallCenterComma
             .WithMessage("A Call Center Admin name is required.");
         RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().MaximumLength(200)
             .WithMessage("A valid Call Center Admin email is required.");
+        // Upper bounds only — a blank optional field must stay valid.
+        RuleFor(x => x.Phone).MaximumLength(40);
+        RuleFor(x => x.Address).MaximumLength(300);
+        RuleFor(x => x.City).MaximumLength(120);
+        RuleFor(x => x.TimeZone).MaximumLength(60);
+        RuleFor(x => x.SeatCapacity).GreaterThan(0).When(x => x.SeatCapacity is not null)
+            .WithMessage("Seats must be a positive number.");
     }
 }
 
@@ -91,7 +107,8 @@ public class CallCenterHandler :
             .Select(c => new CallCenterDto(
                 c.Id, c.Name, c.Code, c.IsActive,
                 _db.Leads.Count(l => l.CallCenterId == c.Id),
-                c.AgencyId, null))
+                c.AgencyId, null,
+                c.Phone, c.Address, c.City, c.TimeZone, c.SeatCapacity))
             .ToListAsync(ct);
 
         // Resolve agency names only for the cross-agency case, where the UI needs to disambiguate
@@ -126,7 +143,12 @@ public class CallCenterHandler :
             AgencyId = _user.AgencyId.Value,
             Name = name,
             Code = request.Code?.Trim(),
-            IsActive = true
+            IsActive = true,
+            Phone = Blank(request.Phone),
+            Address = Blank(request.Address),
+            City = Blank(request.City),
+            TimeZone = Blank(request.TimeZone),
+            SeatCapacity = request.SeatCapacity,
         };
         _db.CallCenters.Add(cc);
         await _db.SaveChangesAsync(ct);
@@ -144,8 +166,12 @@ public class CallCenterHandler :
             AgencyName: agencyName,
             CallCenterName: cc.Name), ct);
 
-        return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, 0);
+        return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, 0, cc.AgencyId, agencyName,
+            cc.Phone, cc.Address, cc.City, cc.TimeZone, cc.SeatCapacity);
     }
+
+    /// <summary>Treat an all-whitespace optional field as "not provided" rather than storing "  ".</summary>
+    private static string? Blank(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
 
     public async Task<CallCenterDto> Handle(UpdateCallCenterCommand request, CancellationToken ct)
     {
@@ -160,6 +186,11 @@ public class CallCenterHandler :
         cc.Name = request.Name.Trim();
         cc.Code = request.Code?.Trim();
         cc.IsActive = request.IsActive;
+        cc.Phone = Blank(request.Phone);
+        cc.Address = Blank(request.Address);
+        cc.City = Blank(request.City);
+        cc.TimeZone = Blank(request.TimeZone);
+        cc.SeatCapacity = request.SeatCapacity;
         await _db.SaveChangesAsync(ct);
 
         // Disabling a call center force-logs-out every agent pinned to it (login/refresh are
@@ -168,6 +199,7 @@ public class CallCenterHandler :
             await _jwt.RevokeAllForCallCenterAsync(cc.Id, ct);
 
         var leads = await _db.Leads.CountAsync(l => l.CallCenterId == cc.Id, ct);
-        return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads);
+        return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads, cc.AgencyId, null,
+            cc.Phone, cc.Address, cc.City, cc.TimeZone, cc.SeatCapacity);
     }
 }

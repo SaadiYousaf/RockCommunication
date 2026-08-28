@@ -479,11 +479,19 @@ export const baseApi = createApi({
       query: () => "/api/admin/call-centers",
       providesTags: ["CallCenters"],
     }),
-    createCallCenter: b.mutation<CallCenterDto, { name: string; code?: string | null; adminName: string; adminEmail: string }>({
+    createCallCenter: b.mutation<CallCenterDto, {
+      name: string; code?: string | null; adminName: string; adminEmail: string;
+      phone?: string | null; address?: string | null; city?: string | null;
+      timeZone?: string | null; seatCapacity?: number | null;
+    }>({
       query: (body) => ({ url: "/api/admin/call-centers", method: "POST", body }),
       invalidatesTags: ["CallCenters"],
     }),
-    updateCallCenter: b.mutation<CallCenterDto, { id: string; name: string; code?: string | null; isActive: boolean }>({
+    updateCallCenter: b.mutation<CallCenterDto, {
+      id: string; name: string; code?: string | null; isActive: boolean;
+      phone?: string | null; address?: string | null; city?: string | null;
+      timeZone?: string | null; seatCapacity?: number | null;
+    }>({
       query: ({ id, ...body }) => ({ url: `/api/admin/call-centers/${id}`, method: "PUT", body }),
       invalidatesTags: ["CallCenters"],
     }),
@@ -820,7 +828,10 @@ export const baseApi = createApi({
       query: (id) => `/api/agencies/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Agencies", id }],
     }),
-    createAgency: b.mutation<AgencyDto, { name: string; code?: string | null; ceoName: string; ceoEmail: string }>({
+    createAgency: b.mutation<AgencyDto, {
+      name: string; code?: string | null; ceoName: string; ceoEmail: string;
+      phone?: string | null; address?: string | null; website?: string | null;
+    }>({
       query: (body) => ({ url: "/api/agencies", method: "POST", body }),
       invalidatesTags: ["Agencies"],
     }),
@@ -860,7 +871,11 @@ export const baseApi = createApi({
       query: (agencyId) => `/api/agencies/${agencyId}/call-centers`,
       providesTags: ["CallCenters"],
     }),
-    createCallCenterInAgency: b.mutation<CallCenterDto, { agencyId: string; name: string; code?: string | null; adminName: string; adminEmail: string }>({
+    createCallCenterInAgency: b.mutation<CallCenterDto, {
+      agencyId: string; name: string; code?: string | null; adminName: string; adminEmail: string;
+      phone?: string | null; address?: string | null; city?: string | null;
+      timeZone?: string | null; seatCapacity?: number | null;
+    }>({
       query: ({ agencyId, ...body }) => ({ url: `/api/agencies/${agencyId}/call-centers`, method: "POST", body }),
       invalidatesTags: ["CallCenters", "Agencies"],
     }),

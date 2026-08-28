@@ -93,22 +93,30 @@ public class AdminController : ControllerBase
         => Ok(await _mediator.Send(new ListCallCentersQuery(), ct));
 
     /// <summary>Admin name + email are mandatory — the Call Center Admin is provisioned with the call center.</summary>
-    public record CallCenterBody(string Name, string? Code, string AdminName, string AdminEmail);
+    public record CallCenterBody(string Name, string? Code, string AdminName, string AdminEmail,
+        string? Phone = null, string? Address = null, string? City = null,
+        string? TimeZone = null, int? SeatCapacity = null);
     [HttpPost("call-centers")]
     [HasPermission(Permissions.CallCentersManage)]
     public async Task<IActionResult> CreateCallCenter([FromBody] CallCenterBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new CreateCallCenterCommand(body.Name, body.Code, body.AdminName, body.AdminEmail), ct));
+        return Ok(await _mediator.Send(new CreateCallCenterCommand(
+            body.Name, body.Code, body.AdminName, body.AdminEmail,
+            body.Phone, body.Address, body.City, body.TimeZone, body.SeatCapacity), ct));
     }
 
-    public record UpdateCallCenterBody(string Name, string? Code, bool IsActive);
+    public record UpdateCallCenterBody(string Name, string? Code, bool IsActive,
+        string? Phone = null, string? Address = null, string? City = null,
+        string? TimeZone = null, int? SeatCapacity = null);
     [HttpPut("call-centers/{id:guid}")]
     [HasPermission(Permissions.CallCentersManage)]
     public async Task<IActionResult> UpdateCallCenter(Guid id, [FromBody] UpdateCallCenterBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new UpdateCallCenterCommand(id, body.Name, body.Code, body.IsActive), ct));
+        return Ok(await _mediator.Send(new UpdateCallCenterCommand(
+            id, body.Name, body.Code, body.IsActive,
+            body.Phone, body.Address, body.City, body.TimeZone, body.SeatCapacity), ct));
     }
 
     public record SetUserCallCenterBody(Guid? CallCenterId);

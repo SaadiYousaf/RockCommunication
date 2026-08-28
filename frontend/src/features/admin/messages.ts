@@ -165,6 +165,12 @@ export const ADMIN_MSG = {
 
   // ── Agencies (AgenciesPage) ──────────────────────────────────────────────
   agencies: {
+    // ── Contact details (optional on create/edit) ─────────────────────────────
+    contactDetails: "Contact details",
+    fieldPhone: "Phone",
+    fieldAddress: "Address",
+    fieldWebsite: "Website",
+
     ceoRequiredTitle: "CEO required",
     ceoRequiredDesc: "An Agency CEO name and email are required.",
     created: "Agency created",
@@ -238,6 +244,15 @@ export const ADMIN_MSG = {
 
   // ── Call centers list (CallCentersPage) ──────────────────────────────────
   callCenters: {
+    // ── Site details (optional on create/edit) ────────────────────────────────
+    siteDetails: "Site details",
+    fieldCity: "City",
+    fieldPhone: "Phone",
+    fieldAddress: "Address",
+    fieldTimeZone: "Time zone",
+    fieldSeats: "Agent seats",
+    seatsInvalid: "Agent seats must be a positive number.",
+
     adminRequiredTitle: "Admin required",
     adminRequiredDesc: "A Call Center Admin name and email are required.",
     agencyRequiredTitle: "Agency required",

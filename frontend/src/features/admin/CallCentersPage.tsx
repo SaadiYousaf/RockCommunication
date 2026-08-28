@@ -103,18 +103,28 @@ export function CallCentersPage() {
 
   const [editing, setEditing] = useState<CallCenterDto | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "", adminName: "", adminEmail: "" });
+  const [form, setForm] = useState({ name: "", code: "", adminName: "", adminEmail: "", phone: "", address: "", city: "", timeZone: "", seatCapacity: "" });
 
   async function submitNew(e: React.FormEvent) {
     e.preventDefault();
     try {
       if (!form.adminName.trim() || !form.adminEmail.trim()) { toast.error(ADMIN_MSG.callCenters.adminRequiredTitle, ADMIN_MSG.callCenters.adminRequiredDesc); return; }
       if (isSuperAdmin && !agencyId) { toast.error(ADMIN_MSG.callCenters.agencyRequiredTitle, ADMIN_MSG.callCenters.agencyRequiredDesc); return; }
-      const body = { name: form.name.trim(), code: form.code.trim() || null, adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim() };
+      const seats = form.seatCapacity.trim() ? Number(form.seatCapacity.trim()) : null;
+      if (seats !== null && (!Number.isFinite(seats) || seats <= 0)) {
+        toast.error(ADMIN_MSG.callCenters.seatsInvalid); return;
+      }
+      const body = {
+        name: form.name.trim(), code: form.code.trim() || null,
+        adminName: form.adminName.trim(), adminEmail: form.adminEmail.trim(),
+        phone: form.phone.trim() || null, address: form.address.trim() || null,
+        city: form.city.trim() || null, timeZone: form.timeZone.trim() || null,
+        seatCapacity: seats,
+      };
       if (isSuperAdmin) await createCcInAgency({ agencyId, ...body }).unwrap();
       else await createCc(body).unwrap();
       toast.success(ADMIN_MSG.callCenters.created, ADMIN_MSG.callCenters.createdDesc(form.name));
-      setShowNew(false); setForm({ name: "", code: "", adminName: "", adminEmail: "" });
+      setShowNew(false); setForm({ name: "", code: "", adminName: "", adminEmail: "", phone: "", address: "", city: "", timeZone: "", seatCapacity: "" });
     } catch (err: unknown) {
       toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? ADMIN_MSG.callCenters.createFailedDesc);
     }
@@ -269,6 +279,28 @@ export function CallCentersPage() {
               <Input label="Admin email" type="email" required value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
             </div>
             <p className="text-xs text-ink-500 mt-2">The admin is created automatically and emailed a temporary password — they set their own on first login.</p>
+          </div>
+
+          {/* Site details — all optional. A BPO runs several physical sites, and "where is it, who
+              do we ring, what hours does it keep" previously had nowhere to live. */}
+          <div className="border-t border-ink-100 pt-3 mt-1">
+            <div className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">
+              {ADMIN_MSG.callCenters.siteDetails}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label={ADMIN_MSG.callCenters.fieldCity} placeholder="e.g. Lahore"
+                value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              <Input label={ADMIN_MSG.callCenters.fieldPhone} placeholder="Optional"
+                value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <Input label={ADMIN_MSG.callCenters.fieldTimeZone} placeholder="e.g. Asia/Karachi"
+                value={form.timeZone} onChange={(e) => setForm({ ...form, timeZone: e.target.value })} />
+              <Input label={ADMIN_MSG.callCenters.fieldSeats} type="number" min={1} placeholder="Optional"
+                value={form.seatCapacity} onChange={(e) => setForm({ ...form, seatCapacity: e.target.value })} />
+            </div>
+            <div className="mt-3">
+              <Input label={ADMIN_MSG.callCenters.fieldAddress} placeholder="Optional"
+                value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>

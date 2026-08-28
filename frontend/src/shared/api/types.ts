@@ -39,6 +39,14 @@ export interface CallCenterDto {
   agencyId?: string;
   /** Owning agency's name, only populated for a SuperAdmin's cross-agency list. */
   agencyName?: string | null;
+  // Site details — all optional; older centres predate them.
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  /** IANA zone the site works in, e.g. "Asia/Karachi". */
+  timeZone?: string | null;
+  /** Agent seats at this site, for capacity planning. */
+  seatCapacity?: number | null;
 }
 
 /** A stored insurance / carrier portal login (Confidential vault, Admin/SuperAdmin only). */
@@ -426,6 +434,10 @@ export interface AgencyDto {
   senderEmail: string | null;
   /** True when a logo has been uploaded (fetch from /api/agencies/{id}/logo). */
   hasLogo: boolean;
+  /** Contact details — all optional. */
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
   /** Currency the UI formats sale money in ("USD" / "PKR"). */
   displayCurrency: string;
   /** Units of displayCurrency per 1 USD (1 = no conversion). */

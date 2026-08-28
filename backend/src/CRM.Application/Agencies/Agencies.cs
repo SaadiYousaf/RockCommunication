@@ -27,7 +27,9 @@ public record AgencyDto(
     /// <summary>Currency the UI formats sale money in ("USD" / "PKR").</summary>
     string DisplayCurrency = "USD",
     /// <summary>Units of DisplayCurrency per 1 USD (1 = no conversion).</summary>
-    decimal ExchangeRate = 1m);
+    decimal ExchangeRate = 1m,
+    // Contact details — who support, finance and compliance actually call.
+    string? Phone = null, string? Address = null, string? Website = null);
 
 public record ListAgenciesQuery(bool IncludeInactive = false) : IRequest<IReadOnlyList<AgencyDto>>;
 public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
@@ -36,9 +38,12 @@ public record GetAgencyQuery(Guid Id) : IRequest<AgencyDto>;
 /// mandatory: an agency may never exist without an owner. Additional agency fields can be
 /// appended to this record without changing the handler's control flow.
 /// </summary>
-public record CreateAgencyCommand(string Name, string? Code, string CeoName, string CeoEmail) : IRequest<AgencyDto>;
+public record CreateAgencyCommand(
+    string Name, string? Code, string CeoName, string CeoEmail,
+    string? Phone = null, string? Address = null, string? Website = null) : IRequest<AgencyDto>;
 public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsActive, string? SenderEmail = null,
-    string? DisplayCurrency = null, decimal? ExchangeRate = null) : IRequest<AgencyDto>;
+    string? DisplayCurrency = null, decimal? ExchangeRate = null,
+    string? Phone = null, string? Address = null, string? Website = null) : IRequest<AgencyDto>;
 public record AssignCeoCommand(Guid AgencyId, Guid UserId) : IRequest<AgencyDto>;
 /// <summary>Point the agency's logo at an already-stored file key (uploaded via the controller).</summary>
 public record SetAgencyLogoCommand(Guid Id, string LogoKey) : IRequest<Unit>;
@@ -152,7 +157,10 @@ public class AgenciesHandler :
         {
             Name = name,
             Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim(),
-            IsActive = true
+            IsActive = true,
+            Phone = Blank(request.Phone),
+            Address = Blank(request.Address),
+            Website = Blank(request.Website),
         };
         _db.Agencies.Add(agency);
         // Every agency needs baseline dispositions or its agents can't wrap up calls.
@@ -184,6 +192,9 @@ public class AgenciesHandler :
         agency.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim();
         agency.IsActive = request.IsActive;
         agency.SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? null : request.SenderEmail!.Trim();
+        agency.Phone = Blank(request.Phone);
+        agency.Address = Blank(request.Address);
+        agency.Website = Blank(request.Website);
         if (!string.IsNullOrWhiteSpace(request.DisplayCurrency))
             agency.DisplayCurrency = request.DisplayCurrency!.Trim().ToUpperInvariant();
         // A non-positive rate would zero out or invert every figure on screen — ignore it.
@@ -262,8 +273,12 @@ public class AgenciesHandler :
             ceo?.Id, ceo?.UserName,
             users.Count, a.CreatedAt,
             a.SenderEmail, !string.IsNullOrWhiteSpace(a.LogoKey),
-            a.DisplayCurrency, a.ExchangeRate);
+            a.DisplayCurrency, a.ExchangeRate,
+            a.Phone, a.Address, a.Website);
     }
+
+    /// <summary>Treat an all-whitespace optional field as "not provided" rather than storing "  ".</summary>
+    private static string? Blank(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
 
     public async Task<Unit> Handle(SetAgencyLogoCommand request, CancellationToken ct)
     {

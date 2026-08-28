@@ -39,6 +39,10 @@ export function AgenciesPage() {
   const [code, setCode] = useState("");
   const [ceoName, setCeoName] = useState("");
   const [ceoEmail, setCeoEmail] = useState("");
+  // Optional contact details captured at creation so nobody has to chase them later.
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [website, setWebsite] = useState("");
 
   const [editing, setEditing] = useState<AgencyDto | null>(null);
   const [editName, setEditName] = useState("");
@@ -63,9 +67,13 @@ export function AgenciesPage() {
     if (!trimmed) return;
     if (!ceoName.trim() || !ceoEmail.trim()) { toast.error(ADMIN_MSG.agencies.ceoRequiredTitle, ADMIN_MSG.agencies.ceoRequiredDesc); return; }
     try {
-      await createAgency({ name: trimmed, code: code.trim() || null, ceoName: ceoName.trim(), ceoEmail: ceoEmail.trim() }).unwrap();
+      await createAgency({
+        name: trimmed, code: code.trim() || null,
+        ceoName: ceoName.trim(), ceoEmail: ceoEmail.trim(),
+        phone: phone.trim() || null, address: address.trim() || null, website: website.trim() || null,
+      }).unwrap();
       toast.success(ADMIN_MSG.agencies.created, ADMIN_MSG.agencies.createdDesc(trimmed));
-      setName(""); setCode(""); setCeoName(""); setCeoEmail("");
+      setName(""); setCode(""); setCeoName(""); setCeoEmail(""); setPhone(""); setAddress(""); setWebsite("");
     } catch (err: unknown) {
       toast.error(ADMIN_MSG.common.createFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
@@ -197,6 +205,26 @@ export function AgenciesPage() {
                 containerClassName="flex-1 min-w-[220px]" />
             </div>
             <p className="text-xs text-ink-500">The CEO is created automatically and emailed a temporary password — they set their own on first login.</p>
+
+            {/* Contact details — optional. Support, finance and compliance all need a way to reach
+                an agency; before this it lived only in someone's phone. */}
+            <div className="border-t border-ink-100 pt-3 mt-1">
+              <div className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">
+                {ADMIN_MSG.agencies.contactDetails}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Input label={ADMIN_MSG.agencies.fieldPhone} leftIcon={<Icon name="phone" size={14} />}
+                  placeholder="Optional" value={phone} onChange={(e) => setPhone(e.target.value)}
+                  containerClassName="flex-1 min-w-[200px]" />
+                <Input label={ADMIN_MSG.agencies.fieldWebsite} leftIcon={<Icon name="globe" size={14} />}
+                  placeholder="Optional" value={website} onChange={(e) => setWebsite(e.target.value)}
+                  containerClassName="flex-1 min-w-[200px]" />
+              </div>
+              <div className="mt-2">
+                <Input label={ADMIN_MSG.agencies.fieldAddress}
+                  placeholder="Optional" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+            </div>
             <div className="flex justify-end">
               <Button leftIcon={<Icon name="plus" size={14} />} loading={creating}>Create agency + invite CEO</Button>
             </div>
