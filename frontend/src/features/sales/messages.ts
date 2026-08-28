@@ -8,6 +8,16 @@
 export const SALES_MSG = {
   /** Lowercase noun for the "Couldn't load <x>" error state. */
   resourceName: "sales",
+
+  /**
+   * Shown when a sale's banking result came from the offline simulator instead of the live Lyons
+   * service. Deliberately blunt: staff were treating a simulated "cleared" as a real bank
+   * verification, which is exactly the mistake that puts money at risk.
+   */
+  simulatedBankCheckTitle: "Simulated result — not a real bank check.",
+  simulatedBankCheckBody:
+    "This result was generated from the routing and account digits, not verified with the bank. " +
+    "Don't rely on it to confirm that an account is good.",
   // Shared across sales pages
   exportReadyTitle: "Export ready",
   rowsDownloaded: (count: number) => `${count} rows downloaded.`,

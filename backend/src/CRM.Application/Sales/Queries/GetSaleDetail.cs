@@ -1,4 +1,5 @@
 using CRM.Application.Common.Exceptions;
+using CRM.Application.Common.Integrations;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
@@ -34,7 +35,12 @@ public record SaleDetailDto(
     decimal TotalCommission,
     IReadOnlyList<SaleCommissionLineDto> Commissions,
     // Timeline
-    DateTime SoldAt, DateTime? ValidatedAt, DateTime? FundedAt, DateTime CreatedAt);
+    DateTime SoldAt, DateTime? ValidatedAt, DateTime? FundedAt, DateTime CreatedAt,
+    // True when this sale's banking result came from the OFFLINE SIMULATOR rather than the live
+    // Lyons service. Derived per-sale from the stored reference, not from current configuration, so
+    // sales validated while the simulator was active stay correctly marked forever after the real
+    // service is connected. The UI must not present a simulated result as a real bank check.
+    bool BankValidationSimulated = false);
 
 public record GetSaleDetailQuery(Guid Id) : IRequest<SaleDetailDto>;
 
@@ -112,6 +118,7 @@ public class GetSaleDetailHandler : IRequestHandler<GetSaleDetailQuery, SaleDeta
             sale.IsInternalSale, sale.InternalSaleReason,
             commissions.Sum(c => c.Amount),
             commissions,
-            sale.SoldAt, sale.ValidatedAt, sale.FundedAt, sale.CreatedAt);
+            sale.SoldAt, sale.ValidatedAt, sale.FundedAt, sale.CreatedAt,
+            BankValidationSimulated: LyonsReferences.IsSimulated(sale.LyonsReference));
     }
 }

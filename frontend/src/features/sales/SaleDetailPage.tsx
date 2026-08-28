@@ -169,6 +169,17 @@ export function SaleDetailPage() {
             }
           />
           <CardBody className="space-y-1">
+            {/* A simulated result must never be mistaken for a real bank check — it is produced
+                offline from the routing/account digits, not by Lyons. */}
+            {sale.bankValidationSimulated && (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <Icon name="warning" size={14} className="mt-0.5 shrink-0 text-amber-700" />
+                <div className="text-xs leading-relaxed text-amber-900">
+                  <span className="font-semibold">{SALES_MSG.simulatedBankCheckTitle}</span>{" "}
+                  {SALES_MSG.simulatedBankCheckBody}
+                </div>
+              </div>
+            )}
             <Field label="Banking code" value={<Badge tone={b.tone} variant="soft" dot>{b.label}</Badge>} />
             <Field label="Bank" value={sale.bankName ?? "—"} />
             <Field label="Routing #" value={sale.bankRoutingNumber ?? "—"} mono />

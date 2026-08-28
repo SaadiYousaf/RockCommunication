@@ -30,6 +30,22 @@ public record LyonsValidationResult(
     string? Reason);
 
 /// <summary>
+/// Identifies where a stored banking result actually came from.
+///
+/// The offline simulator stamps its references with a fixed prefix. Reading that back per-sale —
+/// rather than looking at today's configuration — means a sale validated while the simulator was
+/// running stays correctly labelled even after the live Lyons service is connected, so historical
+/// records never silently gain the authority of a real bank check.
+/// </summary>
+public static class LyonsReferences
+{
+    public const string SimulatedPrefix = "LYONS-STUB-";
+
+    public static bool IsSimulated(string? reference) =>
+        reference is not null && reference.StartsWith(SimulatedPrefix, StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>
 /// Lyons Commercial Data bank-account validation. Verifies a routing/account
 /// number pair and returns the banking code that gates sale submission, so the
 /// code is derived from a real check rather than entered by hand.

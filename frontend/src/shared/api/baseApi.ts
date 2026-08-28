@@ -1413,6 +1413,8 @@ export interface SaleDetail {
   declineReason: string | null;
   bankingCode: number; bankRoutingNumber: string | null; bankAccountLast4: string | null;
   bankName: string | null; lyonsReference: string | null; bankingNote: string | null; hasRecording: boolean;
+  /** True when the banking result came from the offline simulator, not the live Lyons service. */
+  bankValidationSimulated: boolean;
   isInternalSale: boolean; internalSaleReason: string | null;
   totalCommission: number; commissions: SaleCommissionLine[];
   soldAt: string; validatedAt: string | null; fundedAt: string | null; createdAt: string;

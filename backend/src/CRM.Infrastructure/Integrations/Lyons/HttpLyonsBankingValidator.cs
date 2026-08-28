@@ -34,7 +34,8 @@ public class StubLyonsBankingValidator : ILyonsBankingValidator
         Guard.AgainstNull(request);
         var routing = new string((request.RoutingNumber ?? "").Where(char.IsDigit).ToArray());
         var account = new string((request.AccountNumber ?? "").Where(char.IsDigit).ToArray());
-        var reference = $"LYONS-STUB-{Guid.NewGuid():N}".Substring(0, 18);
+        // The prefix is the marker that tells the rest of the app this result is SIMULATED.
+        var reference = $"{LyonsReferences.SimulatedPrefix}{Guid.NewGuid():N}".Substring(0, 18);
 
         if (!IsValidAba(routing))
             return Task.FromResult(new LyonsValidationResult(BankValidationStatus.Blocked, 0, null, reference,
