@@ -26,7 +26,8 @@ public class DatabaseBackupTests : IClassFixture<CrmWebAppFactory>
             {
                 ["Backups:Enabled"] = "true",
                 ["Backups:Directory"] = backupDir,
-                ["Backups:Keep"] = "3",
+                ["Backups:RecentHours"] = "48",
+                ["Backups:DailyDays"] = "30",
             })
             .Build();
 
@@ -64,28 +65,59 @@ public class DatabaseBackupTests : IClassFixture<CrmWebAppFactory>
     }
 
     [Fact]
-    public async Task Backup_prunes_old_snapshots_and_keeps_the_newest()
+    public async Task Retention_keeps_recent_snapshots_one_per_day_and_drops_the_rest()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"crm-backup-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
 
-        // Five stale snapshots, deliberately older than anything the run will create.
-        for (var i = 0; i < 5; i++)
-        {
-            var stale = Path.Combine(dir, $"crm-2000010{i}-000000.db");
-            await File.WriteAllTextAsync(stale, "old");
-            File.SetCreationTimeUtc(stale, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(i));
-        }
+        var now = DateTime.UtcNow;
+        string Name(DateTime t) => $"crm-{t:yyyyMMdd-HHmmss}.db";
+        async Task Seed(DateTime t) => await File.WriteAllTextAsync(Path.Combine(dir, Name(t)), "x");
 
-        var service = BuildService(dir);          // Keep = 3
+        // Inside the 48h window: every one of these must survive (fine-grained recent recovery).
+        var recent = new[] { now.AddHours(-2), now.AddHours(-8), now.AddHours(-20), now.AddHours(-40) };
+        foreach (var t in recent) await Seed(t);
+
+        // 10 days ago, three on the SAME day: only the newest of them should survive.
+        var oldDay = now.AddDays(-10).Date.AddHours(9);
+        await Seed(oldDay);
+        await Seed(oldDay.AddHours(5));
+        var newestOnOldDay = oldDay.AddHours(11);
+        await Seed(newestOnOldDay);
+
+        // Older than the 30-day daily window: must be dropped.
+        var ancient = now.AddDays(-100).Date.AddHours(3);
+        await Seed(ancient);
+
+        // A hand-made pre-migration copy — must NEVER be pruned, however old.
+        var manual = Path.Combine(dir, "crm-precallcenter-20260723-223612.db");
+        await File.WriteAllTextAsync(manual, "manual");
+
+        // Keep = irrelevant now; the service is configured by RecentHours / DailyDays.
+        var service = BuildService(dir);
         await service.RunOnceAsync(CancellationToken.None);
 
-        var remaining = Directory.GetFiles(dir, "crm-*.db");
-        Assert.Equal(3, remaining.Length);
+        var left = Directory.GetFiles(dir).Select(Path.GetFileName).ToHashSet()!;
 
-        // The one just written is the newest, so it must have survived the prune.
-        Assert.Contains(remaining, f => !Path.GetFileName(f).StartsWith("crm-2000", StringComparison.Ordinal));
+        foreach (var t in recent)
+            Assert.Contains(Name(t), left);                       // all recent kept
+
+        Assert.Contains(Name(newestOnOldDay), left);              // newest of that day kept
+        Assert.DoesNotContain(Name(oldDay), left);                // its earlier siblings pruned
+        Assert.DoesNotContain(Name(oldDay.AddHours(5)), left);
+
+        Assert.DoesNotContain(Name(ancient), left);               // beyond the daily window
+        Assert.Contains("crm-precallcenter-20260723-223612.db", left);  // manual copy untouched
 
         Directory.Delete(dir, recursive: true);
     }
+
+    [Theory]
+    [InlineData("crm-20260828-174140.db", true)]
+    [InlineData("crm-precallcenter-20260723-223612.db", false)]  // hand-made — never ours to prune
+    [InlineData("crm-preintake-20260724-041042.db", false)]
+    [InlineData("something-else.db", false)]
+    [InlineData("crm-20261332-999999.db", false)]                // well-formed but not a real date
+    public void Only_snapshots_this_service_wrote_are_prunable(string fileName, bool isOurs)
+        => Assert.Equal(isOurs, CRM.Infrastructure.BackgroundJobs.DatabaseBackupService.TakenAt(fileName) is not null);
 }

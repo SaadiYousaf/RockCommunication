@@ -44,8 +44,18 @@ public class DatabaseBackupService : BackgroundService
     private TimeSpan Interval =>
         TimeSpan.FromHours(Math.Clamp(_config.GetValue("Backups:IntervalHours", 6), 1, 24));
 
-    /// <summary>How many snapshots to keep. Older ones are pruned oldest-first.</summary>
-    private int Keep => Math.Clamp(_config.GetValue("Backups:Keep", 14), 1, 200);
+    /// <summary>
+    /// Keep EVERY snapshot from this window, so a recent mistake can be undone at 6-hourly
+    /// granularity. Default 48h.
+    /// </summary>
+    private TimeSpan RecentWindow =>
+        TimeSpan.FromHours(Math.Clamp(_config.GetValue("Backups:RecentHours", 48), 6, 720));
+
+    /// <summary>
+    /// Beyond that window keep ONE snapshot per calendar day, for this many days. Default 30 —
+    /// corruption is often noticed weeks later, and a 3-day history would already be gone.
+    /// </summary>
+    private int DailyDays => Math.Clamp(_config.GetValue("Backups:DailyDays", 30), 1, 3650);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -117,30 +127,71 @@ public class DatabaseBackupService : BackgroundService
         return target;
     }
 
-    /// <summary>Keeps the newest <see cref="Keep"/> snapshots and deletes the rest.</summary>
+    /// <summary>
+    /// Tiered retention, so recovery is possible from both "an hour ago" and "three weeks ago":
+    ///   • every snapshot inside <see cref="RecentWindow"/> (fine-grained, recent mistakes)
+    ///   • then the newest ONE PER DAY for <see cref="DailyDays"/> days (long look-back)
+    ///   • everything else is deleted.
+    ///
+    /// Only files this service created (crm-yyyyMMdd-HHmmss.db) are ever considered. Hand-made
+    /// safety copies such as crm-precallcenter-*.db are deliberately left alone — they were taken
+    /// before risky migrations and must not vanish because they aged out of a rolling window.
+    /// </summary>
     private void Prune(string dir)
     {
         try
         {
-            var stale = new DirectoryInfo(dir)
-                .GetFiles("crm-*.db")
-                .OrderByDescending(f => f.CreationTimeUtc)
-                .Skip(Keep)
+            var mine = new DirectoryInfo(dir).GetFiles("crm-*.db")
+                .Select(f => (File: f, Taken: TakenAt(f.Name)))
+                .Where(x => x.Taken is not null)          // skips the hand-made copies
+                .Select(x => (x.File, Taken: x.Taken!.Value))
+                .OrderByDescending(x => x.Taken)
                 .ToList();
 
-            foreach (var f in stale)
+            var now = DateTime.UtcNow;
+            var cutoff = now.Date.AddDays(-DailyDays);
+            var keep = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var x in mine)
+                if (now - x.Taken <= RecentWindow) keep.Add(x.File.FullName);
+
+            foreach (var day in mine.GroupBy(x => x.Taken.Date))
+                if (day.Key >= cutoff)
+                    keep.Add(day.OrderByDescending(x => x.Taken).First().File.FullName);
+
+            var stale = mine.Where(x => !keep.Contains(x.File.FullName)).ToList();
+            foreach (var x in stale)
             {
-                try { f.Delete(); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Could not prune old backup {Name}", f.Name); }
+                try { x.File.Delete(); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Could not prune old backup {Name}", x.File.Name); }
             }
+
             if (stale.Count > 0)
-                _logger.LogInformation("Pruned {Count} old backup(s), keeping the newest {Keep}.", stale.Count, Keep);
+                _logger.LogInformation(
+                    "Pruned {Count} snapshot(s); kept {Kept} (all within {Hours}h, then one per day for {Days} days).",
+                    stale.Count, keep.Count, (int)RecentWindow.TotalHours, DailyDays);
         }
         catch (Exception ex)
         {
-            // Pruning is housekeeping — a failure here must not fail the backup that just succeeded.
+            // Housekeeping only — a prune failure must never fail the backup that just succeeded.
             _logger.LogWarning(ex, "Backup pruning failed.");
         }
+    }
+
+    /// <summary>
+    /// The timestamp encoded in a snapshot this service wrote, or null for any other file. Parsing
+    /// the NAME rather than trusting the filesystem keeps pruning correct even if a copy or restore
+    /// rewrites creation times.
+    /// </summary>
+    public static DateTime? TakenAt(string fileName)
+    {
+        // crm-yyyyMMdd-HHmmss.db
+        var m = System.Text.RegularExpressions.Regex.Match(fileName, @"^crm-(\d{8}-\d{6})\.db$");
+        if (!m.Success) return null;
+        return DateTime.TryParseExact(m.Groups[1].Value, "yyyyMMdd-HHmmss",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal,
+            out var dt) ? dt : null;
     }
 
     /// <summary>The on-disk path of the live database, read from the active connection string.</summary>
