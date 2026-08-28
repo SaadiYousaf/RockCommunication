@@ -1,6 +1,7 @@
 using CRM.Application.CallCenter;
 using CRM.Domain.Common;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,10 @@ namespace CRM.Api.Controllers;
 [ApiController]
 [Route("api/webhooks/dialer")]
 [EnableRateLimiting("webhook")]   // 600/min/IP — prevents upstream provider bursts from DoSing us.
+// The dialer authenticates with a mandatory HMAC signature over the raw body (verified below), not
+// with a bearer token, so it must opt out of the app-wide fail-closed fallback policy. Removing
+// this does not "secure" the endpoint — it breaks every inbound call event with a 401.
+[AllowAnonymous]
 public class DialerWebhookController : ControllerBase
 {
     private readonly IMediator _mediator;

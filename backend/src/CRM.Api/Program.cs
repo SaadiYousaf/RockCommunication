@@ -39,6 +39,16 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationP
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
     PermissionHandler>();
 
+// FAIL CLOSED. Without a fallback policy an endpoint with NO auth attribute is fully ANONYMOUS, so
+// one forgotten [Authorize] on a future controller silently publishes it to the internet. This makes
+// "authenticated" the default and forces an explicit [AllowAnonymous] to opt out — the eight
+// genuinely public auth endpoints, the HMAC-signed dialer webhook, the public lead-capture endpoint
+// and the two health checks each carry one.
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -255,16 +265,19 @@ if (builder.Configuration.GetValue("BackgroundJobs:Provider", "InProcess")
         "cadence-runner", j => j.RunAsync(CancellationToken.None), Hangfire.Cron.Minutely());
 }
 // Liveness: is the process up? No dependency checks, so a transient DB blip never triggers a restart loop.
+// .AllowAnonymous() is REQUIRED now that a fail-closed FallbackPolicy is in force —
+// without it /health would 401 and the deploy smoke test, Cloudflare and any uptime
+// monitor would all report the app as down.
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = _ => false,
-});
+}).AllowAnonymous();
 // Readiness: are dependencies (the database) reachable? For load-balancer traffic gating / uptime monitors.
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("ready"),
     ResponseWriter = HealthResponseWriter.WriteAsync,
-});
+}).AllowAnonymous();
 
 using (var scope = app.Services.CreateScope())
 {

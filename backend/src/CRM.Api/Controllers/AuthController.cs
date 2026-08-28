@@ -83,12 +83,16 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [AllowAnonymous]
+
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         Guard.AgainstNull(req);
         return Ok(await _identity.LoginAsync(req.UserNameOrEmail, req.Password, ct));
     }
+
+    [AllowAnonymous]
 
     [HttpPost("2fa/verify")]
     public async Task<ActionResult<LoginResponse>> Verify2Fa([FromBody] TwoFactorVerifyRequest req, CancellationToken ct)
@@ -136,6 +140,8 @@ public class AuthController : ControllerBase
 
     [DisableRateLimiting]
 
+    [AllowAnonymous]
+
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenResult>> Refresh([FromBody] RefreshRequest req, CancellationToken ct)
     {
@@ -145,6 +151,8 @@ public class AuthController : ControllerBase
     }
 
     [DisableRateLimiting]
+
+    [AllowAnonymous]
 
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest req, CancellationToken ct)
@@ -206,6 +214,8 @@ public class AuthController : ControllerBase
     public record ConfirmEmailRequest(Guid UserId, string Token);
     public record ResendConfirmationRequest(string Email);
 
+    [AllowAnonymous]
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req, CancellationToken ct)
     {
@@ -215,6 +225,8 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [AllowAnonymous]
+
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req, CancellationToken ct)
     {
@@ -223,6 +235,8 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [AllowAnonymous]
+
     [HttpPost("email/confirm")]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest req, CancellationToken ct)
     {
@@ -230,6 +244,8 @@ public class AuthController : ControllerBase
         await _identity.ConfirmEmailAsync(req.UserId, req.Token, ct);
         return NoContent();
     }
+
+    [AllowAnonymous]
 
     [HttpPost("email/resend-confirmation")]
     public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest req, CancellationToken ct)
