@@ -66,6 +66,70 @@ export const ADMIN_MSG = {
   userMgmt: {
     callCenterUpdated: "Call center updated",
     callCenterUpdateFailed: "Couldn't update call center",
+
+    // ── Team / agency placement ──────────────────────────────────────────────
+    teamUpdated: "Team updated",
+    teamUpdateFailed: "Couldn't update team",
+    agencyUpdated: "Agency updated",
+    agencyUpdateFailed: "Couldn't move this user",
+    moveAgencyConfirmTitle: (name: string) => `Move ${name} to another agency?`,
+    moveAgencyConfirmDesc:
+      "Their team and call centre will be cleared, because both belong to the agency they're leaving. " +
+      "You'll need to set them again afterwards.",
+    moveAgencyConfirmLabel: "Move user",
+
+    // ── Creating a user ──────────────────────────────────────────────────────
+    createTitle: "Add user",
+    createDescription:
+      "Create the account and place it in the org in one step. Everything here decides what they'll be able to see.",
+    createSubmit: "Add user",
+    createCancel: "Cancel",
+    createFailed: "Couldn't create this user",
+    createMissingBasics: "Enter a username and an email address.",
+    createNeedsAgency: "Choose which agency this user belongs to.",
+    userCreated: (name: string) => `${name} created`,
+    userCreatedInvited: "We've emailed them an invitation to set their password.",
+    userCreatedWithPassword: "Share the password with them securely — they'll be asked to change it at first sign-in.",
+
+    fieldUserName: "Username",
+    fieldEmail: "Email",
+    fieldAgency: "Agency",
+    fieldCallCenter: "Call center",
+    fieldTeam: "Team",
+    fieldRoles: "Roles",
+    fieldPassword: "Temporary password",
+    selectAgency: "Choose an agency…",
+    agencyLevel: "Agency-level (all)",
+    noTeam: "No team",
+    rolesHint: "Roles decide which parts of the app they can open. You can change these at any time.",
+    passwordPlaceholder: "Leave blank to email an invitation",
+    passwordHint:
+      "Leave this empty and we'll email them a link to set their own password — the usual choice. " +
+      "Set one only if you need to hand it over directly.",
+
+    // ── Filters ──────────────────────────────────────────────────────────────
+    filterRole: "Filter by role",
+    filterCallCenter: "Filter by call center",
+    filterTeam: "Filter by team",
+    filterStatus: "Filter by status",
+    allRoles: "All roles",
+    allCallCenters: "All call centers",
+    allTeams: "All teams",
+    allStatuses: "Any status",
+    statusActive: "Active",
+    statusInactive: "Deactivated",
+    statusPending: "Invite pending",
+    statusNoRoles: "No roles",
+
+    // ── Bulk placement ───────────────────────────────────────────────────────
+    bulkAssignLabel: (n: number) => `Assign ${n} selected ${n === 1 ? "user" : "users"} to:`,
+    bulkToCallCenter: "Move to call center…",
+    bulkToTeam: "Move to team…",
+    bulkCallCenterDone: (n: number) => `Moved ${n} ${n === 1 ? "user" : "users"}`,
+    bulkTeamDone: (n: number) => `Reassigned ${n} ${n === 1 ? "user" : "users"}`,
+    usersActivated: (n: number) => `Activated ${n} ${n === 1 ? "user" : "users"}`,
+    activateFailed: "Couldn't activate",
+
     deactivateConfirmTitle: (n: number) => `Deactivate ${n} ${n === 1 ? "user" : "users"}?`,
     deactivateConfirmDesc: "They'll be blocked from signing in. You can reactivate them later.",
     deactivateConfirmLabel: "Deactivate",

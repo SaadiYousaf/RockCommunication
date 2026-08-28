@@ -491,6 +491,11 @@ export const baseApi = createApi({
       query: ({ userId, callCenterId }) => ({ url: `/api/admin/users/${userId}/call-center`, method: "PUT", body: { callCenterId } }),
       invalidatesTags: ["Users"],
     }),
+    /** Move a user into another agency. SuperAdmin only — the server enforces it. */
+    setUserAgency: b.mutation<UserSummary, { userId: string; agencyId: string }>({
+      query: ({ userId, agencyId }) => ({ url: `/api/admin/users/${userId}/agency`, method: "PUT", body: { agencyId } }),
+      invalidatesTags: ["Users", "Agencies"],
+    }),
 
     // ---- Intake pipeline (Fronter → Verifier → Closer) ----
     captureIntakeLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
@@ -895,7 +900,11 @@ export const baseApi = createApi({
     }),
 
     // ===== Register (admin-protected on the server) =====
-    register: b.mutation<UserSummary, { email: string; userName: string; password?: string | null; agencyId: string; roles: string[] }>({
+    register: b.mutation<UserSummary, {
+      email: string; userName: string; password?: string | null; agencyId: string; roles: string[];
+      /** Optional: pin the new user to a call centre and/or team in the SAME request. */
+      callCenterId?: string | null; teamId?: string | null;
+    }>({
       query: (body) => ({ url: "/api/auth/register", method: "POST", body }),
       invalidatesTags: ["Users"],
     }),
@@ -1558,6 +1567,7 @@ export const {
   useListVerticalsQuery, useCreateVerticalMutation, useUpdateVerticalMutation,
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
   useListCallCentersQuery, useCreateCallCenterMutation, useUpdateCallCenterMutation, useSetUserCallCenterMutation, useResendInvitationMutation,
+  useSetUserAgencyMutation,
   useCaptureIntakeLeadMutation, useVerifierQueueQuery, useSetVerifierStatusMutation,
   useCloserQueueQuery, useGetClosingApplicationQuery, useSubmitClosingApplicationMutation,
   useCaptureCloserLeadMutation, useValidatorQueueQuery, useSetValidatorStatusMutation,

@@ -120,6 +120,20 @@ public class AdminController : ControllerBase
         return Ok(await _mediator.Send(new SetUserCallCenterCommand(userId, body.CallCenterId), ct));
     }
 
+    public record SetUserAgencyBody(Guid AgencyId);
+    /// <summary>
+    /// Move a user into another agency. SuperAdmin only (enforced in the handler) — this is the
+    /// correction path for a user created in the wrong tenant, which previously required deleting
+    /// and re-inviting them.
+    /// </summary>
+    [HttpPut("users/{userId:guid}/agency")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> SetUserAgency(Guid userId, [FromBody] SetUserAgencyBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetUserAgencyCommand(userId, body.AgencyId), ct));
+    }
+
     [HttpGet("commission-config")]
     // Commission RATES are a finance-desk concern, not payroll processing — gating them on their own
     // permission lets the Commission Agent own them without also handing over payroll runs.

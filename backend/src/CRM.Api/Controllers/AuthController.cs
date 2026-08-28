@@ -6,6 +6,7 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,15 +20,24 @@ public class AuthController : ControllerBase
 {
     private readonly IIdentityService _identity;
     private readonly ICurrentUser _user;
+    private readonly IMediator _mediator;
 
-    public AuthController(IIdentityService identity, ICurrentUser user)
+    public AuthController(IIdentityService identity, ICurrentUser user, IMediator mediator)
     {
         _identity = Guard.AgainstNull(identity);
         _user = Guard.AgainstNull(user);
+        _mediator = Guard.AgainstNull(mediator);
     }
 
     /// <summary>AgencyId is optional — defaults to the calling admin's agency. Only a SuperAdmin can target a different agency.</summary>
-    public record RegisterRequest(string Email, string UserName, string? Password, Guid? AgencyId, string[] Roles);
+    /// <summary>
+    /// Create a user. CallCenterId and TeamId are optional but strongly preferred: without them the
+    /// admin had to create the account, find it in the list, then set its call centre and team as
+    /// two more round trips — and a user sitting with neither is invisible to most of the app.
+    /// </summary>
+    public record RegisterRequest(
+        string Email, string UserName, string? Password, Guid? AgencyId, string[] Roles,
+        Guid? CallCenterId = null, Guid? TeamId = null);
     public record LoginRequest(string UserNameOrEmail, string Password);
     public record TwoFactorVerifyRequest(string TwoFactorToken, string Code);
     public record TwoFactorEnableRequest(string Code);
@@ -68,9 +78,21 @@ public class AuthController : ControllerBase
         }
         // Confinement: a call-center-pinned caller (e.g. CallCenterAdmin) may only create users
         // inside their own call center — mirrors UserAdminService.AuthorizeTargetAsync. Agency-level
-        // callers (CallCenterId == null) and SuperAdmin keep agency-wide reach.
-        var callCenterId = isSuperAdmin ? null : _user.CallCenterId;
-        return Ok(await _identity.RegisterAsync(req.Email, req.UserName, req.Password, agencyId, req.Roles, callCenterId: callCenterId, ct: ct));
+        // callers (CallCenterId == null) and SuperAdmin may name any call centre in the target
+        // agency; SetUserCallCenterCommand re-validates that it actually belongs there.
+        var pinned = isSuperAdmin ? null : _user.CallCenterId;
+        var callCenterId = pinned ?? req.CallCenterId;
+        if (pinned is { } p && req.CallCenterId is { } wanted && wanted != p) return Forbid();
+
+        var created = await _identity.RegisterAsync(
+            req.Email, req.UserName, req.Password, agencyId, req.Roles, callCenterId: callCenterId, ct: ct);
+
+        // Team is a separate concern from identity, so it goes through the same command the admin
+        // screen uses — which validates the team belongs to this agency and notifies the user.
+        if (req.TeamId is { } teamId && teamId != Guid.Empty)
+            created = await _mediator.Send(new SetUserTeamCommand(created.Id, teamId), ct);
+
+        return Ok(created);
     }
 
     [Authorize]

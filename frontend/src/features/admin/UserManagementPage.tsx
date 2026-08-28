@@ -9,33 +9,50 @@ import {
   useListUsersQuery, useResetUserPasswordMutation,
   useSetUserActiveMutation, useUpdateUserRolesMutation,
   useListCallCentersQuery, useSetUserCallCenterMutation,
-  useResendInvitationMutation,
+  useResendInvitationMutation, useSetUserTeamMutation, useSetUserAgencyMutation,
+  useListAgenciesQuery, useOrgTreeQuery,
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
-import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
-import { roleLabel, ROLE_TONES as roleTones, canManageUser } from "../../shared/constants/roles";
+import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser } from "../../shared/constants/roles";
 import { RolePicker } from "../../shared/components/RolePicker";
 import { useTableSort } from "../../shared/hooks/useTableSort";
+import { CreateUserModal } from "./CreateUserModal";
 
 
 
 
 export function UserManagementPage() {
   const me = useSelector((s: RootState) => s.auth.user);
+  const isSuperAdmin = (me?.roles ?? []).includes("SuperAdmin");
+
   const { data: users, isLoading } = useListUsersQuery();
   const { data: callCenters } = useListCallCentersQuery();
+  // Agency list only matters to a SuperAdmin (nobody else may move a user between tenants).
+  const { data: agencies } = useListAgenciesQuery(undefined, { skip: !isSuperAdmin });
   const [updateRoles] = useUpdateUserRolesMutation();
   const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
   const [resetPw, { isLoading: resettingPw }] = useResetUserPasswordMutation();
   const [setUserCc] = useSetUserCallCenterMutation();
+  const [setUserTeam] = useSetUserTeamMutation();
+  const [setUserAgency] = useSetUserAgencyMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
   const confirm = useConfirm();
+
+  // Teams come from the org tree, which is per-agency. An agency-scoped admin only ever needs their
+  // own; a SuperAdmin's list spans agencies, so we look up each row's own agency.
+  const { data: myOrg } = useOrgTreeQuery(isSuperAdmin ? undefined : undefined);
+  const teamsFor = (agencyId: string | null | undefined) => {
+    if (!myOrg) return [];
+    // The tree we hold is for one agency; only offer its teams to users who belong to it.
+    if (agencyId && myOrg.agencyId && agencyId !== myOrg.agencyId) return [];
+    return myOrg.teams ?? [];
+  };
 
   // Can the signed-in user manage this row (reset password / edit roles)? Mirrors the backend
   // rank rule so we disable — rather than 403 — actions on peers or higher-ranked accounts.
@@ -51,7 +68,40 @@ export function UserManagementPage() {
     }
   }
 
+  async function assignTeam(userId: string, value: string) {
+    try {
+      await setUserTeam({ userId, teamId: value || null }).unwrap();
+      toast.success(ADMIN_MSG.userMgmt.teamUpdated);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.userMgmt.teamUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  // Moving agencies is destructive — it drops the user's team and call centre, because both belong
+  // to the agency they are leaving. Confirm before doing it rather than surprising the admin.
+  async function assignAgency(userId: string, userName: string, value: string) {
+    if (!value) return;
+    if (!(await confirm({
+      title: ADMIN_MSG.userMgmt.moveAgencyConfirmTitle(userName),
+      description: ADMIN_MSG.userMgmt.moveAgencyConfirmDesc,
+      confirmLabel: ADMIN_MSG.userMgmt.moveAgencyConfirmLabel,
+      danger: true,
+    }))) return;
+    try {
+      await setUserAgency({ userId, agencyId: value }).unwrap();
+      toast.success(ADMIN_MSG.userMgmt.agencyUpdated);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.userMgmt.agencyUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
   const [search, setSearch] = useState("");
+  // Narrowing filters — an agency with a few hundred users is unusable on free-text alone.
+  const [roleFilter, setRoleFilter] = useState("");
+  const [ccFilter, setCcFilter] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<{ id: string; userName: string; roles: string[] } | null>(null);
   const [resetting, setResetting] = useState<{ id: string; userName: string } | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; userName: string } | null>(null);
@@ -60,13 +110,27 @@ export function UserManagementPage() {
   const filtered = useMemo(() => {
     if (!users) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      u.userName.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.roles.some((r) => r.toLowerCase().includes(q))
-    );
-  }, [users, search]);
+    return users.filter((u) => {
+      if (q && !(
+        u.userName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.roles.some((r) => r.toLowerCase().includes(q))
+      )) return false;
+
+      if (roleFilter && !u.roles.includes(roleFilter)) return false;
+
+      // "" = any; "none" = deliberately agency-level (no centre pinned).
+      if (ccFilter === "none" ? !!u.callCenterId : ccFilter && u.callCenterId !== ccFilter) return false;
+      if (teamFilter === "none" ? !!u.teamId : teamFilter && u.teamId !== teamFilter) return false;
+
+      if (statusFilter === "active" && !(u.isActive ?? true)) return false;
+      if (statusFilter === "inactive" && (u.isActive ?? true)) return false;
+      if (statusFilter === "pending" && !u.mustChangePassword) return false;
+      if (statusFilter === "noroles" && u.roles.length > 0) return false;
+
+      return true;
+    });
+  }, [users, search, roleFilter, ccFilter, teamFilter, statusFilter]);
 
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     key: "userName",
@@ -89,6 +153,45 @@ export function UserManagementPage() {
       { header: "Active", value: (u) => ((u.isActive ?? true) ? "Yes" : "No") },
     ], `users-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
+  }
+
+  // Bulk assignment — the single biggest time saver when standing up a new call centre or shift.
+  // Loops the same per-row mutation the dropdowns use, so all the server-side tenant validation and
+  // the "your call centre changed" notification apply to every user exactly as if done by hand.
+  async function bulkAssignCallCenter(callCenterId: string | null) {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map((userId) => setUserCc({ userId, callCenterId }).unwrap()));
+      toast.success(ADMIN_MSG.userMgmt.bulkCallCenterDone(ids.length));
+      sel.clear();
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.userMgmt.callCenterUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function bulkAssignTeam(teamId: string | null) {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map((userId) => setUserTeam({ userId, teamId }).unwrap()));
+      toast.success(ADMIN_MSG.userMgmt.bulkTeamDone(ids.length));
+      sel.clear();
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.userMgmt.teamUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
+
+  async function activateSelected() {
+    const ids = sel.selectedIds;
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map((id) => setActive({ id, isActive: true }).unwrap()));
+      toast.success(ADMIN_MSG.userMgmt.usersActivated(ids.length));
+      sel.clear();
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.userMgmt.activateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
   }
 
   // Bulk deactivate loops the SAME per-row setActive mutation over the ticked users — no new endpoint.
@@ -128,12 +231,17 @@ export function UserManagementPage() {
         title="User management"
         description="Add or remove user roles, reset passwords, and manage account access."
         actions={
-          <Link to="/admin/register">
-            <Button leftIcon={<Icon name="userPlus" size={15} />}>
-              Invite user
-            </Button>
-          </Link>
+          <Button leftIcon={<Icon name="userPlus" size={15} />} onClick={() => setCreating(true)}>
+            {ADMIN_MSG.userMgmt.createSubmit}
+          </Button>
         }
+      />
+
+      <CreateUserModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        isSuperAdmin={isSuperAdmin}
+        defaultAgencyId={me?.agencyId}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
@@ -155,6 +263,37 @@ export function UserManagementPage() {
               placeholder={ADMIN_MSG.search.users}
             />
           </div>
+          {/* Narrowing filters. An agency with hundreds of users can't be worked by search alone —
+              "every closer in Lahore with no team" is the question an admin actually has. */}
+          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
+            className="text-xs min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterRole}>
+            <option value="">{ADMIN_MSG.userMgmt.allRoles}</option>
+            {ALL_ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+          </Select>
+
+          <Select value={ccFilter} onChange={(e) => setCcFilter(e.target.value)}
+            className="text-xs min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterCallCenter}>
+            <option value="">{ADMIN_MSG.userMgmt.allCallCenters}</option>
+            <option value="none">{ADMIN_MSG.userMgmt.agencyLevel}</option>
+            {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+
+          <Select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
+            className="text-xs min-w-[8rem]" aria-label={ADMIN_MSG.userMgmt.filterTeam}>
+            <option value="">{ADMIN_MSG.userMgmt.allTeams}</option>
+            <option value="none">{ADMIN_MSG.userMgmt.noTeam}</option>
+            {(myOrg?.teams ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </Select>
+
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-xs min-w-[8rem]" aria-label={ADMIN_MSG.userMgmt.filterStatus}>
+            <option value="">{ADMIN_MSG.userMgmt.allStatuses}</option>
+            <option value="active">{ADMIN_MSG.userMgmt.statusActive}</option>
+            <option value="inactive">{ADMIN_MSG.userMgmt.statusInactive}</option>
+            <option value="pending">{ADMIN_MSG.userMgmt.statusPending}</option>
+            <option value="noroles">{ADMIN_MSG.userMgmt.statusNoRoles}</option>
+          </Select>
+
           {users && (
             <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">
               {filtered.length} of {users.length}
@@ -191,6 +330,10 @@ export function UserManagementPage() {
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
               <TH sortDir={dirFor("role")} onClick={() => toggle("role")}><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">A user's roles decide which modules they see and what they can do. No roles means they can sign in but can't access anything until you assign one.</InfoHint></span></TH>
               <TH><span className="inline-flex items-center gap-1">Call center<InfoHint title="Call center" side="top">Pin a user to one call center to limit their pipeline to just that center; leave it agency-level to see the whole agency.</InfoHint></span></TH>
+              <TH><span className="inline-flex items-center gap-1">Team<InfoHint title="Team" side="top">The team this user reports into. Teams live inside an agency, so moving someone to another agency clears their team.</InfoHint></span></TH>
+              {isSuperAdmin && (
+                <TH><span className="inline-flex items-center gap-1">Agency<InfoHint title="Agency" side="top">Which agency this user belongs to. Moving them clears their team and call centre, because both live inside an agency.</InfoHint></span></TH>
+              )}
               <TH className="sticky right-0 bg-ink-50 border-l hairline text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">Actions</TH>
             </TR>
           </THead>
@@ -257,6 +400,36 @@ export function UserManagementPage() {
                       ))}
                   </Select>
                 </TD>
+                <TD>
+                  <Select
+                    value={u.teamId ?? ""}
+                    onChange={(e) => assignTeam(u.id, e.target.value)}
+                    className="text-xs min-w-[9rem]"
+                    disabled={!canManage(u)}
+                    aria-label={`Team for ${u.userName}`}
+                  >
+                    <option value="">No team</option>
+                    {/* Teams are agency-scoped, so only this user's own agency's teams are valid. */}
+                    {teamsFor(u.agencyId).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+                </TD>
+                {isSuperAdmin && (
+                  <TD>
+                    <Select
+                      value={u.agencyId ?? ""}
+                      onChange={(e) => assignAgency(u.id, u.userName, e.target.value)}
+                      className="text-xs min-w-[9rem]"
+                      aria-label={`Agency for ${u.userName}`}
+                    >
+                      <option value="">—</option>
+                      {(agencies ?? []).map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </Select>
+                  </TD>
+                )}
                 <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">
                   {/* Icon-only actions with tooltips so the row fits without horizontal scroll. */}
                   <div className="flex items-center justify-end gap-1">
@@ -314,10 +487,43 @@ export function UserManagementPage() {
           </TBody>
         </Table>
         <Pager {...pg} onPage={pg.setPage} unit="users" />
+
+        {/* Bulk placement. Standing up a shift or a new centre means moving twenty people at once;
+            doing that one dropdown at a time was the single slowest thing on this screen. The
+            selects reset to their placeholder after firing, so they read as an action, not a state. */}
+        {sel.selectedCount > 0 && (
+          <Card className="mt-3">
+            <CardBody className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-ink-700">
+                {ADMIN_MSG.userMgmt.bulkAssignLabel(sel.selectedCount)}
+              </span>
+              <Select
+                value="" className="text-xs min-w-[11rem]"
+                aria-label={ADMIN_MSG.userMgmt.bulkToCallCenter}
+                onChange={(e) => { const v = e.target.value; e.target.value = ""; if (v) bulkAssignCallCenter(v === "none" ? null : v); }}
+              >
+                <option value="">{ADMIN_MSG.userMgmt.bulkToCallCenter}</option>
+                <option value="none">{ADMIN_MSG.userMgmt.agencyLevel}</option>
+                {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </Select>
+              <Select
+                value="" className="text-xs min-w-[10rem]"
+                aria-label={ADMIN_MSG.userMgmt.bulkToTeam}
+                onChange={(e) => { const v = e.target.value; e.target.value = ""; if (v) bulkAssignTeam(v === "none" ? null : v); }}
+              >
+                <option value="">{ADMIN_MSG.userMgmt.bulkToTeam}</option>
+                <option value="none">{ADMIN_MSG.userMgmt.noTeam}</option>
+                {(myOrg?.teams ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </Select>
+            </CardBody>
+          </Card>
+        )}
+
         <BulkActionBar
           count={sel.selectedCount} itemNoun="user" onClear={sel.clear}
           actions={[
             { key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected },
+            { key: "activate", label: "Activate", icon: "check", onClick: activateSelected },
             { key: "deactivate", label: "Deactivate", icon: "userX", onClick: deactivateSelected, danger: true },
           ]}
         />

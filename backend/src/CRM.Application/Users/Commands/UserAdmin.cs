@@ -19,6 +19,14 @@ public record SetTeamLeadCommand(Guid TeamId, Guid? UserId) : IRequest<Unit>;
 public record SetUserCallCenterCommand(Guid UserId, Guid? CallCenterId) : IRequest<UserSummaryDto>;
 /// <summary>Re-issue the onboarding invitation (fresh temp password + email) for a user who hasn't accepted yet.</summary>
 public record ResendInvitationCommand(Guid UserId) : IRequest<Unit>;
+/// <summary>
+/// Move a user into a different agency. SuperAdmin only — the service clears team membership and
+/// team-lead pointers, because teams live inside an agency and would otherwise dangle.
+///
+/// The capability already existed on IUserAdminService but was never routed, so a SuperAdmin who
+/// created a user in the wrong agency had no way to correct it short of deleting and re-inviting.
+/// </summary>
+public record SetUserAgencyCommand(Guid UserId, Guid AgencyId) : IRequest<UserSummaryDto>;
 
 public class UpdateUserRolesValidator : AbstractValidator<UpdateUserRolesCommand>
 {
@@ -41,6 +49,7 @@ public class UserAdminHandler :
     IRequestHandler<SetPreferred2FaCommand, UserSummaryDto>,
     IRequestHandler<SetUserTeamCommand, UserSummaryDto>,
     IRequestHandler<SetUserCallCenterCommand, UserSummaryDto>,
+    IRequestHandler<SetUserAgencyCommand, UserSummaryDto>,
     IRequestHandler<SetTeamLeadCommand, Unit>,
     IRequestHandler<ResendInvitationCommand, Unit>
 {
@@ -96,6 +105,16 @@ public class UserAdminHandler :
         Guard.AgainstNull(request);
         await EnsurePermissionAsync(Permissions.UsersManage, ct);
         return await _admin.SetCallCenterAsync(request.UserId, request.CallCenterId, ct);
+    }
+
+    public async Task<UserSummaryDto> Handle(SetUserAgencyCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        // Moving a user BETWEEN tenants is strictly a platform operation: an agency admin must never
+        // be able to push one of their users into someone else's agency, or pull one out of it.
+        // UsersManage alone is not enough here.
+        if (!_user.Roles.Contains(DomainRoles.SuperAdmin)) throw new ForbiddenAccessException();
+        return await _admin.SetAgencyAsync(request.UserId, request.AgencyId, ct);
     }
 
     public async Task<Unit> Handle(ResendInvitationCommand request, CancellationToken ct)
