@@ -389,6 +389,8 @@ public static class DependencyInjection
         // providers. Each has its own internal timer loop and is idempotent, so running once per
         // box is safe regardless of BackgroundJobs:Provider. (Previously, Hangfire mode silently
         // dropped attendance-autofill — which feeds payroll — plus birthday/invite/training jobs.)
+        // The whole product lives in one SQLite file — snapshot it on a schedule.
+        services.AddHostedService<DatabaseBackupService>();
         services.AddHostedService<BirthdayNotificationService>();
         services.AddHostedService<InvitationExpiryNotificationService>();
         services.AddHostedService<TrainingReminderService>();
