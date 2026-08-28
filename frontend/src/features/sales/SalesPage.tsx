@@ -1,6 +1,6 @@
 import type { ButtonVariant } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
-import { formatPhone } from "../../shared/lib/format";
+import { formatPhone, formatUsd } from "../../shared/lib/format";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -11,7 +11,7 @@ import {
   useListSalesQuery, useListUsersQuery, type SalesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -358,7 +358,7 @@ export function SalesPage() {
 function SalesList() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<SalesQuery>({ skip: 0, take: 50, sort: "soldAt-desc" });
-  const { data, isLoading, isFetching } = useListSalesQuery(filters);
+  const { data, isLoading, isFetching, isError, error, refetch } = useListSalesQuery(filters);
   const { data: users } = useListUsersQuery();
   const { data: carriers } = useCarriersQuery();
   const toast = useToast();
@@ -374,6 +374,13 @@ function SalesList() {
       [s.leadName, s.leadPhone, s.carrier, s.policyNumber, s.closerName, s.planApproved]
         .some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [data?.items, search]);
+
+  // The server only fills agencyName when the list actually spans agencies, so the column shows
+  // itself exactly when it carries information and stays hidden for tenant-scoped users.
+  const showAgency = useMemo(
+    () => (data?.items ?? []).some((s) => !!s.agencyName),
+    [data?.items],
+  );
 
   const sel = useRowSelection(filteredRows.map((s) => s.id));
 
@@ -409,7 +416,7 @@ function SalesList() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
         <Stat label="Total sales"   value={total}                                                                                   icon={<Icon name="briefcase" size={16} />} tone="brand"
               onClick={() => update("status", undefined)} hint="All sales matching the filters. Click to clear the status filter." />
-        <Stat label="Total premium" value={`$${(data?.totalPremium ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}  icon={<Icon name="dollar" size={16} />}    tone="success"
+        <Stat label="Total premium" value={formatUsd(data?.totalPremium ?? 0)}  icon={<Icon name="dollar" size={16} />}    tone="success"
               hint="Combined monthly premium across every sale matching the current filters." />
         <Stat label="Funded"        value={data?.fundedCount ?? 0}                                                                  icon={<Icon name="success" size={16} />}   tone="success"
               onClick={() => update("status", "Funded")} hint="First premium draft cleared. Click to show only these." />
@@ -482,6 +489,11 @@ function SalesList() {
 
       {isLoading ? (
         <Card><CardBody>{[0,1,2,3,4].map((i) => <Skeleton key={i} className="h-12 my-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no sales found" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={SALES_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !data || data.items.length === 0 ? (
         <Card><CardBody>
           <EmptyState
@@ -526,6 +538,8 @@ function SalesList() {
                   </span>
                 </TH>
                 <TH>Policy #</TH>
+                {/* Only meaningful when the list spans agencies (an unscoped SuperAdmin). */}
+                {showAgency && <TH>Agency</TH>}
               </TR>
             </THead>
             <TBody>
@@ -557,8 +571,8 @@ function SalesList() {
                   </TD>
                   <TD className="text-ink-700">{s.carrier}</TD>
                   <TD className="text-ink-900 font-medium tabular-nums whitespace-nowrap">
-                    ${s.monthlyPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
-                    <div className="text-xs text-ink-500 tabular-nums">${s.annualPremium.toLocaleString(undefined, { maximumFractionDigits: 0 })}/yr</div>
+                    {formatUsd(s.monthlyPremium)}/mo
+                    <div className="text-xs text-ink-500 tabular-nums">{formatUsd(s.annualPremium)}/yr</div>
                   </TD>
                   <TD>
                     <span className="inline-flex items-center gap-1">
@@ -574,6 +588,9 @@ function SalesList() {
                     </span>
                   </TD>
                   <TD className="text-ink-500 font-mono text-xs tabular-nums whitespace-nowrap">{s.policyNumber ?? "—"}</TD>
+                  {showAgency && (
+                    <TD className="text-ink-600 text-sm whitespace-nowrap">{s.agencyName ?? "—"}</TD>
+                  )}
                 </TR>
               ))}
             </TBody>

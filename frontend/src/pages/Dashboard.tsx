@@ -6,6 +6,7 @@ import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton, cn,
   usePagination, Pager, type IconName, type BadgeTone,
 } from "../shared/ui";
+import { formatUsdCompact } from "../shared/lib/format";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery, useTeamStatusQuery } from "../shared/api/baseApi";
 import { useDashboardLayout } from "./useDashboardLayout";
 import { usePermission, Perm } from "../shared/auth/permissions";
@@ -33,9 +34,7 @@ const stageBar: Record<WorkflowStage, string> = {
 };
 
 function formatMoney(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
-  return `$${Math.round(n).toLocaleString()}`;
+  return formatUsdCompact(n);
 }
 
 function pctDelta(current: number, prior: number): { delta: string; trend: "up" | "down" | "flat" } {

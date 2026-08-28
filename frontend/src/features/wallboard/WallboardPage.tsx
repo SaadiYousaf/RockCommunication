@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLeaderboardQuery, useWallboardQuery } from "../../shared/api/baseApi";
 import { Spinner, type IconName, Icon, InfoHint } from "../../shared/ui";
+import { formatUsdCompact } from "../../shared/lib/format";
 
 function ClockNow() {
   const [now, setNow] = useState(new Date());
@@ -180,7 +181,7 @@ export function WallboardPage() {
                             <span className="text-2xl font-bold text-emerald-300 font-mono tabular-nums">{u.salesToday ?? 0}</span>
                           </div>
                           <div className="col-span-4 text-right relative">
-                            <span className="text-xl font-mono text-brand-300 tabular-nums">${premium.toLocaleString()}</span>
+                            <span className="text-xl font-mono text-brand-300 tabular-nums">{formatUsdCompact(premium)}</span>
                           </div>
                         </div>
                       );

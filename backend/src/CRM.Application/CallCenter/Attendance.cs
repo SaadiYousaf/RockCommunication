@@ -55,9 +55,16 @@ public class AttendanceHandler : IRequestHandler<AttendanceQuery, IReadOnlyList<
         IQueryable<AgentStatusLog> logQ;
         if (_user.IsSuperAdmin)
         {
-            if (request.AgencyId is not { } aid || aid == Guid.Empty)
+            // Prefer an explicit ?agencyId, but fall back to the agency this session is scoped to
+            // (POST /api/auth/context) before refusing — otherwise a SuperAdmin who has already
+            // picked a working context gets a 403 that the page can only render as "no data".
+            var target =
+                request.AgencyId is { } aid && aid != Guid.Empty ? aid
+                : _user.AgencyId is { } scoped && scoped != Guid.Empty ? scoped
+                : Guid.Empty;
+            if (target == Guid.Empty)
                 throw new ForbiddenAccessException("Select an agency to view attendance.");
-            agencyId = aid;
+            agencyId = target;
             sessQ = _db.AgentSessions.IgnoreQueryFilters().Where(s => s.AgencyId == agencyId && !s.IsDeleted);
             logQ = _db.AgentStatusLogs.IgnoreQueryFilters().Where(l => l.AgencyId == agencyId && !l.IsDeleted);
         }

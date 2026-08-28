@@ -1387,6 +1387,8 @@ export interface SaleListItem {
   commissionEarned: number | null; callCenterName: string | null;
   soldAt: string; validatedAt: string | null; fundedAt: string | null;
   isInternalSale: boolean; status: string;
+  /** Set only when the list spans agencies (an unscoped SuperAdmin); null for tenant-scoped users. */
+  agencyName: string | null;
 }
 export interface PagedSalesResult {
   items: SaleListItem[]; total: number; skip: number; take: number;

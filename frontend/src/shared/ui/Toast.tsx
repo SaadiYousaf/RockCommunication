@@ -30,6 +30,20 @@ interface ToastApi {
 
 const ToastCtx = createContext<ToastApi | null>(null);
 
+/**
+ * Bridge for code that runs OUTSIDE React and therefore cannot use the hook — specifically the
+ * Redux middleware that reports failed API calls. Set by <ToastProvider> on mount.
+ *
+ * No-ops before the provider mounts (or after it unmounts) rather than throwing: a toast is never
+ * important enough to take the app down with it.
+ */
+let bridge: ToastApi | null = null;
+
+/** Raise a toast from non-React code. Silently does nothing if no provider is mounted. */
+export function emitToast(opts: ToastOptions): void {
+  try { bridge?.show(opts); } catch { /* never let a toast break the caller */ }
+}
+
 export function useToast() {
   const ctx = useContext(ToastCtx);
   if (!ctx) throw new Error("useToast must be used inside <ToastProvider>");
@@ -123,6 +137,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     warning: (title, description) => show({ title, description, tone: "warning" }),
     dismiss,
   }), [show, dismiss]);
+
+  // Expose this provider to non-React callers (see emitToast) for as long as it is mounted.
+  useEffect(() => {
+    bridge = api;
+    return () => { if (bridge === api) bridge = null; };
+  }, [api]);
 
   useEffect(() => () => Object.values(timers.current).forEach((t) => window.clearTimeout(t)), []);
 

@@ -29,9 +29,16 @@ public class DashboardHandler : IRequestHandler<DashboardQuery, IReadOnlyList<Me
         Guid agencyId;
         if (_user.IsSuperAdmin)
         {
-            if (request.AgencyId is not { } aid || aid == Guid.Empty)
+            // Prefer an explicit ?agencyId, but fall back to the agency this session is scoped to
+            // (POST /api/auth/context) before refusing — otherwise a SuperAdmin who has already
+            // picked a working context gets a 403 the page can only render as empty KPIs.
+            var target =
+                request.AgencyId is { } aid && aid != Guid.Empty ? aid
+                : _user.AgencyId is { } scoped && scoped != Guid.Empty ? scoped
+                : Guid.Empty;
+            if (target == Guid.Empty)
                 throw new ForbiddenAccessException("Select an agency to view its KPIs.");
-            agencyId = aid;
+            agencyId = target;
         }
         else
         {

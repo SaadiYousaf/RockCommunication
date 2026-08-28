@@ -24,6 +24,7 @@ export const MESSAGES = {
 
   /** Generic fallbacks used across mutations/toasts. */
   genericError: "Something went wrong. Please try again.",
+  loadFailed: "Couldn't load this",
   tryAgain: "Please try again.",
   savedOk: "Saved.",
 
@@ -33,4 +34,25 @@ export const MESSAGES = {
 
   /** Shared chrome: the header notifications bell (no feature messages.ts owns it). */
   markAllReadFailed: "Couldn't mark everything as read",
+} as const;
+
+/**
+ * Copy for a request that FAILED to load, used by <ErrorState> and the global API-error toast.
+ *
+ * Deliberately says nothing about status codes, roles or permissions by name — the reader is a
+ * salesperson, not an engineer. "You don't have access to this" is actionable ("ask my admin");
+ * "403 Forbidden: RequirePermission(Sales.ViewAll)" is not.
+ */
+export const LOAD_ERROR = {
+  couldNotLoad: "Couldn't load",
+  couldNotLoadGeneric: "Couldn't load this",
+  retry: "Try again",
+
+  noAccessTitle: "You don't have access to this",
+  noAccessBody: "Ask an administrator if you think you should be able to see it.",
+
+  notFoundBody: "It may have been deleted or moved.",
+  offlineBody: "Check your internet connection, then try again.",
+  serverBody: "The server had a problem. Please try again in a moment.",
+  genericBody: "Please try again.",
 } as const;

@@ -2,6 +2,7 @@ import { configureStore, createListenerMiddleware, isAnyOf } from "@reduxjs/tool
 import { baseApi } from "../shared/api/baseApi";
 import authReducer, { setAuth, clearAuth } from "./authSlice";
 import { setMoneyDisplay } from "../shared/lib/format";
+import { apiErrorMiddleware } from "./apiErrorMiddleware";
 
 export { setAuth, clearAuth } from "./authSlice";
 export type { AuthState } from "./authSlice";
@@ -37,7 +38,7 @@ export const store = configureStore({
     [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefault) =>
-    getDefault().prepend(authListener.middleware).concat(baseApi.middleware),
+    getDefault().prepend(authListener.middleware).concat(baseApi.middleware, apiErrorMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

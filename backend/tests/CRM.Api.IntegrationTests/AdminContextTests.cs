@@ -88,6 +88,56 @@ public class AdminContextTests : IClassFixture<CrmWebAppFactory>
         Assert.DoesNotContain(scopedUsers.EnumerateArray(), u => u.GetProperty("email").GetString() == cidEmail);
     }
 
+    /// <summary>
+    /// A SuperAdmin who has NOT picked a working context must still be able to list sales.
+    ///
+    /// REGRESSION: ListSales used to throw ForbiddenAccessException("An agency must be specified.")
+    /// whenever a SuperAdmin omitted ?agencyId. A list page cannot render a 403, so the client fell
+    /// through to its "no sales found" empty state — the Sales page looked EMPTY while the dashboard
+    /// (which does pass an agencyId) reported real totals off the very same rows. That reads as data
+    /// loss to whoever is looking at it.
+    /// </summary>
+    [Fact]
+    public async Task Unscoped_superadmin_can_list_sales_without_naming_an_agency()
+    {
+        var sa = await _factory.LoginAsync("superadmin", "SuperAdmin@123!");
+
+        var resp = await sa.GetAsync("/api/sales");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+    }
+
+    /// <summary>
+    /// The other half of the contract: once a SuperAdmin picks a context, the sales list narrows to
+    /// that agency rather than continuing to show the platform.
+    /// </summary>
+    [Fact]
+    public async Task Scoped_superadmin_sees_only_the_chosen_agency_sales()
+    {
+        var sa = await _factory.LoginAsync("superadmin", "SuperAdmin@123!");
+
+        var made = await sa.PostJsonAsync("/api/agencies", new
+        {
+            name = $"S-{Guid.NewGuid():N}".Substring(0, 10),
+            code = (string?)null,
+            ceoName = "Sal Ceo",
+            ceoEmail = $"sal-{Guid.NewGuid():N}@crm.local",
+        });
+        var freshAgencyId = made.GetProperty("id").GetGuid();
+
+        var ctx = await sa.PostJsonAsync("/api/auth/context", new { agencyId = freshAgencyId });
+        var scoped = _factory.CreateClient();
+        scoped.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", ctx.GetProperty("accessToken").GetString());
+
+        var body = await scoped.GetJsonAsync("/api/sales");
+
+        // A brand-new agency has no sales, so the scoped view must be empty even though the
+        // platform-wide view (asserted above) succeeds. This is the assertion that would fail if the
+        // "no agency predicate" branch ever leaked across tenants.
+        Assert.Equal(0, body.GetProperty("total").GetInt32());
+    }
+
     /// <summary>Decode a JWT payload and read a claim (no signature check — test-only).</summary>
     private static string? JwtClaim(string accessToken, string claim)
     {

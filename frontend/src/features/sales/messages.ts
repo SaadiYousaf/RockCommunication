@@ -6,6 +6,8 @@
  * what the user can/can't do; lean on the shared MESSAGES helpers for read-only / permission copy.
  */
 export const SALES_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "sales",
   // Shared across sales pages
   exportReadyTitle: "Export ready",
   rowsDownloaded: (count: number) => `${count} rows downloaded.`,

@@ -19,13 +19,13 @@ import { usePermission, Perm } from "../../shared/auth/permissions";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import { SALES_MSG } from "./messages";
+import { formatUsd } from "../../shared/lib/format";
 
 const statusTone: Record<string, BadgeTone> = {
   Funded: "success", Validated: "info", Pending: "warning",
 };
 
-const money = (n: number) =>
-  `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n: number) => formatUsd(n);
 const dateTime = (s: string | null | undefined) =>
   s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 

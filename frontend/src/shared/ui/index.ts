@@ -8,6 +8,7 @@ export { Badge, type BadgeTone } from "./Badge";
 export { Spinner } from "./Spinner";
 export { Skeleton } from "./Skeleton";
 export { EmptyState } from "./EmptyState";
+export { ErrorState, QueryState } from "./ErrorState";
 export { PageHeader } from "./PageHeader";
 export { Avatar } from "./Avatar";
 export { Modal } from "./Modal";

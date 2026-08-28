@@ -41,3 +41,23 @@ export function formatUsd(n: number | null | undefined): string {
     return `${displayCurrency} ${converted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
+
+/**
+ * Compact variant of {@link formatUsd} for tight stat tiles and wallboards, e.g. "$1.2M" or
+ * "PKR 3.4K". Same USD→display-currency conversion and the same safe fallback for an unknown
+ * ISO code; nullish → "—".
+ */
+export function formatUsdCompact(n: number | null | undefined): string {
+  if (n == null) return "—";
+  const converted = n * exchangeRate;
+  try {
+    return converted.toLocaleString(undefined, {
+      style: "currency",
+      currency: displayCurrency,
+      notation: "compact",
+      maximumFractionDigits: 1,
+    });
+  } catch {
+    return `${displayCurrency} ${Math.round(converted).toLocaleString()}`;
+  }
+}
