@@ -247,9 +247,14 @@ export function UserManagementPage() {
                     className="text-xs min-w-[9rem]"
                   >
                     <option value="">Agency-level (all)</option>
-                    {(callCenters ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {/* A SuperAdmin's list spans agencies, so only offer the centres that belong to
+                        THIS user's agency — assigning someone to another tenant's centre would be
+                        rejected by the server anyway, and is confusing to even show. */}
+                    {(callCenters ?? [])
+                      .filter((c) => !c.agencyId || c.agencyId === u.agencyId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
                   </Select>
                 </TD>
                 <TD className="sticky right-0 bg-white border-l hairline shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.10)]">

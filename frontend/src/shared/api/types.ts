@@ -35,6 +35,10 @@ export interface CallCenterDto {
   code: string | null;
   isActive: boolean;
   leadCount: number;
+  /** Owning agency — set so a SuperAdmin's cross-agency list can be scoped per row. */
+  agencyId?: string;
+  /** Owning agency's name, only populated for a SuperAdmin's cross-agency list. */
+  agencyName?: string | null;
 }
 
 /** A stored insurance / carrier portal login (Confidential vault, Admin/SuperAdmin only). */

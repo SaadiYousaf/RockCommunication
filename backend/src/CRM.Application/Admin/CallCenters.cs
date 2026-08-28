@@ -11,7 +11,9 @@ using DomainRoles = CRM.Domain.Enums.Roles;
 
 namespace CRM.Application.Admin;
 
-public record CallCenterDto(Guid Id, string Name, string? Code, bool IsActive, int LeadCount);
+public record CallCenterDto(Guid Id, string Name, string? Code, bool IsActive, int LeadCount,
+    /// <summary>Owning agency — set so a SuperAdmin's cross-agency list can be grouped/filtered.</summary>
+    Guid AgencyId = default, string? AgencyName = null);
 
 public record ListCallCentersQuery() : IRequest<IReadOnlyList<CallCenterDto>>;
 /// <summary>
@@ -64,19 +66,43 @@ public class CallCenterHandler :
     public async Task<IReadOnlyList<CallCenterDto>> Handle(ListCallCentersQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        // A SuperAdmin has no agency (Guid.Empty); this agency-scoped page can't create/list
-        // for them without a real agency. Fail clearly instead of hitting a FK constraint.
-        if (_user.AgencyId is null || _user.AgencyId == Guid.Empty)
-            throw new ForbiddenAccessException("Super Admins manage call centres from the Agency panel — open an agency (Agencies) and use \"New call centre\".");
-        // Explicit agency scope as a backstop: SuperAdmin bypasses the global tenant filter, so
-        // without this an accidental SuperAdmin caller would see every agency's call centers.
-        return await _db.CallCenters
-            .Where(c => c.AgencyId == _user.AgencyId.Value)
-            .OrderBy(c => c.Name)
+
+        // A SuperAdmin has no agency of their own. They used to get a 403 here, which silently left
+        // every call-centre picker EMPTY for them (User Management showed only "Agency-level"). They
+        // legitimately see across tenants, so return every agency's centres, labelled with the owning
+        // agency so the UI can scope each picker to the right one.
+        var superAdminUnscoped = _user.IsSuperAdmin && (_user.AgencyId is null || _user.AgencyId == Guid.Empty);
+
+        var q = _db.CallCenters.AsQueryable();
+        if (!superAdminUnscoped)
+        {
+            if (_user.AgencyId is null || _user.AgencyId == Guid.Empty) throw new ForbiddenAccessException();
+            // Explicit agency scope as a backstop: SuperAdmin bypasses the global tenant filter, so
+            // without this an accidental SuperAdmin caller would see every agency's call centers.
+            var own = _user.AgencyId.Value;
+            q = q.Where(c => c.AgencyId == own);
+        }
+        else
+        {
+            q = q.IgnoreQueryFilters().Where(c => !c.IsDeleted);
+        }
+
+        var rows = await q.OrderBy(c => c.Name)
             .Select(c => new CallCenterDto(
                 c.Id, c.Name, c.Code, c.IsActive,
-                _db.Leads.Count(l => l.CallCenterId == c.Id)))
+                _db.Leads.Count(l => l.CallCenterId == c.Id),
+                c.AgencyId, null))
             .ToListAsync(ct);
+
+        // Resolve agency names only for the cross-agency case, where the UI needs to disambiguate
+        // two centres that share a name.
+        if (!superAdminUnscoped) return rows;
+
+        var agencyIds = rows.Select(r => r.AgencyId).Distinct().ToList();
+        var names = await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
+            .Where(a => agencyIds.Contains(a.Id) && !a.IsDeleted)
+            .ToDictionaryAsync(a => a.Id, a => a.Name, ct);
+        return rows.Select(r => r with { AgencyName = names.TryGetValue(r.AgencyId, out var n) ? n : null }).ToList();
     }
 
     public async Task<CallCenterDto> Handle(CreateCallCenterCommand request, CancellationToken ct)
