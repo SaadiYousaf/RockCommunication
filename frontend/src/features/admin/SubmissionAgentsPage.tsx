@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { MESSAGES } from "../../shared/constants/messages";
+import { MESSAGES, STATUS } from "../../shared/constants/messages";
 import { ADMIN_MSG } from "./messages";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -12,7 +12,7 @@ import {
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
+  Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,  StatusBadge, statusOf,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 
@@ -48,7 +48,7 @@ export function SubmissionAgentsPage() {
 
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     key: "name",
-    accessors: { status: (a) => (a.isActive ? "Active" : "Inactive") },
+    accessors: { status: (a) => (a.isActive ? STATUS.active : STATUS.disabled) },
   });
 
   // Display-only paging over the filtered+sorted list; selection, bulk deactivate and CSV
@@ -62,7 +62,7 @@ export function SubmissionAgentsPage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (a) => a.name },
       { header: "Email", value: (a) => a.email },
-      { header: "Status", value: (a) => (a.isActive ? (a.pendingInvite ? "Active — awaiting sign-in" : "Active") : "Inactive") },
+      { header: "Status", value: (a) => (a.isActive ? (a.pendingInvite ? `${STATUS.active} — awaiting sign-in` : STATUS.active) : STATUS.disabled) },
       { header: "Active", value: (a) => (a.isActive ? "Yes" : "No") },
     ], `submission-agents-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
@@ -165,7 +165,7 @@ export function SubmissionAgentsPage() {
                     </TD>
                     <TD className="whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1">
-                        <Badge tone={a.isActive ? "success" : "neutral"} variant="soft">{a.isActive ? "Active" : "Inactive"}</Badge>
+                        <StatusBadge status={statusOf(a.isActive)} />
                         {a.isActive && a.pendingInvite && (
                           <Badge tone="warning" variant="soft" size="sm">
                             <Icon name="clock" size={10} className="mr-1" /> Awaiting sign-in

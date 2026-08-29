@@ -11,7 +11,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
-  Skeleton, Tabs, useToast,
+  Skeleton, Tabs, useToast,  StatusBadge,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 
@@ -170,7 +170,7 @@ function VerticalsSection() {
                 <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{v.description ?? "—"}</span>
                 {v.isActive
                   ? <Badge tone="success" variant="soft">Active</Badge>
-                  : <Badge tone="neutral" variant="soft">Inactive</Badge>}
+                  : <StatusBadge status="disabled" />}
                 <Button variant="ghost" size="sm"
                   onClick={() => { void toggleActive(v); }}>
                   {v.isActive ? "Disable" : "Enable"}
@@ -231,7 +231,7 @@ function HorizontalsSection() {
                 <span className="text-xs text-ink-500 flex-1 truncate min-w-0">{v.description ?? "—"}</span>
                 {v.isActive
                   ? <Badge tone="success" variant="soft">Active</Badge>
-                  : <Badge tone="neutral" variant="soft">Inactive</Badge>}
+                  : <StatusBadge status="disabled" />}
                 <Button variant="ghost" size="sm"
                   onClick={() => { void toggleActive(v); }}>
                   {v.isActive ? "Disable" : "Enable"}

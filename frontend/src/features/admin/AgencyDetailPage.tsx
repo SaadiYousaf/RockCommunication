@@ -1,6 +1,6 @@
 import { getErrorDetail } from "../../shared/api/apiError";
 import { ADMIN_MSG } from "./messages";
-import { MESSAGES } from "../../shared/constants/messages";
+import { MESSAGES, STATUS } from "../../shared/constants/messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -15,7 +15,7 @@ import {
 import type { AgencyDto, CallCenterDto } from "../../shared/api/types";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
+  Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,  StatusBadge, statusOf,
 } from "../../shared/ui";
 import { formatUsd } from "../../shared/lib/format";
 
@@ -119,7 +119,7 @@ export function AgencyDetailPage() {
             <div className="flex flex-wrap gap-2">
               {agents.map((a) => (
                 <Badge key={a.id} tone={a.isActive ? "info" : "neutral"} variant="soft">
-                  {a.name}{a.isActive ? "" : " (inactive)"}
+                  {a.name}{a.isActive ? "" : ` — ${STATUS.disabled}`}
                 </Badge>
               ))}
             </div>
@@ -162,7 +162,7 @@ export function AgencyDetailPage() {
                       </TD>
                       <TD numeric className="text-sm text-ink-700 tabular-nums font-medium">{staffByCc.get(c.id) ?? 0}</TD>
                       <TD numeric className="text-sm text-ink-600 tabular-nums">{c.leadCount}</TD>
-                      <TD><Badge tone={c.isActive ? "success" : "neutral"} variant="soft">{c.isActive ? "Active" : "Disabled"}</Badge></TD>
+                      <TD><StatusBadge status={statusOf(c.isActive, c.disabledWithAgency)} /></TD>
                       <TD className="text-right">
                         <Button variant="ghost" size="sm" leftIcon={<Icon name="edit" size={14} />} onClick={() => setEditCc(c)}>Edit</Button>
                       </TD>
