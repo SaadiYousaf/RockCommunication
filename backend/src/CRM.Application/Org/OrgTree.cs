@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Auth.Dtos;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
@@ -47,12 +48,15 @@ public class OrgTreeHandler : IRequestHandler<GetOrgTreeQuery, OrgTreeDto>
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
+    private readonly IPermissionService _permissions;
 
-    public OrgTreeHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    public OrgTreeHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
+        IPermissionService permissions)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
+        _permissions = Guard.AgainstNull(permissions);
     }
 
     public async Task<OrgTreeDto> Handle(GetOrgTreeQuery request, CancellationToken ct)
@@ -75,8 +79,19 @@ public class OrgTreeHandler : IRequestHandler<GetOrgTreeQuery, OrgTreeDto>
 
         var users = await _identity.ListUsersAsync(agencyId, ct);
 
+        // The org chart is open to every authenticated user so anyone can see the team layout — but
+        // the layout is names and structure, not contact details and privilege. Email addresses and
+        // role names are only for callers who may read the user directory anyway; without this, this
+        // endpoint handed out more than the UsersRead-gated /api/users does.
+        var maySeeUserDetail = isSuperAdmin
+            || (_user.UserId is { } uid && await _permissions.HasAsync(uid, Permissions.UsersRead, ct));
+
         OrgPersonDto Person(UserSummaryDto u) =>
-            new(u.Id, u.UserName, u.Email, null, u.Roles, true);
+            new(u.Id, u.UserName,
+                maySeeUserDetail ? u.Email : string.Empty,
+                null,
+                maySeeUserDetail ? u.Roles : Array.Empty<string>(),
+                true);
 
         var ceo = users.FirstOrDefault(u => u.Roles.Contains(DomainRoles.CEO));
 

@@ -47,6 +47,7 @@ public class UserAdminService : IUserAdminService
     private readonly IJwtTokenService _jwt;
     private readonly ICurrentUser _current;
     private readonly INotificationDispatcher _notify;
+    private readonly IActiveUserCache _activeUsers;
 
     public UserAdminService(
         UserManager<ApplicationUser> users,
@@ -54,7 +55,8 @@ public class UserAdminService : IUserAdminService
         AppDbContext db,
         IJwtTokenService jwt,
         ICurrentUser current,
-        INotificationDispatcher notify)
+        INotificationDispatcher notify,
+        IActiveUserCache activeUsers)
     {
         _users = Guard.AgainstNull(users);
         _roles = Guard.AgainstNull(roles);
@@ -62,6 +64,7 @@ public class UserAdminService : IUserAdminService
         _jwt = Guard.AgainstNull(jwt);
         _current = Guard.AgainstNull(current);
         _notify = Guard.AgainstNull(notify);
+        _activeUsers = Guard.AgainstNull(activeUsers);
     }
 
     // Best-effort in-app notice to the affected user — never notify yourself, and never let a
@@ -137,6 +140,15 @@ public class UserAdminService : IUserAdminService
             ?? throw new NotFoundException("User", userId);
         await AuthorizeTargetAsync(user);
 
+        // SELF-ESCALATION: AuthorizeTargetAsync deliberately skips its rank check when the target is
+        // the caller (so people can manage their own profile), which left one hole — editing your
+        // OWN roles. Any holder of users.manage could grant themselves a role they are not ranked to
+        // receive, e.g. HR, which reads decrypted identity and bank data agency-wide. Roles are
+        // re-read from the database on token refresh, so it would take effect without re-login.
+        // Nobody edits their own roles; an administrator does it for them.
+        if (!CallerIsSuperAdmin && user.Id == _current.UserId)
+            throw new ForbiddenAccessException("You can't change your own roles. Ask another administrator.");
+
         // Role allow-list. A non-SuperAdmin caller may never grant the global SuperAdmin
         // role (it bypasses both the permission framework and the multi-tenant filter).
         // Roles are never auto-created here — they must be provisioned via role management.
@@ -186,27 +198,37 @@ public class UserAdminService : IUserAdminService
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
         await AuthorizeTargetAsync(user);
+
+        // Re-enabling someone whose agency or call centre is still disabled would show them as
+        // Active in the admin list while the per-request gate keeps refusing them — the UI would be
+        // lying. Refuse and say which thing has to be turned back on first.
+        if (isActive && !await TenantLoginGate.IsTenantActiveAsync(_db, user.AgencyId, user.CallCenterId, ct))
+            throw new ConflictException(
+                "This person's agency or call centre is disabled. Enable that first, and they will be restored with it.");
+
+        var wasActive = user.IsActive;
         user.IsActive = isActive;
+        // An individual decision, so clear any cascade marker: re-enabling their agency later must
+        // not undo an admin deliberately switching this one person off.
+        user.CascadeDisabledAt = null;
         var result = await _users.UpdateAsync(user);
         if (!result.Succeeded) throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
-        // Force-logout-everywhere on deactivation: revoke every outstanding refresh
-        // token AND bump the user's SecurityStamp so any short-lived access token
-        // they're holding fails the next request (the JwtBearer events check
-        // SecurityStamp via Identity's IUserStore on validation).
         if (!isActive)
         {
+            // Revoking refresh tokens stops them starting a NEW session. What stops the session they
+            // already hold is ActiveUserGateMiddleware, which re-reads IsActive per request — so drop
+            // its cached entry immediately rather than leaving them working for the TTL.
             await _jwt.RevokeAllForUserAsync(user.Id, ct);
-            await _users.UpdateSecurityStampAsync(user);
         }
+        _activeUsers.Invalidate(user.Id);
 
-        // Being switched off mid-shift (or back on) is something the user must be told about.
-        // NOTE: a deactivated user can no longer sign in, so they won't SEE this in-app notice until
-        // they are reactivated — we still record it so the notice is waiting for them, and so the
-        // event is on their notification history either way. Reactivation is delivered normally.
-        await NotifyTargetAsync(user,
-            isActive ? ReactivatedTitle : DeactivatedTitle,
-            isActive ? ReactivatedBody : DeactivatedBody, ct);
+        // Only on a real change — a repeat deactivate used to post a duplicate notice every time.
+        // Matches SetTeamAsync / SetCallCenterAsync, which already guard this way.
+        if (wasActive != isActive)
+            await NotifyTargetAsync(user,
+                isActive ? ReactivatedTitle : DeactivatedTitle,
+                isActive ? ReactivatedBody : DeactivatedBody, ct);
 
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,

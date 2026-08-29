@@ -111,6 +111,13 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         Guard.AgainstNull(req);
+        // This endpoint is anonymous and bypasses MediatR, so nothing else validates it: a null or
+        // absurdly long field used to reach the identity layer and 500 on an unauthenticated route.
+        // The message stays deliberately generic — it must not hint at what a valid input looks like.
+        if (string.IsNullOrWhiteSpace(req.UserNameOrEmail) || string.IsNullOrWhiteSpace(req.Password)
+            || req.UserNameOrEmail.Length > 256 || req.Password.Length > 256)
+            return BadRequest(new { title = "Sign-in failed", status = 400, detail = "Enter your username and password." });
+
         return Ok(await _identity.LoginAsync(req.UserNameOrEmail, req.Password, ct));
     }
 

@@ -64,6 +64,14 @@ public class CallCenter : TenantEntity
     public string? Code { get; set; }
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Set when this centre was switched off BY its agency being disabled, rather than by an admin
+    /// disabling this centre individually. Null for both an active centre and one deliberately
+    /// turned off. Re-enabling the agency restores only the centres carrying this marker, so an
+    /// individually-disabled centre stays off. See ApplicationUser.CascadeDisabledAt.
+    /// </summary>
+    public DateTime? CascadeDisabledAt { get; set; }
+
     // ---- Site details -------------------------------------------------------
     // A BPO runs several physical sites; knowing where one is, who to ring and what hours it keeps
     // is basic operational information that had nowhere to live.

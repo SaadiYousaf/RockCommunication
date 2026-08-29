@@ -75,9 +75,14 @@ public class CallCenterHandler :
     private readonly ICurrentUser _user;
     private readonly IInvitationService _invitations;
     private readonly IJwtTokenService _jwt;
+    private readonly ITenantLifecycleService _tenantLifecycle;
 
-    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user, IInvitationService invitations, IJwtTokenService jwt)
-    { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _invitations = Guard.AgainstNull(invitations); _jwt = Guard.AgainstNull(jwt); }
+    public CallCenterHandler(IApplicationDbContext db, ICurrentUser user, IInvitationService invitations,
+        IJwtTokenService jwt, ITenantLifecycleService tenantLifecycle)
+    {
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _invitations = Guard.AgainstNull(invitations);
+        _jwt = Guard.AgainstNull(jwt); _tenantLifecycle = Guard.AgainstNull(tenantLifecycle);
+    }
 
     public async Task<IReadOnlyList<CallCenterDto>> Handle(ListCallCentersQuery request, CancellationToken ct)
     {
@@ -185,18 +190,20 @@ public class CallCenterHandler :
         var wasActive = cc.IsActive;
         cc.Name = request.Name.Trim();
         cc.Code = request.Code?.Trim();
-        cc.IsActive = request.IsActive;
-        cc.Phone = Blank(request.Phone);
-        cc.Address = Blank(request.Address);
-        cc.City = Blank(request.City);
-        cc.TimeZone = Blank(request.TimeZone);
-        cc.SeatCapacity = request.SeatCapacity;
+
+        // null means "not sent, leave alone"; empty string still clears. The edit form and the
+        // enable/disable toggle post different subsets of this record.
+        if (request.Phone is not null) cc.Phone = Blank(request.Phone);
+        if (request.Address is not null) cc.Address = Blank(request.Address);
+        if (request.City is not null) cc.City = Blank(request.City);
+        if (request.TimeZone is not null) cc.TimeZone = Blank(request.TimeZone);
+        if (request.SeatCapacity is not null) cc.SeatCapacity = request.SeatCapacity;
         await _db.SaveChangesAsync(ct);
 
-        // Disabling a call center force-logs-out every agent pinned to it (login/refresh are
-        // already blocked by TenantLoginGate), so they're locked out until it's re-enabled.
-        if (wasActive && !request.IsActive)
-            await _jwt.RevokeAllForCallCenterAsync(cc.Id, ct);
+        // An active-state change cascades to the agents pinned to this centre and to their live
+        // sessions, so it goes through the lifecycle service rather than flipping a flag here.
+        if (wasActive != request.IsActive)
+            await _tenantLifecycle.SetCallCenterActiveAsync(cc.Id, request.IsActive, ct);
 
         var leads = await _db.Leads.CountAsync(l => l.CallCenterId == cc.Id, ct);
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads, cc.AgencyId, null,

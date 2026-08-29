@@ -28,6 +28,10 @@ builder.Host.UseSerilog((ctx, lc) => lc
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
+// Lets the tenant cascade (Infrastructure) drop this API's account-status cache the moment it
+// commits, so a disabled user is refused on their very next request rather than after the TTL.
+builder.Services.AddSingleton<CRM.Application.Common.Interfaces.IActiveUserCache,
+    CRM.Api.Middleware.ActiveUserCache>();
 
 // Real-time agent push
 builder.Services.AddSingleton<IAgentNotifier,

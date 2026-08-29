@@ -30,6 +30,18 @@ public class ApplicationUser : IdentityUser<Guid>
     public string? Location { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Set when this account was switched off BY a tenant cascade (its agency or call centre being
+    /// disabled), rather than by an admin disabling this person individually. Null for both an
+    /// active account and one an admin turned off deliberately.
+    ///
+    /// This distinction is the whole reversibility story: re-enabling the agency restores exactly
+    /// the accounts the cascade took and leaves individually-disabled ones off. Without the marker,
+    /// re-enable would silently reactivate people an admin had deliberately blocked.
+    /// </summary>
+    public DateTime? CascadeDisabledAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string PreferredTwoFactorMethod { get; set; } = "Totp";
 

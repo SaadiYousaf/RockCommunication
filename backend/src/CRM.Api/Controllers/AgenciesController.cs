@@ -70,6 +70,30 @@ public class AgenciesController : ControllerBase
             body.Phone, body.Address, body.Website), ct));
     }
 
+    public record SetActiveBody(bool IsActive);
+
+    /// <summary>
+    /// Turn an agency on or off. This is a tenant-wide operation, not an edit: disabling cascades to
+    /// every call centre and user underneath and ends their sessions. Returns what it actually did so
+    /// the client can confirm the real blast radius rather than guess.
+    /// </summary>
+    [HttpPut("{id:guid}/active")]
+    [HasPermission(Permissions.AgenciesManage)]
+    public async Task<IActionResult> SetActive(Guid id, [FromBody] SetActiveBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new SetAgencyActiveCommand(id, body.IsActive), ct));
+    }
+
+    /// <summary>
+    /// What disabling this agency would affect. Read before the confirmation dialog so the operator
+    /// is told the real counts up front instead of a vague warning.
+    /// </summary>
+    [HttpGet("{id:guid}/disable-impact")]
+    [HasPermission(Permissions.AgenciesManage)]
+    public async Task<IActionResult> DisableImpact(Guid id, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAgencyDisableImpactQuery(id), ct));
+
     /// <summary>Upload / replace the agency logo shown in customer emails. Images only, under 2 MB.</summary>
     [HttpPost("{id:guid}/logo")]
     [HasPermission(Permissions.AgenciesManage)]

@@ -1,5 +1,6 @@
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
+using CRM.Domain.Entities;
 using CRM.Infrastructure.Identity;
 using CRM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,27 +9,33 @@ using System.Collections.Concurrent;
 namespace CRM.Api.Middleware;
 
 /// <summary>
-/// "Force-logout on deactivation" gate.
+/// The per-request account gate — "is this caller still allowed to be here?"
 ///
-/// JWTs are stateless — once issued they remain valid until they expire (15 min
-/// default). When an admin deactivates a user we already revoke their refresh
-/// tokens, but their currently-loaded browser tab keeps working until the
-/// short-lived access token expires.
+/// JWTs are stateless: once issued they stay valid until they expire (15 minutes). Revoking refresh
+/// tokens stops a user minting a NEW session but does nothing about the one already in their browser.
+/// This middleware is what makes access revocation take effect immediately, and it checks THREE
+/// things, because any of them can end a user's access:
 ///
-/// This middleware closes that gap: for every authenticated request, it looks
-/// up <c>ApplicationUser.IsActive</c> and returns <c>401</c> the moment the
-/// account is flipped off. The frontend's auth pipeline already treats 401
-/// as "session ended, send to /login".
+///   1. the account itself was deactivated,
+///   2. their agency was disabled,
+///   3. their call centre was disabled.
 ///
-/// Performance: results are cached in-process for 30 seconds keyed by user id,
-/// so the lookup is effectively free in the steady state. The cache is short
-/// enough that deactivation propagates to all concurrent requests within a
-/// few seconds.
+/// It used to check only (1). That was the hole: disabling an agency never wrote the user's IsActive
+/// column, so everyone underneath it kept working — reads and writes — for the remainder of their
+/// token. The cascade now writes that column too, but this gate checks tenant state independently so
+/// enforcement does not depend on a cascade having run correctly. Belt and braces, deliberately.
+///
+/// Performance: one query per user per 30 seconds, cached in-process. Do not lower the TTL; the
+/// cascade calls <see cref="Invalidate(Guid)"/> for every affected account the moment it commits, so
+/// the propagation delay for a real disable is zero on the serving process rather than 30 seconds.
 /// </summary>
 public class ActiveUserGateMiddleware
 {
-    // user-id → (isActive, expires-at-utc)
-    private static readonly ConcurrentDictionary<Guid, (bool Active, DateTime ExpiresAt)> _cache = new();
+    /// <summary>Why a caller was refused. Sent as a machine-readable field so the UI never string-matches English.</summary>
+    private const string ReasonAccountDisabled = "account_disabled";
+    private const string ReasonTenantDisabled = "tenant_disabled";
+
+    private static readonly ConcurrentDictionary<Guid, (bool Active, string? Reason, DateTime ExpiresAt)> _cache = new();
     private static readonly TimeSpan _ttl = TimeSpan.FromSeconds(30);
 
     private readonly RequestDelegate _next;
@@ -50,25 +57,25 @@ public class ActiveUserGateMiddleware
 
         if (!_cache.TryGetValue(uid, out var entry) || entry.ExpiresAt <= now)
         {
-            var isActive = await db.Set<ApplicationUser>()
-                .Where(u => u.Id == uid)
-                .Select(u => (bool?)u.IsActive)
-                .FirstOrDefaultAsync(ctx.RequestAborted);
-
-            // User row missing → treat as inactive (deleted out from under them).
-            entry = (isActive ?? false, now.Add(_ttl));
+            entry = await EvaluateAsync(db, uid, now, ctx.RequestAborted);
             _cache[uid] = entry;
         }
 
         if (!entry.Active)
         {
+            var tenant = entry.Reason == ReasonTenantDisabled;
             ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            ctx.Response.Headers["WWW-Authenticate"] = "Bearer error=\"account_disabled\"";
+            ctx.Response.Headers["WWW-Authenticate"] = $"Bearer error=\"{entry.Reason}\"";
             await ctx.Response.WriteAsJsonAsync(new
             {
-                title = "Account disabled",
+                title = tenant ? "Access unavailable" : "Account disabled",
                 status = 401,
-                detail = "Your account has been deactivated by an administrator.",
+                // Reuse the same copy the login path shows, so a user sees one consistent
+                // explanation whether they are signed out mid-session or refused at sign-in.
+                detail = tenant
+                    ? TenantLoginGate.DisabledMessage
+                    : "Your account is currently unavailable. Please contact your administrator for assistance.",
+                reason = entry.Reason,
             });
             return;
         }
@@ -76,6 +83,66 @@ public class ActiveUserGateMiddleware
         await _next(ctx);
     }
 
-    /// <summary>Drops the cached entry so the next request re-checks the DB.</summary>
+    /// <summary>
+    /// Status is read from the USER ROW rather than the JWT claims on purpose: a SuperAdmin who has
+    /// scoped themselves into an agency still carries their own (empty) agency on their row, and a
+    /// mid-session context switch must not change whether they are allowed in at all.
+    /// </summary>
+    private static async Task<(bool, string?, DateTime)> EvaluateAsync(
+        AppDbContext db, Guid uid, DateTime now, CancellationToken ct)
+    {
+        var expires = now.Add(_ttl);
+
+        var row = await db.Set<ApplicationUser>().IgnoreQueryFilters()
+            .Where(u => u.Id == uid)
+            .Select(u => new { u.IsActive, u.AgencyId, u.CallCenterId })
+            .FirstOrDefaultAsync(ct);
+
+        // User row missing → treat as inactive (deleted out from under them).
+        if (row is null) return (false, ReasonAccountDisabled, expires);
+
+        // Tenant state is evaluated BEFORE the individual flag on purpose. A cascade switches both
+        // off at once, and "your organisation's access was disabled" is the truthful and more useful
+        // explanation for someone who did nothing wrong — telling them their account was disabled
+        // would send them chasing the wrong problem.
+        //
+        // Platform users (SuperAdmin / central submission agents) carry the empty agency and have no
+        // tenant to be disabled with. That is what stops a SuperAdmin locking themselves out the
+        // instant they disable an agency. Mirrors TenantLoginGate.
+        if (row.AgencyId != Guid.Empty)
+        {
+            var agencyOk = await db.Set<Agency>().IgnoreQueryFilters()
+                .AnyAsync(a => a.Id == row.AgencyId && a.IsActive && !a.IsDeleted, ct);
+            if (!agencyOk) return (false, ReasonTenantDisabled, expires);
+
+            if (row.CallCenterId is { } ccId && ccId != Guid.Empty)
+            {
+                var ccOk = await db.Set<CallCenter>().IgnoreQueryFilters()
+                    .AnyAsync(c => c.Id == ccId && c.IsActive && !c.IsDeleted, ct);
+                if (!ccOk) return (false, ReasonTenantDisabled, expires);
+            }
+        }
+
+        if (!row.IsActive) return (false, ReasonAccountDisabled, expires);
+
+        return (true, null, expires);
+    }
+
+    /// <summary>Drops the cached entry so the next request re-checks the database.</summary>
     public static void Invalidate(Guid userId) => _cache.TryRemove(userId, out _);
+}
+
+/// <summary>
+/// Lets Infrastructure drop cache entries without referencing the API project. Registered in
+/// Program.cs; the single invalidation path for both the tenant cascade and per-user admin actions.
+/// </summary>
+public class ActiveUserCache : IActiveUserCache
+{
+    public void Invalidate(Guid userId) => ActiveUserGateMiddleware.Invalidate(userId);
+
+    public void Invalidate(IEnumerable<Guid> userIds)
+    {
+        if (userIds is null) return;
+        foreach (var id in userIds) ActiveUserGateMiddleware.Invalidate(id);
+    }
 }

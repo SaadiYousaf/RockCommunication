@@ -106,11 +106,13 @@ public static class DependencyInjection
             if (Encoding.UTF8.GetByteCount(jwt.Secret) < 32)
                 throw new InvalidOperationException(
                     "Jwt:Secret is too short. Use at least 32 bytes (256 bits) of random material.");
-            // Reject the known repo-committed placeholder: a long-but-public value passes the
-            // length check yet lets anyone with repo access forge tokens.
-            if (jwt.Secret.Contains("REPLACE-WITH", StringComparison.OrdinalIgnoreCase))
+            // Reject any value that has ever lived in the repository. A long-but-public secret
+            // passes the length check while letting anyone who can read the source forge tokens for
+            // any user — including SuperAdmin. Add to this list, never remove from it.
+            string[] publiclyKnown = { "REPLACE-WITH", "dev-secret", "change-this", "changeme" };
+            if (publiclyKnown.Any(k => jwt.Secret.Contains(k, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException(
-                    "Jwt:Secret is the committed placeholder. Supply a real random secret via JWT__SECRET.");
+                    "Jwt:Secret matches a value committed to source control. Supply a real random secret via JWT__SECRET.");
         }
 
         // PII-at-rest encryption key (SSN / driver's licence). Prefer a dedicated
@@ -173,6 +175,8 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
+        // Owns the agency/call-centre disable cascade (children + users + sessions, one transaction).
+        services.AddScoped<ITenantLifecycleService, Identity.TenantLifecycleService>();
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<AuthEmailSender>();
         services.AddSingleton<IChatAttachmentStorage, Services.LocalChatAttachmentStorage>();

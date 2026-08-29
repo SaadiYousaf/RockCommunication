@@ -99,6 +99,14 @@ public class JwtTokenService : IJwtTokenService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == existing.UserId, ct);
         if (user is null || !user.IsActive) return null;
 
+        // Refresh must re-apply the same gates login does, or a live refresh token becomes a way to
+        // keep minting full sessions for the whole 7-day window without ever passing back through
+        // LoginAsync. Lockout (repeated failed passwords) and an expired onboarding invitation both
+        // blocked sign-in but were never re-checked here.
+        if (user.LockoutEnd is { } until && until > DateTimeOffset.UtcNow) return null;
+        if (InvitationPolicy.IsExpired(user.MustChangePassword, user.InvitationSentAt, user.InvitationAcceptedAt, DateTime.UtcNow))
+            return null;
+
         var roles = await (from ur in _db.UserRoles
                            join r in _db.Roles on ur.RoleId equals r.Id
                            where ur.UserId == user.Id

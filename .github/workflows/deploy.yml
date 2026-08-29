@@ -73,7 +73,7 @@ jobs:
       # --delete below would wipe every uploaded file on each deploy. Exclude ⇒ preserved.
       - name: Sync backend
         run: |
-          rsync -az --delete --exclude 'appsettings.Production.json' --exclude 'App_Data' \
+          rsync -az --delete --exclude 'appsettings.Production.json' --exclude 'appsettings.Development.json' --exclude 'App_Data' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             api-publish/ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${BOX_REPO}/api-publish/"
 

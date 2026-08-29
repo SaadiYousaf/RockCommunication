@@ -43,12 +43,11 @@ public class ExceptionMiddleware
 
         var (status, problem) = ex switch
         {
-            ValidationException v => ((int)HttpStatusCode.BadRequest, new ProblemDetails
-            {
-                Title = "Validation failed",
-                Status = (int)HttpStatusCode.BadRequest,
-                Detail = JsonSerializer.Serialize(v.Errors)
-            }),
+            // The per-field errors go in the standard problem+json "errors" extension, which is where
+            // the client already looks for them. Serialising the dictionary into Detail meant users
+            // were shown raw C# — literally {"Input.PolicyNumber":["'Policy Number' must not be
+            // empty."]} — while the client's own field-error reader always came back empty.
+            ValidationException v => ((int)HttpStatusCode.BadRequest, BuildValidationProblem(v)),
             // Never echo ex.Message here — it embeds the record key/GUID. Show only the entity type
             // (the full message with the key is still captured in the server log below).
             NotFoundException nf => ((int)HttpStatusCode.NotFound, new ProblemDetails
@@ -92,5 +91,27 @@ public class ExceptionMiddleware
         ctx.Response.StatusCode = status;
         ctx.Response.ContentType = "application/problem+json";
         await ctx.Response.WriteAsync(JsonSerializer.Serialize(problem));
+    }
+
+    /// <summary>
+    /// A human sentence in Detail, and the machine-readable field errors in the standard "errors"
+    /// extension so the form can highlight the offending inputs.
+    /// </summary>
+    private static ProblemDetails BuildValidationProblem(ValidationException v)
+    {
+        var byField = v.Errors;
+
+        var problem = new ProblemDetails
+        {
+            Title = "Validation failed",
+            Status = (int)HttpStatusCode.BadRequest,
+            // One clear sentence when there is a single problem — which is the common case — rather
+            // than making the reader parse a structure. Falls back to a count for the rest.
+            Detail = byField.Count == 1 && byField.First().Value.Length == 1
+                ? byField.First().Value[0]
+                : "Some of the details you entered need attention.",
+        };
+        problem.Extensions["errors"] = byField;
+        return problem;
     }
 }

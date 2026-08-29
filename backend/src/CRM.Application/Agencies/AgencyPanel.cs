@@ -112,14 +112,17 @@ public class AgencyPanelHandler :
     private readonly IIdentityService _identity;
     private readonly IInvitationService _invitations;
     private readonly IJwtTokenService _jwt;
+    private readonly ITenantLifecycleService _tenantLifecycle;
 
-    public AgencyPanelHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IInvitationService invitations, IJwtTokenService jwt)
+    public AgencyPanelHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
+        IInvitationService invitations, IJwtTokenService jwt, ITenantLifecycleService tenantLifecycle)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _invitations = Guard.AgainstNull(invitations);
         _jwt = Guard.AgainstNull(jwt);
+        _tenantLifecycle = Guard.AgainstNull(tenantLifecycle);
     }
 
     public async Task<IReadOnlyList<AgencyOptionDto>> Handle(ListAgencyOptionsQuery request, CancellationToken ct)
@@ -253,13 +256,12 @@ public class AgencyPanelHandler :
         var wasActive = cc.IsActive;
         cc.Name = name;
         cc.Code = request.Code?.Trim();
-        cc.IsActive = request.IsActive;
         await _db.SaveChangesAsync(ct);
 
-        // Disabling a call center is a kill switch: force-logout every agent pinned to it
-        // (login/refresh are already blocked by TenantLoginGate).
-        if (wasActive && !request.IsActive)
-            await _jwt.RevokeAllForCallCenterAsync(cc.Id, ct);
+        // Same lifecycle service the agency-scoped screen uses, so both paths cascade to the agents
+        // pinned to this centre identically instead of drifting apart.
+        if (wasActive != request.IsActive)
+            await _tenantLifecycle.SetCallCenterActiveAsync(cc.Id, request.IsActive, ct);
 
         var leads = await _db.Leads.IgnoreQueryFilters().CountAsync(l => l.CallCenterId == cc.Id && !l.IsDeleted, ct);
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads);

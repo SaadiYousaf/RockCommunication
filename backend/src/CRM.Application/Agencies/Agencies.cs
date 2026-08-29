@@ -45,6 +45,14 @@ public record UpdateAgencyCommand(Guid Id, string Name, string? Code, bool IsAct
     string? DisplayCurrency = null, decimal? ExchangeRate = null,
     string? Phone = null, string? Address = null, string? Website = null) : IRequest<AgencyDto>;
 public record AssignCeoCommand(Guid AgencyId, Guid UserId) : IRequest<AgencyDto>;
+/// <summary>
+/// Turn an agency on or off. Separate from <see cref="UpdateAgencyCommand"/> because it is not an
+/// edit — it cascades to every call centre and user underneath, so the UI toggle should not have to
+/// round-trip the whole entity to flip one flag.
+/// </summary>
+public record SetAgencyActiveCommand(Guid Id, bool IsActive) : IRequest<TenantCascadeResult>;
+/// <summary>What disabling this agency would affect, so the confirmation can state it before asking.</summary>
+public record GetAgencyDisableImpactQuery(Guid Id) : IRequest<TenantDisableImpact>;
 /// <summary>Point the agency's logo at an already-stored file key (uploaded via the controller).</summary>
 public record SetAgencyLogoCommand(Guid Id, string LogoKey) : IRequest<Unit>;
 /// <summary>The agency logo storage key (null if none). SuperAdmin or same-agency access.</summary>
@@ -88,7 +96,9 @@ public class AgenciesHandler :
     IRequestHandler<UpdateAgencyCommand, AgencyDto>,
     IRequestHandler<SetAgencyLogoCommand, Unit>,
     IRequestHandler<GetAgencyLogoKeyQuery, string?>,
-    IRequestHandler<AssignCeoCommand, AgencyDto>
+    IRequestHandler<AssignCeoCommand, AgencyDto>,
+    IRequestHandler<SetAgencyActiveCommand, TenantCascadeResult>,
+    IRequestHandler<GetAgencyDisableImpactQuery, TenantDisableImpact>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -96,6 +106,7 @@ public class AgenciesHandler :
     private readonly IUserAdminService _userAdmin;
     private readonly IInvitationService _invitations;
     private readonly IJwtTokenService _jwt;
+    private readonly ITenantLifecycleService _tenantLifecycle;
 
     public AgenciesHandler(
         IApplicationDbContext db,
@@ -103,7 +114,8 @@ public class AgenciesHandler :
         IIdentityService identity,
         IUserAdminService userAdmin,
         IInvitationService invitations,
-        IJwtTokenService jwt)
+        IJwtTokenService jwt,
+        ITenantLifecycleService tenantLifecycle)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
@@ -111,6 +123,21 @@ public class AgenciesHandler :
         _userAdmin = Guard.AgainstNull(userAdmin);
         _invitations = Guard.AgainstNull(invitations);
         _jwt = Guard.AgainstNull(jwt);
+        _tenantLifecycle = Guard.AgainstNull(tenantLifecycle);
+    }
+
+    public async Task<TenantCascadeResult> Handle(SetAgencyActiveCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdmin();
+        return await _tenantLifecycle.SetAgencyActiveAsync(request.Id, request.IsActive, ct);
+    }
+
+    public async Task<TenantDisableImpact> Handle(GetAgencyDisableImpactQuery request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureSuperAdmin();
+        return await _tenantLifecycle.GetAgencyDisableImpactAsync(request.Id, ct);
     }
 
     public async Task<IReadOnlyList<AgencyDto>> Handle(ListAgenciesQuery request, CancellationToken ct)
@@ -190,22 +217,27 @@ public class AgenciesHandler :
         var wasActive = agency.IsActive;
         agency.Name = request.Name.Trim();
         agency.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code!.Trim();
-        agency.IsActive = request.IsActive;
-        agency.SenderEmail = string.IsNullOrWhiteSpace(request.SenderEmail) ? null : request.SenderEmail!.Trim();
-        agency.Phone = Blank(request.Phone);
-        agency.Address = Blank(request.Address);
-        agency.Website = Blank(request.Website);
+
+        // null means "not sent, leave alone"; an empty string still clears the field. The edit form
+        // and the enable/disable toggle post different subsets of this record, so assigning these
+        // unconditionally wiped the agency's contact details and sender address on every toggle.
+        if (request.SenderEmail is not null) agency.SenderEmail = Blank(request.SenderEmail);
+        if (request.Phone is not null) agency.Phone = Blank(request.Phone);
+        if (request.Address is not null) agency.Address = Blank(request.Address);
+        if (request.Website is not null) agency.Website = Blank(request.Website);
+
         if (!string.IsNullOrWhiteSpace(request.DisplayCurrency))
             agency.DisplayCurrency = request.DisplayCurrency!.Trim().ToUpperInvariant();
         // A non-positive rate would zero out or invert every figure on screen — ignore it.
         if (request.ExchangeRate is { } rate && rate > 0) agency.ExchangeRate = rate;
         await _db.SaveChangesAsync(ct);
 
-        // Disabling an agency is a kill switch: force-logout every user underneath it so they
-        // can't keep working on a still-valid access token. Login/refresh are already blocked
-        // (TenantLoginGate), so they stay locked out until the agency is re-enabled.
-        if (wasActive && !request.IsActive)
-            await _jwt.RevokeAllForAgencyAsync(agency.Id, ct);
+        // An active-state change is a tenant-wide operation (call centres, users, live sessions), so
+        // it goes through the lifecycle service rather than flipping a flag here. Delegating after
+        // the field save keeps this handler about editing an agency and that one about shutting a
+        // tenant down. Re-reads the entity because the cascade mutates it on the same context.
+        if (wasActive != request.IsActive)
+            await _tenantLifecycle.SetAgencyActiveAsync(agency.Id, request.IsActive, ct);
 
         return await ToDtoAsync(agency, ct);
     }
