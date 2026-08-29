@@ -4,7 +4,7 @@ import type { RootState } from "../../app/store";
 import { useAttendanceQuery, useAgencyOptionsQuery } from "../../shared/api/baseApi";
 import type { AttendanceRow, AttendanceSession } from "../../shared/api/types";
 import {
-  Avatar, Badge, Card, CardBody, EmptyState, Icon, Input, PageHeader, Select, Skeleton, Stat, cn,
+  Avatar, Badge, Card, CardBody, EmptyState, ErrorState, Icon, Input, PageHeader, Select, Skeleton, Stat, cn,
 } from "../../shared/ui";
 import type { BadgeTone } from "../../shared/ui";
 import { CALLCENTER_MSG } from "./messages";
@@ -46,7 +46,7 @@ export function AttendancePage() {
   function applyRange(days: number) { setFrom(dateStr(-days)); setTo(dateStr(1)); setRange(days); }
 
   const waitingForAgency = isSuperAdmin && !agencyId;
-  const { data, isLoading, isFetching } = useAttendanceQuery(
+  const { data, isLoading, isFetching, isError, error, refetch } = useAttendanceQuery(
     { from: new Date(from).toISOString(), to: new Date(to).toISOString(), agencyId: isSuperAdmin ? agencyId : undefined },
     { skip: waitingForAgency },
   );
@@ -127,6 +127,11 @@ export function AttendancePage() {
           body={!agencyOptions?.length ? CALLCENTER_MSG.noAgenciesExist : CALLCENTER_MSG.chooseAgencyToView} />
       ) : isLoading ? (
         <Card><CardBody className="space-y-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-14" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must not read as "nobody clocked in today".
+        <Card><CardBody>
+          <ErrorState error={error} resource={CALLCENTER_MSG.attendanceResourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !data || data.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="clock" size={20} />} title={CALLCENTER_MSG.noAttendanceTitle}

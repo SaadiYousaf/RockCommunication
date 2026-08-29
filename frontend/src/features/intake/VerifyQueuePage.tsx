@@ -9,7 +9,7 @@ import {
 import type { IntakeQueueItem, VerifierStatusValue } from "../../shared/api/types";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput, Select,
   Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, useToast, Pager, usePagination,} from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection, type RowSelection } from "../../shared/hooks/useRowSelection";
@@ -21,7 +21,7 @@ import { INTAKE_MSG } from "./messages";
 /** Verifier work queue — fronted leads awaiting a verification status. */
 export function VerifyQueuePage() {
   // Poll: leads land here from other users' actions (fronters capturing), so refresh without a reload.
-  const { data: queue, isLoading } = useVerifierQueueQuery(undefined, { pollingInterval: 30_000 });
+  const { data: queue, isLoading, isError, error, refetch } = useVerifierQueueQuery(undefined, { pollingInterval: 30_000 });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const filtered = (queue ?? []).filter((l) =>
@@ -67,7 +67,11 @@ export function VerifyQueuePage() {
         <CardHeader title="Awaiting verification" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
-          {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
+          {isLoading ? <Skeleton className="h-40" /> : isError ? (
+            // A failed request must never read as "queue is empty" — nobody should stop working
+            // because the load broke.
+            <ErrorState error={error} resource={INTAKE_MSG.verifyResourceName} onRetry={refetch} />
+          ) : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.verifyEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.verifyEmptyDesc} />
           ) : (
             <>

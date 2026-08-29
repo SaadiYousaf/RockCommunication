@@ -5,7 +5,7 @@ import {
   useWorkflowActionTypesQuery, useWorkflowEventTypesQuery, useWorkflowExecutionsQuery,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, Textarea,
   usePagination, useToast, cn, type IconName,
 } from "../../shared/ui";
@@ -50,7 +50,7 @@ const actionIcon: Record<string, IconName> = {
 };
 
 export function WorkflowsPage() {
-  const { data: rules, isLoading } = useListWorkflowRulesQuery();
+  const { data: rules, isLoading, isError, error, refetch } = useListWorkflowRulesQuery();
   const { data: eventTypes } = useWorkflowEventTypesQuery();
   const { data: actionTypes } = useWorkflowActionTypesQuery();
   // Poll: execution rows are produced entirely by the background engine, never by a UI mutation.
@@ -164,6 +164,12 @@ export function WorkflowsPage() {
 
       {tab === "rules" && (isLoading ? (
         <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}</div>
+      ) : isError ? (
+        // A failed request must never read as "no rules yet" — that invites someone to rebuild
+        // automations that are still there.
+        <Card><CardBody className="py-12">
+          <ErrorState error={error} resource={WORKFLOWS_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : filtered.length === 0 ? (
         <Card><CardBody className="py-12">
           <EmptyState

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useListQaReviewsQuery, useQaScorecardsQuery, useUserDirectoryQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, BulkActionBar, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   Pager, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -18,7 +18,7 @@ function scoreTone(pct: number): "success" | "warning" | "danger" {
 export function QaBrowserPage() {
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10));
   const [to, setTo]     = useState(() => new Date(Date.now() + 86400 * 1000).toISOString().slice(0, 10));
-  const { data: reviews, isLoading: reviewsLoading } = useListQaReviewsQuery({ from, to });
+  const { data: reviews, isLoading: reviewsLoading, isError: reviewsFailed, error: reviewsError, refetch: refetchReviews } = useListQaReviewsQuery({ from, to });
   const { data: scorecards, isLoading: cardsLoading } = useQaScorecardsQuery({ from, to });
   // The QA DTOs carry only user ids; resolve display names from the directory.
   const { data: directory } = useUserDirectoryQuery();
@@ -147,6 +147,11 @@ export function QaBrowserPage() {
         <CardBody className="pt-0 px-0">
           {reviewsLoading ? (
             <div className="px-5 pb-5 space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : reviewsFailed ? (
+            // A failed request must never read as "no reviews" — that looks like QA work was lost.
+            <div className="px-5 pb-5">
+              <ErrorState error={reviewsError} resource={QA_MSG.reviewsResourceName} onRetry={refetchReviews} />
+            </div>
           ) : !reviews || reviews.length === 0 ? (
             <div className="px-5 pb-5">
               <EmptyState

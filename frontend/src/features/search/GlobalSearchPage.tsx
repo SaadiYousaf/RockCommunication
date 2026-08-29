@@ -9,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { Lead, UserSummary } from "../../shared/api/types";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, ErrorState, Icon, InfoHint,
   PageHeader, SearchInput, Skeleton, Stat, Tabs, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageLabel } from "../../shared/constants/leadStage";
@@ -71,7 +71,7 @@ export function GlobalSearchPage() {
   const looksLikePhone = /^[\d\s()+\-.]{4,}$/.test(debounced);
   const looksLikeEmail = debounced.includes("@");
 
-  const { data: leads, isFetching: leadsLoading } = useSearchLeadsQuery(
+  const { data: leads, isFetching: leadsLoading, isError: leadsFailed, error: leadsError, refetch: refetchLeads } = useSearchLeadsQuery(
     {
       phone: looksLikePhone ? debounced : undefined,
       email: looksLikeEmail ? debounced : undefined,
@@ -190,6 +190,14 @@ export function GlobalSearchPage() {
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
             <Skeleton className="h-9" />
+          </CardBody>
+        </Card>
+      ) : leadsFailed ? (
+        // A failed search must never read as "no matches" — that tells people their records are
+        // gone when the request simply broke.
+        <Card>
+          <CardBody>
+            <ErrorState error={leadsError} resource={SEARCH_MSG.resourceName} onRetry={refetchLeads} />
           </CardBody>
         </Card>
       ) : totalCount === 0 ? (

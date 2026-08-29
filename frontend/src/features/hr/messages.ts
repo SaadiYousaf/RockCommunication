@@ -113,6 +113,8 @@ export const HR_MSG = {
   saveRulesPermissionDesc: "You may not have permission for this call centre.",
 
   // ── Social Media ──────────────────────────────────────────────────────────
+  /** What failed to load, for the shared ErrorState ("Couldn't load social media reports"). */
+  socialResourceName: "social media reports",
   reportUpdated: "Report updated",
   reportAdded: "Report added",
   deleteReportTitle: "Delete report?",

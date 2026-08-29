@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { useDashboardQuery, useMetricCatalogQuery, useAgencyOptionsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, Input, Modal, PageHeader,
   Select, Skeleton, useToast, cn,
 } from "../../shared/ui";
 import { usePersistentState } from "../../shared/hooks/usePersistentState";
@@ -99,7 +99,7 @@ export function KpiDashboardPage() {
 
   const selected = Object.keys(picked).filter((k) => picked[k]);
   const waitingForAgency = isSuperAdmin && !agencyId;
-  const { data: values, isFetching } = useDashboardQuery(
+  const { data: values, isFetching, isError, error, refetch } = useDashboardQuery(
     { from, to, metrics: selected.length > 0 ? selected : undefined, agencyId: isSuperAdmin ? agencyId : undefined },
     { skip: waitingForAgency },
   );
@@ -326,6 +326,12 @@ export function KpiDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
+      ) : isError ? (
+        // A failed request must never read as "no data for this range" — that reports a zero the
+        // business never actually had.
+        <Card><CardBody>
+          <ErrorState error={error} resource="KPI metrics" onRetry={refetch} />
+        </CardBody></Card>
       ) : !values || values.length === 0 ? (
         <Card><CardBody>
           <EmptyState

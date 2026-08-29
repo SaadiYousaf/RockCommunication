@@ -23,7 +23,7 @@ interface ConfirmOptions {
    * to shut down a tenant needs to read that its call centres go down and its staff get signed out
    * BEFORE they press the button, not discover it afterwards.
    */
-  consequences?: ReactNode[];
+  consequences?: readonly ReactNode[];
   /**
    * Require the operator to type this exact text to enable the confirm button. Reserve it for
    * actions whose blast radius is a whole tenant — friction everywhere trains people to ignore it.

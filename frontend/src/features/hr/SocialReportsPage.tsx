@@ -7,7 +7,7 @@ import {
 import type { SocialMediaReport, SocialMediaInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Pager,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader, Pager,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast, usePagination,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -21,7 +21,7 @@ const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "
 export function SocialReportsPage() {
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
-  const { data: reports, isLoading } = useListSocialReportsQuery({ search: search.trim() || undefined });
+  const { data: reports, isLoading, isError, error, refetch } = useListSocialReportsQuery({ search: search.trim() || undefined });
   const { data: employees } = useListEmployeesQuery();
   const [create, { isLoading: creating }] = useCreateSocialReportMutation();
   const [update, { isLoading: updating }] = useUpdateSocialReportMutation();
@@ -157,6 +157,12 @@ export function SocialReportsPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must never read as "no reports yet" — that looks like the team's logged
+        // work disappeared.
+        <Card><CardBody>
+          <ErrorState error={error} resource={HR_MSG.socialResourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="chat" size={20} />} title={search ? HR_MSG.noMatchesTitle : HR_MSG.reportsEmptyTitle}

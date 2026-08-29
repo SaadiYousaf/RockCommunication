@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useCreateRubricMutation, useRubricsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -10,7 +10,7 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { QA_MSG } from "./messages";
 
 export function QaPage() {
-  const { data: rubrics, isLoading } = useRubricsQuery();
+  const { data: rubrics, isLoading, isError, error, refetch } = useRubricsQuery();
   const [create, { isLoading: creating }] = useCreateRubricMutation();
   const toast = useToast();
 
@@ -46,6 +46,12 @@ export function QaPage() {
         <div className="space-y-3">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-32" />)}
         </div>
+      ) : isError ? (
+        // A failed request must never read as "no rubrics yet" — that invites someone to recreate
+        // scoring rubrics that already exist.
+        <Card><CardBody>
+          <ErrorState error={error} resource={QA_MSG.rubricsResourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !rubrics || rubrics.length === 0 ? (
         <Card><CardBody>
           <EmptyState

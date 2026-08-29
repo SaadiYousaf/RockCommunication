@@ -3,6 +3,11 @@
  * Keep inline message strings out of the pages — reference these instead.
  */
 export const QA_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load QA rubrics"). */
+  rubricsResourceName: "QA rubrics",
+  /** What failed to load, for the shared ErrorState ("Couldn't load QA reviews"). */
+  reviewsResourceName: "QA reviews",
+
   // Rubric mutations
   rubricCreated: "Rubric created",
   createRubricFailed: "Couldn't create rubric",

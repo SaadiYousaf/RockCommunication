@@ -25,6 +25,8 @@ export const INTAKE_MSG = {
   marked: (status: string) => `Marked ${status}`,
 
   // ---- CloseQueuePage ----
+  /** What failed to load, for the shared ErrorState ("Couldn't load the closer queue"). */
+  closeResourceName: "the closer queue",
   leadAddedTitle: "Lead added",
   leadAddedDesc: (name: string) => `${name} → your closer queue`,
   addLeadFailedTitle: "Couldn't add lead",
@@ -56,6 +58,8 @@ export const INTAKE_MSG = {
   updateFailedTitle: "Couldn't update",
 
   // ---- VerifyQueuePage ----
+  /** What failed to load, for the shared ErrorState ("Couldn't load the verifier queue"). */
+  verifyResourceName: "the verifier queue",
   verifyEmptyTitle: "Queue is empty",
   verifyEmptyDesc: "New fronted leads will appear here.",
   pickStatus: "Pick a status",

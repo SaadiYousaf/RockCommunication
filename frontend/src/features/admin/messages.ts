@@ -137,6 +137,17 @@ export const ADMIN_MSG = {
     disableConfirmTitle: (name: string) => `Disable ${name}?`,
     disableConfirmDesc: "This account will no longer be able to sign in.",
     disableConfirmLabel: "Disable user",
+    bulkDisableConsequences: (n: number) => [
+      `${n === 1 ? "This person is" : `All ${n} are`} signed out immediately and can't sign in again.`,
+      "Their leads, sales and history are kept and stay assigned to them.",
+      "You can enable the accounts again at any time.",
+    ],
+    moveAgencyConsequences: [
+      "Their team and call centre are cleared — both belong to the agency they're leaving.",
+      "Their leads, sales and history stay with them.",
+      "You'll need to set their team and call centre again in the new agency.",
+    ],
+
     disableConsequences: (name: string) => [
       `${name} is signed out immediately and can't sign in again.`,
       "Their leads, sales and history are kept and stay assigned to them.",

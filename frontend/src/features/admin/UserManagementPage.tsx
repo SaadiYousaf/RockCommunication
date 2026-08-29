@@ -85,6 +85,7 @@ export function UserManagementPage() {
     if (!(await confirm({
       title: ADMIN_MSG.userMgmt.moveAgencyConfirmTitle(userName),
       description: ADMIN_MSG.userMgmt.moveAgencyConfirmDesc,
+      consequences: ADMIN_MSG.userMgmt.moveAgencyConsequences,
       confirmLabel: ADMIN_MSG.userMgmt.moveAgencyConfirmLabel,
       danger: true,
     }))) return;
@@ -224,6 +225,7 @@ export function UserManagementPage() {
     if (!(await confirm({
       title: ADMIN_MSG.userMgmt.deactivateConfirmTitle(n),
       description: ADMIN_MSG.userMgmt.deactivateConfirmDesc,
+      consequences: ADMIN_MSG.userMgmt.bulkDisableConsequences(n),
       confirmLabel: ADMIN_MSG.userMgmt.deactivateConfirmLabel,
       danger: true,
     }))) return;

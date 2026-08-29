@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCaptureCloserLeadMutation, useCloserQueueQuery } from "../../shared/api/baseApi";
 import type { IntakeLeadInput } from "../../shared/api/types";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, Icon, InfoHint, Modal, PageHeader, SearchInput, Stepper,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn, EmptyState, ErrorState, Icon, InfoHint, Modal, PageHeader, SearchInput, Stepper,
   Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, Pager, usePagination,} from "../../shared/ui";
 import { IntakeLeadForm } from "./IntakeLeadForm";
 import { INTAKE_MSG } from "./messages";
@@ -18,7 +18,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
   // Poll: leads flow in as verifiers promote them, so keep the pool live without a manual reload.
-  const { data: queue, isLoading } = useCloserQueueQuery(undefined, { pollingInterval: 30_000 });
+  const { data: queue, isLoading, isError, error, refetch } = useCloserQueueQuery(undefined, { pollingInterval: 30_000 });
   const [addLead, { isLoading: adding }] = useCaptureCloserLeadMutation();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -89,7 +89,11 @@ export function CloseQueuePage() {
         <CardHeader title="Ready to close" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "lead" : "leads"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
-          {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
+          {isLoading ? <Skeleton className="h-40" /> : isError ? (
+            // A failed request must never read as "no verified leads" — closers would think the
+            // pipeline had dried up.
+            <ErrorState error={error} resource={INTAKE_MSG.closeResourceName} onRetry={refetch} />
+          ) : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.closeEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.closeEmptyDesc}
               action={!q ? <Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setOpen(true)}>Add lead</Button> : undefined} />
           ) : (

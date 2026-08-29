@@ -3,6 +3,8 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const SEARCH_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load search results"). */
+  resourceName: "search results",
   // Search placeholders (no user-facing copy inline).
   searchPlaceholder: "Search by name, phone, email, role…",
   // CSV export

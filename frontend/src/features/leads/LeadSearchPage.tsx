@@ -9,7 +9,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, cn,
-  EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Stat, Tabs,
+  EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Stat, Tabs,
   Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { STAGE_TONE as stageTone, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
@@ -40,7 +40,7 @@ export function LeadSearchPage() {
   const hasQuery = useMemo(() =>
     Object.values(debounced).some((v) => v.trim().length > 0), [debounced]);
 
-  const { data: results, isFetching: searching } = useSearchLeadsQuery(
+  const { data: results, isFetching: searching, isError, error, refetch } = useSearchLeadsQuery(
     {
       phone: debounced.phone || undefined,
       email: debounced.email || undefined,
@@ -192,6 +192,12 @@ export function LeadSearchPage() {
               <div className="space-y-2">
                 {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12" />)}
               </div>
+            </CardBody></Card>
+          ) : isError ? (
+            // A failed search must never read as "no leads match" — that sends people rewording a
+            // query that was never the problem.
+            <Card><CardBody>
+              <ErrorState error={error} resource={LEADS_MSG.searchResource} onRetry={refetch} />
             </CardBody></Card>
           ) : filtered.length === 0 ? (
             <Card><CardBody>

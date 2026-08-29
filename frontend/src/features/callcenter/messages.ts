@@ -7,6 +7,8 @@
  * what the user can/can't do; lean on the shared MESSAGES helpers for read-only / permission copy.
  */
 export const CALLCENTER_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  attendanceResourceName: "attendance",
   // Search placeholders (kept here so no user-facing copy lives inline).
   scriptsSearchPlaceholder: "Search scripts by name, content, stage, or role…",
   dncSearchPlaceholder: "Search by phone or reason…",
