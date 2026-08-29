@@ -1,4 +1,5 @@
 using CRM.Api.Authorization;
+using CRM.Application.Intake;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Leads.Commands;
 using CRM.Application.Leads.Dtos;
@@ -72,6 +73,33 @@ public class LeadsController : ControllerBase
     [HasPermission(Permissions.LeadsRead)]
     public async Task<ActionResult<IReadOnlyList<DuplicateGroup>>> Duplicates(CancellationToken ct)
         => Ok(await _mediator.Send(new DuplicateScanQuery(), ct));
+
+    /// <summary>
+    /// Everything waiting to be claimed in the pools this caller's roles work. One screen for every
+    /// role, replacing the per-role verify/close queue endpoints.
+    /// </summary>
+    [HttpGet("available")]
+    [HasPermission(Permissions.QueueRead)]
+    public async Task<IActionResult> Available(CancellationToken ct)
+        => Ok(await _mediator.Send(new AvailableLeadsQuery(), ct));
+
+    /// <summary>Take an unclaimed lead out of the shared pool. 409 if someone got there first.</summary>
+    [HttpPost("{id:guid}/claim")]
+    [HasPermission(Permissions.QueueRead)]
+    public async Task<IActionResult> Claim(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new ClaimLeadCommand(id), ct);
+        return NoContent();
+    }
+
+    /// <summary>Put a lead you own back in the pool for its stage.</summary>
+    [HttpPost("{id:guid}/release")]
+    [HasPermission(Permissions.QueueRead)]
+    public async Task<IActionResult> Release(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new ReleaseLeadCommand(id), ct);
+        return NoContent();
+    }
 
     [HttpPost("{id:guid}/rescore")]
     [HasPermission(Permissions.LeadsWrite)]

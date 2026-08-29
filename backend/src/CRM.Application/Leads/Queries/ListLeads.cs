@@ -1,3 +1,4 @@
+using CRM.Application.Queues;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
@@ -49,7 +50,15 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
         // Front-line agents only browse their own assigned leads; managers see the whole
         // call center. (The global filter already limits rows to the caller's call center.)
         if (!AccessScope.SeesAllRecords(_user.Roles))
-            q = q.Where(l => l.AssignedUserId == _user.UserId);
+        {
+            // Their own leads PLUS anything unclaimed in a queue their role works — the same reach
+            // they have in the app. Without the second clause, pooled work silently vanished from a
+            // front-line agent's Leads page the moment the pool stopped carrying an owner.
+            var myPools = LeadQueuePredicates.PoolsFor(_user.Roles, seesEverything: false);
+            var me = _user.UserId;
+            q = q.Where(l => l.AssignedUserId == me
+                || (l.AssignedUserId == null && myPools.Contains(l.Stage)));
+        }
         if (request.Stage is { } stage) q = q.Where(l => l.Stage == stage);
         if (request.AssignedUserId is { } uid) q = q.Where(l => l.AssignedUserId == uid);
         if (request.Disposition is { } d) q = q.Where(l => l.Disposition == d);

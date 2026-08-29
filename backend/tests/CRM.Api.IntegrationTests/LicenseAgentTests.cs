@@ -338,9 +338,11 @@ public class LicenseAgentTests : IClassFixture<CrmWebAppFactory>
         var unread = await closer.GetJsonAsync("/api/notifications/unread-count");
         Assert.True(unread.GetProperty("count").GetInt32() >= 1, "the assignee should get a durable notification");
 
-        // …and the lead shows in the closer's live queue count (sidebar "N waiting" badge).
+        // …and the lead shows in the closer's own workload count (sidebar badge).
+        // Renamed from "myQueue" when the badge stopped double-counting the same lead as both a
+        // personal workload and a shared-pool workload.
         var counts = await closer.GetJsonAsync("/api/work-queues/counts");
-        Assert.True(counts.GetProperty("myQueue").GetInt32() >= 1);
+        Assert.True(counts.GetProperty("myLeads").GetInt32() >= 1);
     }
 
     /// <summary>Drives a lead through New→Fronted→Verified and records a clean sale; returns the sale id.

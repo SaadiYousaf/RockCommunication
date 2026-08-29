@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Compliance;
 using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Exceptions;
@@ -116,7 +117,13 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
 
         if (lead.Stage != WorkflowStage.Verified)
-            throw new ConflictException("Only verified leads in the closer queue can be closed.");
+            throw new ConflictException("This lead isn't ready to be closed.");
+
+        // Ownership, not just stage. Two closers used to be able to fill in the same application —
+        // including the customer's banking details — and the loser only found out at submit. Now
+        // the lead has to be yours, which means claiming it from Available Leads first.
+        if (lead.AssignedUserId != _user.UserId && !AccessScope.SeesAllRecords(_user.Roles))
+            throw new ConflictException("Another agent is working this lead. Claim it from Available Leads first.");
 
         var d = request.Input;
         var from = lead.Stage;

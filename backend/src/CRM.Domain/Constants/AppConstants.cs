@@ -26,6 +26,8 @@ public static class AppConstants
         public const string CloseQueue = "/close-queue";
         public const string ValidateQueue = "/validate-queue";
         public const string MyQueue = "/queue";
+        /// <summary>The single shared pool screen — replaces the per-role verify/close queue routes.</summary>
+        public const string Available = "/available";
         public const string Callbacks = "/callbacks";
     }
 

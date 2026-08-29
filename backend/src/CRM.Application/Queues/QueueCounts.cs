@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
@@ -12,18 +13,25 @@ namespace CRM.Application.Queues;
 /// "N new" badge on each queue. Per-user queues (My Queue, Callbacks) filter by the caller;
 /// the shared role pools (Verifier/Closer/Submission) are tenant-scoped by the global filter.
 /// </summary>
-public record QueueCountsDto(int MyQueue, int Callbacks, int VerifierQueue, int CloserQueue, int SubmissionQueue);
+/// <summary>
+/// One badge per meaningful workload. MyLeads and Available can never count the same lead: the first
+/// requires an owner, the second requires none. Previously myQueue overlapped both role pools and
+/// the submission queue, so a single sold deal incremented two badges.
+/// </summary>
+public record QueueCountsDto(
+    int MyLeads,
+    int Callbacks,
+    /// <summary>Total waiting in the pools this caller's roles actually work. 0 when they own none.</summary>
+    int Available,
+    /// <summary>Split of Available, so the screen can label its tabs without a second call.</summary>
+    int AvailableToVerify,
+    int AvailableToClose,
+    int SubmissionQueue);
 
 public record QueueCountsQuery() : IRequest<QueueCountsDto>;
 
 public class QueueCountsHandler : IRequestHandler<QueueCountsQuery, QueueCountsDto>
 {
-    private static readonly WorkflowStage[] ActiveMine =
-    {
-        WorkflowStage.New, WorkflowStage.Fronted, WorkflowStage.Verified,
-        WorkflowStage.JrClosed, WorkflowStage.Closed, WorkflowStage.Followup,
-    };
-
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
 
@@ -33,16 +41,20 @@ public class QueueCountsHandler : IRequestHandler<QueueCountsQuery, QueueCountsD
     public async Task<QueueCountsDto> Handle(QueueCountsQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
-        if (_user.UserId is not { } uid) return new QueueCountsDto(0, 0, 0, 0, 0);
+        if (_user.UserId is not { } uid) return new QueueCountsDto(0, 0, 0, 0, 0, 0);
 
-        // Personal queues — scoped to the caller (works for any role, no tenant edge cases).
-        var myQueue = await _db.Leads.CountAsync(l => l.AssignedUserId == uid && ActiveMine.Contains(l.Stage), ct);
+        // Personal workload — leads I own that still need something from me.
+        var myLeads = await _db.Leads.CountAsync(LeadQueuePredicates.Mine(uid), ct);
         var callbacks = await _db.ScheduledCallbacks.CountAsync(c => c.AssignedUserId == uid && !c.Completed, ct);
 
-        // Shared role pools — the global tenant filter already scopes these to the caller's
-        // agency/call-center. A central Submission Agent reads cross-agency; count all pending sales.
-        var verifierQueue = await _db.Leads.CountAsync(l => l.Stage == WorkflowStage.Fronted, ct);
-        var closerQueue = await _db.Leads.CountAsync(l => l.Stage == WorkflowStage.Verified, ct);
+        // Shared pools, counted ONLY for the roles this caller actually works — a badge should be a
+        // number they can act on, not a tenant-wide statistic. The global tenant filter already
+        // scopes these to their agency/call-centre.
+        var myPools = LeadQueuePredicates.PoolsFor(_user.Roles, AccessScope.SeesAllRecords(_user.Roles));
+        var availableToVerify = myPools.Contains(WorkflowStage.Fronted)
+            ? await _db.Leads.CountAsync(LeadQueuePredicates.Pool(WorkflowStage.Fronted), ct) : 0;
+        var availableToClose = myPools.Contains(WorkflowStage.Verified)
+            ? await _db.Leads.CountAsync(LeadQueuePredicates.Pool(WorkflowStage.Verified), ct) : 0;
 
         var isCentral = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
         var pendingSales = _db.Sales.AsQueryable();
@@ -54,6 +66,8 @@ public class QueueCountsHandler : IRequestHandler<QueueCountsQuery, QueueCountsD
             && s.ValidatorStatus != ValidatorStatus.Decline
             && s.ValidatorStatus != ValidatorStatus.ClientCancelled, ct);
 
-        return new QueueCountsDto(myQueue, callbacks, verifierQueue, closerQueue, submissionQueue);
+        return new QueueCountsDto(myLeads, callbacks,
+            availableToVerify + availableToClose, availableToVerify, availableToClose,
+            submissionQueue);
     }
 }

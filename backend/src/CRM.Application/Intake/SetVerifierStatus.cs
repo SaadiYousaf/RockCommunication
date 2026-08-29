@@ -66,6 +66,10 @@ public class SetVerifierStatusHandler : IRequestHandler<SetVerifierStatusCommand
             case VerifierStatus.Verified:
                 lead.Stage = WorkflowStage.Verified;              // → Closer queue
                 lead.Disposition = LeadDisposition.Interested;
+                // Hand-off RELEASES. Without this the lead keeps whoever captured it as its owner —
+                // usually the fronter — so it sat in the shared closer pool AND in that person's
+                // personal list forever. Releasing is what actually moves it to Available Leads.
+                lead.AssignedUserId = null;
                 break;
             case VerifierStatus.NotInterested:
                 lead.Stage = WorkflowStage.Lost;

@@ -104,7 +104,11 @@ public class CaptureIntakeLeadHandler : IRequestHandler<CaptureIntakeLeadCommand
             Stage = request.EntryStage,
             Disposition = LeadDisposition.None,
             VerifierStatus = toCloser ? VerifierStatus.Verified : VerifierStatus.None,
-            AssignedUserId = _user.UserId
+            // A closer typing a lead in is the person working it — it is theirs immediately and
+            // never enters the shared pool. A fronter's job ends when the lead is fronted, so it
+            // goes to the verifier pool unowned. Assigning it to the fronter (as before) put every
+            // captured lead in two places at once from the moment it was created.
+            AssignedUserId = toCloser ? _user.UserId : null
         };
         _db.Leads.Add(lead);
         _db.LeadActivities.Add(new LeadActivity

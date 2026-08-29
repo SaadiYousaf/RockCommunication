@@ -32,6 +32,11 @@ public class AssignAgentAction : IWorkflowAction
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == leadId, ct);
         if (lead is null) return;
 
+        // Auto-assignment exists to distribute UNCLAIMED work. A lead that already has an owner is
+        // someone's current job, and reassigning it silently took work off them — a closer who typed
+        // a lead in had it handed straight to a random fronter by the round-robin rule.
+        if (lead.AssignedUserId is not null) return;
+
         var role = p.TryGetValue("role", out var r) ? r?.ToString() ?? Roles.Fronter : Roles.Fronter;
         var strategy = p.TryGetValue("strategy", out var s) ? s?.ToString() ?? "round-robin" : "round-robin";
         await _assignment.AssignAsync(lead, role, strategy, ct);

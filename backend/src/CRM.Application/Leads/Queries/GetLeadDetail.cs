@@ -1,3 +1,4 @@
+using CRM.Application.Queues;
 using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
@@ -58,6 +59,16 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
         _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _scorer = Guard.AgainstNull(scorer); _identity = Guard.AgainstNull(identity);
     }
 
+    /// <summary>Mine, or unclaimed in a pool my role works.</summary>
+    private bool CanReach(Lead lead)
+    {
+        if (lead.AssignedUserId == _user.UserId) return true;
+        if (lead.AssignedUserId is not null) return false;
+        return LeadStagePolicy.QueueOwnerRole(lead.Stage) is { } owner
+            && LeadQueuePredicates.PoolsFor(_user.Roles, seesEverything: false).Contains(lead.Stage)
+            && owner is not null;
+    }
+
     public async Task<LeadDetailDto> Handle(GetLeadDetailQuery request, CancellationToken ct)
     {
         Guard.AgainstNull(request);
@@ -71,9 +82,12 @@ public class GetLeadDetailHandler : IRequestHandler<GetLeadDetailQuery, LeadDeta
             .FirstOrDefaultAsync(l => l.Id == request.Id && (scope == null || l.AgencyId == scope), ct)
             ?? throw new NotFoundException(nameof(Lead), request.Id);
 
-        // Front-line agents may only open leads assigned to them; managers see any lead in
-        // their call center. Report NotFound (not Forbidden) so we don't confirm existence.
-        if (!AccessScope.SeesAllRecords(_user.Roles) && lead.AssignedUserId != _user.UserId)
+        // Front-line agents may open a lead that is theirs, OR one sitting unclaimed in a queue
+        // their role works — otherwise clicking a name in Available Leads would report the lead as
+        // not found, which is exactly the confusion this whole change exists to remove. Managers see
+        // any lead in their call centre. Still NotFound rather than Forbidden, so we never confirm
+        // the existence of a lead the caller has no business knowing about.
+        if (!AccessScope.SeesAllRecords(_user.Roles) && !CanReach(lead))
             throw new NotFoundException(nameof(Lead), request.Id);
 
         var sale = await _db.Sales.AsNoTracking()
