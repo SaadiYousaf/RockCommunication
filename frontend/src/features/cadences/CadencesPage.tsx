@@ -2,7 +2,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { useCadenceEnrollmentsQuery, useListCadencesQuery, useUpsertCadenceMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Select, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
   type IconName,
 } from "../../shared/ui";
@@ -37,7 +37,7 @@ function formatDelay(min: number) {
 }
 
 export function CadencesPage() {
-  const { data: cadences, isLoading } = useListCadencesQuery();
+  const { data: cadences, isLoading, isError, error, refetch } = useListCadencesQuery();
   // Poll: the cadence runner advances step/status every minute server-side, so track it live.
   const { data: enrollments, isLoading: enrLoading } = useCadenceEnrollmentsQuery(undefined, { pollingInterval: 30_000 });
   const [upsert, { isLoading: saving }] = useUpsertCadenceMutation();
@@ -108,6 +108,11 @@ export function CadencesPage() {
 
       {isLoading ? (
         <div className="space-y-3 mb-8">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28" />)}</div>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no cadences yet" — that reads as data loss.
+        <Card className="mb-8"><CardBody>
+          <ErrorState error={error} resource={CADENCES_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !cadences || cadences.length === 0 ? (
         <Card className="mb-8"><CardBody>
           <EmptyState

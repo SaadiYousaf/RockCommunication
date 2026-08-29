@@ -5,7 +5,7 @@ import {
   useImportLeadsCsvMutation, useLeadListsQuery, useListImportBatchesQuery, useUpsertLeadListMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -16,7 +16,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 import { LISTS_MSG } from "./messages";
 
 export function LeadListsPage() {
-  const { data: lists, isLoading } = useLeadListsQuery();
+  const { data: lists, isLoading, isError, error, refetch } = useLeadListsQuery();
   const [upsert, { isLoading: saving }] = useUpsertLeadListMutation();
   const [importCsv, { isLoading: importing }] = useImportLeadsCsvMutation();
   const toast = useToast();
@@ -139,6 +139,11 @@ export function LeadListsPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no lead lists" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={LISTS_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : filtered.length === 0 ? (
         <Card><CardBody>
           <EmptyState

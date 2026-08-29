@@ -32,11 +32,13 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIdentityService _identity;
 
-    public ListLeadsHandler(IApplicationDbContext db, ICurrentUser user)
+    public ListLeadsHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
+        _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<PagedLeadsResult> Handle(ListLeadsQuery request, CancellationToken ct)
@@ -91,11 +93,23 @@ public class ListLeadsHandler : IRequestHandler<ListLeadsQuery, PagedLeadsResult
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 500);
 
-        var items = await q.Skip(skip).Take(take)
-            .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.PhoneNumber,
-                l.Email, l.State, l.Stage, l.Disposition, l.AssignedUserId, l.TeamId,
-                l.JornayaVerified, l.CreatedAt))
+        var rows = await q.Skip(skip).Take(take)
+            .Select(l => new
+            {
+                l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State,
+                l.Stage, l.Disposition, l.AssignedUserId, l.TeamId, l.JornayaVerified, l.CreatedAt,
+            })
             .ToListAsync(ct);
+
+        // Resolve owner names once for the page rather than per row. Without this the list showed no
+        // owner at all, so there was no way to tell your leads from a colleague's.
+        var names = await _identity.ListUserNamesAsync(_user.AgencyId, ct);
+
+        var items = rows.Select(l => new LeadDto(
+                l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State,
+                l.Stage, l.Disposition, l.AssignedUserId, l.TeamId, l.JornayaVerified, l.CreatedAt,
+                l.AssignedUserId is { } uid && names.TryGetValue(uid, out var n) ? n : null))
+            .ToList();
 
         return new PagedLeadsResult(items, total, skip, take);
     }

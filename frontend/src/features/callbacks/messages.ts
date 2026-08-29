@@ -6,6 +6,9 @@
  * what the user can/can't do; lean on the shared MESSAGES helpers for read-only / permission copy.
  */
 export const CALLBACKS_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load callbacks"). */
+  resourceName: "callbacks",
+
   exportReadyTitle: "Export ready",
   rowsDownloaded: (count: number) => `${count} rows downloaded.`,
 

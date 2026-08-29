@@ -33,6 +33,12 @@ const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","Ca
 // The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
 const PIPELINE: WorkflowStage[] = ["New","Fronted","Verified","JrClosed","Closed","Validated","Funded"];
 
+/** Plain-language "what do I do now" for a stage. Unclaimed leads need claiming before anything else. */
+function nextActionFor(stage: WorkflowStage, owned: boolean): string {
+  if (!owned) return LEADS_MSG.nextAction.unclaimed;
+  return LEADS_MSG.nextAction[stage] ?? "—";
+}
+
 export function LeadDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -221,7 +227,6 @@ export function LeadDetailPage() {
               {lead.email && <a href={`mailto:${lead.email}`} className="text-brand-700 hover:underline">{lead.email}</a>}
               {lead.state && <span>{[lead.city, lead.state, lead.postalCode].filter(Boolean).join(", ")}</span>}
               {lead.age && <span>{lead.age} y/o</span>}
-              {lead.assignedUserName && <span>· Assigned to <strong>{lead.assignedUserName}</strong></span>}
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -231,6 +236,40 @@ export function LeadDetailPage() {
               <InfoHint title="Lead score (0–100)" side="left">
                 A rules-based heuristic of how likely this lead is to convert — higher is better. Built from the weighted factors in the AI insights breakdown (recency, engagement, data completeness, disposition…). It's a heuristic, not an ML prediction.
               </InfoHint>
+            </div>
+          </div>
+        </div>
+
+        {/* Who has it and what happens next — the two questions someone opening a lead is asking,
+            previously answerable only by reading a run-on metadata line or the timeline. */}
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl bg-ink-50 border border-ink-100 p-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              {LEADS_MSG.detailOwner}
+            </div>
+            <div className="mt-1 flex items-center gap-2 min-w-0">
+              {lead.assignedUserName ? (
+                <>
+                  <Avatar name={lead.assignedUserName} size={22} />
+                  <span className="text-sm font-medium text-ink-900 truncate">{lead.assignedUserName}</span>
+                </>
+              ) : (
+                <Badge tone="accent" variant="soft">{LEADS_MSG.ownerAvailable}</Badge>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              {LEADS_MSG.detailStatus}
+            </div>
+            <div className="mt-1"><StageBadge stage={lead.stage} /></div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              {LEADS_MSG.detailNextAction}
+            </div>
+            <div className="mt-1 text-sm text-ink-800 truncate">
+              {nextActionFor(lead.stage as WorkflowStage, !!lead.assignedUserName)}
             </div>
           </div>
         </div>

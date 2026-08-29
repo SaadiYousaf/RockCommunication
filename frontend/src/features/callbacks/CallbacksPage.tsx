@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompleteCallbackMutation, useMyCallbacksQuery, useScheduleCallbackMutation, useMyLeadsQuery } from "../../shared/api/baseApi";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -41,7 +41,7 @@ export function CallbacksPage() {
   // read 0 until you actually click into the Completed tab (the count is derived from
   // whatever's loaded). Per-user callback volume is small, and loading them once also
   // makes tab switches instant instead of refetching. The tab still filters client-side.
-  const { data: callbacks, isLoading } = useMyCallbacksQuery({ includeCompleted: true });
+  const { data: callbacks, isLoading, isError, error, refetch } = useMyCallbacksQuery({ includeCompleted: true });
   const [schedule, { isLoading: scheduling }] = useScheduleCallbackMutation();
   const [complete] = useCompleteCallbackMutation();
   const toast = useToast();
@@ -182,6 +182,11 @@ export function CallbacksPage() {
               <Skeleton className="h-4 w-48 ml-auto" />
             </div>
           ))}
+        </CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no callbacks scheduled" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={CALLBACKS_MSG.resourceName} onRetry={refetch} />
         </CardBody></Card>
       ) : filtered.length === 0 ? (
         <Card><CardBody>

@@ -13,7 +13,7 @@ import {
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { EmployeeImageField } from "./EmployeeImageField";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -43,7 +43,7 @@ const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : "
 export function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [designation, setDesignation] = useState("");
-  const { data: employees, isLoading } = useListEmployeesQuery({
+  const { data: employees, isLoading, isError, error, refetch } = useListEmployeesQuery({
     search: search.trim() || undefined,
     designation: designation || undefined,
   });
@@ -220,6 +220,11 @@ export function EmployeesPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no employees" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={HR_MSG.employeesResourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="users" size={20} />} title={search || designation ? HR_MSG.noMatchesTitle : HR_MSG.employeesEmptyTitle}

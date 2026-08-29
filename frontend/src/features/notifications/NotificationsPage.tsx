@@ -3,14 +3,14 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import {
   useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
 } from "../../shared/api/baseApi";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, PageHeader, Skeleton, Stat, useToast, cn } from "../../shared/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, PageHeader, Skeleton, Stat, useToast, cn } from "../../shared/ui";
 
 /**
  * Full notification inbox — every work-assignment / pipeline alert for the signed-in user,
  * beyond the last few shown in the header bell. Click an item to mark it read and jump to it.
  */
 export function NotificationsPage() {
-  const { data: notifs = [], isLoading } = useNotificationsQuery({ take: 100 });
+  const { data: notifs = [], isLoading, isError, error, refetch } = useNotificationsQuery({ take: 100 });
   const [markRead] = useMarkNotificationReadMutation();
   const [markAll, { isLoading: markingAll }] = useMarkAllNotificationsReadMutation();
   const navigate = useNavigate();
@@ -55,6 +55,9 @@ export function NotificationsPage() {
         <CardBody className="pt-0">
           {isLoading ? (
             <div className="space-y-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}</div>
+          ) : isError ? (
+            // A failed request must NEVER fall through to "no notifications yet" — that reads as data loss.
+            <ErrorState error={error} resource="notifications" onRetry={refetch} />
           ) : notifs.length === 0 ? (
             <EmptyState
               icon={<Icon name="bell" size={20} />}

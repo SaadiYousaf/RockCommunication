@@ -7,6 +7,8 @@
  */
 export const HR_MSG = {
   payrollResourceName: "payroll",
+  /** What failed to load, for the shared ErrorState ("Couldn't load employees"). */
+  employeesResourceName: "employees",
   payrollAgencyFilter: "Filter by agency",
   payrollAllAgencies: "All agencies",
   payrollAllCallCentres: "All call centres",

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useListCallsQuery, useListUsersQuery, type CallsQuery } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
@@ -25,7 +25,7 @@ export function CallsHistoryPage() {
     status: searchParams.get("status") ?? undefined,
     direction: searchParams.get("direction") ?? undefined,
   }));
-  const { data, isLoading, isFetching } = useListCallsQuery(filters);
+  const { data, isLoading, isFetching, isError, error, refetch } = useListCallsQuery(filters);
   const { data: users } = useListUsersQuery();
   const toast = useToast();
 
@@ -151,6 +151,11 @@ export function CallsHistoryPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0,1,2,3,4].map((i) => <Skeleton key={i} className="h-12 my-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no calls found" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={CALLCENTER_MSG.callsResourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !data || data.items.length === 0 ? (
         <Card><CardBody>
           <EmptyState

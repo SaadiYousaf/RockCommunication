@@ -11,6 +11,8 @@ export const QUEUES_MSG = {
   noMatchesDesc: "Try a different search.",
 
   // Queues
+  /** What failed to load, for the shared ErrorState ("Couldn't load inbound queues"). */
+  queuesResourceName: "inbound queues",
   queueCreated: "Queue created",
   queueCreatedDesc: (name: string) => `${name} is ready to receive calls.`,
   createQueueFailed: "Couldn't create queue",

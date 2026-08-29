@@ -517,6 +517,8 @@ export type LeadDisposition =
   | "Sold" | "NotQualified" | "Voicemail" | "NoAnswer" | "WrongNumber";
 
 export interface Lead {
+  /** Who owns this lead. Null/undefined means unclaimed — it is in a shared queue. */
+  assignedUserName?: string | null;
   id: string;
   firstName: string;
   lastName: string;

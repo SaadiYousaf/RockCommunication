@@ -14,7 +14,13 @@ public record LeadDto(
     Guid? AssignedUserId,
     Guid? TeamId,
     bool JornayaVerified,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    /// <summary>
+    /// Who owns this lead, resolved for display. Null means it is unclaimed and sitting in a pool.
+    /// Ownership was previously only visible on the detail page, so a list gave no way to tell your
+    /// leads from anyone else's.
+    /// </summary>
+    string? AssignedUserName = null);
 
 public record CreateLeadDto(
     string FirstName,

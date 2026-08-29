@@ -12,7 +12,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 import { timeAgoShort } from "../../shared/lib/time";
 import { BUGS_MSG } from "./messages";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, Input, Modal, PageHeader, Pager,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, Input, Modal, PageHeader, Pager,
   SearchInput, Select, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast, usePagination,
 } from "../../shared/ui";
 
@@ -23,7 +23,7 @@ import {
 export function BugsPage() {
   const [status, setStatus] = useState<string>("");
   const [scope, setScope] = useState<"all" | "mine" | "assigned">("all");
-  const { data: bugs, isLoading } = useListBugsQuery({ status: status || undefined, scope });
+  const { data: bugs, isLoading, isError, error, refetch } = useListBugsQuery({ status: status || undefined, scope });
   const [openId, setOpenId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -116,6 +116,11 @@ export function BugsPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no bugs here" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={BUGS_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : list.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="success" size={20} />} title={BUGS_MSG.noBugsTitle}

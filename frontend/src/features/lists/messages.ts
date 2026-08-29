@@ -4,6 +4,9 @@
  * Never surface internal identifiers here — speak in plain language.
  */
 export const LISTS_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load lead lists"). */
+  resourceName: "lead lists",
+
   // Search placeholders (no user-facing copy inline).
   searchPlaceholder: "Search lists by name…",
   // ---- Export ----

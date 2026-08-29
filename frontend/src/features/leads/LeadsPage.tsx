@@ -384,6 +384,14 @@ export function LeadsPage() {
               <TH>Lead</TH>
               <TH>Phone</TH>
               <TH>
+                <span className="inline-flex items-center gap-1">Owner
+                  <InfoHint title="Owner" side="bottom">
+                    Who is working this lead. "Available" means nobody has claimed it yet — it is
+                    sitting in the shared queue for its stage.
+                  </InfoHint>
+                </span>
+              </TH>
+              <TH>
                 <span className="inline-flex items-center gap-1">Stage
                   <InfoHint title="Pipeline stage" side="bottom">
                     The lead's current step in the pipeline: New → Fronted → Verified → Closed → Validated → Funded (or off-track Follow-up / Win-back / Lost).
@@ -391,8 +399,8 @@ export function LeadsPage() {
                 </span>
               </TH>
               <TH>
-                <span className="inline-flex items-center gap-1">Disposition
-                  <InfoHint title="Disposition" side="bottom">
+                <span className="inline-flex items-center gap-1">Last outcome
+                  <InfoHint title="Last outcome" side="bottom">
                     The outcome recorded after the most recent call attempt (e.g. Interested, Voicemail, No answer, DNC) — it doesn't change the pipeline stage.
                   </InfoHint>
                 </span>
@@ -424,6 +432,16 @@ export function LeadsPage() {
                     </div>
                   </TD>
                   <TD className="font-mono text-xs text-ink-700 tabular-nums whitespace-nowrap">{formatPhone(l.phoneNumber)}</TD>
+                  <TD className="whitespace-nowrap">
+                    {l.assignedUserName ? (
+                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <Avatar name={l.assignedUserName} size={22} />
+                        <span className="text-sm text-ink-700 truncate max-w-[9rem]">{l.assignedUserName}</span>
+                      </span>
+                    ) : (
+                      <Badge tone="accent" variant="soft">{LEADS_MSG.ownerAvailable}</Badge>
+                    )}
+                  </TD>
                   <TD><Badge tone={stageTone[stage]} variant="soft" dot>{stageLabel(stage)}</Badge></TD>
                   <TD className="text-ink-600 text-xs">{dispositionLabel(l.disposition)}</TD>
                   <TD className="text-ink-500 text-xs tabular-nums whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</TD>

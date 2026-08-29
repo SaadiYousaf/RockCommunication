@@ -7,7 +7,7 @@ import {
   useUpsertQueueMutation, useUpsertVoicemailMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -34,7 +34,7 @@ export function QueuesPage() {
 }
 
 function QueueSection() {
-  const { data: queues, isLoading } = useListQueuesQuery();
+  const { data: queues, isLoading, isError, error, refetch } = useListQueuesQuery();
   const [upsert, { isLoading: saving }] = useUpsertQueueMutation();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -100,6 +100,11 @@ function QueueSection() {
         {isLoading ? (
           <div className="px-5 pb-5 space-y-2">
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}
+          </div>
+        ) : isError ? (
+          // A failed request must NEVER fall through to "no queues yet" — that reads as data loss.
+          <div className="px-5 pb-5">
+            <ErrorState error={error} resource={QUEUES_MSG.queuesResourceName} onRetry={refetch} />
           </div>
         ) : !queues || queues.length === 0 ? (
           <div className="px-5 pb-5">

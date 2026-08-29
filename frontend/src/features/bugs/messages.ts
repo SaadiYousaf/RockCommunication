@@ -4,6 +4,9 @@
  * fallback comes from the shared MESSAGES helper in the components.
  */
 export const BUGS_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load bug reports"). */
+  resourceName: "bug reports",
+
   exportReady: "Export ready",
   rowsDownloaded: (n: number) => `${n} rows downloaded.`,
   retry: "Try again.",

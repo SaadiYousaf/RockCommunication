@@ -3,6 +3,9 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const CADENCES_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load cadences"). */
+  resourceName: "cadences",
+
   // Cadence mutations
   cadenceUpdated: "Cadence updated",
   cadenceCreated: "Cadence created",

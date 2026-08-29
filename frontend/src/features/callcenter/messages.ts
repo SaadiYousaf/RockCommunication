@@ -11,6 +11,8 @@ export const CALLCENTER_MSG = {
   scriptsSearchPlaceholder: "Search scripts by name, content, stage, or role…",
   dncSearchPlaceholder: "Search by phone or reason…",
   agentSearchPlaceholder: "Search by agent name…",
+  /** What failed to load, for the shared ErrorState ("Couldn't load call history"). */
+  callsResourceName: "call history",
   // Shared across call-center pages
   exportReadyTitle: "Export ready",
   rowsDownloaded: (count: number) => `${count} rows downloaded.`,

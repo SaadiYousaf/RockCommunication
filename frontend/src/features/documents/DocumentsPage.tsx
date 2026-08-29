@@ -11,7 +11,7 @@ import {
 import type { DocumentMeta } from "../../shared/api/types";
 import type { RootState } from "../../app/store";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input,
   PageHeader, Skeleton, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -30,7 +30,7 @@ export function DocumentsPage() {
   const roles = auth.user?.roles ?? [];
   const canManage = roles.some((r) => ["Admin", "ProgramManager", "SuperAdmin"].includes(r));
 
-  const { data: docs, isLoading } = useListDocumentsQuery();
+  const { data: docs, isLoading, isError, error, refetch } = useListDocumentsQuery();
   const [uploadDoc, { isLoading: uploading }] = useUploadDocumentMutation();
   const [deleteDoc] = useDeleteDocumentMutation();
   const toast = useToast();
@@ -106,6 +106,9 @@ export function DocumentsPage() {
           <CardBody className="pt-0">
             {isLoading ? (
               <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+            ) : isError ? (
+              // A failed request must NEVER fall through to "no documents yet" — that reads as data loss.
+              <ErrorState error={error} resource={DOCUMENTS_MSG.resourceName} onRetry={refetch} />
             ) : !docs || docs.length === 0 ? (
               <EmptyState icon={<Icon name="doc" size={20} />} title={DOCUMENTS_MSG.noDocumentsTitle}
                 description={canManage ? DOCUMENTS_MSG.noDocumentsManageDesc : DOCUMENTS_MSG.noDocumentsReadonlyDesc} />

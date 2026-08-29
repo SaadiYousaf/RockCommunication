@@ -4,7 +4,7 @@ import { useAuditFiltersQuery, useListAuditQuery, type AuditEntry, type AuditQue
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tooltip, useToast,
 } from "../../shared/ui";
 
@@ -75,7 +75,7 @@ function fmtVal(v: unknown): string {
 export function AuditLogPage() {
   const [filters, setFilters] = useState<AuditQuery>({ skip: 0, take: 50 });
   const { data: filterOpts } = useAuditFiltersQuery();
-  const { data, isLoading, isFetching } = useListAuditQuery(filters);
+  const { data, isLoading, isFetching, isError, error, refetch } = useListAuditQuery(filters);
   const [expanded, setExpanded] = useState<string | null>(null);
   const toast = useToast();
   const sel = useRowSelection((data?.items ?? []).map((e) => e.id));
@@ -212,6 +212,11 @@ export function AuditLogPage() {
       {isLoading ? (
         <Card><CardBody>
           {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10 my-2" />)}
+        </CardBody></Card>
+      ) : isError ? (
+        // A failed request must NEVER fall through to "no audit entries" — that reads as data loss.
+        <Card><CardBody>
+          <ErrorState error={error} resource={ADMIN_MSG.audit.resourceName} onRetry={refetch} />
         </CardBody></Card>
       ) : !data || data.items.length === 0 ? (
         <Card><CardBody>

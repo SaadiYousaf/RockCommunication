@@ -332,6 +332,8 @@ export const ADMIN_MSG = {
 
   // ── Audit log (AuditLogPage) ─────────────────────────────────────────────
   audit: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load audit entries"). */
+    resourceName: "audit entries",
     exportedRows: (n: number) => `Exported ${n} rows`,
     emptyTitle: "No audit entries",
     emptyDesc: "Try a different filter or date range.",

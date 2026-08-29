@@ -3,12 +3,13 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import type { RootState } from "../app/store";
 import {
-  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Skeleton, cn,
+  Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Skeleton, cn,
   usePagination, Pager, type IconName, type BadgeTone,
 } from "../shared/ui";
 import { formatUsdCompact } from "../shared/lib/format";
 import { useDashboardSummaryQuery, useLeaderboardQuery, useWallboardQuery, useUpcomingEventsQuery, useTeamStatusQuery } from "../shared/api/baseApi";
 import { useDashboardLayout } from "./useDashboardLayout";
+import { MyWorkCard } from "./MyWorkCard";
 import { usePermission, Perm } from "../shared/auth/permissions";
 import { useIsSupervisor } from "../shared/auth/rank";
 import type { DashboardStageBucket, DashboardSummary, WorkflowStage, TeamStatusRow, TeamLiveStatus } from "../shared/api/types";
@@ -151,15 +152,17 @@ export function Dashboard() {
     <>
       <Hero userName={userName} role={role} data={data} loading={isLoading} onRefresh={refetch} />
 
+      {/* The first thing on the page: what this person has to do, each tile a link to that work.
+          Previously the dashboard opened on KPI charts and a floor wallboard — informative for a
+          supervisor, no help at all to someone signing in wanting to know where to start. */}
+      <MyWorkCard />
+
       {isError && (
         <Card className="mb-6">
           <CardBody>
-            <EmptyState
-              icon={<Icon name="error" size={20} />}
-              title="Couldn't load dashboard"
-              description="The dashboard service is unavailable. Make sure the backend is running."
-              action={<Button onClick={() => refetch()}>Retry</Button>}
-            />
+            {/* "Make sure the backend is running" is developer instruction, not something a
+                salesperson can act on. The shared error state says what happened and offers a retry. */}
+            <ErrorState error={undefined} resource="your dashboard" onRetry={refetch} />
           </CardBody>
         </Card>
       )}

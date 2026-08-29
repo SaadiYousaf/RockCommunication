@@ -56,6 +56,29 @@ export const LEADS_MSG = {
   releaseFailedTitle: "Couldn't release this lead",
 
   openAction: "Open",
+  ownerAvailable: "Available",
+  detailOwner: "Owner",
+  detailStatus: "Status",
+  detailNextAction: "Next action",
+
+  /**
+   * What to do next, stated in plain language per stage. The pipeline stepper shows WHERE a lead is;
+   * this says what the person looking at it should actually do — the question a new employee asks
+   * and the app never answered.
+   */
+  nextAction: {
+    unclaimed: "Claim this lead to work it",
+    New: "Call the customer and front the lead",
+    Fronted: "Verify the customer's details",
+    Verified: "Complete the closing application",
+    JrClosed: "Review and close the sale",
+    Closed: "Waiting on submission review",
+    Validated: "Waiting on funding",
+    Funded: "Complete — no action needed",
+    Followup: "Follow up with the customer",
+    Winback: "Attempt a win-back",
+    Lost: "Closed out — no action needed",
+  } as Record<string, string>,
 
   // Search placeholders (no user-facing copy inline).
   myQueueSearchPlaceholder: "Search my queue by name, phone, or email…",

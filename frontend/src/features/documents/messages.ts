@@ -3,6 +3,9 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const DOCUMENTS_MSG = {
+  /** What failed to load, for the shared ErrorState ("Couldn't load documents"). */
+  resourceName: "documents",
+
   // Upload
   uploaded: "Uploaded",
   uploadFailed: "Upload failed",
