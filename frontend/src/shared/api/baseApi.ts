@@ -9,7 +9,7 @@ import type {
   Callback, MetricCatalogItem, MetricValue, Rubric, ChatRoom, ChatMessage, ChatOversightRoom, ChatOversightMessage,
   OversightAgency, OversightCallCenter, AttendanceRow, AppNotification, QueueCounts,
   WorkflowStage, LeadDisposition, DashboardSummary, TeamStatusRow,
-  AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
+  AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto, AvailableLeadItem,
   TenantCascadeResult, TenantDisableImpact,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
@@ -127,7 +127,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "VerifierQueue", "CloserQueue", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "Available", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -208,6 +208,24 @@ export const baseApi = createApi({
     myLeads: b.query<Lead[], { stage?: WorkflowStage; take?: number } | void>({
       query: (params) => ({ url: "/api/leads/mine", params: params ?? undefined }),
       providesTags: ["Leads"],
+    }),
+    /** Everything waiting to be claimed in the pools this user's roles work. */
+    availableLeads: b.query<AvailableLeadItem[], void>({
+      query: () => "/api/leads/available",
+      providesTags: ["Available"],
+    }),
+    /**
+     * Claim / release both cross the owner<->pool boundary, so each must invalidate BOTH lists and
+     * the badges — otherwise a claimed lead lingers in Available until the next poll and the user
+     * sees it in two places again, which is the whole problem this change exists to remove.
+     */
+    claimLead: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/leads/${id}/claim`, method: "POST" }),
+      invalidatesTags: ["Leads", "Available", "QueueCounts"],
+    }),
+    releaseLead: b.mutation<void, string>({
+      query: (id) => ({ url: `/api/leads/${id}/release`, method: "POST" }),
+      invalidatesTags: ["Leads", "Available", "QueueCounts"],
     }),
     leadTimeline: b.query<LeadTimeline, string>({
       query: (id) => `/api/leads/${id}/timeline`,
@@ -509,15 +527,15 @@ export const baseApi = createApi({
     // ---- Intake pipeline (Fronter → Verifier → Closer) ----
     captureIntakeLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
       query: (body) => ({ url: "/api/intake/leads", method: "POST", body }),
-      invalidatesTags: ["VerifierQueue", "Leads", "QueueCounts"],
+      invalidatesTags: ["Available", "Leads", "QueueCounts"],
     }),
     verifierQueue: b.query<IntakeQueueItem[], void>({
       query: () => "/api/intake/verify/queue",
-      providesTags: ["VerifierQueue"],
+      providesTags: ["Available"],
     }),
     setVerifierStatus: b.mutation<{ leadId: string; status: string; stage: string }, { leadId: string; status: string; notes?: string; callbackAt?: string }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/verify/${leadId}/status`, method: "POST", body }),
-      invalidatesTags: ["VerifierQueue", "CloserQueue", "QueueCounts"],
+      invalidatesTags: ["Available", "Leads", "QueueCounts"],
     }),
     // Verifier opens a queued lead to review / correct its intake details.
     getVerifyLead: b.query<ClosingApplicationView, string>({
@@ -526,7 +544,7 @@ export const baseApi = createApi({
     }),
     updateVerifyLead: b.mutation<{ leadId: string }, { leadId: string } & UpdateIntakeLeadInput>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/verify/${leadId}`, method: "PUT", body }),
-      invalidatesTags: (_r, _e, arg) => ["VerifierQueue", { type: "ClosingApp", id: arg.leadId }],
+      invalidatesTags: (_r, _e, arg) => ["Available", "Leads", "QueueCounts", { type: "ClosingApp", id: arg.leadId }],
     }),
     // Submission agent opens the full lead + application to copy into the carrier portal.
     getValidateLead: b.query<ClosingApplicationView, string>({
@@ -535,7 +553,7 @@ export const baseApi = createApi({
     }),
     closerQueue: b.query<IntakeQueueItem[], void>({
       query: () => "/api/intake/close/queue",
-      providesTags: ["CloserQueue"],
+      providesTags: ["Available"],
     }),
     getClosingApplication: b.query<ClosingApplicationView, string>({
       query: (leadId) => `/api/intake/close/${leadId}`,
@@ -543,12 +561,12 @@ export const baseApi = createApi({
     }),
     submitClosingApplication: b.mutation<{ leadId: string; status: string; stage: string; saleId: string | null }, { leadId: string; status: string; application: ClosingApplicationInput }>({
       query: ({ leadId, ...body }) => ({ url: `/api/intake/close/${leadId}`, method: "POST", body }),
-      invalidatesTags: (_r, _e, arg) => ["CloserQueue", "Sales", "Leads", "Commissions", "ValidatorQueue", "QueueCounts", { type: "ClosingApp", id: arg.leadId }],
+      invalidatesTags: (_r, _e, arg) => ["Available", "Sales", "Leads", "Commissions", "ValidatorQueue", "QueueCounts", { type: "ClosingApp", id: arg.leadId }],
     }),
     // Closer adds a lead straight into the Closer queue (skips fronter/verifier).
     captureCloserLead: b.mutation<{ leadId: string; firstName: string; lastName: string; stage: string }, IntakeLeadInput>({
       query: (body) => ({ url: "/api/intake/close/leads", method: "POST", body }),
-      invalidatesTags: ["CloserQueue", "Leads", "QueueCounts"],
+      invalidatesTags: ["Available", "Leads", "QueueCounts"],
     }),
     // ---- Validator queue ----
     validatorQueue: b.query<ValidatorQueueItem[], void>({
@@ -1566,7 +1584,8 @@ export const {
   useLoginMutation, useSetContextMutation, useVerify2FaMutation, useSetup2FaMutation, useEnable2FaMutation,
   useDisable2FaMutation, useGet2FaStatusQuery,
   useMeQuery, useListUsersQuery, useUserDirectoryQuery,
-  useListLeadsQuery, useMyLeadsQuery, useLeadTimelineQuery,
+  useListLeadsQuery, useMyLeadsQuery, useAvailableLeadsQuery,
+  useClaimLeadMutation, useReleaseLeadMutation, useLeadTimelineQuery,
   useCreateLeadMutation, useTransitionLeadMutation, useSetLeadDispositionMutation, useAssignLeadMutation,
   useVerifyJornayaMutation, useDialMutation, useCarriersQuery,
   useRecordSaleMutation, useValidateSaleMutation, useFundSaleMutation, useUploadSaleRecordingMutation,

@@ -8,6 +8,55 @@ import { MESSAGES } from "../../shared/constants/messages";
  * stays consistent app-wide.
  */
 export const LEADS_MSG = {
+  // ── The two work lists ─────────────────────────────────────────────────────
+  // One vocabulary: a lead is either MINE or AVAILABLE. The verb is Claim; the inverse is Release.
+  // No synonyms — "queue", "pool", "owned" and "assigned to me" all meant the same thing before and
+  // nobody could tell which list was their real workload.
+  myTitle: "My Leads",
+  myDescription: "Leads assigned to you. This is your workload — if a lead is yours, it's here.",
+  myResource: "your leads",
+  myEmptyTitle: "Your list is clear",
+  myEmptyBody: "Nothing is waiting on you. Check Available Leads to pick up something new.",
+  myEmptyAction: "Go to Available Leads",
+
+  availableTitle: "Available Leads",
+  availableDescription: "Leads waiting to be picked up. Claim one and it moves to My Leads.",
+  availableResource: "available leads",
+  availableEmptyTitle: "Nothing waiting",
+  availableEmptyBody:
+    "Every lead has been picked up. New ones appear here as soon as they're ready for you.",
+
+  noSearchMatchTitle: "Nothing matches your search",
+  noSearchMatchBody: "Try a different name or phone number, or clear the search.",
+  searchPlaceholder: "Search name, phone, or city…",
+  waitingCount: (n: number) => `${n} waiting`,
+
+  colLead: "Lead",
+  colWaiting: "Waiting",
+  colPriority: "Priority",
+  colLocation: "Location",
+  colStatus: "Status",
+  colLastOutcome: "Last outcome",
+  colAction: "Action",
+
+  claimAction: "Claim",
+  claimedTitle: "Claimed",
+  claimedBody: (name: string) => `${name} is now in My Leads.`,
+  claimLostTitle: "Someone else got there first",
+  claimLostBody: (name: string) => `${name} was just claimed by another agent.`,
+  claimFailedTitle: "Couldn't claim this lead",
+  claimFailedBody: "Please try again.",
+
+  releaseAction: "Release to Available",
+  releaseConfirmTitle: (name: string) => `Release ${name}?`,
+  releaseConfirmBody: "This puts the lead back in Available Leads for someone else to pick up.",
+  releaseConfirmLabel: "Release lead",
+  releasedTitle: "Released",
+  releasedBody: (name: string) => `${name} is back in Available Leads.`,
+  releaseFailedTitle: "Couldn't release this lead",
+
+  openAction: "Open",
+
   // Search placeholders (no user-facing copy inline).
   myQueueSearchPlaceholder: "Search my queue by name, phone, or email…",
   leadsSearchPlaceholder: "Search by name, phone, or email…",

@@ -9,6 +9,7 @@ export { Spinner } from "./Spinner";
 export { Skeleton } from "./Skeleton";
 export { EmptyState } from "./EmptyState";
 export { StatusBadge, statusOf, type StatusKind } from "./StatusBadge";
+export { RowMenu, type RowMenuItem } from "./RowMenu";
 export { ErrorState, QueryState } from "./ErrorState";
 export { PageHeader } from "./PageHeader";
 export { Avatar } from "./Avatar";

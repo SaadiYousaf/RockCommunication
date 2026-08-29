@@ -7,6 +7,7 @@ import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
 import { ConfirmEmailPage } from "../features/auth/ConfirmEmailPage";
 import { LeadsPage } from "../features/leads/LeadsPage";
 import { MyQueuePage } from "../features/leads/MyQueuePage";
+import { AvailableLeadsPage } from "../features/leads/AvailableLeadsPage";
 import { IntakeFormPage } from "../features/intake/IntakeFormPage";
 import { VerifyQueuePage } from "../features/intake/VerifyQueuePage";
 import { CloseQueuePage } from "../features/intake/CloseQueuePage";
@@ -187,7 +188,12 @@ const router = createBrowserRouter([
           },
           {
             element: <ProtectedRoute modules={[M.MyQueue]} />,
-            children: [{ path: "/queue", element: <MyQueuePage /> }],
+            children: [
+              { path: "/queue", element: <MyQueuePage /> },
+              // The shared pool. Same module gate as My Leads — they are the two halves of one
+              // workload, not separate features, and the page shows only the pools this user works.
+              { path: "/available", element: <AvailableLeadsPage /> },
+            ],
           },
 
           // Intake pipeline — role-gated (Admin/SuperAdmin bypass in ProtectedRoute)

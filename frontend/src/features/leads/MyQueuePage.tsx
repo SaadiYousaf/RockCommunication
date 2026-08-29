@@ -2,13 +2,15 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  useDialLeadMutation, useMyLeadsQuery, useTransitionLeadMutation,
+  useDialLeadMutation, useMyLeadsQuery, useTransitionLeadMutation, useReleaseLeadMutation,
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
-  Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, PageHeader,
+  Pager, RowMenu, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { MESSAGES } from "../../shared/constants/messages";
 import { STAGE_TONE as stageTone, stageOf, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
 import { formatPhone } from "../../shared/lib/format";
@@ -42,10 +44,29 @@ export function MyQueuePage() {
   const navigate = useNavigate();
   const toast = useToast();
   // Poll: managers/round-robin can assign leads to me while I'm on this page.
-  const { data: leads, isLoading, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000 });
-  const [transition, { isLoading: transitioning }] = useTransitionLeadMutation();
+  const { data: leads, isLoading, isError, error, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000 });
+  const [transition] = useTransitionLeadMutation();
+  const [release] = useReleaseLeadMutation();
+  const confirm = useConfirm();
   const [dial, { isLoading: dialing }] = useDialLeadMutation();
   const [busyId, setBusyId] = useState<string | null>(null);   // the row whose action is in flight
+
+  /** Hand a lead back to the shared pool — the inverse of Claim, and the way to say "not mine". */
+  async function releaseFromRow(id: string, name: string) {
+    const ok = await confirm({
+      title: LEADS_MSG.releaseConfirmTitle(name),
+      description: LEADS_MSG.releaseConfirmBody,
+      confirmLabel: LEADS_MSG.releaseConfirmLabel,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await release(id).unwrap();
+      toast.success(LEADS_MSG.releasedTitle, LEADS_MSG.releasedBody(name));
+    } catch {
+      toast.error(LEADS_MSG.releaseFailedTitle, MESSAGES.tryAgain);
+    }
+  }
 
   const [filter, setFilter] = useState<WorkflowStage | "All" | "Active">("Active");
   const [search, setSearch] = useState("");
@@ -135,8 +156,9 @@ export function MyQueuePage() {
     <>
       <PageHeader
         eyebrow="Workspace"
-        title="My Queue"
-        description="Leads currently assigned to you. Dial, dispose, and move them through the pipeline."
+        title={LEADS_MSG.myTitle}
+        description={LEADS_MSG.myDescription}
+        breadcrumbs={[{ label: "Workspace" }, { label: LEADS_MSG.myTitle }]}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
@@ -168,14 +190,21 @@ export function MyQueuePage() {
             </div>
           ))}
         </CardBody></Card>
+      ) : isError ? (
+        // A failed request used to fall through to "nothing matches your filter", which sent people
+        // clearing a search that was never the problem.
+        <Card><CardBody>
+          <ErrorState error={error} resource={LEADS_MSG.myResource} onRetry={refetch} />
+        </CardBody></Card>
       ) : filtered.length === 0 ? (
         <Card><CardBody>
           <EmptyState
             icon={<Icon name="inbox" size={20} />}
-            title={leads && leads.length === 0 ? LEADS_MSG.queueEmptyTitle : LEADS_MSG.queueNoMatchTitle}
-            description={leads && leads.length === 0
-              ? LEADS_MSG.queueEmptyDesc
-              : LEADS_MSG.queueNoMatchDesc}
+            title={leads && leads.length === 0 ? LEADS_MSG.myEmptyTitle : LEADS_MSG.noSearchMatchTitle}
+            description={leads && leads.length === 0 ? LEADS_MSG.myEmptyBody : LEADS_MSG.noSearchMatchBody}
+            action={leads && leads.length === 0 ? (
+              <Button onClick={() => navigate("/available")}>{LEADS_MSG.myEmptyAction}</Button>
+            ) : undefined}
           />
         </CardBody></Card>
       ) : (
@@ -234,28 +263,35 @@ export function MyQueuePage() {
                     </span>
                   </TD>
                   <TD>
-                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                      <Button size="sm" leftIcon={<Icon name="phoneCall" size={13} />}
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button size="sm" variant="ghost" leftIcon={<Icon name="phoneCall" size={13} />}
                         loading={dialing && busyId === l.id} disabled={busyId === l.id}
                         onClick={() => dialFromRow(l.id, name)}>Dial</Button>
-                      {next.includes("Verified") && (
-                        <Button size="sm" variant="outline"
-                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
-                          onClick={() => quick(l.id, "Verified", "Interested", name)}>Verified</Button>
-                      )}
-                      {next.includes("Closed") && (
-                        <Button size="sm" variant="outline"
-                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
-                          onClick={() => quick(l.id, "Closed", "Sold", name)}>Closed</Button>
-                      )}
-                      {QUICK_DISPOSITIONS.filter(q => next.includes(q.kind)).slice(0, 2).map(q => (
-                        <Button key={q.label} size="sm" variant="ghost"
-                          loading={transitioning && busyId === l.id} disabled={busyId === l.id}
-                          onClick={() => quick(l.id, q.kind, q.disp, name)}>{q.label}</Button>
-                      ))}
                       <Link to={`/leads/${l.id}`}>
-                        <Button variant="ghost" size="sm" rightIcon={<Icon name="chevronRight" size={13} />}>Open</Button>
+                        <Button size="sm" rightIcon={<Icon name="chevronRight" size={13} />}>
+                          {LEADS_MSG.openAction}
+                        </Button>
                       </Link>
+                      <RowMenu
+                        items={[
+                          ...(next.includes("Verified") ? [{
+                            key: "verified", label: "Mark verified",
+                            onClick: () => quick(l.id, "Verified", "Interested", name),
+                          }] : []),
+                          ...(next.includes("Closed") ? [{
+                            key: "closed", label: "Mark closed",
+                            onClick: () => quick(l.id, "Closed", "Sold", name),
+                          }] : []),
+                          ...QUICK_DISPOSITIONS.filter((q) => next.includes(q.kind)).map((q) => ({
+                            key: q.label, label: q.label,
+                            onClick: () => quick(l.id, q.kind, q.disp, name),
+                          })),
+                          {
+                            key: "release", label: LEADS_MSG.releaseAction, danger: true,
+                            onClick: () => releaseFromRow(l.id, name),
+                          },
+                        ]}
+                      />
                     </div>
                   </TD>
                 </TR>

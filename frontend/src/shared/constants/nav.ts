@@ -38,20 +38,19 @@ export const NAV: NavNode[] = [
     children: [
       { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: "dashboard", module: "dashboard" },
       { key: "calendar",  to: "/calendar",  label: "Calendar",  icon: "calendar" },
-      { key: "queue",     to: "/queue",     label: "My Queue",  icon: "inbox", module: "queue", countKey: "myQueue" },
+      // The two work lists, side by side and named for what they contain. "My Leads" is the
+      // primary experience: if a lead is yours, it is here and nowhere else.
+      { key: "queue",     to: "/queue",     label: "My Leads",        icon: "inbox",     module: "queue", countKey: "myLeads" },
+      { key: "available", to: "/available", label: "Available Leads", icon: "briefcase", module: "queue", countKey: "available" },
+      { key: "intake-form", to: "/intake",  label: "Add Lead",        icon: "plus",      roles: ["Fronter", "Closer"] },
       { key: "chat",      to: "/chat",      label: "Chat",      icon: "chat",  module: "chat" },
       { key: "pulse",     to: "/pulse",     label: "Pulse",     icon: "activity" },
       { key: "callbacks", to: "/callbacks", label: "Callbacks", icon: "calendar", module: "callbacks", countKey: "callbacks" },
-      {
-        key: "intake", label: "Intake Pipeline", icon: "filter",
-        children: [
-          { key: "intake-form",   to: "/intake",          label: "Lead Intake",      icon: "plus",      roles: ["Fronter"] },
-          { key: "verify-queue",  to: "/verify-queue",    label: "Verifier Queue",   icon: "check",     roles: ["Verifier"], countKey: "verifierQueue" },
-          { key: "close-queue",   to: "/close-queue",     label: "Closer Queue",     icon: "briefcase", roles: ["Closer"], countKey: "closerQueue" },
-          { key: "validate-queue", to: "/validate-queue", label: "Submission Queue", icon: "shield",    roles: ["Validator"], countKey: "submissionQueue" },
-          { key: "my-sales",      to: "/my-sales",        label: "My Sales",         icon: "briefcase", roles: ["LicenseAgent"] },
-        ],
-      },
+      // "Intake Pipeline" is gone: with the two role queues collapsed into Available Leads it held
+      // nothing that belonged under a pipeline heading, and it forced users to learn which internal
+      // queue their job mapped to. Its survivors are role-specific surfaces, listed plainly.
+      { key: "validate-queue", to: "/validate-queue", label: "Submissions", icon: "shield",    roles: ["Validator"], countKey: "submissionQueue" },
+      { key: "my-sales",       to: "/my-sales",       label: "My Sales",    icon: "briefcase", roles: ["LicenseAgent"] },
       { key: "agent", to: "/agent", label: "Agent Panel", icon: "phone", module: "agent" },
       { key: "team",  to: "/team",  label: "Team",        icon: "users" },
       { key: "guide", to: "/guide", label: "Guide",       icon: "book" },
@@ -61,7 +60,7 @@ export const NAV: NavNode[] = [
   {
     key: "pipeline", label: "Pipeline",
     children: [
-      { key: "leads", to: "/leads", label: "Leads", icon: "list", module: "leads" },
+      { key: "leads", to: "/leads", label: "All Leads", icon: "list", module: "leads" },
       {
         key: "outreach", label: "Lists & Outreach", icon: "filter",
         children: [

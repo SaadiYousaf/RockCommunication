@@ -655,11 +655,23 @@ export interface LicenseAgent {
   isActive: boolean;
 }
 export interface QueueCounts {
-  myQueue: number;
+  /** Leads I own that still need something from me. */
+  myLeads: number;
   callbacks: number;
-  verifierQueue: number;
-  closerQueue: number;
+  /** Waiting in the pools my roles actually work — 0 when I work none. */
+  available: number;
+  /** Split of `available`, so the screen can label its tabs without a second call. */
+  availableToVerify: number;
+  availableToClose: number;
   submissionQueue: number;
+}
+
+/** A lead waiting in a shared pool, tagged with which pool so one list can be tabbed by stage. */
+export interface AvailableLeadItem {
+  lead: IntakeQueueItem;
+  stage: WorkflowStage;
+  /** "To verify" / "To close" — server-supplied so the wording lives in one place. */
+  stageLabel: string;
 }
 
 export interface AppNotification {
