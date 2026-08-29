@@ -31,7 +31,10 @@ echo "  built. Log: /tmp/crm-frontend-build.log"
 
 echo "▶ Starting backend on http://localhost:5293..."
 cd "$REPO/backend/src/CRM.Api"
-ASPNETCORE_ENVIRONMENT=Development nohup dotnet run --no-launch-profile --urls http://localhost:5293 \
+# Production, NOT Development: Development publishes Swagger and relaxes the JWT-secret guard.
+# The live box runs the systemd unit (crm-api) in Production; this local launcher must not
+# contradict it, or someone using it to "go live" would quietly expose the API surface.
+ASPNETCORE_ENVIRONMENT=Production nohup dotnet run --no-launch-profile --urls http://localhost:5293 \
   > /tmp/crm-backend.log 2>&1 &
 echo $! >> "$PIDS"
 echo "  backend pid=$! log=/tmp/crm-backend.log"

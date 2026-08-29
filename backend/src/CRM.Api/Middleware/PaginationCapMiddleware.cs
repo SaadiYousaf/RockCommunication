@@ -33,7 +33,10 @@ public class PaginationCapMiddleware
             var copy = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(q.Count);
             foreach (var kv in q)
             {
-                if (Array.IndexOf(_params, kv.Key) >= 0
+                // ASP.NET binds query keys case-INSENSITIVELY, so a case-sensitive match here let
+                // "?Take=1000000" slip straight past the cap. (Handler-level clamps still held, so
+                // this was defence in depth rather than an open door — but it was not doing its job.)
+                if (_params.Contains(kv.Key, StringComparer.OrdinalIgnoreCase)
                     && int.TryParse(kv.Value.ToString(), out var v)
                     && v > _maxTake)
                 {

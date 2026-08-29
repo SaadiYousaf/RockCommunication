@@ -158,6 +158,7 @@ public class EmployeeHandlers :
         EnsureHr();
         var i = request.Input;
         await EnsureAgentCodeFreeAsync(i.AgentCode, null, ct);
+        await EnsureLinksInAgencyAsync(i, ct);
         var e = new Employee { AgencyId = _user.AgencyId ?? Guid.Empty };
         Apply(e, i);
         _db.Employees.Add(e);
@@ -172,6 +173,7 @@ public class EmployeeHandlers :
         var e = await _db.Employees.FirstOrDefaultAsync(x => x.Id == request.Id, ct)
             ?? throw new NotFoundException(nameof(Employee), request.Id);
         await EnsureAgentCodeFreeAsync(request.Input.AgentCode, e.Id, ct);
+        await EnsureLinksInAgencyAsync(request.Input, ct);
         Apply(e, request.Input);
         e.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -308,9 +310,38 @@ public class EmployeeHandlers :
         e.BankAccountTitle = Clean(i.BankAccountTitle);
         e.BankAccountNumber = Clean(i.BankAccountNumber);
         e.BankIban = Clean(i.BankIban);
-        e.PhotoKey = Clean(i.PhotoKey);
-        e.IdCardFrontKey = Clean(i.IdCardFrontKey);
-        e.IdCardBackKey = Clean(i.IdCardBackKey);
+        // PhotoKey / IdCardFrontKey / IdCardBackKey are deliberately NOT copied from the request.
+        // They are opaque storage keys, set only by the dedicated upload endpoint after it has
+        // written the bytes. Binding them from the client let a caller point an employee's photo or
+        // ID slot at any other stored file simply by naming its key.
+    }
+
+    /// <summary>
+    /// The linked user and call centre arrive from the client, so they must be proven to belong to
+    /// the caller's own agency before being written. Without this an HR user in one agency could
+    /// attach an employee record — which drives the designation shown on a profile — to somebody in
+    /// another tenant just by supplying their id.
+    /// </summary>
+    private async Task EnsureLinksInAgencyAsync(EmployeeInput i, CancellationToken ct)
+    {
+        var agencyId = _user.AgencyId ?? Guid.Empty;
+        if (agencyId == Guid.Empty) throw new ForbiddenAccessException();
+
+        if (i.CallCenterId is { } ccId && ccId != Guid.Empty)
+        {
+            var ok = await _db.CallCenters.IgnoreQueryFilters()
+                .AnyAsync(c => c.Id == ccId && c.AgencyId == agencyId && !c.IsDeleted, ct);
+            if (!ok) throw new ConflictException("That call centre isn't part of your agency.");
+        }
+
+        if (i.UserId is { } uid && uid != Guid.Empty)
+        {
+            // Reuses the agency-scoped user list this handler already reads elsewhere rather than
+            // adding a new identity lookup; employee writes are infrequent enough for it.
+            var agencyUsers = await _identity.ListUsersAsync(agencyId, ct);
+            if (agencyUsers.All(u => u.Id != uid))
+                throw new ConflictException("That user isn't part of your agency.");
+        }
     }
 
     private static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
