@@ -5,16 +5,18 @@ import type { RootState } from "../../app/store";
 import { API_URL } from "../../shared/config";
 import {
   useListPayrollQuery, useSavePayrollMutation, useListCallCentersQuery,
-  useGetPayrollConfigQuery, useSavePayrollConfigMutation,
+  useGetPayrollConfigQuery, useSavePayrollConfigMutation, useListAgenciesQuery,
 } from "../../shared/api/baseApi";
 import type { PayrollRow, SavePayrollInput, PayrollConfig, SavePayrollConfigInput } from "../../shared/api/types";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
+  SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, Textarea, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import { HR_MSG } from "./messages";
+import { STATUS } from "../../shared/constants/messages";
+import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
 
 // Salaries are paid in PKR.
 const money = (n: number | null | undefined) =>
@@ -69,8 +71,26 @@ export function PayrollPage() {
   const [search, setSearch] = useState("");
   const monthValue = `${year}-${String(month).padStart(2, "0")}`;
 
-  const { data: rows, isLoading } = useListPayrollQuery({ year, month, callCenterId: callCenterId || undefined });
+  // A SuperAdmin's list spans tenants, and SEVEN agencies each have a call centre named "Main" —
+  // so the centre picker is meaningless without first choosing an agency. Agency narrows the list,
+  // and the centre picker then only offers that agency's centres.
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.roles?.includes("SuperAdmin") ?? false);
+  const [agencyId, setAgencyId] = useState("");
+  const { data: agencies } = useListAgenciesQuery({ includeInactive: true }, { skip: !isSuperAdmin });
+
+  const { data: rows, isLoading, isError, error, refetch } = useListPayrollQuery({
+    year, month,
+    callCenterId: callCenterId || undefined,
+    agencyId: agencyId || undefined,
+  });
   const { data: callCenters } = useListCallCentersQuery();
+
+  // Only the chosen agency's centres. Centres carry their owning agency, so this is what turns a
+  // flat list of seven identical "Main" entries into one unambiguous choice.
+  const centreOptions = useMemo(
+    () => (callCenters ?? []).filter((c) => !agencyId || !c.agencyId || c.agencyId === agencyId),
+    [callCenters, agencyId],
+  );
   const [save, { isLoading: saving }] = useSavePayrollMutation();
   const toast = useToast();
   const token = useSelector((s: RootState) => s.auth.accessToken) ?? "";
@@ -154,11 +174,17 @@ export function PayrollPage() {
       [r.fullName, r.agentCode, r.callCenterName].some((v) => (v ?? "").toLowerCase().includes(q)));
   }, [rows, search]);
 
-  // Selection is scoped to the visible (searched) rows so a bulk action never reaches a hidden one.
-  const sel = useRowSelection(filtered.map((r) => r.employeeId));
+  // Employees whose agency or call centre has been disabled still carry payroll history, so their
+  // rows are kept — but they do not belong in the month an admin is actually working. Tabbed away,
+  // with the count visible so nothing looks lost.
+  const statusTabs = useStatusTabs(filtered, (r) => !r.tenantDisabled);
+  const visible = statusTabs.visible;
+
+  // Selection is scoped to the visible rows so a bulk action never reaches a hidden one.
+  const sel = useRowSelection(visible.map((r) => r.employeeId));
 
   function exportSelected() {
-    const chosen = filtered.filter((r) => sel.isSelected(r.employeeId));
+    const chosen = visible.filter((r) => sel.isSelected(r.employeeId));
     exportRowsToCsv(chosen, [
       { header: "Name", value: (r) => r.fullName },
       { header: "Agent ID", value: (r) => r.agentCode },
@@ -179,7 +205,7 @@ export function PayrollPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => setBulkForm((f) => ({ ...f, [k]: e.target.value }));
 
   async function applyBulk() {
-    const chosen = filtered.filter((r) => sel.isSelected(r.employeeId));
+    const chosen = visible.filter((r) => sel.isSelected(r.employeeId));
     const editable = chosen.filter((r) => !r.finalized);
     const skipped = chosen.length - editable.length;
     const numOrUndef = (s: string) => (s.trim() === "" ? undefined : Number(s));
@@ -246,15 +272,38 @@ export function PayrollPage() {
           <Input type="month" aria-label="Month" value={monthValue}
             onChange={(e) => { const [y, m] = e.target.value.split("-").map(Number); if (y && m) { setYear(y); setMonth(m); } }}
             className="w-44" />
+          {isSuperAdmin && (
+            <Select
+              aria-label={HR_MSG.payrollAgencyFilter} value={agencyId}
+              onChange={(e) => { setAgencyId(e.target.value); setCallCenterId(""); }}
+              className="w-48"
+            >
+              <option value="">{HR_MSG.payrollAllAgencies}</option>
+              {(agencies ?? []).map((a) => (
+                <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : ` — ${STATUS.disabled}`}</option>
+              ))}
+            </Select>
+          )}
           <Select aria-label="Call centre" value={callCenterId} onChange={(e) => setCallCenterId(e.target.value)} className="w-48">
-            <option value="">All call centres</option>
-            {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">{HR_MSG.payrollAllCallCentres}</option>
+            {centreOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}{c.isActive ? "" : ` — ${STATUS.disabled}`}
+              </option>
+            ))}
           </Select>
           <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.payrollSearchPlaceholder} className="w-64" />
           <Button variant="outline" leftIcon={<Icon name="cog" size={15} />} onClick={() => setConfigOpen(true)}>Deduction rules</Button>
           <span className="text-sm text-ink-500 ml-auto">{list.length} {list.length === 1 ? "employee" : "employees"}</span>
         </CardBody>
       </Card>
+
+      {/* Active vs Disabled — "Disabled" means this person's agency or call centre was switched off. */}
+      {list.length > 0 && (
+        <div className="mb-3">
+          <Tabs value={statusTabs.tab} onChange={statusTabs.setTab} items={statusTabs.items} />
+        </div>
+      )}
 
       <DeductionRulesModal open={configOpen} onClose={() => setConfigOpen(false)}
         callCenters={callCenters ?? []} initialCallCenterId={callCenterId} />
@@ -297,9 +346,12 @@ export function PayrollPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed load must never read as "this agency has no employees".
+        <Card><CardBody><ErrorState error={error} resource={HR_MSG.payrollResourceName} onRetry={refetch} /></CardBody></Card>
       ) : list.length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.payrollEmptyDesc} /></CardBody></Card>
-      ) : filtered.length === 0 ? (
+      ) : visible.length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="search" size={20} />} title={HR_MSG.noMatchesTitle} description={HR_MSG.noEmployeeSearchMatchesDesc} /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
@@ -340,7 +392,7 @@ export function PayrollPage() {
               <TH className="text-right">Actions</TH>
             </TR></THead>
             <TBody>
-              {filtered.map((r) => (
+              {visible.map((r) => (
                 <TR key={r.employeeId} className={sel.isSelected(r.employeeId) ? "bg-brand-50/40" : undefined}>
                   <TD>
                     <Checkbox aria-label={`Select ${r.fullName}`} {...sel.checkboxProps(r.employeeId)} />
@@ -348,6 +400,13 @@ export function PayrollPage() {
                   <TD>
                     <div className="font-medium text-ink-900">{r.fullName}</div>
                     <div className="font-mono text-xs text-ink-500">{r.agentCode}</div>
+                    {/* Which agency and centre — without this, seven different people all read
+                        "Main" and there is no way to tell whose payroll you are editing. */}
+                    {(r.agencyName || r.callCenterName) && (
+                      <div className="mt-0.5 text-xs text-ink-400 truncate">
+                        {[r.agencyName, r.callCenterName].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
                   </TD>
                   <TD numeric className="tabular-nums text-ink-600">{money(r.basicSalary)}</TD>
                   <TD numeric className="tabular-nums text-ink-600">{money(r.monthlyCommissions)}</TD>

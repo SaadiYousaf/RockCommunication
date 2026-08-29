@@ -201,6 +201,11 @@ export interface SavePayrollConfigInput {
 }
 
 export interface PayrollRow {
+  /** Owning agency — several agencies have a call centre with the same name, so this disambiguates. */
+  agencyId?: string;
+  agencyName?: string | null;
+  /** True when this employee's agency or call centre is disabled. */
+  tenantDisabled?: boolean;
   employeeId: string;
   fullName: string;
   agentCode: string;

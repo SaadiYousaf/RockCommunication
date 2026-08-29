@@ -1198,7 +1198,7 @@ export const baseApi = createApi({
       query: (params) => ({ url: "/api/hr/attendance/day", params }),
       providesTags: ["Attendance"],
     }),
-    attendanceSummary: b.query<HrAttendanceSummaryRow[], { year: number; month: number; callCenterId?: string }>({
+    attendanceSummary: b.query<HrAttendanceSummaryRow[], { year: number; month: number; callCenterId?: string; agencyId?: string }>({
       query: (params) => ({ url: "/api/hr/attendance/summary", params }),
       providesTags: ["Attendance"],
     }),
@@ -1242,7 +1242,7 @@ export const baseApi = createApi({
     }),
 
     // ── HR — payroll ──────────────────────────────────────────────────────────
-    listPayroll: b.query<PayrollRow[], { year: number; month: number; callCenterId?: string }>({
+    listPayroll: b.query<PayrollRow[], { year: number; month: number; callCenterId?: string; agencyId?: string }>({
       query: (params) => ({ url: "/api/hr/payroll", params }),
       providesTags: ["Payroll"],
     }),

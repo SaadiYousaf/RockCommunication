@@ -6,6 +6,10 @@
  * Short UI labels (buttons, headers, placeholders) stay in the components — this holds messages.
  */
 export const HR_MSG = {
+  payrollResourceName: "payroll",
+  payrollAgencyFilter: "Filter by agency",
+  payrollAllAgencies: "All agencies",
+  payrollAllCallCentres: "All call centres",
   // Search placeholders (no user-facing copy inline).
   interviewSearchPlaceholder: "Search candidate, phone, position…",
   // Search placeholders (kept here so no user-facing copy lives inline).

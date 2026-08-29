@@ -20,7 +20,15 @@ public record PayrollRowDto(
     // The "amount against" each attendance-driven deduction line (its day count is the number).
     decimal LateComingAmount, decimal HalfDaysAmount, decimal AbsentDaysAmount, decimal NcnsAmount,
     decimal GrossEarnings, decimal Deductions, decimal NetPay,
-    string? Notes, bool Finalized, bool Saved);
+    string? Notes, bool Finalized, bool Saved,
+    // Owning agency — a SuperAdmin's list spans tenants, and several agencies each have a call
+    // centre called "Main", so the name alone cannot identify one.
+    Guid AgencyId = default, string? AgencyName = null,
+    /// <summary>
+    /// True when this employee's agency or call centre is disabled. They still hold payroll history,
+    /// so the row is kept — but it belongs on the Disabled tab, not in the month being worked.
+    /// </summary>
+    bool TenantDisabled = false);
 
 public record SavePayrollInput(
     decimal BasicSalary, decimal Punctuality, decimal DailyBonus, decimal MonthlyCommissions,
@@ -31,7 +39,8 @@ public record SavePayrollInput(
 
 // ── Requests ────────────────────────────────────────────────────────────────
 
-public record ListPayrollQuery(int Year, int Month, Guid? CallCenterId = null)
+/// <summary>AgencyId narrows a SuperAdmin's cross-tenant list; ignored for agency-scoped callers.</summary>
+public record ListPayrollQuery(int Year, int Month, Guid? CallCenterId = null, Guid? AgencyId = null)
     : IRequest<IReadOnlyList<PayrollRowDto>>;
 public record GetPayrollSlipQuery(Guid EmployeeId, int Year, int Month) : IRequest<PayrollRowDto>;
 public record SavePayrollCommand(Guid EmployeeId, int Year, int Month, SavePayrollInput Input)
@@ -125,7 +134,7 @@ public class PayrollHandlers :
     public async Task<IReadOnlyList<PayrollRowDto>> Handle(ListPayrollQuery request, CancellationToken ct)
     {
         HrAccess.EnsureHr(_user);
-        var employees = await EmployeesQuery(request.CallCenterId).ToListAsync(ct);
+        var employees = await EmployeesQuery(request.CallCenterId, request.AgencyId).ToListAsync(ct);
         var empIds = employees.Select(e => e.Id).ToList();
 
         var saved = (await _db.EmployeePayrolls.AsNoTracking()
@@ -137,11 +146,15 @@ public class PayrollHandlers :
         var commissions = await CommissionByUserAsync(employees, request.Year, request.Month, ct);
         var prior = await PriorMonthAsync(empIds, request.Year, request.Month, ct);
         var (configs, names) = await LoadCallCenterInfoAsync(employees.Select(e => e.CallCenterId), ct);
+        var (agencyNames, deadAgencies, deadCentres) = await LoadTenantStateAsync(employees, ct);
 
         return employees.Select(e => Build(e, request.Year, request.Month,
             saved.GetValueOrDefault(e.Id), attendance.GetValueOrDefault(e.Id), prior.GetValueOrDefault(e.Id),
             e.UserId is { } uid ? commissions.GetValueOrDefault(uid) : 0m,
-            CfgFor(e.CallCenterId, configs), NameFor(e.CallCenterId, names))).ToList();
+            CfgFor(e.CallCenterId, configs), NameFor(e.CallCenterId, names),
+            agencyNames.GetValueOrDefault(e.AgencyId),
+            deadAgencies.Contains(e.AgencyId)
+                || (e.CallCenterId is { } cid && deadCentres.Contains(cid)))).ToList();
     }
 
     public async Task<PayrollRowDto> Handle(GetPayrollSlipQuery request, CancellationToken ct)
@@ -187,7 +200,8 @@ public class PayrollHandlers :
 
     private static PayrollRowDto Build(Employee e, int year, int month, EmployeePayroll? saved,
         AttendanceCounts? att, EmployeePayroll? prior, decimal liveCommission,
-        CallCenterPayrollConfig cfg, string? callCenterName)
+        CallCenterPayrollConfig cfg, string? callCenterName,
+        string? agencyName = null, bool tenantDisabled = false)
     {
         // Saved values win; otherwise derive a draft (attendance live, commission live, basic+advance carried).
         var basic = saved?.BasicSalary ?? prior?.BasicSalary ?? 0m;
@@ -228,7 +242,8 @@ public class PayrollHandlers :
             basic, punctuality, dailyBonus, commission, transport, special, advance, docks,
             working, present, leave, late, half, absent, ncns,
             lateAmt, halfAmt, absentAmt, ncnsAmt,
-            gross, deductions, net, saved?.Notes, saved?.Finalized ?? false, saved is not null);
+            gross, deductions, net, saved?.Notes, saved?.Finalized ?? false, saved is not null,
+            e.AgencyId, agencyName, tenantDisabled);
     }
 
     private static void Apply(EmployeePayroll p, SavePayrollInput i, CallCenterPayrollConfig cfg)
@@ -256,9 +271,12 @@ public class PayrollHandlers :
         p.Finalized = i.Finalized;
     }
 
-    private IQueryable<Employee> EmployeesQuery(Guid? callCenterId)
+    private IQueryable<Employee> EmployeesQuery(Guid? callCenterId, Guid? agencyId = null)
     {
         var q = _db.Employees.AsNoTracking().AsQueryable();
+        // Agency narrowing is only meaningful for a caller who can see more than one — the global
+        // tenant filter already confines everyone else to their own.
+        if (agencyId is { } ag && ag != Guid.Empty) q = q.Where(e => e.AgencyId == ag);
         if (callCenterId is { } cc) q = q.Where(e => e.CallCenterId == cc);
         return q.OrderBy(e => e.FullName);
     }
@@ -279,6 +297,34 @@ public class PayrollHandlers :
                 .Where(c => ids.Contains(c.Id)).Select(c => new { c.Id, c.Name }).ToListAsync(ct))
             .ToDictionary(c => c.Id, c => c.Name);
         return (configs, names);
+    }
+
+    /// <summary>
+    /// Which agencies and call centres are currently disabled, plus agency display names.
+    ///
+    /// IgnoreQueryFilters because a SuperAdmin's list legitimately spans tenants and because a
+    /// DISABLED tenant is exactly what we are trying to identify — the ambient filter would hide the
+    /// very rows this lookup exists to flag.
+    /// </summary>
+    private async Task<(Dictionary<Guid, string> AgencyNames, HashSet<Guid> DisabledAgencies, HashSet<Guid> DisabledCentres)>
+        LoadTenantStateAsync(IEnumerable<Employee> employees, CancellationToken ct)
+    {
+        var agencyIds = employees.Select(e => e.AgencyId).Where(id => id != Guid.Empty).Distinct().ToList();
+        var centreIds = employees.Select(e => e.CallCenterId)
+            .Where(id => id is { } g && g != Guid.Empty).Select(id => id!.Value).Distinct().ToList();
+
+        var agencies = agencyIds.Count == 0 ? new() : await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
+            .Where(a => agencyIds.Contains(a.Id))
+            .Select(a => new { a.Id, a.Name, a.IsActive, a.IsDeleted }).ToListAsync(ct);
+
+        var centres = centreIds.Count == 0 ? new() : await _db.CallCenters.AsNoTracking().IgnoreQueryFilters()
+            .Where(c => centreIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.IsActive, c.IsDeleted }).ToListAsync(ct);
+
+        return (
+            agencies.ToDictionary(a => a.Id, a => a.Name),
+            agencies.Where(a => !a.IsActive || a.IsDeleted).Select(a => a.Id).ToHashSet(),
+            centres.Where(c => !c.IsActive || c.IsDeleted).Select(c => c.Id).ToHashSet());
     }
 
     private static CallCenterPayrollConfig CfgFor(Guid? ccId, Dictionary<Guid, CallCenterPayrollConfig> configs)

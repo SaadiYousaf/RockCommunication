@@ -28,8 +28,10 @@ public class HrPayrollController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] int year, [FromQuery] int month, [FromQuery] Guid? callCenterId, CancellationToken ct)
-        => Ok(await _mediator.Send(new ListPayrollQuery(year, month, callCenterId), ct));
+    public async Task<IActionResult> List(
+        [FromQuery] int year, [FromQuery] int month,
+        [FromQuery] Guid? callCenterId, [FromQuery] Guid? agencyId, CancellationToken ct)
+        => Ok(await _mediator.Send(new ListPayrollQuery(year, month, callCenterId, agencyId), ct));
 
     public record SaveBody(int Year, int Month, SavePayrollInput Input);
 
