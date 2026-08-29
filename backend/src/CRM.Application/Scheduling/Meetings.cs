@@ -1,3 +1,4 @@
+using CRM.Domain.Constants;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -50,6 +51,13 @@ public class MeetingInputValidator : AbstractValidator<MeetingInput>
         RuleFor(x => x.Location).MaximumLength(SchedulingDefaults.MaxLocationLength);
         RuleFor(x => x.OnlineUrl).MaximumLength(SchedulingDefaults.MaxOnlineUrlLength);
         RuleFor(x => x.EndsAt).GreaterThan(x => x.StartsAt).WithMessage("End time must be after the start time.");
+        // Upcoming Events and the attendee's calendar only ever show FUTURE meetings, so a meeting
+        // booked in the past is invisible the moment it is created — which is exactly what happened:
+        // a meeting was scheduled for 29 July while the date was 29 August, and then nobody could
+        // find it. A small grace window allows for clock skew and a slow form submission.
+        RuleFor(x => x.StartsAt)
+            .GreaterThan(_ => DateTime.UtcNow.AddMinutes(-SchedulingDefaults.PastGraceMinutes))
+            .WithMessage("That start time has already passed. Pick a date and time in the future.");
         // Null-safe combined count with no When-gate: previously the cap was skipped entirely when
         // either list was null, so a request with one huge list (and the other null) bypassed the
         // limit and could insert thousands of attendees + fire thousands of email invites.
@@ -91,14 +99,51 @@ public class MeetingHandlers :
     private readonly ICurrentUser _user;
     private readonly IIdentityService _identity;
     private readonly IMeetingInviteSender _invites;
+    private readonly Intake.IIntakeNotifier _notifier;
 
-    public MeetingHandlers(IApplicationDbContext db, ICurrentUser user, IIdentityService identity, IMeetingInviteSender invites)
+    public MeetingHandlers(IApplicationDbContext db, ICurrentUser user, IIdentityService identity,
+        IMeetingInviteSender invites, Intake.IIntakeNotifier notifier)
     {
         _db = Guard.AgainstNull(db);
         _user = Guard.AgainstNull(user);
         _identity = Guard.AgainstNull(identity);
         _invites = Guard.AgainstNull(invites);
+        _notifier = Guard.AgainstNull(notifier);
     }
+
+    /// <summary>
+    /// Tell every INTERNAL attendee, in the app, that something happened to a meeting they are on.
+    ///
+    /// Scheduling only ever sent an email invite. Someone already signed in saw nothing at all — the
+    /// bell said "You're all caught up" while a meeting sat on their calendar — because no
+    /// notification row was ever written. Email-only also fails anyone whose address is stale.
+    ///
+    /// Never notifies the organiser about their own action, skips external email-only guests (they
+    /// have no account to notify), and is best-effort: a notification problem must not fail the
+    /// scheduling command itself.
+    /// </summary>
+    private async Task NotifyAttendeesAsync(Meeting meeting, Guid actingUserId, string title, string body, CancellationToken ct)
+    {
+        var recipients = meeting.Attendees
+            .Where(a => a.UserId is { } uid && uid != actingUserId)
+            .Select(a => a.UserId!.Value)
+            .Distinct()
+            .ToList();
+
+        foreach (var userId in recipients)
+        {
+            try
+            {
+                await _notifier.NotifyUserAsync(meeting.AgencyId, userId, title, body,
+                    AppConstants.QueueRoutes.Calendar, ct);
+            }
+            catch { /* graceful — a failed notice must never undo a scheduled meeting */ }
+        }
+    }
+
+    /// <summary>"Tue 2 Sep at 2:00 PM" — a person-readable instant for notification text.</summary>
+    private static string WhenText(DateTime utc) =>
+        utc.ToString("ddd d MMM 'at' h:mm tt", System.Globalization.CultureInfo.InvariantCulture) + " UTC";
 
     /// <summary>The authenticated caller's user id, or a 403 if there's no user context.</summary>
     private Guid CurrentUserId => _user.UserId ?? throw new ForbiddenAccessException();
@@ -158,6 +203,10 @@ public class MeetingHandlers :
         // Best-effort: never let an email problem fail the scheduling command.
         await TrySendAsync(() => _invites.SendInvitesAsync(meeting, OrganizerName(me, directory), ct));
 
+        await NotifyAttendeesAsync(meeting, me,
+            "You've been invited to a meeting",
+            $"{meeting.Title} — {WhenText(meeting.StartsAt)}, organised by {OrganizerName(me, directory)}.", ct);
+
         return Map(meeting, me, NamesFrom(directory));
     }
 
@@ -170,16 +219,61 @@ public class MeetingHandlers :
         if (meeting.Status == MeetingStatus.Cancelled)
             throw new ConflictException("A cancelled meeting can't be edited.");
 
+        // Capture what people were told BEFORE the edit, so we only notify on a real change.
+        var previousStart = meeting.StartsAt;
+        var priorUserIds = meeting.Attendees
+            .Where(a => a.UserId is not null).Select(a => a.UserId!.Value).ToHashSet();
+
         ApplyScalars(meeting, request.Input);
 
         // Rebuild the attendee set, preserving each surviving invitee's RSVP (matched by email).
         var directory = await AgencyUsersAsync(ct);
         var existingByEmail = meeting.Attendees.ToDictionary(a => a.Email.Trim().ToLowerInvariant(), a => a.Response);
-        _db.MeetingAttendees.RemoveRange(meeting.Attendees);
-        meeting.Attendees = BuildAttendees(request.Input, meeting.AgencyId, directory, existingByEmail);
 
+        // TWO SAVES, deliberately. Editing ANY meeting used to return a 500, because this replaced
+        // the tracked navigation collection outright: that severs the association on a non-nullable
+        // MeetingId, and the "removed" rows are only SOFT-deleted (the audit interceptor turns a
+        // delete into IsDeleted = true), so re-adding the same person in the same SaveChanges also
+        // races the unique index on (MeetingId, Email) filtered to IsDeleted = 0.
+        // Retiring the old rows first, then inserting the new ones, avoids both.
+        _db.MeetingAttendees.RemoveRange(meeting.Attendees.ToList());
         meeting.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        var rebuilt = BuildAttendees(request.Input, meeting.AgencyId, directory, existingByEmail);
+        foreach (var a in rebuilt)
+        {
+            a.MeetingId = meeting.Id;
+            _db.MeetingAttendees.Add(a);
+        }
+        await _db.SaveChangesAsync(ct);
+
+        // The tracked collection still holds the retired rows; the response and the notifications
+        // below must describe who is on the meeting NOW.
+        meeting.Attendees = rebuilt;
+
+        var organiser = OrganizerName(me, directory);
+
+        // A moved meeting is the one edit everyone must be told about — it changes where they have
+        // to be. Only when the start time actually changed, so renaming a meeting stays silent.
+        if (meeting.StartsAt != previousStart)
+            await NotifyAttendeesAsync(meeting, me, "A meeting was moved",
+                $"{meeting.Title} is now {WhenText(meeting.StartsAt)} (was {WhenText(previousStart)}).", ct);
+
+        // Someone added after the fact never received the original invitation.
+        var added = meeting.Attendees
+            .Where(a => a.UserId is { } uid && !priorUserIds.Contains(uid) && uid != me).ToList();
+        foreach (var a in added)
+        {
+            try
+            {
+                await _notifier.NotifyUserAsync(meeting.AgencyId, a.UserId!.Value,
+                    "You've been invited to a meeting",
+                    $"{meeting.Title} — {WhenText(meeting.StartsAt)}, organised by {organiser}.",
+                    AppConstants.QueueRoutes.Calendar, ct);
+            }
+            catch { /* graceful */ }
+        }
 
         return Map(meeting, me, NamesFrom(directory));
     }
@@ -199,6 +293,10 @@ public class MeetingHandlers :
 
             var directory = await AgencyUsersAsync(ct);
             await TrySendAsync(() => _invites.SendCancellationsAsync(meeting, OrganizerName(me, directory), ct));
+
+            await NotifyAttendeesAsync(meeting, me, "A meeting was cancelled",
+                $"{meeting.Title} on {WhenText(meeting.StartsAt)} is no longer happening.", ct);
+
             return Map(meeting, me, NamesFrom(directory));
         }
 

@@ -1376,19 +1376,19 @@ export const baseApi = createApi({
     }),
     createMeeting: b.mutation<Meeting, MeetingInput>({
       query: (body) => ({ url: "/api/meetings", method: "POST", body }),
-      invalidatesTags: ["Meetings"],
+      invalidatesTags: ["Meetings", "Notifications"],
     }),
     updateMeeting: b.mutation<Meeting, { id: string } & MeetingInput>({
       query: ({ id, ...body }) => ({ url: `/api/meetings/${id}`, method: "PUT", body }),
-      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings"],
+      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings", "Notifications"],
     }),
     cancelMeeting: b.mutation<Meeting, string>({
       query: (id) => ({ url: `/api/meetings/${id}/cancel`, method: "POST" }),
-      invalidatesTags: (_r, _e, id) => [{ type: "Meetings", id }, "Meetings"],
+      invalidatesTags: (_r, _e, id) => [{ type: "Meetings", id }, "Meetings", "Notifications"],
     }),
     respondMeeting: b.mutation<Meeting, { id: string; response: AttendeeResponse }>({
       query: ({ id, response }) => ({ url: `/api/meetings/${id}/respond`, method: "POST", body: { response } }),
-      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings"],
+      invalidatesTags: (_r, _e, arg) => [{ type: "Meetings", id: arg.id }, "Meetings", "Notifications"],
     }),
 
     // Retention worklist — problem policies (bad bank / NSF / cancelled / declined / app error).

@@ -29,6 +29,8 @@ public static class AppConstants
         /// <summary>The single shared pool screen — replaces the per-role verify/close queue routes.</summary>
         public const string Available = "/available";
         public const string Callbacks = "/callbacks";
+        /// <summary>Where a meeting notification deep-links to.</summary>
+        public const string Calendar = "/calendar";
     }
 
     /// <summary>Direction values persisted on <c>CallRecord.Direction</c>.</summary>

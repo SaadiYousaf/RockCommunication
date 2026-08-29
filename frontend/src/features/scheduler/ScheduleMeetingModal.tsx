@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { SCHEDULER_MSG } from "./messages";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import {
@@ -28,12 +29,40 @@ interface FormState {
   attendeeEmails: string[];
 }
 
+/**
+ * A new meeting always starts in the FUTURE.
+ *
+ * The form used to seed 9:00 AM on whichever day was clicked — so opening it from a past calendar
+ * cell (or a month you were browsing) produced a start time that had already gone. The server
+ * accepted it, and the meeting was then invisible in Upcoming Events and on the calendar, because
+ * both only show what is still to come. That is exactly how a real meeting went missing: booked for
+ * 29 July while the date was 29 August, then nobody could find it.
+ *
+ * If the chosen day's default slot has passed, fall forward to the next half hour from now.
+ */
 function blankForm(day: Date): FormState {
-  const start = localInputAt(day, DEFAULT_HOUR, 0);
+  const preferred = new Date(day.getFullYear(), day.getMonth(), day.getDate(), DEFAULT_HOUR, 0);
+  const start = preferred.getTime() > Date.now()
+    ? localInputAt(day, DEFAULT_HOUR, 0)
+    : nextHalfHourInput();
   return {
     title: "", description: "", start, end: addMinutesToLocalInput(start, DEFAULT_DURATION_MIN),
     location: "", onlineUrl: "", attendeeUserIds: [], attendeeEmails: [],
   };
+}
+
+/** Right now, as a datetime-local value — the earliest a new meeting may start. */
+function nowInput(): string {
+  const d = new Date();
+  return localInputAt(d, d.getHours(), d.getMinutes());
+}
+
+/** The next :00 or :30 from now, as a datetime-local value. */
+function nextHalfHourInput(): string {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() <= 30 ? 30 : 60);
+  return localInputAt(d, d.getHours(), d.getMinutes());
 }
 
 function fromMeeting(m: Meeting): FormState {
@@ -176,6 +205,8 @@ export function ScheduleMeetingModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Starts" type="datetime-local" required value={form.start}
+            min={meeting ? undefined : nowInput()}
+            hint={meeting ? undefined : SCHEDULER_MSG.startsInFutureHint}
             onChange={(e) => {
               const start = e.target.value;
               setForm((f) => {
@@ -188,6 +219,7 @@ export function ScheduleMeetingModal({
           />
           <Input
             label="Ends" type="datetime-local" required value={form.end}
+            min={form.start || (meeting ? undefined : nowInput())}
             onChange={(e) => set("end")(e.target.value)}
           />
         </div>

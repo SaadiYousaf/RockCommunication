@@ -11,6 +11,13 @@ public static class SchedulingDefaults
     /// <summary>Default length of a new meeting when only a start time is picked (minutes).</summary>
     public const int DefaultDurationMinutes = 30;
 
+    /// <summary>
+    /// How far into the past a start time may still be accepted. Covers clock skew between the
+    /// browser and the server plus the time taken to fill the form in; anything older is a mistake,
+    /// and would create a meeting that is invisible in Upcoming Events the moment it is saved.
+    /// </summary>
+    public const int PastGraceMinutes = 5;
+
     // ── Field length caps (mirrored by the EF column max-lengths + validators) ──
     public const int MaxTitleLength = 200;
     public const int MaxDescriptionLength = 4000;
