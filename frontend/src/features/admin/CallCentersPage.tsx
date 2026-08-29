@@ -15,9 +15,11 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { useConfirm } from "../../shared/components/ConfirmDialog";
+import { STATUS } from "../../shared/constants/messages";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
+  BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  SearchInput, Select, Skeleton, Stat, StatusBadge, statusOf, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
 /**
@@ -92,6 +94,37 @@ export function CallCentersPage() {
   const [updateCc, { isLoading: saving }] = useUpdateCallCenterMutation();
   const [updateCcInAgency, { isLoading: savingSa }] = useUpdateCallCenterInAgencyMutation();
   const toast = useToast();
+  const confirm = useConfirm();
+
+  /**
+   * Enable/disable a centre from the row. Disabling signs out every agent pinned to it, so it is
+   * confirmed with that consequence stated — the same wording the agency flow uses, one tier down.
+   */
+  async function toggleCentre(c: CallCenterDto) {
+    if (c.isActive) {
+      const agents = (users ?? []).filter((u) => u.callCenterId === c.id && (u.isActive ?? true)).length;
+      const ok = await confirm({
+        title: ADMIN_MSG.callCenters.disableConfirmTitle(c.name),
+        description: ADMIN_MSG.callCenters.disableConfirmDesc,
+        consequences: [
+          ADMIN_MSG.callCenters.consequenceAgents(agents),
+          ADMIN_MSG.callCenters.consequenceDataKept,
+          ADMIN_MSG.callCenters.consequenceReversible,
+        ],
+        danger: true,
+        confirmLabel: ADMIN_MSG.callCenters.disableConfirmLabel,
+      });
+      if (!ok) return;
+    }
+    try {
+      const body = { name: c.name, code: c.code ?? null, isActive: !c.isActive };
+      if (isSuperAdmin) await updateCcInAgency({ agencyId, callCenterId: c.id, ...body }).unwrap();
+      else await updateCc({ id: c.id, ...body }).unwrap();
+      toast.success(c.isActive ? ADMIN_MSG.callCenters.disabled : ADMIN_MSG.callCenters.enabled, c.name);
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
+  }
 
   function exportSelected() {
     const chosen = sorted.filter((c) => sel.isSelected(c.id));
@@ -204,7 +237,7 @@ export function CallCentersPage() {
               {isSuperAdmin && (
                 <Select aria-label="Agency" value={agencyId} onChange={(e) => setAgencyId(e.target.value)} className="w-56">
                   {(!agencyOptions || agencyOptions.length === 0) && <option value="">No agencies</option>}
-                  {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>)}
+                  {(agencyOptions ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : ` — ${STATUS.disabled}`}</option>)}
                 </Select>
               )}
               <SearchInput value={search} onChange={setSearch}
@@ -256,11 +289,24 @@ export function CallCentersPage() {
                     <TD className="font-mono text-xs text-ink-600 whitespace-nowrap">{c.code || "—"}</TD>
                     <TD><AdminCell admins={adminsByCenter.get(c.id) ?? []} onOpen={(id) => navigate(`/profile/${id}`)} /></TD>
                     <TD numeric className="text-sm tabular-nums">{c.leadCount}</TD>
-                    <TD>{c.isActive
-                      ? <Badge tone="success" variant="soft">Active</Badge>
-                      : <Badge tone="neutral" variant="soft">Inactive</Badge>}</TD>
+                    <TD><StatusBadge status={statusOf(c.isActive, c.disabledWithAgency)} /></TD>
                     <TD className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setEditing({ ...c })}>Edit</Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="outline" onClick={() => setEditing({ ...c })}>Edit</Button>
+                        {/* This row action did not exist: the only way to disable a centre was to
+                            open Edit and find a checkbox, with no warning about its agents. */}
+                        <Button
+                          size="sm" variant="ghost"
+                          className={c.isActive ? "text-rose-600 hover:bg-rose-50" : "text-emerald-700 hover:bg-emerald-50"}
+                          disabled={!c.isActive && !!c.disabledWithAgency}
+                          title={!c.isActive && c.disabledWithAgency
+                            ? ADMIN_MSG.callCenters.enableBlockedByAgency
+                            : undefined}
+                          onClick={() => toggleCentre(c)}
+                        >
+                          {c.isActive ? STATUS.disable : STATUS.enable}
+                        </Button>
+                      </div>
                     </TD>
                   </TR>
                 ))}

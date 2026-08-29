@@ -16,7 +16,9 @@ public record CallCenterDto(Guid Id, string Name, string? Code, bool IsActive, i
     Guid AgencyId = default, string? AgencyName = null,
     // Site details. Optional so existing centres keep working; shown on the detail/edit screens.
     string? Phone = null, string? Address = null, string? City = null,
-    string? TimeZone = null, int? SeatCapacity = null);
+    string? TimeZone = null, int? SeatCapacity = null,
+    /// <summary>True when this centre is off only because its agency is off — it comes back with the agency.</summary>
+    bool DisabledWithAgency = false);
 
 public record ListCallCentersQuery() : IRequest<IReadOnlyList<CallCenterDto>>;
 /// <summary>
@@ -113,7 +115,8 @@ public class CallCenterHandler :
                 c.Id, c.Name, c.Code, c.IsActive,
                 _db.Leads.Count(l => l.CallCenterId == c.Id),
                 c.AgencyId, null,
-                c.Phone, c.Address, c.City, c.TimeZone, c.SeatCapacity))
+                c.Phone, c.Address, c.City, c.TimeZone, c.SeatCapacity,
+                c.CascadeDisabledAt != null))
             .ToListAsync(ct);
 
         // Resolve agency names only for the cross-agency case, where the UI needs to disambiguate
@@ -207,6 +210,6 @@ public class CallCenterHandler :
 
         var leads = await _db.Leads.CountAsync(l => l.CallCenterId == cc.Id, ct);
         return new CallCenterDto(cc.Id, cc.Name, cc.Code, cc.IsActive, leads, cc.AgencyId, null,
-            cc.Phone, cc.Address, cc.City, cc.TimeZone, cc.SeatCapacity);
+            cc.Phone, cc.Address, cc.City, cc.TimeZone, cc.SeatCapacity, cc.CascadeDisabledAt != null);
     }
 }

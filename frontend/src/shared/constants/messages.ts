@@ -48,6 +48,25 @@ export const STATUS_TABS = {
 } as const;
 
 /**
+ * The ONE status vocabulary for agencies, call centres and users.
+ *
+ * State is Active / Disabled. The verb is Disable / Enable. They match deliberately, so the button
+ * an admin presses and the badge they end up looking at use the same word. Previously the app said
+ * Inactive, Disabled, Deactivated and "(inactive)" for the same thing in four places.
+ */
+export const STATUS = {
+  active: "Active",
+  disabled: "Disabled",
+  disabledWithAgency: "Disabled with agency",
+  disabledWithAgencyHint:
+    "This was disabled automatically because its agency is disabled. Enabling the agency restores it.",
+
+  /** Verbs — used on buttons and in confirmations. */
+  disable: "Disable",
+  enable: "Enable",
+} as const;
+
+/**
  * Copy for a request that FAILED to load, used by <ErrorState> and the global API-error toast.
  *
  * Deliberately says nothing about status codes, roles or permissions by name — the reader is a

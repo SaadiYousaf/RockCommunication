@@ -10,12 +10,14 @@ import {
   useListUsersQuery,
   useRegisterMutation,
   useUpdateAgencyMutation,
+  useSetAgencyActiveMutation,
+  useLazyAgencyDisableImpactQuery,
 } from "../../shared/api/baseApi";
-import type { AgencyDto, UserSummary } from "../../shared/api/types";
+import type { AgencyDto, TenantDisableImpact, UserSummary } from "../../shared/api/types";
 import { Link } from "react-router-dom";
 import {
   Avatar, Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Select, Skeleton, Stat, Tabs, useToast,
+  ErrorState, Select, Skeleton, Stat, StatusBadge, statusOf, Tabs, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 
@@ -26,10 +28,12 @@ import { useConfirm } from "../../shared/components/ConfirmDialog";
  * route guard requires the SuperAdmin role.
  */
 export function AgenciesPage() {
-  const { data: agencies, isLoading } = useListAgenciesQuery({ includeInactive: true });
+  const { data: agencies, isLoading, isError, error, refetch } = useListAgenciesQuery({ includeInactive: true });
   const [createAgency, { isLoading: creating }] = useCreateAgencyMutation();
   const [updateAgency, { isLoading: updating }] = useUpdateAgencyMutation();
   const [assignCeo] = useAssignAgencyCeoMutation();
+  const [setAgencyActive] = useSetAgencyActiveMutation();
+  const [fetchImpact] = useLazyAgencyDisableImpactQuery();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -107,25 +111,53 @@ export function AgenciesPage() {
   }
 
   async function toggleActive(a: AgencyDto) {
-    // Disabling a tenant locks everyone in it out — confirm before doing it.
+    // Disabling a tenant shuts down its call centres and signs out everyone in it. The operator is
+    // told the REAL numbers first — fetched from the server, not guessed — and has to type the
+    // agency name, because this is the largest destructive action in the product.
     if (a.isActive) {
+      let impact: TenantDisableImpact | null = null;
+      try {
+        impact = await fetchImpact(a.id).unwrap();
+      } catch {
+        // If the preview fails we still let them proceed, just without counts — better than
+        // blocking a legitimate admin action on a secondary read.
+        impact = null;
+      }
+
       const ok = await confirm({
         title: ADMIN_MSG.agencies.disableConfirmTitle(a.name),
         description: ADMIN_MSG.agencies.disableConfirmDesc,
+        consequences: [
+          ADMIN_MSG.agencies.consequenceCallCenters(impact?.callCenters),
+          ADMIN_MSG.agencies.consequenceUsers(impact?.users),
+          ADMIN_MSG.agencies.consequenceSessions(impact?.activeSessions),
+          ADMIN_MSG.agencies.consequenceDataKept,
+          ADMIN_MSG.agencies.consequenceReversible,
+        ],
+        requireTypeToConfirm: a.name,
+        typeToConfirmLabel: ADMIN_MSG.agencies.typeToConfirmLabel(a.name),
         danger: true,
         confirmLabel: ADMIN_MSG.agencies.disableConfirmLabel,
       });
       if (!ok) return;
     }
+
     setTogglingId(a.id);
     try {
-      await updateAgency({
-        id: a.id,
-        name: a.name,
-        code: a.code,
-        isActive: !a.isActive,
-      }).unwrap();
-      toast.success(a.isActive ? ADMIN_MSG.agencies.disabled : ADMIN_MSG.agencies.enabled, a.name);
+      // A dedicated endpoint, not a whole-entity update: this is a tenant operation, and it returns
+      // what it actually changed so the confirmation reports facts rather than assumptions.
+      const result = await setAgencyActive({ id: a.id, isActive: !a.isActive }).unwrap();
+      if (a.isActive) {
+        toast.success(
+          ADMIN_MSG.agencies.disabled,
+          ADMIN_MSG.agencies.disabledDetail(a.name, result.callCentersChanged, result.usersChanged),
+        );
+      } else {
+        toast.success(
+          ADMIN_MSG.agencies.enabled,
+          ADMIN_MSG.agencies.enabledDetail(a.name, result.callCentersChanged, result.usersChanged),
+        );
+      }
     } catch (err: unknown) {
       toast.error(ADMIN_MSG.common.updateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
@@ -269,6 +301,11 @@ export function AgenciesPage() {
             <div className="px-5 py-4">
               <Skeleton className="h-24" />
             </div>
+          ) : isError ? (
+            // A failed request must never read as "there are no agencies".
+            <div className="px-5 py-4">
+              <ErrorState error={error} resource={ADMIN_MSG.agencies.resourceName} onRetry={refetch} />
+            </div>
           ) : !agencies || agencies.length === 0 ? (
             <div className="px-5 py-4">
               <EmptyState
@@ -306,11 +343,7 @@ export function AgenciesPage() {
                           {a.code}
                         </code>
                       )}
-                      {a.isActive ? (
-                        <Badge tone="success" variant="soft">Active</Badge>
-                      ) : (
-                        <Badge tone="neutral" variant="soft">Inactive</Badge>
-                      )}
+                      <StatusBadge status={statusOf(a.isActive)} />
                     </div>
                     <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-ink-500">
                       <span className="inline-flex items-center gap-1 tabular-nums whitespace-nowrap">

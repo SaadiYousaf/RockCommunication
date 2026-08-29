@@ -10,6 +10,7 @@ import type {
   OversightAgency, OversightCallCenter, AttendanceRow, AppNotification, QueueCounts,
   WorkflowStage, LeadDisposition, DashboardSummary, TeamStatusRow,
   AppModuleDto, RoleDto, AgencyDto, CallCenterDto, OrgTreeDto,
+  TenantCascadeResult, TenantDisableImpact,
   LeadDiagnostics, IntegrationInfo, IntegrationHealthResult,
   DocumentMeta, DocumentNote,
   IntakeLeadInput, IntakeQueueItem, ClosingApplicationView, ClosingApplicationInput, UpdateIntakeLeadInput,
@@ -835,6 +836,15 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/agencies", method: "POST", body }),
       invalidatesTags: ["Agencies"],
     }),
+    /** Turn an agency on or off — cascades to its call centres and users. Returns what it changed. */
+    setAgencyActive: b.mutation<TenantCascadeResult, { id: string; isActive: boolean }>({
+      query: ({ id, isActive }) => ({ url: `/api/agencies/${id}/active`, method: "PUT", body: { isActive } }),
+      invalidatesTags: ["Agencies", "CallCenters", "Users"],
+    }),
+    /** What disabling this agency would affect — read before showing the confirmation. */
+    agencyDisableImpact: b.query<TenantDisableImpact, string>({
+      query: (id) => `/api/agencies/${id}/disable-impact`,
+    }),
     updateAgency: b.mutation<AgencyDto, { id: string; name: string; code?: string | null; isActive: boolean; senderEmail?: string | null; displayCurrency?: string; exchangeRate?: number }>({
       query: ({ id, ...body }) => ({ url: `/api/agencies/${id}`, method: "PUT", body }),
       invalidatesTags: (_r, _e, arg) => ["Agencies", { type: "Agencies", id: arg.id }],
@@ -1611,6 +1621,7 @@ export const {
   useListModulesQuery, useMyModulesQuery,
   useListAgenciesQuery, useGetAgencyQuery, useCreateAgencyMutation,
   useUpdateAgencyMutation, useUploadAgencyLogoMutation, useAssignAgencyCeoMutation,
+  useSetAgencyActiveMutation, useLazyAgencyDisableImpactQuery,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery, useCreateLicenseAgentMutation,
   useAgencyCallCentersQuery, useCreateCallCenterInAgencyMutation, useUpdateCallCenterInAgencyMutation,
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,

@@ -14,7 +14,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  Pager, SearchInput, Select, Skeleton, Stat, Table, Tabs, TBody, TD, TH, THead, TR, useToast, usePagination,
+  ErrorState, Pager, SearchInput, Select, Skeleton, Stat, StatusBadge, statusOf, Table, Tabs, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -31,12 +31,12 @@ export function UserManagementPage() {
   const me = useSelector((s: RootState) => s.auth.user);
   const isSuperAdmin = (me?.roles ?? []).includes("SuperAdmin");
 
-  const { data: users, isLoading } = useListUsersQuery();
+  const { data: users, isLoading, isError, error, refetch } = useListUsersQuery();
   const { data: callCenters } = useListCallCentersQuery();
   // Agency list only matters to a SuperAdmin (nobody else may move a user between tenants).
   const { data: agencies } = useListAgenciesQuery(undefined, { skip: !isSuperAdmin });
   const [updateRoles] = useUpdateUserRolesMutation();
-  const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
+  const [setActive] = useSetUserActiveMutation();
   const [resetPw, { isLoading: resettingPw }] = useResetUserPasswordMutation();
   const [setUserCc] = useSetUserCallCenterMutation();
   const [setUserTeam] = useSetUserTeamMutation();
@@ -105,7 +105,6 @@ export function UserManagementPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<{ id: string; userName: string; roles: string[] } | null>(null);
   const [resetting, setResetting] = useState<{ id: string; userName: string } | null>(null);
-  const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; userName: string } | null>(null);
   const [newPwd, setNewPwd] = useState("");
 
   const filtered = useMemo(() => {
@@ -155,6 +154,28 @@ export function UserManagementPage() {
       { header: "Active", value: (u) => ((u.isActive ?? true) ? "Yes" : "No") },
     ], `users-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(ADMIN_MSG.common.exportReady, ADMIN_MSG.common.exportReadyDesc(chosen.length));
+  }
+
+  /**
+   * Single-user disable. Shares its copy with the bulk path below via one message function, so the
+   * two can never drift into describing the same action differently — which they previously did
+   * ("prevent X from signing in" vs "blocked from signing in").
+   */
+  async function disableOne(userId: string, userName: string) {
+    const ok = await confirm({
+      title: ADMIN_MSG.userMgmt.disableConfirmTitle(userName),
+      description: ADMIN_MSG.userMgmt.disableConfirmDesc,
+      consequences: ADMIN_MSG.userMgmt.disableConsequences(userName),
+      danger: true,
+      confirmLabel: ADMIN_MSG.userMgmt.disableConfirmLabel,
+    });
+    if (!ok) return;
+    try {
+      await setActive({ id: userId, isActive: false }).unwrap();
+      toast.success(ADMIN_MSG.userMgmt.userDeactivated, ADMIN_MSG.common.canNoLongerSignIn(userName));
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+    }
   }
 
   // Bulk assignment — the single biggest time saver when standing up a new call centre or shift.
@@ -320,6 +341,11 @@ export function UserManagementPage() {
             </div>
           ))}
         </CardBody></Card>
+      ) : isError ? (
+        // A failed request must never read as "there are no users".
+        <Card><CardBody>
+          <ErrorState error={error} resource={ADMIN_MSG.userMgmt.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !users || users.length === 0 ? (
         <Card><CardBody>
           <EmptyState
@@ -337,6 +363,7 @@ export function UserManagementPage() {
               <TH sortDir={dirFor("userName")} onClick={() => toggle("userName")}>User</TH>
               <TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH>
               <TH sortDir={dirFor("role")} onClick={() => toggle("role")}><span className="inline-flex items-center gap-1">Roles<InfoHint title="Roles" side="top">A user's roles decide which modules they see and what they can do. No roles means they can sign in but can't access anything until you assign one.</InfoHint></span></TH>
+              <TH><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active users can sign in. Disabled users cannot. "Disabled with agency" means they were switched off because their agency was disabled — they return automatically when it is enabled.</InfoHint></span></TH>
               <TH><span className="inline-flex items-center gap-1">Call center<InfoHint title="Call center" side="top">Pin a user to one call center to limit their pipeline to just that center; leave it agency-level to see the whole agency.</InfoHint></span></TH>
               <TH><span className="inline-flex items-center gap-1">Team<InfoHint title="Team" side="top">The team this user reports into. Teams live inside an agency, so moving someone to another agency clears their team.</InfoHint></span></TH>
               {isSuperAdmin && (
@@ -355,17 +382,12 @@ export function UserManagementPage() {
                 <TD><Checkbox aria-label={`Select ${u.userName}`} {...sel.checkboxProps(u.id)} /></TD>
                 <TD>
                   <div className="flex items-center gap-3">
-                    <Avatar name={u.userName} size={36} className={active ? "" : "opacity-50 grayscale"} />
+                    <Avatar name={u.userName} size={36} className={active ? "" : "opacity-60"} />
                     <div className="min-w-0">
-                      <div className={"font-medium truncate " + (active ? "text-ink-900" : "text-ink-500 line-through decoration-rose-400/40")} title={u.userName}>
+                      <div className={"font-medium truncate " + (active ? "text-ink-900" : "text-ink-500")} title={u.userName}>
                         {u.userName}
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
-                        {!active && (
-                          <Badge tone="danger" variant="soft" size="sm">
-                            <Icon name="userX" size={10} className="mr-1" /> Deactivated
-                          </Badge>
-                        )}
                         {u.mustChangePassword && (
                           u.invitationExpired ? (
                             <Badge tone="danger" variant="soft" size="sm">
@@ -391,6 +413,7 @@ export function UserManagementPage() {
                       ))}
                   </div>
                 </TD>
+                <TD><StatusBadge status={statusOf(u.isActive, u.disabledWithAgency)} /></TD>
                 <TD>
                   <Select
                     value={u.callCenterId ?? ""}
@@ -472,7 +495,7 @@ export function UserManagementPage() {
                     {active ? (
                       <Button
                         variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" title="Deactivate user" aria-label="Deactivate user"
-                        onClick={() => setConfirmDeactivate({ id: u.id, userName: u.userName })}
+                        onClick={() => disableOne(u.id, u.userName)}
                       ><Icon name="userX" size={15} /></Button>
                     ) : (
                       <Button
@@ -604,36 +627,6 @@ export function UserManagementPage() {
         />
       </Modal>
 
-      {/* Deactivate confirm */}
-      <Modal
-        open={confirmDeactivate !== null}
-        onClose={() => setConfirmDeactivate(null)}
-        title="Deactivate user"
-        description={confirmDeactivate ? `This will prevent ${confirmDeactivate.userName} from signing in.` : ""}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setConfirmDeactivate(null)}>Cancel</Button>
-            <Button
-              variant="danger"
-              loading={settingActive}
-              onClick={async () => {
-                if (!confirmDeactivate) return;
-                try {
-                  await setActive({ id: confirmDeactivate.id, isActive: false }).unwrap();
-                  toast.success(ADMIN_MSG.userMgmt.userDeactivated, ADMIN_MSG.common.canNoLongerSignIn(confirmDeactivate.userName));
-                  setConfirmDeactivate(null);
-                } catch (err: unknown) {
-                  toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
-                }
-              }}
-            >Deactivate user</Button>
-          </>
-        }
-      >
-        <div className="text-sm text-ink-700">
-          You can re-activate the user later if needed.
-        </div>
-      </Modal>
     </>
   );
 }

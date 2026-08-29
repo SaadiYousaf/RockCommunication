@@ -1,4 +1,6 @@
 export interface UserSummary {
+  /** True when this account is off only because its agency/call centre is off. */
+  disabledWithAgency?: boolean;
   id: string;
   userName: string;
   email: string;
@@ -47,6 +49,8 @@ export interface CallCenterDto {
   timeZone?: string | null;
   /** Agent seats at this site, for capacity planning. */
   seatCapacity?: number | null;
+  /** True when this centre is off only because its agency is off — it returns with the agency. */
+  disabledWithAgency?: boolean;
 }
 
 /** A stored insurance / carrier portal login (Confidential vault, Admin/SuperAdmin only). */
@@ -419,6 +423,19 @@ export interface RoleDto {
   modules: string[];
   /** Null for system role templates; set for agency-scoped custom roles. */
   agencyId?: string | null;
+}
+
+/** What a tenant enable/disable actually changed — reported back so the UI states facts. */
+export interface TenantCascadeResult {
+  callCentersChanged: number;
+  usersChanged: number;
+}
+
+/** What disabling an agency WOULD affect, read before the confirmation dialog. */
+export interface TenantDisableImpact {
+  callCenters: number;
+  users: number;
+  activeSessions: number;
 }
 
 export interface AgencyDto {

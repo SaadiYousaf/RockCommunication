@@ -423,7 +423,8 @@ public class IdentityService : IIdentityService
             result.Add(new UserSummaryDto(u.Id, u.UserName!, u.Email!, u.AgencyId, roles.ToList(), modules,
                 MustChangePassword: u.MustChangePassword, TeamId: u.TeamId, IsActive: u.IsActive,
                 CallCenterId: u.CallCenterId,
-                InvitationExpired: InvitationPolicy.IsExpired(u.MustChangePassword, u.InvitationSentAt, u.InvitationAcceptedAt, DateTime.UtcNow)));
+                InvitationExpired: InvitationPolicy.IsExpired(u.MustChangePassword, u.InvitationSentAt, u.InvitationAcceptedAt, DateTime.UtcNow),
+                DisabledWithAgency: u.CascadeDisabledAt != null));
         }
         return result;
     }

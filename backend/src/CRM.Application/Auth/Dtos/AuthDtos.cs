@@ -33,7 +33,13 @@ public record UserSummaryDto(
     /// <summary>Currency the UI formats sale/commission money in ("USD" / "PKR") — an agency setting.</summary>
     string DisplayCurrency = "USD",
     /// <summary>Units of DisplayCurrency per 1 USD (1 = show stored USD figures unchanged).</summary>
-    decimal ExchangeRate = 1m);
+    decimal ExchangeRate = 1m,
+    /// <summary>
+    /// True when this account is off only because its agency or call centre is off. It comes back
+    /// automatically when that is re-enabled — which is why the admin list must distinguish it from
+    /// someone an administrator disabled individually.
+    /// </summary>
+    bool DisabledWithAgency = false);
 
 public record TwoFactorSetupResponse(string Secret, string QrCodeUri);
 

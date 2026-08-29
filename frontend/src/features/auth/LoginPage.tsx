@@ -1,18 +1,21 @@
 import { getErrorDetail } from "../../shared/api/apiError";
+import { AUTH_MSG, isUnavailableAccount } from "./messages";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { markSessionRecovered, useLoginMutation, useVerify2FaMutation } from "../../shared/api/baseApi";
 import { setAuth } from "../../app/store";
 import { Button, Icon, Input, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
 
 export function LoginPage() {
-  const [userNameOrEmail, setU] = useState("admin");
+  const [userNameOrEmail, setU] = useState("");
   const [password, setP] = useState("");
   const [code, setCode] = useState("");
   const [twoFactorToken, setTfToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Set when the account exists but cannot be used — shown as a banner, not a field error. */
+  const [blocked, setBlocked] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
 
   const [login, { isLoading: loggingIn }] = useLoginMutation();
@@ -41,9 +44,17 @@ export function LoginPage() {
         }
       }
     } catch (err: unknown) {
-      const msg = getErrorDetail(err) ?? "Login failed.";
-      setError(msg);
-      toast.error("Sign in failed", msg);
+      const detail = getErrorDetail(err);
+      // A blocked account is not a typo: it is not worth retrying, and the person needs to be told
+      // who to contact. Anything else stays as an inline field error they can correct.
+      if (isUnavailableAccount(err, detail)) {
+        setBlocked(AUTH_MSG.accountUnavailable);
+        setError(null);
+      } else {
+        setBlocked(null);
+        setError(detail ?? AUTH_MSG.signInFailed);
+        toast.error(AUTH_MSG.signInFailedTitle, detail ?? AUTH_MSG.signInFailed);
+      }
     }
   }
 
@@ -142,6 +153,16 @@ export function LoginPage() {
                   leftIcon={<Icon name="users" size={16} />}
                   required autoFocus
                 />
+                {blocked && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3"
+                  >
+                    <Icon name="warning" size={15} className="mt-0.5 shrink-0 text-amber-700" />
+                    <p className="text-sm leading-relaxed text-amber-900">{blocked}</p>
+                  </div>
+                )}
+
                 <Input
                   label="Password"
                   type={showPwd ? "text" : "password"}
@@ -161,11 +182,8 @@ export function LoginPage() {
                 />
 
                 <div className="flex items-center justify-between text-xs">
-                  <label className="inline-flex items-center gap-2 text-ink-600 cursor-pointer select-none">
-                    <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
-                    Remember me
-                  </label>
-                  <a className="text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" href="/forgot-password">Forgot password?</a>
+                  <span />
+                  <Link className="text-brand-600 hover:text-brand-700 font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" to="/forgot-password">Forgot password?</Link>
                 </div>
 
                 <Button type="submit" loading={loggingIn} fullWidth size="lg">

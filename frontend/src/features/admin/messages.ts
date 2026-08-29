@@ -64,6 +64,7 @@ export const ADMIN_MSG = {
 
   // ── User management (UserManagementPage) ─────────────────────────────────
   userMgmt: {
+    resourceName: "users",
     callCenterUpdated: "Call center updated",
     callCenterUpdateFailed: "Couldn't update call center",
 
@@ -130,6 +131,16 @@ export const ADMIN_MSG = {
     usersActivated: (n: number) => `Activated ${n} ${n === 1 ? "user" : "users"}`,
     activateFailed: "Couldn't activate",
 
+    // One set of words for disabling a user, whether it is one person or twenty.
+    disableConfirmTitle: (name: string) => `Disable ${name}?`,
+    disableConfirmDesc: "This account will no longer be able to sign in.",
+    disableConfirmLabel: "Disable user",
+    disableConsequences: (name: string) => [
+      `${name} is signed out immediately and can't sign in again.`,
+      "Their leads, sales and history are kept and stay assigned to them.",
+      "You can enable the account again at any time.",
+    ],
+
     deactivateConfirmTitle: (n: number) => `Deactivate ${n} ${n === 1 ? "user" : "users"}?`,
     deactivateConfirmDesc: "They'll be blocked from signing in. You can reactivate them later.",
     deactivateConfirmLabel: "Deactivate",
@@ -165,6 +176,31 @@ export const ADMIN_MSG = {
 
   // ── Agencies (AgenciesPage) ──────────────────────────────────────────────
   agencies: {
+    resourceName: "agencies",
+    // ── Disable: consequences stated before the operator commits ──────────────
+    // Counts come from the server so the dialog reports facts, not guesses. Each falls back to a
+    // vaguer but still honest line if the preview call failed.
+    consequenceCallCenters: (n?: number) =>
+      n === undefined ? "Its call centres will be disabled."
+        : n === 0 ? "It has no active call centres."
+        : `${n} call centre${n === 1 ? "" : "s"} will be disabled.`,
+    consequenceUsers: (n?: number) =>
+      n === undefined ? "Everyone in this agency will be blocked from signing in."
+        : n === 0 ? "It has no active users."
+        : `${n} user${n === 1 ? "" : "s"} will be blocked from signing in.`,
+    consequenceSessions: (n?: number) =>
+      n === undefined ? "Anyone signed in right now will be signed out."
+        : n === 0 ? "Nobody from this agency is signed in right now."
+        : `${n} person${n === 1 ? "" : "s"} signed in right now will be signed out immediately.`,
+    consequenceDataKept: "Leads, sales and history are kept — nothing is deleted.",
+    consequenceReversible:
+      "Enabling the agency again restores everything this action disabled. Anything you disabled individually stays disabled.",
+    typeToConfirmLabel: (name: string) => `Type “${name}” to confirm`,
+    disabledDetail: (name: string, centres: number, users: number) =>
+      `${name} is disabled. ${centres} call centre${centres === 1 ? "" : "s"} and ${users} user${users === 1 ? "" : "s"} were disabled with it.`,
+    enabledDetail: (name: string, centres: number, users: number) =>
+      `${name} is active again. ${centres} call centre${centres === 1 ? "" : "s"} and ${users} user${users === 1 ? "" : "s"} were restored.`,
+
     noneInTabTitle: "Nothing here",
     noneInTabDesc: "No agencies with this status. Try another tab.",
     // ── Contact details (optional on create/edit) ─────────────────────────────
@@ -246,6 +282,20 @@ export const ADMIN_MSG = {
 
   // ── Call centers list (CallCentersPage) ──────────────────────────────────
   callCenters: {
+    resourceName: "call centres",
+    // ── Disable: consequences stated before the operator commits ──────────────
+    disableConfirmTitle: (name: string) => `Disable ${name}?`,
+    disableConfirmDesc: "This call centre stops operating and its agents lose access.",
+    disableConfirmLabel: "Disable call centre",
+    consequenceAgents: (n: number) =>
+      n === 0 ? "No agents are currently assigned to it."
+        : `${n} agent${n === 1 ? "" : "s"} pinned to it will be signed out and blocked from signing in.`,
+    consequenceDataKept: "Its leads, sales and history are kept — nothing is deleted.",
+    consequenceReversible: "You can enable it again at any time.",
+    disabled: "Call centre disabled",
+    enabled: "Call centre enabled",
+    enableBlockedByAgency: "This call centre is disabled because its agency is disabled. Enable the agency to restore it.",
+
     // ── Site details (optional on create/edit) ────────────────────────────────
     siteDetails: "Site details",
     fieldCity: "City",
