@@ -9,7 +9,7 @@ import {
 import type { PortalCredential, PortalCredentialInput } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader, Pager, SearchInput,
+  Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader, Pager, SearchInput,
   Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, useToast, usePagination,
 } from "../../shared/ui";
 
@@ -21,7 +21,7 @@ const EMPTY: PortalCredentialInput = { portalName: "", url: "", username: "", pa
  * masked with a reveal / copy affordance.
  */
 export function ConfidentialPage() {
-  const { data: creds, isLoading } = useListPortalCredentialsQuery();
+  const { data: creds, isLoading, isError, error, refetch } = useListPortalCredentialsQuery();
   const [create, { isLoading: creating }] = useCreatePortalCredentialMutation();
   const [update, { isLoading: updating }] = useUpdatePortalCredentialMutation();
   const [remove] = useDeletePortalCredentialMutation();
@@ -135,6 +135,11 @@ export function ConfidentialPage() {
 
       {isLoading ? (
         <Card><CardBody>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 mb-2" />)}</CardBody></Card>
+      ) : isError ? (
+        // A failed request must never read as "there are no stored logins".
+        <Card><CardBody>
+          <ErrorState error={error} resource={CONFIDENTIAL_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : filtered.length === 0 ? (
         <Card><CardBody>
           <EmptyState

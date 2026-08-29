@@ -7,7 +7,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { AppModuleDto, RoleDto } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Stat, useToast, cn,
 } from "../../shared/ui";
 import { usePermission, Perm } from "../../shared/auth/permissions";
@@ -21,7 +21,9 @@ import { ADMIN_MSG } from "./messages";
  * of those modules in their sidebar and route guards.
  */
 export function RolesPage() {
-  const { data: roles, isLoading: rolesLoading } = useListRolesQuery();
+  const {
+    data: roles, isLoading: rolesLoading, isError: rolesFailed, error: rolesError, refetch: refetchRoles,
+  } = useListRolesQuery();
   const { data: modules, isLoading: modulesLoading } = useListModulesQuery();
   const [createRole, { isLoading: creating }] = useCreateRoleMutation();
   const [renameRole, { isLoading: renaming }] = useRenameRoleMutation();
@@ -187,6 +189,11 @@ export function RolesPage() {
             {rolesLoading ? (
               <div className="space-y-2 p-2">
                 {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+              </div>
+            ) : rolesFailed ? (
+              // A failed request must never read as "no roles exist".
+              <div className="py-10">
+                <ErrorState error={rolesError} resource={ADMIN_MSG.roles.resourceName} onRetry={refetchRoles} />
               </div>
             ) : filteredRoles.length === 0 ? (
               <div className="py-10">

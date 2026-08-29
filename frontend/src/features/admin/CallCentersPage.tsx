@@ -18,7 +18,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { STATUS } from "../../shared/constants/messages";
 import {
-  BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Select, Skeleton, Stat, StatusBadge, statusOf, Table, Tabs, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -78,6 +78,10 @@ export function CallCentersPage() {
   });
   const sel = useRowSelection(sorted.map((c) => c.id));
   const isLoading = isSuperAdmin ? (scoped.isLoading || !agencyId) : own.isLoading;
+  // Whichever of the two queries is actually feeding the list is the one whose failure matters.
+  const listFailed = isSuperAdmin ? scoped.isError : own.isError;
+  const listError = isSuperAdmin ? scoped.error : own.error;
+  const refetchList = isSuperAdmin ? scoped.refetch : own.refetch;
 
   // At-a-glance totals for the currently-scoped agency (mirrors AgenciesPage).
   const stats = useMemo(() => {
@@ -252,7 +256,10 @@ export function CallCentersPage() {
               <Tabs value={statusTabs.tab} onChange={statusTabs.setTab} items={statusTabs.items} />
             </div>
           )}
-          {isLoading ? <Skeleton className="h-40" /> : !list || list.length === 0 ? (
+          {isLoading ? <Skeleton className="h-40" /> : listFailed ? (
+            // A failed request must never read as "this agency has no call centers".
+            <ErrorState error={listError} resource={ADMIN_MSG.callCenters.resourceName} onRetry={refetchList} />
+          ) : !list || list.length === 0 ? (
             <EmptyState icon={<Icon name="building" size={20} />} title={ADMIN_MSG.callCenters.emptyTitle}
               description={ADMIN_MSG.callCenters.emptyDesc}
               action={<Button size="sm" leftIcon={<Icon name="plus" size={14} />} onClick={() => setShowNew(true)}>Add call center</Button>} />

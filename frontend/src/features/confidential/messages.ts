@@ -6,6 +6,8 @@
 export const CONFIDENTIAL_MSG = {
   // Search placeholders (no user-facing copy inline).
   searchPlaceholder: "Search portals, usernames…",
+  /** What failed to load, for the shared ErrorState ("Couldn't load portal logins"). */
+  resourceName: "portal logins",
   loginUpdated: "Login updated",
   loginSaved: "Login saved",
   saveFailed: "Couldn't save",

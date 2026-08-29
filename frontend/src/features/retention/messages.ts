@@ -5,6 +5,9 @@ import type { BadgeTone } from "../../shared/ui";
  * Keep inline strings out of the component — reference these instead.
  */
 export const RETENTION_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "retention policies",
+
   eyebrow: "Pipeline",
   title: "Retention",
   description:

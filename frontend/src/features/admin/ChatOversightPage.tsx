@@ -4,7 +4,7 @@ import {
   useChatOversightRoomsQuery, useChatOversightMessagesQuery,
 } from "../../shared/api/baseApi";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, PageHeader, SearchInput, Skeleton, cn,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, PageHeader, SearchInput, Skeleton, cn,
 } from "../../shared/ui";
 import { ADMIN_MSG } from "./messages";
 
@@ -107,8 +107,14 @@ function Empty({ title, body, icon = "chat" }: { title: string; body: string; ic
 }
 
 function AgencyGrid({ onPick }: { onPick: (a: { id: string; name: string }) => void }) {
-  const { data, isLoading } = useChatOversightAgenciesQuery();
+  const { data, isLoading, isError, error, refetch } = useChatOversightAgenciesQuery();
   if (isLoading) return <Grid>{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>;
+  // A failed request must never read as "no agencies exist".
+  if (isError) return (
+    <Card><CardBody>
+      <ErrorState error={error} resource={ADMIN_MSG.agencies.resourceName} onRetry={refetch} />
+    </CardBody></Card>
+  );
   if (!data || data.length === 0) return <Empty icon="building" title={ADMIN_MSG.chatOversight.noAgenciesTitle} body={ADMIN_MSG.chatOversight.noAgenciesBody} />;
   return (
     <Grid>
@@ -126,7 +132,7 @@ function CallCenterGrid({ agency, onPick, onAllChats }: {
   onPick: (c: { id: string; name: string }) => void;
   onAllChats: () => void;
 }) {
-  const { data, isLoading } = useChatOversightCallCentersQuery(agency.id);
+  const { data, isLoading, isError, error, refetch } = useChatOversightCallCentersQuery(agency.id);
   return (
     <>
       <div className="mb-3">
@@ -136,6 +142,11 @@ function CallCenterGrid({ agency, onPick, onAllChats }: {
       </div>
       {isLoading ? (
         <Grid>{[0, 1, 2].map((i) => <Skeleton key={i} className="h-[76px] rounded-xl" />)}</Grid>
+      ) : isError ? (
+        // A failed request must never read as "this agency has no call centres with chats".
+        <Card><CardBody>
+          <ErrorState error={error} resource={ADMIN_MSG.callCenters.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !data || data.length === 0 ? (
         <Empty icon="headset" title={ADMIN_MSG.chatOversight.noCallCentersTitle} body={ADMIN_MSG.chatOversight.noCallCentersBody(agency.name)} />
       ) : (
@@ -167,7 +178,7 @@ function RoomBrowser({ agencyId, callCenter }: {
   const roomsArg = callCenter.id === "all"
     ? { agencyId }
     : { agencyId, callCenterId: callCenter.id };
-  const { data: rooms, isLoading } = useChatOversightRoomsQuery(roomsArg);
+  const { data: rooms, isLoading, isError, error, refetch } = useChatOversightRoomsQuery(roomsArg);
   const { data: messages, isFetching: msgLoading } = useChatOversightMessagesQuery(roomId ?? "", { skip: !roomId });
 
   const filtered = (rooms ?? []).filter((r) => !q.trim() ||
@@ -185,6 +196,11 @@ function RoomBrowser({ agencyId, callCenter }: {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="p-3 space-y-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}</div>
+          ) : isError ? (
+            // A failed request must never read as "there are no conversations here".
+            <div className="p-4">
+              <ErrorState error={error} resource={ADMIN_MSG.chatOversight.roomsResourceName} onRetry={refetch} compact />
+            </div>
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center text-sm text-ink-500">
               {q ? ADMIN_MSG.chatOversight.noRoomsMatch : ADMIN_MSG.chatOversight.noConversations}

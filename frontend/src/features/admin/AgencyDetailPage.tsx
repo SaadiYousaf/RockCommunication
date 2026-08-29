@@ -14,7 +14,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { AgencyDto, CallCenterDto } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,  StatusBadge, statusOf,
 } from "../../shared/ui";
 import { formatUsd } from "../../shared/lib/format";
@@ -33,7 +33,9 @@ export function AgencyDetailPage() {
   const { data: agents } = useAgencyLicenseAgentsQuery(agencyId, { skip: !agencyId });
 
   const [skip, setSkip] = useState(0);
-  const { data: sales, isLoading: salesLoading } = useListSalesQuery(
+  const {
+    data: sales, isLoading: salesLoading, isError: salesFailed, error: salesError, refetch: refetchSales,
+  } = useListSalesQuery(
     { agencyId, skip, take: PAGE, sort: "soldAt-desc" }, { skip: !agencyId });
 
   const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
@@ -193,7 +195,10 @@ export function AgencyDetailPage() {
       <Card>
         <CardHeader title="Sales" subtitle={sales ? `${total} sale(s)` : undefined} />
         <CardBody>
-          {salesLoading || agencyLoading ? <Skeleton className="h-48" /> : items.length === 0 ? (
+          {salesLoading || agencyLoading ? <Skeleton className="h-48" /> : salesFailed ? (
+            // A failed request must never read as "this agency has no sales".
+            <ErrorState error={salesError} resource={ADMIN_MSG.agencyDetail.salesResourceName} onRetry={refetchSales} />
+          ) : items.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={ADMIN_MSG.agencyDetail.noSalesTitle} description={ADMIN_MSG.agencyDetail.noSalesDesc} />
           ) : (
             <div className="overflow-x-auto">

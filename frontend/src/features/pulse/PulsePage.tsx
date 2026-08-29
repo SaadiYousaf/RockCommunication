@@ -12,7 +12,7 @@ import {
 import type { FeedPost, FeedComment, FeedPostKind, FeedPoll } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Avatar, Button, Card, CardBody, EmptyState, Icon, PageHeader, Skeleton, cn, useToast,
+  Avatar, Button, Card, CardBody, EmptyState, ErrorState, Icon, PageHeader, Skeleton, cn, useToast,
 } from "../../shared/ui";
 import { MentionBox, type MentionUser } from "./MentionBox";
 import { PULSE_MSG } from "./messages";
@@ -99,7 +99,7 @@ export function PulsePage() {
   const me = useSelector((s: RootState) => s.auth.user);
   const navigate = useNavigate();
   const { data: users } = useUserDirectoryQuery();
-  const { data: posts, isLoading } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000 });
+  const { data: posts, isLoading, isError, error, refetch } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000 });
 
   // Clicking a @mention or an author opens a direct message with that person.
   const usersByName = useMemo(() => new Map((users ?? []).map((u) => [u.userName.toLowerCase(), u.id])), [users]);
@@ -246,6 +246,11 @@ export function PulsePage() {
       {/* Feed */}
       {isLoading ? (
         <div className="space-y-4">{[0, 1, 2].map((i) => <Card key={i}><CardBody><Skeleton className="h-20" /></CardBody></Card>)}</div>
+      ) : isError ? (
+        // A failed request must never read as "nobody has posted anything".
+        <Card><CardBody>
+          <ErrorState error={error} resource={PULSE_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !posts || posts.length === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="chat" size={20} />} title={PULSE_MSG.nothingHereTitle}

@@ -3,6 +3,9 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const CHAT_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "your conversations",
+
   // Search placeholders (no user-facing copy inline).
   searchConversations: "Search conversations...",
   searchInConversation: "Search in conversation…",

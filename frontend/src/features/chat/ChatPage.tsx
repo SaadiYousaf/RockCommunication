@@ -15,7 +15,7 @@ import type { RootState } from "../../app/store";
 import type { ChatMessage, ChatReaction } from "../../shared/api/types";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
-  Avatar, Badge, Button, EmptyState, Icon, Input, Modal, Skeleton, useToast, cn,
+  Avatar, Badge, Button, EmptyState, ErrorState, Icon, Input, Modal, Skeleton, useToast, cn,
 } from "../../shared/ui";
 import { MESSAGES } from "../../shared/constants/messages";
 import { CHAT_MSG } from "./messages";
@@ -62,7 +62,9 @@ function isEmojiOnly(s: string): boolean {
 
 export function ChatPage() {
   const auth = useSelector((s: RootState) => s.auth);
-  const { data: rooms, isLoading: roomsLoading } = useChatRoomsQuery();
+  const {
+    data: rooms, isLoading: roomsLoading, isError: roomsFailed, error: roomsError, refetch: refetchRooms,
+  } = useChatRoomsQuery();
   const { data: users } = useListUsersQuery();
   const { data: directory } = useUserDirectoryQuery();
   const { data: unread, refetch: refetchUnread } = useChatUnreadQuery(undefined, { pollingInterval: 15_000 });
@@ -535,6 +537,12 @@ export function ChatPage() {
           {roomsLoading ? (
             <div className="space-y-2 p-2">
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
+            </div>
+          ) : roomsFailed ? (
+            // A failed load used to read as "no conversations", which looks like every chat history
+            // was deleted — and pushed people to start duplicate rooms.
+            <div className="p-6">
+              <ErrorState error={roomsError} resource={CHAT_MSG.resourceName} onRetry={refetchRooms} />
             </div>
           ) : !rooms || rooms.length === 0 ? (
             <div className="p-6">

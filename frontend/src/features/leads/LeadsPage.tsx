@@ -17,7 +17,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, useToast,
 } from "../../shared/ui";
 import { WORKFLOW_STAGES as stages, STAGE_TONE as stageTone, stageOf, stageLabel, dispositionLabel } from "../../shared/constants/leadStage";
@@ -86,7 +86,7 @@ export function LeadsPage() {
     createdAfter,
   } as const;
 
-  const { data: leadsResult, isLoading, isFetching, refetch } = useListLeadsQuery(queryParams);
+  const { data: leadsResult, isLoading, isFetching, isError, error, refetch } = useListLeadsQuery(queryParams);
   const allLeads = leadsResult?.items;
   const total = leadsResult?.total ?? 0;
   const { data: cadences } = useListCadencesQuery();
@@ -356,6 +356,12 @@ export function LeadsPage() {
               <Skeleton className="h-5 w-16 rounded-full ml-auto" />
             </div>
           ))}
+        </CardBody></Card>
+      ) : isError ? (
+        // A failed request must never read as "no leads match" — that sends people clearing filters
+        // that were never the problem.
+        <Card><CardBody>
+          <ErrorState error={error} resource={LEADS_MSG.allLeadsResource} onRetry={refetch} />
         </CardBody></Card>
       ) : filteredClient.length === 0 ? (
         <Card><CardBody>

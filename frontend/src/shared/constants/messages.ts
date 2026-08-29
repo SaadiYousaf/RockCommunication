@@ -41,6 +41,16 @@ export const MESSAGES = {
  * "Disabled" rather than "Inactive": it names the action an admin took, and pairs with the
  * Enable/Disable buttons on the rows themselves.
  */
+/** Shared filter-bar copy — one wording for search-and-filter everywhere. */
+export const FILTERS = {
+  searchLabel: "Search",
+  searchPlaceholder: "Search…",
+  clearSearch: "Clear search",
+  moreFilters: "More filters",
+  clearAll: "Clear filters",
+  activeCount: (n: number) => `${n} filter${n === 1 ? "" : "s"} applied`,
+} as const;
+
 export const STATUS_TABS = {
   active: "Active",
   disabled: "Disabled",

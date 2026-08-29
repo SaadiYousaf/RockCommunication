@@ -6,6 +6,9 @@
 export const PULSE_MSG = {
   retry: "Try again.",
 
+  /** What failed to load, for the shared ErrorState ("Couldn't load the team feed"). */
+  resourceName: "the team feed",
+
   imageTooLarge: "Image too large",
   imageTooLargeDesc: "Please choose an image under 8 MB.",
   attachImageFailed: "Couldn't attach image",

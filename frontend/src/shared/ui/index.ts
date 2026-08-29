@@ -10,6 +10,8 @@ export { Skeleton } from "./Skeleton";
 export { EmptyState } from "./EmptyState";
 export { StatusBadge, statusOf, type StatusKind } from "./StatusBadge";
 export { RowMenu, type RowMenuItem } from "./RowMenu";
+export { FieldGroup } from "./FieldGroup";
+export { FilterBar } from "./FilterBar";
 export { ErrorState, QueryState } from "./ErrorState";
 export { PageHeader } from "./PageHeader";
 export { Avatar } from "./Avatar";

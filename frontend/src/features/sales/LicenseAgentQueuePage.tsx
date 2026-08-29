@@ -4,7 +4,7 @@ import { useListSalesQuery } from "../../shared/api/baseApi";
 import type { SaleListItem } from "../../shared/api/baseApi";
 import type { BadgeTone } from "../../shared/ui";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, PageHeader,
   Pager, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { timeAgoShort, waitTone } from "../../shared/lib/time";
@@ -26,7 +26,7 @@ function statusOf(s: SaleListItem): { label: string; tone: BadgeTone } {
  * LicenseAgentUserId for a License Agent, so this simply presents their own sales as a queue.)
  */
 export function LicenseAgentQueuePage() {
-  const { data, isLoading } = useListSalesQuery({ take: 200, sort: "soldAt-desc" });
+  const { data, isLoading, isError, error, refetch } = useListSalesQuery({ take: 200, sort: "soldAt-desc" });
   const items = data?.items ?? [];
   const totalCommission = items.reduce((sum, s) => sum + (s.commissionEarned ?? 0), 0);
   const fundedCount = items.filter((s) => s.fundedAt).length;
@@ -101,6 +101,10 @@ export function LicenseAgentQueuePage() {
         <CardBody>
           {isLoading ? (
             <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : isError ? (
+            // A failed request used to read as "no sales assigned yet" — an agent's whole book of
+            // business reported as empty, which looks like the sales were taken away.
+            <ErrorState error={error} resource={SALES_MSG.assignedSalesResourceName} onRetry={refetch} />
           ) : items.length === 0 ? (
             <EmptyState
               icon={<Icon name="briefcase" size={20} />}

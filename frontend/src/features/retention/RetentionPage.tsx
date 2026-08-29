@@ -6,7 +6,7 @@ import { useListRetentionPoliciesQuery, useResolveRetentionMutation } from "../.
 import type { RetentionPolicy } from "../../shared/api/types";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Modal, PageHeader, Pager, SearchInput,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, Modal, PageHeader, Pager, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
 } from "../../shared/ui";
 import {
@@ -24,7 +24,7 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 export function RetentionPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { data: policies, isLoading } = useListRetentionPoliciesQuery();
+  const { data: policies, isLoading, isError, error, refetch } = useListRetentionPoliciesQuery();
 
   const [search, setSearch] = useState("");
   const filtered = useMemo(() => {
@@ -71,6 +71,10 @@ export function RetentionPage() {
         <CardBody>
           {isLoading ? (
             <Skeleton className="h-40" />
+          ) : isError ? (
+            // "Nothing in retention" on a failed load tells the desk every at-risk policy was
+            // recovered — the one message that must never be shown by accident.
+            <ErrorState error={error} resource={RETENTION_MSG.resourceName} onRetry={refetch} />
           ) : !policies || policies.length === 0 ? (
             <EmptyState icon={<Icon name="refresh" size={20} />} title={RETENTION_MSG.emptyTitle} description={RETENTION_MSG.emptyDesc} />
           ) : sorted.length === 0 ? (

@@ -4,6 +4,15 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  // Form group headings — they name the QUESTION each block answers, not the database tables the
+  // fields come from.
+  groupCustomer: "Customer",
+  groupCustomerHint: "Who you're speaking to.",
+  groupContact: "Contact details",
+  groupContactHint: "How to reach them, and where they live.",
+  groupCompliance: "Consent & source",
+  groupComplianceHint: "Proof of when and how this lead consented to be contacted.",
+
   // Search placeholders (no user-facing copy inline).
   queueSearchPlaceholder: "Search this queue…",
   // ---- Shared across intake pages ----

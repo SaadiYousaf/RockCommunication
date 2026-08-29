@@ -5,6 +5,9 @@ import type { BadgeTone } from "../../shared/ui";
  * Keep inline strings out of the components — reference these instead.
  */
 export const COMMISSION_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "commission sales",
+
   // Sales list
   eyebrow: "Finance",
   title: "Commission Desk",
@@ -86,6 +89,9 @@ export const COMMISSION_MSG = {
 
 /** Copy for the Carrier Advancing Rules screen. */
 export const CARRIER_RULES_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "carrier rules",
+
   eyebrow: "Finance",
   title: "Carrier Rules",
   description:
@@ -117,6 +123,9 @@ export const CARRIER_RULES_MSG = {
 
 /** Copy for the Commission Desk dashboard. */
 export const COMMISSION_DASH_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "the commission dashboard",
+
   eyebrow: "Finance",
   title: "Commission Dashboard",
   description: "Expected advance and actuals by agency and call centre for the selected month.",
@@ -192,6 +201,9 @@ export const needsConfirmation = (s: string): boolean =>
 
 /** Copy for the Commission Rates screen (what each role earns per sale). */
 export const COMMISSION_RATES_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "commission rates",
+
   eyebrow: "Finance",
   title: "Commission Rates",
   description:

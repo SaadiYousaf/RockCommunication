@@ -13,7 +13,7 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { SALES_MSG } from "./messages";
 import { commissionRuleLabel } from "../commission/rates";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -31,7 +31,7 @@ export function CommissionsPage() {
   const auth = useSelector((s: RootState) => s.auth);
   const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const { data: commissions, isLoading } = useMyCommissionsQuery({ from, to });
+  const { data: commissions, isLoading, isError, error, refetch } = useMyCommissionsQuery({ from, to });
   const manager = isManager(auth.user?.roles ?? []);
   const { data: runs } = usePayrollRunsQuery(undefined, { skip: !manager });
   const [createRun, { isLoading: creating }] = useCreatePayrollRunMutation();
@@ -209,6 +209,12 @@ export function CommissionsPage() {
       {isLoading ? (
         <Card className="mb-6"><CardBody>
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 mb-2" />)}
+        </CardBody></Card>
+      ) : isError ? (
+        // Money the user has earned must never be reported as "no commissions in this range" just
+        // because the request failed.
+        <Card className="mb-6"><CardBody>
+          <ErrorState error={error} resource={SALES_MSG.commissionsResourceName} onRetry={refetch} />
         </CardBody></Card>
       ) : !commissions || commissions.length === 0 ? (
         <Card className="mb-6"><CardBody>

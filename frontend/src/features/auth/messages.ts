@@ -8,6 +8,9 @@
  * (retrying will not help, go talk to a person).
  */
 export const AUTH_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state on the register-user role picker. */
+  rolesResourceName: "the list of roles",
+
   signInFailedTitle: "Sign in failed",
   signInFailed: "Please check your details and try again.",
 

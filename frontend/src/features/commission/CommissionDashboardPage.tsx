@@ -3,7 +3,7 @@ import { useCommissionDeskDashboardQuery } from "../../shared/api/baseApi";
 import type { CommissionDeskBreakdownRow } from "../../shared/api/types";
 import { formatUsd } from "../../shared/lib/format";
 import {
-  Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader, Skeleton, Stat,
+  Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, Input, PageHeader, Skeleton, Stat,
   Table, TBody, TD, TH, THead, TR, Pager, usePagination,
 } from "../../shared/ui";
 import { COMMISSION_DASH_MSG } from "./messages";
@@ -17,7 +17,7 @@ export function CommissionDashboardPage() {
   const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [year, mon] = month.split("-").map(Number);
 
-  const { data, isLoading } = useCommissionDeskDashboardQuery({ year, month: mon });
+  const { data, isLoading, isError, error, refetch } = useCommissionDeskDashboardQuery({ year, month: mon });
 
   return (
     <>
@@ -47,6 +47,12 @@ export function CommissionDashboardPage() {
 
       {isLoading ? (
         <Skeleton className="h-64" />
+      ) : isError ? (
+        // A failed request must never read as "nothing was sold this month" — the stats above
+        // already show zeros, so an empty state here would confirm a month of missing sales.
+        <Card><CardBody>
+          <ErrorState error={error} resource={COMMISSION_DASH_MSG.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !data || data.totalSales === 0 ? (
         <Card><CardBody>
           <EmptyState icon={<Icon name="chart" size={20} />} title={COMMISSION_DASH_MSG.emptyTitle}

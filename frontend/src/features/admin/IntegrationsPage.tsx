@@ -6,7 +6,7 @@ import {
   useCheckIntegrationMutation, useListIntegrationsQuery, useTestDialMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, Input, PageHeader,
   Skeleton, Stat, useToast, cn, type IconName,
 } from "../../shared/ui";
 import type { IntegrationInfo, IntegrationHealthResult } from "../../shared/api/types";
@@ -34,7 +34,7 @@ const integrationTone: Record<string, string> = {
 };
 
 export function IntegrationsPage() {
-  const { data: items, isLoading, refetch } = useListIntegrationsQuery();
+  const { data: items, isLoading, isError, error, refetch } = useListIntegrationsQuery();
   const [check] = useCheckIntegrationMutation();
   const toast = useToast();
   const [results, setResults] = useState<Record<string, IntegrationHealthResult>>({});
@@ -88,6 +88,11 @@ export function IntegrationsPage() {
 
       {isLoading ? (
         <div className="space-y-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}</div>
+      ) : isError ? (
+        // A failed request must never read as "no providers are configured".
+        <Card><CardBody>
+          <ErrorState error={error} resource={ADMIN_MSG.integrations.resourceName} onRetry={refetch} />
+        </CardBody></Card>
       ) : !items || items.length === 0 ? (
         <Card><CardBody>
           <EmptyState

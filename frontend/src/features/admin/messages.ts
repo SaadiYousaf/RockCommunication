@@ -40,6 +40,8 @@ export const ADMIN_MSG = {
 
   // ── Role management (RolesPage) ──────────────────────────────────────────
   roles: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load roles"). */
+    resourceName: "roles",
     created: "Role created",
     createdDesc: (name: string) => `${name} is ready to assign.`,
     createFailed: "Could not create role",
@@ -157,6 +159,8 @@ export const ADMIN_MSG = {
 
   // ── Submission agents (SubmissionAgentsPage) ─────────────────────────────
   submissionAgents: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load submission agents"). */
+    resourceName: "submission agents",
     deactivateConfirmTitle: (n: number) => `Deactivate ${n} ${n === 1 ? "agent" : "agents"}?`,
     deactivateConfirmDesc:
       "They'll be signed out and can no longer validate or approve sales. You can reactivate them later.",
@@ -235,6 +239,8 @@ export const ADMIN_MSG = {
 
   // ── Agency detail (AgencyDetailPage) ─────────────────────────────────────
   agencyDetail: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load sales for this agency"). */
+    salesResourceName: "sales for this agency",
     ccSaved: "Call centre saved",
     ccDisabledDesc: (name: string) => `${name} disabled — its agents are logged out`,
     ccCreated: "Call centre created",
@@ -321,6 +327,8 @@ export const ADMIN_MSG = {
 
   // ── Call center detail (CallCenterDetailPage) ────────────────────────────
   callCenterDetail: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load staff"). */
+    resourceName: "staff",
     assignmentSaved: "Assignment saved",
     pinnedDesc: "Pinned to the call centre.",
     agencyWideDesc: "Set to agency-wide.",
@@ -341,6 +349,8 @@ export const ADMIN_MSG = {
 
   // ── Chat oversight (ChatOversightPage) ───────────────────────────────────
   chatOversight: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load conversations"). */
+    roomsResourceName: "conversations",
     noAgenciesTitle: "No agencies",
     noAgenciesBody: "No agencies exist yet.",
     noCallCentersTitle: "No call centers with chats",
@@ -355,6 +365,8 @@ export const ADMIN_MSG = {
 
   // ── Integrations (IntegrationsPage) ──────────────────────────────────────
   integrations: {
+    /** What failed to load, for the shared ErrorState ("Couldn't load integrations"). */
+    resourceName: "integrations",
     checkOk: (code: string) => `${code} OK`,
     checkUnhealthy: (code: string) => `${code} unhealthy`,
     checkFailed: "Check failed",
@@ -368,6 +380,10 @@ export const ADMIN_MSG = {
 
   // ── System config (AdminPage) ────────────────────────────────────────────
   system: {
+    /** What failed to load, for the shared ErrorState on each panel of this page. */
+    ipResourceName: "allowlist entries",
+    verticalsResourceName: "verticals",
+    horizontalsResourceName: "horizontals",
     ipAdded: "Entry added",
     ipAddFailed: "Couldn't add",
     ipEmptyTitle: "No entries — all IPs allowed",

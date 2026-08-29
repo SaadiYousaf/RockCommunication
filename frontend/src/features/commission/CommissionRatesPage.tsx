@@ -3,7 +3,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { MESSAGES } from "../../shared/constants/messages";
 import { useListCommissionConfigQuery, useUpsertCommissionConfigMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader, Pager,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader, Pager,
   SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, usePagination, useToast,
 } from "../../shared/ui";
 import { COMMISSION_RATES_MSG } from "./messages";
@@ -18,7 +18,7 @@ type RateOverride = { amount: number | null; threshold: number | null; enabled: 
  * off. Rules are keyed internally by code, but only the friendly label is ever shown.
  */
 export function CommissionRatesPage() {
-  const { data: stored, isLoading } = useListCommissionConfigQuery();
+  const { data: stored, isLoading, isError, error, refetch } = useListCommissionConfigQuery();
   const [search, setSearch] = useState("");
 
   const rows = useMemo(() => {
@@ -49,6 +49,10 @@ export function CommissionRatesPage() {
         <CardBody>
           {isLoading ? (
             <Skeleton className="h-64" />
+          ) : isError ? (
+            // The rules themselves are static, so a failed config load would otherwise render every
+            // rate at its platform default — an agency's real overrides silently shown as absent.
+            <ErrorState error={error} resource={COMMISSION_RATES_MSG.resourceName} onRetry={refetch} />
           ) : rows.length === 0 ? (
             <EmptyState icon={<Icon name="search" size={20} />} title={COMMISSION_RATES_MSG.noMatchTitle}
               description={COMMISSION_RATES_MSG.noMatchDesc} />

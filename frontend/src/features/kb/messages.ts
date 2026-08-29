@@ -3,6 +3,9 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const KB_MSG = {
+  /** Lowercase noun for the "Couldn't load <x>" error state. */
+  resourceName: "knowledge base articles",
+
   // Search placeholders (no user-facing copy inline).
   searchPlaceholder: "Search articles…",
   // Article mutations

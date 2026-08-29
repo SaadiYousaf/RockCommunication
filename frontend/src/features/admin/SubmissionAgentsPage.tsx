@@ -11,7 +11,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
-  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   Pager, SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, useToast, usePagination,  StatusBadge, statusOf,
 } from "../../shared/ui";
 import { useTableSort } from "../../shared/hooks/useTableSort";
@@ -26,7 +26,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
  * sidebar. This page is the full lifecycle: invite, resend, reset password, deactivate.
  */
 export function SubmissionAgentsPage() {
-  const { data: agents, isLoading } = useListSubmissionAgentsQuery();
+  const { data: agents, isLoading, isError, error, refetch } = useListSubmissionAgentsQuery();
   const [showNew, setShowNew] = useState(false);
   const [resetting, setResetting] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
@@ -139,7 +139,10 @@ export function SubmissionAgentsPage() {
           }
         />
         <CardBody>
-          {isLoading ? <Skeleton className="h-32" /> : !agents || agents.length === 0 ? (
+          {isLoading ? <Skeleton className="h-32" /> : isError ? (
+            // A failed request must never read as "there are no submission agents".
+            <ErrorState error={error} resource={ADMIN_MSG.submissionAgents.resourceName} onRetry={refetch} />
+          ) : !agents || agents.length === 0 ? (
             <EmptyState icon={<Icon name="userPlus" size={20} />} title={ADMIN_MSG.submissionAgents.noAgentsTitle}
               description={ADMIN_MSG.submissionAgents.noAgentsDesc}
               action={<Button size="sm" leftIcon={<Icon name="userPlus" size={14} />} onClick={() => setShowNew(true)}>New submission agent</Button>} />

@@ -14,7 +14,7 @@ import {
 } from "../../shared/api/baseApi";
 import {
   Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  ErrorState, Pager, SearchInput, Select, Skeleton, Stat, StatusBadge, statusOf, Table, Tabs, TBody, TD, TH, THead, TR, useToast, usePagination,
+  ErrorState, FilterBar, Pager, Select, Skeleton, Stat, StatusBadge, statusOf, Table, Tabs, TBody, TD, TH, THead, TR, useToast, usePagination,
 } from "../../shared/ui";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
@@ -277,51 +277,52 @@ export function UserManagementPage() {
               hint="Need role assignment" />
       </div>
 
-      <Card className="mb-4">
-        <CardBody className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[260px]">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={ADMIN_MSG.search.users}
-            />
-          </div>
-          {/* Narrowing filters. An agency with hundreds of users can't be worked by search alone —
-              "every closer in Lahore with no team" is the question an admin actually has. */}
-          <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
-            className="text-xs min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterRole}>
-            <option value="">{ADMIN_MSG.userMgmt.allRoles}</option>
-            {ALL_ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
-          </Select>
-
-          <Select value={ccFilter} onChange={(e) => setCcFilter(e.target.value)}
-            className="text-xs min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterCallCenter}>
-            <option value="">{ADMIN_MSG.userMgmt.allCallCenters}</option>
-            <option value="none">{ADMIN_MSG.userMgmt.agencyLevel}</option>
-            {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-
-          <Select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
-            className="text-xs min-w-[8rem]" aria-label={ADMIN_MSG.userMgmt.filterTeam}>
-            <option value="">{ADMIN_MSG.userMgmt.allTeams}</option>
-            <option value="none">{ADMIN_MSG.userMgmt.noTeam}</option>
-            {(myOrg?.teams ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </Select>
-
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs min-w-[8rem]" aria-label={ADMIN_MSG.userMgmt.filterStatus}>
-            <option value="">{ADMIN_MSG.userMgmt.allStatuses}</option>
-            <option value="pending">{ADMIN_MSG.userMgmt.statusPending}</option>
-            <option value="noroles">{ADMIN_MSG.userMgmt.statusNoRoles}</option>
-          </Select>
-
-          {users && (
-            <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">
-              {filtered.length} of {users.length}
-            </Badge>
-          )}
-        </CardBody>
-      </Card>
+      {/* Search and the two filters an admin reaches for daily stay out; role and team fold away.
+          Five equally-prominent dropdowns read as a control panel rather than a list, and buried the
+          one control most people actually want. */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={ADMIN_MSG.search.users}
+        activeCount={[roleFilter, ccFilter, teamFilter, statusFilter].filter(Boolean).length}
+        onClear={() => { setRoleFilter(""); setCcFilter(""); setTeamFilter(""); setStatusFilter(""); }}
+        primary={
+          <>
+            <Select value={ccFilter} onChange={(e) => setCcFilter(e.target.value)}
+              className="text-sm min-w-[10rem]" aria-label={ADMIN_MSG.userMgmt.filterCallCenter}>
+              <option value="">{ADMIN_MSG.userMgmt.allCallCenters}</option>
+              <option value="none">{ADMIN_MSG.userMgmt.agencyLevel}</option>
+              {(callCenters ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-sm min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterStatus}>
+              <option value="">{ADMIN_MSG.userMgmt.allStatuses}</option>
+              <option value="pending">{ADMIN_MSG.userMgmt.statusPending}</option>
+              <option value="noroles">{ADMIN_MSG.userMgmt.statusNoRoles}</option>
+            </Select>
+          </>
+        }
+        advanced={
+          <>
+            <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
+              className="text-sm min-w-[10rem]" aria-label={ADMIN_MSG.userMgmt.filterRole}>
+              <option value="">{ADMIN_MSG.userMgmt.allRoles}</option>
+              {ALL_ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+            </Select>
+            <Select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
+              className="text-sm min-w-[9rem]" aria-label={ADMIN_MSG.userMgmt.filterTeam}>
+              <option value="">{ADMIN_MSG.userMgmt.allTeams}</option>
+              <option value="none">{ADMIN_MSG.userMgmt.noTeam}</option>
+              {(myOrg?.teams ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+          </>
+        }
+        trailing={users ? (
+          <Badge tone="neutral" variant="soft" className="tabular-nums whitespace-nowrap">
+            {filtered.length} of {users.length}
+          </Badge>
+        ) : undefined}
+      />
 
       {/* Deactivated accounts are kept out of the working list but stay one click away — the counts
           make it obvious they're disabled rather than missing. */}

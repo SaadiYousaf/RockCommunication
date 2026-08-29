@@ -3,7 +3,7 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useState } from "react";
 import { useGetKbArticleQuery, useSearchKbQuery, useUpsertKbArticleMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
+  Badge, Button, EmptyState, ErrorState, Icon, InfoHint, Input, Modal, PageHeader,
   SearchInput, Skeleton, Textarea, useToast, cn,
 } from "../../shared/ui";
 import { Can, Perm } from "../../shared/auth/permissions";
@@ -13,7 +13,9 @@ import { KB_MSG } from "./messages";
 export function KnowledgeBasePage() {
   const [q, setQ] = useState("");
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
-  const { data: results, isLoading: searching } = useSearchKbQuery({ q: q || undefined });
+  const {
+    data: results, isLoading: searching, isError: searchFailed, error: searchError, refetch: retrySearch,
+  } = useSearchKbQuery({ q: q || undefined });
   const { data: article } = useGetKbArticleQuery(activeSlug!, { skip: !activeSlug });
   const [upsert, { isLoading: saving }] = useUpsertKbArticleMutation();
   const [editing, setEditing] = useState<any | null>(null);
@@ -56,6 +58,12 @@ export function KnowledgeBasePage() {
             {searching ? (
               <div className="p-4 space-y-2">
                 {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
+              </div>
+            ) : searchFailed ? (
+              // A failed search used to read as "no articles", which tells the team their knowledge
+              // base is gone rather than that the request failed.
+              <div className="p-6">
+                <ErrorState error={searchError} resource={KB_MSG.resourceName} onRetry={retrySearch} />
               </div>
             ) : !results || results.length === 0 ? (
               <div className="p-6">

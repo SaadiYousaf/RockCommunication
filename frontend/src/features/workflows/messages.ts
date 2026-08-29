@@ -5,6 +5,8 @@
 export const WORKFLOWS_MSG = {
   // Search placeholders (no user-facing copy inline).
   searchPlaceholder: "Search by name, event, description…",
+  /** What failed to load, for the shared ErrorState ("Couldn't load workflow rules"). */
+  resourceName: "workflow rules",
   // Rule mutations
   ruleUpdated: "Rule updated",
   ruleCreated: "Rule created",

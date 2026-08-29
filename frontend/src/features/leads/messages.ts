@@ -57,6 +57,7 @@ export const LEADS_MSG = {
 
   openAction: "Open",
   ownerAvailable: "Available",
+  allLeadsResource: "leads",
   detailOwner: "Owner",
   detailStatus: "Status",
   detailNextAction: "Next action",
@@ -132,6 +133,9 @@ export const LEADS_MSG = {
 
   // ---- LeadSearchPage ----
   callingDesc: "Watch the dock for status.",
+  /** What failed to load, for the shared ErrorState ("Couldn't load search results"). */
+  searchResource: "search results",
+  duplicatesResource: "duplicate leads",
   searchEmptyStartTitle: "Start typing to search",
   searchEmptyStartDesc:
     "Search across all leads by phone fragment, email, or partial name. Results appear as you type.",

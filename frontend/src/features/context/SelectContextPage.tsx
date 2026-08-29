@@ -11,7 +11,7 @@ import {
 import { roleLabel } from "../../shared/constants/roles";
 import { MESSAGES } from "../../shared/constants/messages";
 import {
-  Avatar, Badge, Button, Card, CardBody, EmptyState, Icon, Skeleton, Stepper, cn, useToast,
+  Avatar, Badge, Button, Card, CardBody, EmptyState, ErrorState, Icon, Skeleton, Stepper, cn, useToast,
 } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
 import { CONTEXT_MSG } from "./messages";
@@ -173,7 +173,7 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
   agencyId: string | null; callCenterId: string | null; scopeLabel: string;
   entering: boolean; onEnter: (destination?: string) => void;
 }) {
-  const { data: users, isLoading } = useListUsersQuery(agencyId ? { agencyId } : undefined);
+  const { data: users, isLoading, isError, error, refetch } = useListUsersQuery(agencyId ? { agencyId } : undefined);
   const roster = useMemo(
     () => (users ?? []).filter((u) => (callCenterId ? u.callCenterId === callCenterId : true)),
     [users, callCenterId],
@@ -189,6 +189,10 @@ function RosterStep({ agencyId, callCenterId, scopeLabel, entering, onEnter }: {
 
       {isLoading ? (
         <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
+      ) : isError ? (
+        // A failed roster load used to read as "no members yet", which makes a healthy call centre
+        // look empty at the very moment someone is deciding where to work.
+        <ErrorState error={error} resource={CONTEXT_MSG.rosterResourceName} onRetry={refetch} />
       ) : roster.length === 0 ? (
         <EmptyState icon={<Icon name="users" size={20} />} title={CONTEXT_MSG.noMembersTitle}
           description={CONTEXT_MSG.noMembersDesc} />

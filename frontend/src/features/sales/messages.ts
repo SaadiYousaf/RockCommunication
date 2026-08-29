@@ -35,6 +35,8 @@ export const SALES_MSG = {
   payrollRunCreatedTitle: "Payroll run created",
   payrollRunPeriod: (from: string, to: string) => `Period ${from} → ${to}`,
   createPayrollRunFailed: "Couldn't create payroll run",
+  /** Lowercase noun for the "Couldn't load <x>" error state on the commissions page. */
+  commissionsResourceName: "your commissions",
   noCommissionsTitle: "No commissions in this range",
   noCommissionsBody: "Earn commissions by closing and funding sales, then check back here.",
   commissionsSearchPlaceholder: "Search by rule, note or status…",
@@ -44,6 +46,8 @@ export const SALES_MSG = {
   noPayrollRunsBody: "Run payroll to summarize and freeze commissions for a period.",
 
   // LicenseAgentQueuePage
+  /** Lowercase noun for the "Couldn't load <x>" error state on the license-agent queue. */
+  assignedSalesResourceName: "your assigned sales",
   noSalesAssignedTitle: "No sales assigned yet",
   noSalesAssignedBody:
     "When a submission agent assigns a sale to you, it'll appear here — and you'll get a notification.",

@@ -8,6 +8,8 @@ export const CONTEXT_MSG = {
   nowViewingAll: "Now viewing all call centers",
   switchFailed: "Couldn't switch workspace",
   enterFailed: "Couldn't enter that workspace",
+  /** Lowercase noun for the "Couldn't load <x>" error state on the roster step. */
+  rosterResourceName: "this workspace's team",
   noMembersTitle: "No members yet",
   noMembersDesc: "No users are assigned to this scope. You can still enter and manage it.",
 } as const;

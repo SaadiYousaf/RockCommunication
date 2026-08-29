@@ -10,7 +10,7 @@ import { roleLabel } from "../../shared/constants/roles";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
 import {
-  Avatar, Badge, BulkActionBar, Card, CardBody, Checkbox, EmptyState, Icon, InfoHint, PageHeader, Select, Skeleton,
+  Avatar, Badge, BulkActionBar, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, PageHeader, Select, Skeleton,
   Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 
@@ -24,7 +24,8 @@ export function CallCenterDetailPage() {
 
   const { data: agency } = useGetAgencyQuery(agencyId, { skip: !agencyId });
   const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
-  const { data: people } = useListUsersQuery({ agencyId }, { skip: !agencyId });
+  const { data: people, isLoading: peopleLoading, isError, error, refetch } =
+    useListUsersQuery({ agencyId }, { skip: !agencyId });
   const [setUserCc] = useSetUserCallCenterMutation();
   const toast = useToast();
 
@@ -87,7 +88,12 @@ export function CallCenterDetailPage() {
 
       <Card>
         <CardBody>
-          {!people ? <Skeleton className="h-32" /> : staff.length === 0 ? (
+          {/* The loading test is the query's own flag, not `!people` — otherwise a failed request
+              would sit on the skeleton forever and never reach the error state below. */}
+          {peopleLoading ? <Skeleton className="h-32" /> : isError ? (
+            // A failed request must never read as "nobody works here".
+            <ErrorState error={error} resource={ADMIN_MSG.callCenterDetail.resourceName} onRetry={refetch} />
+          ) : staff.length === 0 ? (
             <EmptyState icon={<Icon name="users" size={20} />} title={ADMIN_MSG.callCenterDetail.noStaffTitle}
               description={isAgencyWide
                 ? ADMIN_MSG.callCenterDetail.noStaffDescAgencyWide

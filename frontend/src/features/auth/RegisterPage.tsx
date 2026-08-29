@@ -6,10 +6,11 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useListRolesQuery, useRegisterMutation } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, Input, PageHeader,
   Skeleton, useToast, cn,
 } from "../../shared/ui";
 import type { RootState } from "../../app/store";
+import { AUTH_MSG } from "./messages";
 
 /**
  * Role buckets — keeps the role picker scannable instead of a wall of checkboxes.
@@ -70,7 +71,9 @@ function generateStrongPassword(): string {
 
 export function RegisterPage() {
   const auth = useSelector((s: RootState) => s.auth);
-  const { data: roles, isLoading: loadingRoles } = useListRolesQuery();
+  const {
+    data: roles, isLoading: loadingRoles, isError: rolesFailed, error: rolesError, refetch: refetchRoles,
+  } = useListRolesQuery();
   const [register, { isLoading }] = useRegisterMutation();
   const toast = useToast();
   const navigate = useNavigate();
@@ -279,6 +282,10 @@ export function RegisterPage() {
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}
                 </div>
+              ) : rolesFailed ? (
+                // A failed roles request used to read as "no roles available", which sends an admin
+                // off to Role Management to re-create roles that are already there.
+                <ErrorState error={rolesError} resource={AUTH_MSG.rolesResourceName} onRetry={refetchRoles} compact />
               ) : grouped.length === 0 ? (
                 <EmptyState
                   compact

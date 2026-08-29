@@ -10,7 +10,7 @@ import {
   useListHorizontalsQuery, useCreateHorizontalMutation, useUpdateHorizontalMutation,
 } from "../../shared/api/baseApi";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   Skeleton, Tabs, useToast,  StatusBadge,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -54,7 +54,7 @@ export function AdminPage() {
 }
 
 function IpAllowlistSection() {
-  const { data: list, isLoading } = useListIpAllowlistQuery();
+  const { data: list, isLoading, isError, error, refetch } = useListIpAllowlistQuery();
   const [add, { isLoading: adding }] = useAddIpAllowlistMutation();
   const [remove] = useRemoveIpAllowlistMutation();
   const toast = useToast();
@@ -100,7 +100,11 @@ function IpAllowlistSection() {
           <Button leftIcon={<Icon name="plus" size={14} />} loading={adding}>Add</Button>
         </form>
 
-        {isLoading ? <Skeleton className="h-24" /> : !list || list.length === 0 ? (
+        {isLoading ? <Skeleton className="h-24" /> : isError ? (
+          // A failed request must never read as "the allowlist is empty" — that reads as
+          // "every IP is allowed", the exact opposite of what may be true.
+          <ErrorState error={error} resource={ADMIN_MSG.system.ipResourceName} onRetry={refetch} />
+        ) : !list || list.length === 0 ? (
           <EmptyState icon={<Icon name="shield" size={20} />}
             title={ADMIN_MSG.system.ipEmptyTitle}
             description={ADMIN_MSG.system.ipEmptyDesc} />
@@ -124,7 +128,7 @@ function IpAllowlistSection() {
 }
 
 function VerticalsSection() {
-  const { data: verticals, isLoading } = useListVerticalsQuery();
+  const { data: verticals, isLoading, isError, error, refetch } = useListVerticalsQuery();
   const [create, { isLoading: creating }] = useCreateVerticalMutation();
   const [update] = useUpdateVerticalMutation();
   const toast = useToast();
@@ -158,7 +162,10 @@ function VerticalsSection() {
             onChange={(e) => setDescription(e.target.value)} containerClassName="flex-1 min-w-[220px]" />
           <Button leftIcon={<Icon name="plus" size={14} />} loading={creating}>Create</Button>
         </form>
-        {isLoading ? <Skeleton className="h-24" /> : !verticals || verticals.length === 0 ? (
+        {isLoading ? <Skeleton className="h-24" /> : isError ? (
+          // A failed request must never read as "there are no verticals".
+          <ErrorState error={error} resource={ADMIN_MSG.system.verticalsResourceName} onRetry={refetch} />
+        ) : !verticals || verticals.length === 0 ? (
           <EmptyState icon={<Icon name="target" size={20} />}
             title={ADMIN_MSG.system.verticalsEmptyTitle} description={ADMIN_MSG.system.verticalsEmptyDesc} />
         ) : (
@@ -185,7 +192,7 @@ function VerticalsSection() {
 }
 
 function HorizontalsSection() {
-  const { data: horizontals, isLoading } = useListHorizontalsQuery();
+  const { data: horizontals, isLoading, isError, error, refetch } = useListHorizontalsQuery();
   const [create, { isLoading: creating }] = useCreateHorizontalMutation();
   const [update] = useUpdateHorizontalMutation();
   const toast = useToast();
@@ -219,7 +226,10 @@ function HorizontalsSection() {
             onChange={(e) => setDescription(e.target.value)} containerClassName="flex-1 min-w-[220px]" />
           <Button leftIcon={<Icon name="plus" size={14} />} loading={creating}>Create</Button>
         </form>
-        {isLoading ? <Skeleton className="h-24" /> : !horizontals || horizontals.length === 0 ? (
+        {isLoading ? <Skeleton className="h-24" /> : isError ? (
+          // A failed request must never read as "there are no horizontals".
+          <ErrorState error={error} resource={ADMIN_MSG.system.horizontalsResourceName} onRetry={refetch} />
+        ) : !horizontals || horizontals.length === 0 ? (
           <EmptyState icon={<Icon name="target" size={20} />}
             title={ADMIN_MSG.system.horizontalsEmptyTitle} description={ADMIN_MSG.system.horizontalsEmptyDesc} />
         ) : (

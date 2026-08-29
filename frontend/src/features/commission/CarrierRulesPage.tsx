@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { CarrierRule } from "../../shared/api/types";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, Input, Modal, PageHeader, Pager,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, Input, Modal, PageHeader, Pager,
   SearchInput, Skeleton, Table, TBody, TD, TH, THead, TR, Textarea, usePagination, useToast,
 } from "../../shared/ui";
 import { CARRIER_RULES_MSG } from "./messages";
@@ -17,7 +17,7 @@ import { CARRIER_RULES_MSG } from "./messages";
  */
 export function CarrierRulesPage() {
   const toast = useToast();
-  const { data: rules, isLoading } = useListCarrierRulesQuery();
+  const { data: rules, isLoading, isError, error, refetch } = useListCarrierRulesQuery();
   const [remove] = useDeleteCarrierRuleMutation();
   const [editing, setEditing] = useState<CarrierRule | null>(null);
   const [creating, setCreating] = useState(false);
@@ -63,6 +63,10 @@ export function CarrierRulesPage() {
         <CardBody>
           {isLoading ? (
             <Skeleton className="h-40" />
+          ) : isError ? (
+            // Without this a failed load reads as "no carrier rules yet", inviting someone to
+            // re-create rules that already exist.
+            <ErrorState error={error} resource={CARRIER_RULES_MSG.resourceName} onRetry={refetch} />
           ) : !rules || rules.length === 0 ? (
             <EmptyState icon={<Icon name="doc" size={20} />} title={CARRIER_RULES_MSG.emptyTitle}
               description={CARRIER_RULES_MSG.emptyDesc}

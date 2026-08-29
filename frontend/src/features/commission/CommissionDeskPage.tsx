@@ -7,7 +7,7 @@ import {
 import type { CommissionSale } from "../../shared/api/types";
 import { formatUsd } from "../../shared/lib/format";
 import {
-  Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, SearchInput,
+  Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input, SearchInput,
   Select, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, useToast,
 } from "../../shared/ui";
 import { COMMISSION_MSG, commissionStatusLabel, commissionStatusTone, COMMISSION_SETTABLE_STATUSES } from "./messages";
@@ -41,7 +41,7 @@ export function CommissionDeskPage() {
   const { data: agencies } = useListAgenciesQuery();
   const { data: callCenters } = useAgencyCallCentersQuery(agencyId, { skip: !agencyId });
 
-  const { data, isLoading, isFetching } = useListCommissionSalesQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useListCommissionSalesQuery({
     agencyId: agencyId || undefined,
     callCenterId: callCenterId || undefined,
     carrier: carrier || undefined,
@@ -129,6 +129,10 @@ export function CommissionDeskPage() {
 
           {isLoading ? (
             <Skeleton className="h-64" />
+          ) : isError ? (
+            // A failed request used to land on "no sales match these filters", which sent the desk
+            // clearing filters that were never the problem.
+            <ErrorState error={error} resource={COMMISSION_MSG.resourceName} onRetry={refetch} />
           ) : items.length === 0 ? (
             <EmptyState icon={<Icon name="dollar" size={20} />}
               title={hasFilters ? COMMISSION_MSG.noMatchTitle : COMMISSION_MSG.emptyTitle}
