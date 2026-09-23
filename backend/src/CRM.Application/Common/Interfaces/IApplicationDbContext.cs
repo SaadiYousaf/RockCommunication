@@ -86,6 +86,15 @@ public interface IApplicationDbContext
     DbSet<Meeting> Meetings { get; }
     DbSet<MeetingAttendee> MeetingAttendees { get; }
     DbSet<BugReport> BugReports { get; }
+
+    // ── Learning Academy ──────────────────────────────────────────────────────
+    // Curriculum (courses/lessons/questions) is seeded platform-wide; progress is tenant-scoped.
+    DbSet<AcademyCourse> AcademyCourses { get; }
+    DbSet<AcademyLesson> AcademyLessons { get; }
+    DbSet<AcademyQuizQuestion> AcademyQuizQuestions { get; }
+    DbSet<AcademyLessonProgress> AcademyLessonProgress { get; }
+    DbSet<AcademyQuizAttempt> AcademyQuizAttempts { get; }
+    DbSet<AcademyCertificate> AcademyCertificates { get; }
     DbSet<BugReportActivity> BugReportActivities { get; }
     DbSet<CarrierAdvancingRule> CarrierAdvancingRules { get; }
 

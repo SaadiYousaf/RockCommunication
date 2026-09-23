@@ -97,6 +97,10 @@ const KnowledgeBasePage = lazyWithReload(() => import("../features/kb/KnowledgeB
 const DocumentsPage = lazyWithReload(() => import("../features/documents/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
 const QueuesPage = lazyWithReload(() => import("../features/queues/QueuesPage").then(m => ({ default: m.QueuesPage })));
 const IntegrationsPage = lazyWithReload(() => import("../features/admin/IntegrationsPage").then(m => ({ default: m.IntegrationsPage })));
+const AcademyPage = lazyWithReload(() => import("../features/academy/AcademyPage").then(m => ({ default: m.AcademyPage })));
+const AcademyCoursePage = lazyWithReload(() => import("../features/academy/AcademyCoursePage").then(m => ({ default: m.AcademyCoursePage })));
+const AcademyLessonPage = lazyWithReload(() => import("../features/academy/AcademyLessonPage").then(m => ({ default: m.AcademyLessonPage })));
+const AcademyCertificatesPage = lazyWithReload(() => import("../features/academy/AcademyCertificatesPage").then(m => ({ default: m.AcademyCertificatesPage })));
 const GuidePage = lazyWithReload(() => import("../features/guide/GuidePage").then(m => ({ default: m.GuidePage })));
 const NotificationsPage = lazyWithReload(() => import("../features/notifications/NotificationsPage").then(m => ({ default: m.NotificationsPage })));
 const CalendarPage = lazyWithReload(() => import("../features/scheduler/CalendarPage").then(m => ({ default: m.CalendarPage })));
@@ -169,6 +173,13 @@ const router = createBrowserRouter([
           // Always available to any authenticated user
           { path: "/dashboard", element: <Dashboard /> },
           { path: "/guide",     element: <GuidePage /> },
+          // The Academy is open to every signed-in user by design: learning the product can't be
+          // behind a grant, or a new hire on day one is the one person locked out.
+          // /certificates is declared before /:courseKey so it can never be read as a course slug.
+          { path: "/academy",                            element: <AcademyPage /> },
+          { path: "/academy/certificates",               element: <AcademyCertificatesPage /> },
+          { path: "/academy/:courseKey",                 element: <AcademyCoursePage /> },
+          { path: "/academy/:courseKey/:lessonKey",      element: <AcademyLessonPage /> },
           { path: "/notifications", element: <NotificationsPage /> },
           { path: "/search",    element: <GlobalSearchPage /> },
           { path: "/2fa",       element: <TwoFactorEnrollPage /> },

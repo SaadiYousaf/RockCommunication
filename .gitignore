@@ -37,3 +37,7 @@ Thumbs.db
 * 2.*
 * 2
 *\ 2.*
+
+# Instagram Reels working dir (large media, not part of the CRM app)
+reelwork/
+output/

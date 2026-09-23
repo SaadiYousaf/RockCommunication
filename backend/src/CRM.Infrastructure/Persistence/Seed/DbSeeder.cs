@@ -98,6 +98,12 @@ public static class DbSeeder
         await SeedPermissionsAsync(db, roles);
         await SeedModulesAsync(db, roles);
 
+        // The Learning Academy curriculum ships WITH the product — it describes how this product
+        // works, so it belongs in version control next to the code it documents rather than in a
+        // database nobody diffs. Upserts on a stable key, so restarts refresh the wording in place
+        // and never duplicate a course or lose anyone's progress.
+        await AcademySeeder.SeedAsync(db);
+
         var seedDummy = config.GetValue("Seed:DummyData", false);
         if (seedDummy)
         {

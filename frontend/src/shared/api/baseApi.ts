@@ -21,6 +21,8 @@ import type {
   RetentionPolicy, RetentionResolveResult,
   CommissionSale, CommissionDeskResult, CarrierRule, CommissionDeskDashboard,
   BugReport, BugActivity, BugReportDetail,
+  AcademyCourse, AcademyLessonSummary, AcademyLesson, QuizResult, LessonCompleted,
+  AcademyProgress, AcademyCertificate,
   SocialMediaReport, SocialMediaInput, UpcomingBirthday, UpcomingTraining, UpcomingEvent,
   ValidatorQueueItem, SetValidatorStatusInput,
   AgencyOption, LicenseAgent, SubmissionAgent,
@@ -127,7 +129,7 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
-  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "Available", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules"],
+  tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "Available", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules", "Academy"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
@@ -1305,6 +1307,42 @@ export const baseApi = createApi({
       invalidatesTags: ["Feed"],
     }),
 
+    // ── Learning Academy ───────────────────────────────────────────────────────
+    // One "Academy" tag covers courses, progress and certificates: finishing a lesson moves all
+    // three at once, so splitting them would only mean remembering to invalidate three tags.
+    academyCourses: b.query<AcademyCourse[], void>({
+      query: () => ({ url: "/api/academy/courses" }),
+      providesTags: ["Academy"],
+    }),
+    academyCourse: b.query<AcademyLessonSummary[], string>({
+      query: (courseKey) => ({ url: `/api/academy/courses/${courseKey}` }),
+      providesTags: ["Academy"],
+    }),
+    academyLesson: b.query<AcademyLesson, { courseKey: string; lessonKey: string }>({
+      query: ({ courseKey, lessonKey }) => ({ url: `/api/academy/courses/${courseKey}/lessons/${lessonKey}` }),
+      providesTags: ["Academy"],
+    }),
+    completeAcademyLesson: b.mutation<LessonCompleted, { lessonId: string; secondsSpent: number }>({
+      query: ({ lessonId, secondsSpent }) => ({
+        url: `/api/academy/lessons/${lessonId}/complete`, method: "POST", body: { secondsSpent },
+      }),
+      invalidatesTags: ["Academy"],
+    }),
+    submitAcademyQuiz: b.mutation<QuizResult, { lessonId: string; answers: number[] }>({
+      query: ({ lessonId, answers }) => ({
+        url: `/api/academy/lessons/${lessonId}/quiz`, method: "POST", body: { answers },
+      }),
+      invalidatesTags: ["Academy"],
+    }),
+    academyProgress: b.query<AcademyProgress, void>({
+      query: () => ({ url: "/api/academy/progress" }),
+      providesTags: ["Academy"],
+    }),
+    academyCertificates: b.query<AcademyCertificate[], void>({
+      query: () => ({ url: "/api/academy/certificates" }),
+      providesTags: ["Academy"],
+    }),
+
     // ── Bug reports (in-app issue tracker) ─────────────────────────────────────
     listBugs: b.query<BugReport[], { status?: string; scope?: "mine" | "all" | "assigned" } | void>({
       query: (p) => ({ url: "/api/bugs", params: p ?? undefined }),
@@ -1687,4 +1725,7 @@ export const {
   useConfirmEmailMutation, useResendEmailConfirmationMutation,
   useMyPermissionsQuery, useListPermissionsQuery,
   useRolePermissionsQuery, useSetRolePermissionsMutation,
+  useAcademyCoursesQuery, useAcademyCourseQuery, useAcademyLessonQuery,
+  useCompleteAcademyLessonMutation, useSubmitAcademyQuizMutation,
+  useAcademyProgressQuery, useAcademyCertificatesQuery,
 } = baseApi;

@@ -129,14 +129,17 @@ public class RegressionTests : IClassFixture<CrmWebAppFactory>
         // 101 emails > SchedulingDefaults.MaxAttendees (100). Distinct so de-dup can't shrink it.
         var emails = Enumerable.Range(0, 101).Select(i => $"invitee{i}-{Guid.NewGuid():N}@crm.local").ToArray();
 
-        // Valid times (EndsAt > StartsAt) + non-empty title so the ONLY failing rule is the attendee cap —
-        // otherwise the test could pass on an unrelated validation error even with the cap removed.
+        // Valid times (EndsAt > StartsAt, and in the FUTURE) + non-empty title so the ONLY failing
+        // rule is the attendee cap — otherwise the test could pass on an unrelated validation error
+        // even with the cap removed. Relative, not absolute: a hardcoded date silently ages into the
+        // past and starts failing the "must start in the future" rule instead.
+        var start = DateTime.UtcNow.AddDays(7);
         var resp = await admin.PostAsJsonAsync("/api/meetings", new
         {
             title = "Big meeting",
             description = (string?)null,
-            startsAt = "2026-09-01T15:00:00Z",
-            endsAt = "2026-09-01T16:00:00Z",
+            startsAt = start,
+            endsAt = start.AddHours(1),
             location = (string?)null,
             onlineUrl = (string?)null,
             attendeeUserIds = (Guid[]?)null,
@@ -153,13 +156,14 @@ public class RegressionTests : IClassFixture<CrmWebAppFactory>
     {
         var admin = await _factory.LoginAdminAsync();
         var emails = Enumerable.Range(0, 3).Select(i => $"invitee{i}-{Guid.NewGuid():N}@crm.local").ToArray();
+        var start = DateTime.UtcNow.AddDays(7);
 
         var resp = await admin.PostAsJsonAsync("/api/meetings", new
         {
             title = "Small meeting",
             description = (string?)null,
-            startsAt = "2026-09-02T15:00:00Z",
-            endsAt = "2026-09-02T16:00:00Z",
+            startsAt = start,
+            endsAt = start.AddHours(1),
             location = (string?)null,
             onlineUrl = (string?)null,
             attendeeUserIds = (Guid[]?)null,

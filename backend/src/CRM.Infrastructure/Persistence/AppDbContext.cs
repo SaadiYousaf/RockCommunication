@@ -138,6 +138,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Meeting> Meetings => Set<Meeting>();
     public DbSet<MeetingAttendee> MeetingAttendees => Set<MeetingAttendee>();
     public DbSet<BugReport> BugReports => Set<BugReport>();
+
+    public DbSet<AcademyCourse> AcademyCourses => Set<AcademyCourse>();
+    public DbSet<AcademyLesson> AcademyLessons => Set<AcademyLesson>();
+    public DbSet<AcademyQuizQuestion> AcademyQuizQuestions => Set<AcademyQuizQuestion>();
+    public DbSet<AcademyLessonProgress> AcademyLessonProgress => Set<AcademyLessonProgress>();
+    public DbSet<AcademyQuizAttempt> AcademyQuizAttempts => Set<AcademyQuizAttempt>();
+    public DbSet<AcademyCertificate> AcademyCertificates => Set<AcademyCertificate>();
     public DbSet<BugReportActivity> BugReportActivities => Set<BugReportActivity>();
     public DbSet<CarrierAdvancingRule> CarrierAdvancingRules => Set<CarrierAdvancingRule>();
 
@@ -341,6 +348,64 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.HasIndex(x => x.PostId);
             // One vote per user per poll (re-voting updates the existing row).
             e.HasIndex(x => new { x.PostId, x.UserId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+
+        b.Entity<AcademyCourse>(e =>
+        {
+            e.Property(x => x.Key).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Summary).HasMaxLength(600);
+            e.Property(x => x.Icon).HasMaxLength(40);
+            e.Property(x => x.AudienceRolesCsv).HasMaxLength(500);
+            // The seeder upserts on Key, so it must be unique — otherwise a restart duplicates the
+            // whole curriculum. Filtered on IsDeleted so a retired course's key can be reused.
+            e.HasIndex(x => x.Key).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+
+        b.Entity<AcademyLesson>(e =>
+        {
+            e.Property(x => x.Key).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Summary).HasMaxLength(600);
+            e.Property(x => x.Route).HasMaxLength(200);
+            e.Property(x => x.BodyMarkdown).HasMaxLength(20000);
+            e.HasIndex(x => new { x.CourseId, x.Order });
+            e.HasIndex(x => new { x.CourseId, x.Key }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+            e.HasOne(x => x.Course).WithMany(c => c.Lessons)
+                .HasForeignKey(x => x.CourseId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<AcademyQuizQuestion>(e =>
+        {
+            e.Property(x => x.Prompt).HasMaxLength(600).IsRequired();
+            e.Property(x => x.OptionsJson).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.Explanation).HasMaxLength(1000);
+            e.HasIndex(x => new { x.LessonId, x.Order });
+            e.HasOne(x => x.Lesson).WithMany(l => l.Questions)
+                .HasForeignKey(x => x.LessonId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<AcademyLessonProgress>(e =>
+        {
+            // One row per learner per lesson — the upsert relies on this, and without it a reload
+            // would quietly accumulate duplicate progress rows.
+            e.HasIndex(x => new { x.UserId, x.LessonId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+            e.HasIndex(x => new { x.AgencyId, x.UserId });
+        });
+
+        b.Entity<AcademyQuizAttempt>(e =>
+        {
+            // Kept per attempt (not unique per lesson) so a learner can see themselves improve.
+            e.HasIndex(x => new { x.UserId, x.LessonId });
+        });
+
+        b.Entity<AcademyCertificate>(e =>
+        {
+            e.Property(x => x.SerialNumber).HasMaxLength(40).IsRequired();
+            e.Property(x => x.LearnerName).HasMaxLength(200);
+            e.Property(x => x.CourseTitle).HasMaxLength(200);
+            e.HasIndex(x => x.SerialNumber).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.CourseId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
         });
 
         b.Entity<BugReport>(e =>

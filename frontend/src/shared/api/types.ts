@@ -1310,3 +1310,98 @@ export interface CommissionDeskDashboard {
   byAgency: CommissionDeskBreakdownRow[];
   byCallCenter: CommissionDeskBreakdownRow[];
 }
+
+// ── Learning Academy ────────────────────────────────────────────────────────
+
+/** A course in the learner's path, with their own progress folded in. */
+export interface AcademyCourse {
+  id: string;
+  key: string;
+  title: string;
+  summary: string;
+  icon: string;
+  level: "Beginner" | "Intermediate" | "Advanced" | "Admin";
+  order: number;
+  lessonCount: number;
+  completedLessons: number;
+  estimatedMinutes: number;
+  isComplete: boolean;
+  certificateSerial: string | null;
+}
+
+export interface AcademyLessonSummary {
+  id: string;
+  key: string;
+  title: string;
+  summary: string;
+  order: number;
+  estimatedMinutes: number;
+  route: string | null;
+  status: "NotStarted" | "InProgress" | "Completed";
+  hasQuiz: boolean;
+}
+
+/** A question as the learner sees it — the answer key stays on the server. */
+export interface AcademyQuestion {
+  id: string;
+  order: number;
+  prompt: string;
+  options: string[];
+}
+
+export interface AcademyLesson {
+  id: string;
+  key: string;
+  title: string;
+  summary: string;
+  bodyMarkdown: string;
+  estimatedMinutes: number;
+  route: string | null;
+  status: "NotStarted" | "InProgress" | "Completed";
+  courseId: string;
+  courseKey: string;
+  courseTitle: string;
+  questions: AcademyQuestion[];
+  previousLessonKey: string | null;
+  nextLessonKey: string | null;
+}
+
+export interface QuizResultItem {
+  questionId: string;
+  correct: boolean;
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface QuizResult {
+  score: number;
+  total: number;
+  passed: boolean;
+  items: QuizResultItem[];
+  courseCompleted: boolean;
+  certificateSerial: string | null;
+}
+
+export interface LessonCompleted {
+  courseCompleted: boolean;
+  certificateSerial: string | null;
+}
+
+export interface AcademyProgress {
+  coursesAvailable: number;
+  coursesCompleted: number;
+  lessonsAvailable: number;
+  lessonsCompleted: number;
+  minutesSpent: number;
+  certificatesEarned: number;
+  nextLessonCourseKey: string | null;
+  nextLessonKey: string | null;
+  nextLessonTitle: string | null;
+}
+
+export interface AcademyCertificate {
+  serialNumber: string;
+  learnerName: string;
+  courseTitle: string;
+  issuedAt: string;
+}

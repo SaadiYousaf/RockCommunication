@@ -53,7 +53,9 @@ export const NAV: NavNode[] = [
       { key: "my-sales",       to: "/my-sales",       label: "My Sales",    icon: "briefcase", roles: ["LicenseAgent"] },
       { key: "agent", to: "/agent", label: "Agent Panel", icon: "phone", module: "agent" },
       { key: "team",  to: "/team",  label: "Team",        icon: "users" },
-      { key: "guide", to: "/guide", label: "Guide",       icon: "book" },
+      // The Academy is the front door for learning the product; the older one-page Guide is still
+      // there and is linked from it, rather than sitting beside it as a second, competing entry.
+      { key: "academy", to: "/academy", label: "Academy", icon: "book" },
       { key: "bugs",  to: "/bugs",  label: "Bugs",        icon: "alert" },
     ],
   },

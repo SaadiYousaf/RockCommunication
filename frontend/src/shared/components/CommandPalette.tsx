@@ -63,6 +63,9 @@ const CURATED: PaletteItem[] = [
   { id: "queue",     label: "My Queue", to: "/queue", group: "Workspace", icon: "inbox", module: "queue" },
   { id: "callbacks", label: "Callbacks", to: "/callbacks", group: "Workspace", icon: "calendar", module: "callbacks" },
   { id: "chat",      label: "Team Chat", to: "/chat", group: "Workspace", icon: "chat", module: "chat" },
+  { id: "academy",   label: "Academy", to: "/academy", group: "Workspace", icon: "book", keywords: ["learn", "learning", "training", "course", "lesson", "onboarding", "how to", "tutorial", "quiz", "guide"] },
+  { id: "academy-certs", label: "My Certificates", to: "/academy/certificates", group: "Workspace", icon: "star", keywords: ["certificate", "certification", "completed", "academy", "training"] },
+  { id: "guide",     label: "Pipeline Overview", to: "/guide", group: "Workspace", icon: "doc", keywords: ["guide", "glossary", "roles", "journey", "stages", "how it works"] },
 
   // Pipeline
   { id: "leads",          label: "Browse Leads", to: "/leads", group: "Pipeline", icon: "list", module: "leads" },

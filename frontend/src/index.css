@@ -245,3 +245,15 @@
   .pg-stack > * + * { margin-top: 1.25rem; }
   .pg-stack-lg > * + * { margin-top: 1.75rem; }
 }
+
+/* ── Printing a certificate ──────────────────────────────────────────────────
+   A certificate is the one thing in this app people actually put on paper. Printing the page as-is
+   would carry the sidebar, header and every other certificate with it, so the chosen one is
+   rendered into a sheet outside the app root and everything else is hidden for the print job. */
+.academy-print-sheet { display: none; }
+
+@media print {
+  body.printing-academy #root { display: none !important; }
+  body.printing-academy .academy-print-sheet { display: block; padding: 2rem; }
+  @page { margin: 1.5cm; }
+}
