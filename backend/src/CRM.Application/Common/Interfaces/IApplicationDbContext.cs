@@ -95,6 +95,7 @@ public interface IApplicationDbContext
     DbSet<AcademyLessonProgress> AcademyLessonProgress { get; }
     DbSet<AcademyQuizAttempt> AcademyQuizAttempts { get; }
     DbSet<AcademyCertificate> AcademyCertificates { get; }
+    DbSet<PlatformState> PlatformStates { get; }
     DbSet<BugReportActivity> BugReportActivities { get; }
     DbSet<CarrierAdvancingRule> CarrierAdvancingRules { get; }
 

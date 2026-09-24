@@ -136,6 +136,7 @@ export function SelectContextPage() {
 function AgencyStep({ onPick }: { onPick: (id: string | null, label: string) => void }) {
   const { data: agencies, isLoading } = useListAgenciesQuery();
   if (isLoading) return <StepSkeleton />;
+  const none = (agencies ?? []).length === 0;
   return (
     <div className="space-y-2">
       <PickRow icon="globe" title="All agencies" subtitle="Platform-wide view across every agency" onClick={() => onPick(null, "All agencies")} />
@@ -143,6 +144,14 @@ function AgencyStep({ onPick }: { onPick: (id: string | null, label: string) => 
         <PickRow key={a.id} icon="building" title={a.name} subtitle={a.isActive ? `${a.userCount} users` : "Inactive"}
           disabled={!a.isActive} onClick={() => onPick(a.id, a.name)} />
       ))}
+      {none && (
+        <EmptyState
+          compact
+          icon={<Icon name="building" size={20} />}
+          title={CONTEXT_MSG.noAgenciesTitle}
+          description={CONTEXT_MSG.noAgenciesDesc}
+        />
+      )}
     </div>
   );
 }

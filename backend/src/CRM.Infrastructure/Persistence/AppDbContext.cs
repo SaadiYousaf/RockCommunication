@@ -147,6 +147,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<AcademyCertificate> AcademyCertificates => Set<AcademyCertificate>();
     public DbSet<BugReportActivity> BugReportActivities => Set<BugReportActivity>();
     public DbSet<CarrierAdvancingRule> CarrierAdvancingRules => Set<CarrierAdvancingRule>();
+    public DbSet<PlatformState> PlatformStates => Set<PlatformState>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -406,6 +407,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             e.Property(x => x.CourseTitle).HasMaxLength(200);
             e.HasIndex(x => x.SerialNumber).IsUnique();
             e.HasIndex(x => new { x.UserId, x.CourseId }).IsUnique().HasFilter("\"IsDeleted\" = 0");
+        });
+
+        b.Entity<PlatformState>(e =>
+        {
+            e.Property(x => x.Key).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Detail).HasMaxLength(2000);
+            // Unique without a soft-delete filter on purpose: a one-shot marker must stay unique even
+            // if someone soft-deletes it, or the operation it guards becomes repeatable.
+            e.HasIndex(x => x.Key).IsUnique();
         });
 
         b.Entity<BugReport>(e =>

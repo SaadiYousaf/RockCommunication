@@ -7,6 +7,8 @@ using CRM.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace CRM.Infrastructure.Persistence.Seed;
 
@@ -18,6 +20,7 @@ public static class DbSeeder
         var roles = sp.GetRequiredService<RoleManager<ApplicationRole>>();
         var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
         var config = sp.GetRequiredService<IConfiguration>();
+        var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DbSeeder));
 
         var providerName = db.Database.ProviderName ?? string.Empty;
         var isSqlite = providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase);
@@ -27,12 +30,23 @@ public static class DbSeeder
         else
             await db.Database.EnsureCreatedAsync();
 
+        // The go-live changeover, if armed: empties the database of demo data before anything below
+        // seeds into it. A no-op on every ordinary start — see GoLiveReset for the five conditions.
+        var environment = sp.GetRequiredService<IHostEnvironment>();
+        await GoLiveReset.RunIfArmedAsync(db, users, roles, config, environment, logger);
+
+        // Has this installation been taken live? Once it has, the demo accounts below must never
+        // come back: default credentials on a live, internet-facing platform are exactly the kind of
+        // thing that gets an agency's customer data taken.
+        var isLive = await db.PlatformStates.IgnoreQueryFilters()
+            .AnyAsync(x => x.Key == GoLiveReset.MarkerKey);
+
         foreach (var role in Roles.All)
             if (!await roles.RoleExistsAsync(role))
                 await roles.CreateAsync(new ApplicationRole(role));
 
         var agency = await db.Agencies.FirstOrDefaultAsync(a => a.Name == "Default Agency");
-        if (agency is null)
+        if (agency is null && !isLive)
         {
             agency = new Agency { Name = "Default Agency", Code = "DEFAULT" };
             db.Agencies.Add(agency);
@@ -40,7 +54,7 @@ public static class DbSeeder
         }
 
         var admin = await users.FindByNameAsync("admin");
-        if (admin is null)
+        if (admin is null && !isLive && agency is not null)
         {
             admin = new ApplicationUser
             {
@@ -57,8 +71,10 @@ public static class DbSeeder
         }
 
         // Global SuperAdmin (no agency). Convention: AgencyId = Guid.Empty → cross-tenant.
+        // Skipped on a live installation: the owner's own SuperAdmin is provisioned below instead,
+        // with a single-use password and compulsory 2FA rather than a password from a config file.
         var superAdmin = await users.FindByNameAsync("superadmin");
-        if (superAdmin is null)
+        if (superAdmin is null && !isLive)
         {
             superAdmin = new ApplicationUser
             {
@@ -104,11 +120,27 @@ public static class DbSeeder
         // and never duplicate a course or lose anyone's progress.
         await AcademySeeder.SeedAsync(db);
 
+        // Demo data is refused outright once the installation is live, whatever the config says.
+        // A stray Seed:DummyData=true in a copied config file would otherwise inject fake leads,
+        // sales and users into a real agency's books.
         var seedDummy = config.GetValue("Seed:DummyData", false);
-        if (seedDummy)
+        if (seedDummy && isLive)
+        {
+            logger.LogWarning(
+                "Seed:DummyData is true but this installation is live; demo data was NOT seeded. Remove the setting.");
+        }
+        else if (seedDummy && agency is not null)
         {
             await DummyDataSeeder.SeedAsync(db, users, roles, agency);
             await FeatureSeeder.SeedAsync(db, users, roles, agency);
+        }
+
+        // The owner's SuperAdmin, on a live installation. After permissions and modules are seeded,
+        // so the account has everything the moment the invitation is opened.
+        if (isLive)
+        {
+            var emailSender = sp.GetRequiredService<AuthEmailSender>();
+            await OwnerAccountSeeder.RunAsync(db, users, emailSender, config, logger);
         }
 
         // Ensure every agency has a default call center and stamp any pre-existing pipeline

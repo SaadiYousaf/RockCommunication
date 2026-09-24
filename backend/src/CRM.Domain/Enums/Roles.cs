@@ -84,13 +84,19 @@ public static class Roles
 
     /// <summary>
     /// Roles for which two-factor authentication is mandatory (see TwoFactorSetupRequiredMiddleware).
-    /// SuperAdmin and Admin remain excluded <b>by explicit user request</b> — do not re-add without
-    /// asking. The CEO already required it; ProgramManager and CallCenterAdmin are added here because
-    /// they are admin-equivalent (they hold <c>users.manage</c> and can reshape their part of the org),
-    /// so cross-user power without 2FA was the real audit gap. Central (cross-agency) Submission Agents
-    /// are also forced, handled via <see cref="IsCentralSubmissionAgent"/>.
+    ///
+    /// SuperAdmin is now included. It had been excluded by explicit request, with a note here not to
+    /// re-add it without asking; the platform owner has since asked for the opposite, as the condition
+    /// of taking the platform live. It is the right call regardless — SuperAdmin is the one account
+    /// that can read and reshape every agency on the installation, so it is the last account that
+    /// should be protected by a password alone.
+    ///
+    /// Admin stays excluded, as originally requested. The CEO already required it; ProgramManager and
+    /// CallCenterAdmin are here because they are admin-equivalent (they hold <c>users.manage</c> and
+    /// can reshape their part of the org), so cross-user power without 2FA was the real audit gap.
+    /// Central (cross-agency) Submission Agents are also forced, via <see cref="IsCentralSubmissionAgent"/>.
     /// </summary>
-    public static readonly string[] RequireTwoFactor = { CEO, ProgramManager, CallCenterAdmin };
+    public static readonly string[] RequireTwoFactor = { SuperAdmin, CEO, ProgramManager, CallCenterAdmin };
 
     /// <summary>
     /// Agency-admin-equivalent roles. Handing one of these out is a privilege escalation, so only
