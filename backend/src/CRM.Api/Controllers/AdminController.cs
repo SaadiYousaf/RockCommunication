@@ -180,6 +180,19 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
+    public record EmailBody(string Email);
+    /// <summary>
+    /// Change the address a user signs in with. Audited, announced to the old address as well as the
+    /// new one, and ends every live session — the email decides who can recover the account.
+    /// </summary>
+    [HttpPut("users/{id:guid}/email")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> ChangeEmail(Guid id, [FromBody] EmailBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        return Ok(await _mediator.Send(new ChangeUserEmailCommand(id, body.Email), ct));
+    }
+
     public record ResetPwBody(string NewPassword);
     [HttpPut("users/{id:guid}/password")]
     [HasPermission(Permissions.UsersManage)]

@@ -69,6 +69,17 @@ internal static class TestHelpers
             : JsonDocument.Parse(raw).RootElement.Clone();
     }
 
+    public static async Task<JsonElement> PutJsonAsync(this HttpClient client, string url, object body)
+    {
+        var resp = await client.PutAsJsonAsync(url, body);
+        var raw = await resp.Content.ReadAsStringAsync();
+        if (!resp.IsSuccessStatusCode)
+            throw new Exception($"PUT {url} → {(int)resp.StatusCode}\nBody: {raw}");
+        return string.IsNullOrWhiteSpace(raw)
+            ? default
+            : JsonDocument.Parse(raw).RootElement.Clone();
+    }
+
     public static async Task<JsonElement> GetJsonAsync(this HttpClient client, string url)
     {
         var resp = await client.GetAsync(url);

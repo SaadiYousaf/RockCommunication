@@ -10,6 +10,7 @@ import {
   useSetUserActiveMutation, useUpdateUserRolesMutation,
   useListCallCentersQuery, useSetUserCallCenterMutation,
   useResendInvitationMutation, useSetUserTeamMutation, useSetUserAgencyMutation,
+  useChangeUserEmailMutation,
   useListAgenciesQuery, useOrgTreeQuery,
 } from "../../shared/api/baseApi";
 import {
@@ -42,6 +43,16 @@ export function UserManagementPage() {
   const [setUserTeam] = useSetUserTeamMutation();
   const [setUserAgency] = useSetUserAgencyMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
+  const [changeEmail, { isLoading: changingEmail }] = useChangeUserEmailMutation();
+  // The user whose address is being changed, plus the address currently on the account — shown so
+  // the admin can see what they are replacing rather than typing over a blank field.
+  const [emailEditing, setEmailEditing] = useState<{ id: string; userName: string; email: string } | null>(null);
+  const [nextEmail, setNextEmail] = useState("");
+  // Deliberately permissive — the server's validator is the authority. This only stops the obvious
+  // typo before a round-trip that would sign the user out for nothing.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail.trim());
+  const sameAsCurrent =
+    !!emailEditing && nextEmail.trim().toLowerCase() === emailEditing.email.toLowerCase();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -479,6 +490,12 @@ export function UserManagementPage() {
                       aria-label="Reset password"
                       onClick={() => { setResetting({ id: u.id, userName: u.userName }); setNewPwd(""); }}
                     ><Icon name="key" size={15} /></Button>
+                    <Button
+                      variant="ghost" size="sm" disabled={!canManage(u)}
+                      title={canManage(u) ? ADMIN_MSG.common.changeEmailAction : "You can only manage users below your role level"}
+                      aria-label={ADMIN_MSG.common.changeEmailAction}
+                      onClick={() => { setEmailEditing({ id: u.id, userName: u.userName, email: u.email }); setNextEmail(""); }}
+                    ><Icon name="mail" size={15} /></Button>
                     {active && u.mustChangePassword && (
                       <Button
                         variant={u.invitationExpired ? "outline" : "ghost"} size="sm" disabled={resending}
@@ -628,6 +645,61 @@ export function UserManagementPage() {
           onChange={(e) => setNewPwd(e.target.value)}
           autoFocus
         />
+      </Modal>
+
+      {/* Change sign-in email */}
+      <Modal
+        open={emailEditing !== null}
+        onClose={() => setEmailEditing(null)}
+        title={emailEditing ? ADMIN_MSG.common.changeEmailTitle(emailEditing.userName) : ""}
+        description={ADMIN_MSG.common.changeEmailDescription}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setEmailEditing(null)}>Cancel</Button>
+            <Button
+              disabled={!emailValid || sameAsCurrent}
+              loading={changingEmail}
+              title={
+                !emailValid ? ADMIN_MSG.common.changeEmailInvalid
+                  : sameAsCurrent ? ADMIN_MSG.common.changeEmailSame
+                  : undefined
+              }
+              onClick={async () => {
+                if (!emailEditing) return;
+                try {
+                  await changeEmail({ id: emailEditing.id, email: nextEmail.trim() }).unwrap();
+                  toast.success(
+                    ADMIN_MSG.common.emailChanged,
+                    ADMIN_MSG.common.emailChangedDesc(emailEditing.userName, nextEmail.trim()),
+                  );
+                  setEmailEditing(null);
+                } catch (err: unknown) {
+                  toast.error(ADMIN_MSG.common.changeEmailFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+                }
+              }}
+            >{ADMIN_MSG.common.changeEmailAction}</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {emailEditing && (
+            <div className="rounded-lg bg-ink-50 px-3 py-2 text-sm">
+              <span className="text-ink-500">Currently </span>
+              <span className="font-medium text-ink-900 break-all">{emailEditing.email}</span>
+            </div>
+          )}
+          <Input
+            type="email"
+            autoComplete="off"
+            name="admin-new-email"
+            label={ADMIN_MSG.common.changeEmailLabel}
+            hint={ADMIN_MSG.common.changeEmailHint}
+            value={nextEmail}
+            onChange={(e) => setNextEmail(e.target.value)}
+            error={sameAsCurrent ? ADMIN_MSG.common.changeEmailSame : undefined}
+            autoFocus
+          />
+        </div>
       </Modal>
 
     </>

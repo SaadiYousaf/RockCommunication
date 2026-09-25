@@ -29,6 +29,18 @@ export const ADMIN_MSG = {
     assignFailed: "Couldn't assign",
     resendInviteFailed: "Couldn't resend invitation",
     resetPasswordFailed: "Couldn't reset password",
+    emailChanged: "Email address changed",
+    emailChangedDesc: (name: string, email: string) =>
+      `${name} now signs in with ${email}. They've been signed out and notified at both addresses.`,
+    changeEmailFailed: "Couldn't change email address",
+    changeEmailTitle: (name: string) => `Change email · ${name}`,
+    changeEmailDescription:
+      "This is the address they sign in with and where password resets are sent. They'll be signed out everywhere, and both the old and new address are notified.",
+    changeEmailLabel: "New email address",
+    changeEmailHint: "They'll be asked to confirm this address the next time they sign in.",
+    changeEmailAction: "Change email",
+    changeEmailSame: "That's already their email address",
+    changeEmailInvalid: "Enter a valid email address first",
     passwordReset: "Password reset",
     passwordResetDesc: (name: string) => `New password set for ${name}.`,
     invitationResent: "Invitation resent",

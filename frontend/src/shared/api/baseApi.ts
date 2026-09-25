@@ -600,6 +600,12 @@ export const baseApi = createApi({
       // A reset re-flags MustChangePassword, so refresh user lists (incl. the submission-agents roster).
       invalidatesTags: ["Users"],
     }),
+    // Changing the sign-in address ends the user's sessions and un-confirms the new address, so the
+    // row they came from has to be re-read rather than patched optimistically.
+    changeUserEmail: b.mutation<UserSummary, { id: string; email: string }>({
+      query: ({ id, email }) => ({ url: `/api/admin/users/${id}/email`, method: "PUT", body: { email } }),
+      invalidatesTags: ["Users"],
+    }),
     resendInvitation: b.mutation<void, string>({
       query: (id) => ({ url: `/api/admin/users/${id}/resend-invitation`, method: "POST" }),
       invalidatesTags: ["Users"],
@@ -1728,4 +1734,5 @@ export const {
   useAcademyCoursesQuery, useAcademyCourseQuery, useAcademyLessonQuery,
   useCompleteAcademyLessonMutation, useSubmitAcademyQuizMutation,
   useAcademyProgressQuery, useAcademyCertificatesQuery,
+  useChangeUserEmailMutation,
 } = baseApi;

@@ -35,6 +35,23 @@ public class AuthEmailSender
         LogResult("confirmation", to, link, result);
     }
 
+    /// <summary>
+    /// A plain security notice with no call to action — used to tell an address that something
+    /// changed on the account it belongs to.
+    ///
+    /// Deliberately link-free. This goes to an address that may no longer be attached to the
+    /// account, so a clickable action in it would be an invitation to phish; the recipient is asked
+    /// to contact their administrator instead.
+    /// </summary>
+    public async Task SendPlainAsync(string to, string subject, string message, CancellationToken ct)
+    {
+        var body = Layout(subject, $@"
+<p>{Html(message)}</p>
+<p style='color:#9ca3af;font-size:12px'>This is an automated security notice from {Html(_opts.FromName)}. You do not need to do anything unless you did not expect this change.</p>");
+        var result = await _email.SendAsync(new EmailMessage(to, subject, body, IsHtml: true, FromName: _opts.FromName), ct);
+        LogResult("notice", to, null, result);
+    }
+
     public async Task SendPasswordResetAsync(string to, string userName, string email, string token, CancellationToken ct)
     {
         var link = $"{_opts.AppUrl.TrimEnd('/')}/reset-password?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
@@ -137,7 +154,7 @@ public class AuthEmailSender
     private static string Row(string label, string valueHtml, bool last = false) =>
         $@"<tr><td style='padding:14px 18px{(last ? "" : ";border-bottom:1px solid #e5e7eb")}'><span style='color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:0.04em'>{Html(label)}</span><br>{valueHtml}</td></tr>";
 
-    private void LogResult(string kind, string to, string link, EmailResult result)
+    private void LogResult(string kind, string to, string? link, EmailResult result)
     {
         if (result.Sent)
             _logger.LogInformation("Auth email ({Kind}) dispatched to {To} (provider id {Id})", kind, to, result.ProviderMessageId);

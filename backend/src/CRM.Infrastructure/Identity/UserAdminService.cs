@@ -9,6 +9,7 @@ using CRM.Domain.Enums;
 using CRM.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Infrastructure.Identity;
 
@@ -35,6 +36,11 @@ public class UserAdminService : IUserAdminService
     private const string CallCenterMovedBodyFormat = "An administrator moved you to the {0} call center.";
     private const string CallCenterRemovedBody = "An administrator removed you from your call center.";
 
+    private const string EmailChangedTitle = "Your sign-in email was changed";
+    private const string EmailChangedBodyFormat =
+        "An administrator changed the email address on your account to {0}. You have been signed out everywhere and will need to sign in again. If this wasn't expected, contact your administrator straight away.";
+    private const string EmailChangedOldAddressSubject = "Your sign-in email was changed";
+
     private const string PasswordResetTitle = "Your password was reset";
     private const string PasswordResetBody =
         "An administrator reset your password and signed you out everywhere. You'll be asked to choose a new password the next time you sign in. If this wasn't expected, contact your administrator straight away.";
@@ -48,6 +54,7 @@ public class UserAdminService : IUserAdminService
     private readonly ICurrentUser _current;
     private readonly INotificationDispatcher _notify;
     private readonly IActiveUserCache _activeUsers;
+    private readonly AuthEmailSender _emailSender;
 
     public UserAdminService(
         UserManager<ApplicationUser> users,
@@ -56,7 +63,8 @@ public class UserAdminService : IUserAdminService
         IJwtTokenService jwt,
         ICurrentUser current,
         INotificationDispatcher notify,
-        IActiveUserCache activeUsers)
+        IActiveUserCache activeUsers,
+        AuthEmailSender emailSender)
     {
         _users = Guard.AgainstNull(users);
         _roles = Guard.AgainstNull(roles);
@@ -65,6 +73,7 @@ public class UserAdminService : IUserAdminService
         _current = Guard.AgainstNull(current);
         _notify = Guard.AgainstNull(notify);
         _activeUsers = Guard.AgainstNull(activeUsers);
+        _emailSender = Guard.AgainstNull(emailSender);
     }
 
     // Best-effort in-app notice to the affected user — never notify yourself, and never let a
@@ -233,6 +242,113 @@ public class UserAdminService : IUserAdminService
         var roles = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
             roles.ToList(), Array.Empty<string>(), IsActive: user.IsActive);
+    }
+
+    /// <summary>
+    /// Change the address a user signs in with.
+    ///
+    /// This is not an ordinary field edit. The email IS the login identity here — it is what password
+    /// resets are sent to and what "forgot my password" trusts — so whoever controls the address
+    /// controls the account. That makes this an account-takeover path if done carelessly, which is
+    /// why it is admin-only, audited, announced to BOTH addresses, and ends every live session.
+    /// </summary>
+    public async Task<UserSummaryDto> ChangeEmailAsync(Guid userId, string newEmail, CancellationToken ct = default)
+    {
+        Guard.AgainstNullOrWhiteSpace(newEmail);
+
+        var user = await _users.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+        await AuthorizeTargetAsync(user);
+
+        var target = newEmail.Trim();
+        var previous = user.Email ?? string.Empty;
+
+        if (string.Equals(previous, target, StringComparison.OrdinalIgnoreCase))
+            throw new ConflictException("That is already this user's email address.");
+
+        // Taken by someone else? Identity would surface this too, but only as a joined error string
+        // after the fact — and a duplicate address would mean two accounts racing for the same
+        // password-reset inbox.
+        var existing = await _users.FindByEmailAsync(target);
+        if (existing is not null && existing.Id != user.Id)
+            throw new ConflictException("Another user already has that email address.");
+
+        // SetEmailAsync, not `user.Email = ...`: it updates NormalizedEmail too. Assigning the
+        // property directly leaves the normalized column stale, and sign-in-by-email looks the user
+        // up by the normalized value — so the account would quietly become unreachable by its own
+        // new address while still answering to the old one.
+        var result = await _users.SetEmailAsync(user, target);
+        if (!result.Succeeded)
+            throw new ConflictException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        // The new address is unproven until someone opens a message sent to it. Marking it
+        // unconfirmed is what makes the confirmation link below mean something.
+        user.EmailConfirmed = false;
+        await _users.UpdateAsync(user);
+
+        WriteEmailChangeAudit(user, previous, target);
+
+        // Every live token was minted for the old identity. Ending them forces a fresh sign-in, so a
+        // session that was open when the address changed cannot keep running on the old footing.
+        await _jwt.RevokeAllForUserAsync(userId, ct);
+
+        await SendEmailChangeNoticesAsync(user, previous, target, ct);
+        await NotifyTargetAsync(user, EmailChangedTitle, string.Format(EmailChangedBodyFormat, target), ct);
+
+        var roles = await _users.GetRolesAsync(user);
+        return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
+            roles.ToList(), Array.Empty<string>());
+    }
+
+    /// <summary>
+    /// Confirmation to the new address, and a heads-up to the old one.
+    ///
+    /// The notice to the OLD address is the security-relevant half: if an attacker changes the
+    /// address, the real owner's inbox is the only channel still under their control, and it is how
+    /// they find out in time to raise it. Best-effort — mail trouble must not leave the account in a
+    /// half-changed state, since the address itself has already been written.
+    /// </summary>
+    private async Task SendEmailChangeNoticesAsync(
+        ApplicationUser user, string previous, string target, CancellationToken ct)
+    {
+        try
+        {
+            var token = await _users.GenerateEmailConfirmationTokenAsync(user);
+            await _emailSender.SendEmailConfirmationAsync(target, user.UserName ?? target, user.Id, token, ct);
+        }
+        catch { /* graceful — the address is changed either way; an admin can resend */ }
+
+        if (string.IsNullOrWhiteSpace(previous)) return;
+        try
+        {
+            await _emailSender.SendPlainAsync(
+                previous,
+                EmailChangedOldAddressSubject,
+                $"The email address on your account was changed to {target} by an administrator. " +
+                "You have been signed out everywhere. If you did not expect this, contact your administrator straight away.",
+                ct);
+        }
+        catch { /* graceful — see above */ }
+    }
+
+    /// <summary>
+    /// An explicit audit row. The automatic interceptor would record an "Updated" on the Identity
+    /// user, which reads the same as a phone-number edit — and this is the one user change that
+    /// moves who can take the account over, so it needs to stand out in the log with both addresses.
+    /// </summary>
+    private void WriteEmailChangeAudit(ApplicationUser user, string previous, string target)
+    {
+        _db.AuditEntries.Add(new AuditEntry
+        {
+            AgencyId = user.AgencyId == Guid.Empty ? null : user.AgencyId,
+            EntityName = nameof(ApplicationUser),
+            EntityId = user.Id.ToString(),
+            Action = "EmailChanged",
+            UserId = _current.UserId?.ToString(),
+            UserName = _current.UserName,
+            Changes = JsonSerializer.Serialize(new { from = previous, to = target }),
+            IpAddress = _current.IpAddress,
+        });
     }
 
     public async Task ResetPasswordAsync(Guid userId, string newPassword, CancellationToken ct = default)

@@ -27,10 +27,28 @@ public record ResendInvitationCommand(Guid UserId) : IRequest<Unit>;
 /// created a user in the wrong agency had no way to correct it short of deleting and re-inviting.
 /// </summary>
 public record SetUserAgencyCommand(Guid UserId, Guid AgencyId) : IRequest<UserSummaryDto>;
+/// <summary>
+/// Change the address a user signs in with. Admin-initiated only — never self-service: the email is
+/// the login identity and the password-reset destination, so letting people edit their own would
+/// turn one typo into a locked-out account nobody can recover.
+/// </summary>
+public record ChangeUserEmailCommand(Guid UserId, string NewEmail) : IRequest<UserSummaryDto>;
 
 public class UpdateUserRolesValidator : AbstractValidator<UpdateUserRolesCommand>
 {
     public UpdateUserRolesValidator() => RuleFor(x => x.UserId).NotEmpty();
+}
+
+public class ChangeUserEmailValidator : AbstractValidator<ChangeUserEmailCommand>
+{
+    public ChangeUserEmailValidator()
+    {
+        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.NewEmail)
+            .NotEmpty().WithMessage("An email address is required.")
+            .EmailAddress().WithMessage("That doesn't look like an email address.")
+            .MaximumLength(256);
+    }
 }
 
 public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>
@@ -51,7 +69,8 @@ public class UserAdminHandler :
     IRequestHandler<SetUserCallCenterCommand, UserSummaryDto>,
     IRequestHandler<SetUserAgencyCommand, UserSummaryDto>,
     IRequestHandler<SetTeamLeadCommand, Unit>,
-    IRequestHandler<ResendInvitationCommand, Unit>
+    IRequestHandler<ResendInvitationCommand, Unit>,
+    IRequestHandler<ChangeUserEmailCommand, UserSummaryDto>
 {
     private readonly IUserAdminService _admin;
     private readonly ICurrentUser _user;
@@ -60,6 +79,13 @@ public class UserAdminHandler :
 
     public UserAdminHandler(IUserAdminService admin, ICurrentUser user, IPermissionService permissions, IInvitationService invitations)
     { _admin = Guard.AgainstNull(admin); _user = Guard.AgainstNull(user); _permissions = Guard.AgainstNull(permissions); _invitations = Guard.AgainstNull(invitations); }
+
+    public async Task<UserSummaryDto> Handle(ChangeUserEmailCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        await EnsurePermissionAsync(Permissions.UsersManage, ct);
+        return await _admin.ChangeEmailAsync(request.UserId, request.NewEmail, ct);
+    }
 
     public async Task<UserSummaryDto> Handle(UpdateUserRolesCommand request, CancellationToken ct)
     {
@@ -153,6 +179,12 @@ public interface IUserAdminService
     Task<UserSummaryDto> UpdateRolesAsync(Guid userId, IReadOnlyList<string> roles, CancellationToken ct = default);
     Task<UserSummaryDto> SetActiveAsync(Guid userId, bool isActive, CancellationToken ct = default);
     Task ResetPasswordAsync(Guid userId, string newPassword, CancellationToken ct = default);
+    /// <summary>
+    /// Change the address a user signs in with. Audited, announced to both the old and the new
+    /// address, and every live session is ended — the email is the login identity, so this decides
+    /// who can take the account over.
+    /// </summary>
+    Task<UserSummaryDto> ChangeEmailAsync(Guid userId, string newEmail, CancellationToken ct = default);
     Task<UserSummaryDto> SetPreferred2FaAsync(Guid userId, string method, CancellationToken ct = default);
     /// <summary>
     /// Move a user onto a team (or off — pass null). Validates the team belongs to the
