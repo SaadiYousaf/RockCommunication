@@ -26,6 +26,10 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   const { pathname } = useLocation();
   if (!auth.accessToken || !auth.user) return <Navigate to="/login" replace />;
 
+  // Onboarding = anything the user must finish before the app is theirs to use. Every gate below
+  // has to agree on this, or two of them redirect at each other and the app renders nothing.
+  const onboarding = !!auth.user.mustChangePassword || !!auth.user.twoFactorSetupRequired;
+
   // Force first-time password change before any other route is accessible.
   if (auth.user.mustChangePassword && pathname !== "/change-password") {
     return <Navigate to="/change-password" replace />;
@@ -45,8 +49,14 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   // Admins who actually have a CHOICE pick a working context once per session before entering the app.
   // A Call Center Admin is pinned to a single center (already scoped by their token), so forcing them
   // through a one-option picker is just friction — they skip it.
+  //
+  // Like the 2FA gate above, this must NOT fire while onboarding is still pending. An invited
+  // SuperAdmin sits at /change-password with mustChangePassword set; without this guard the picker
+  // sends them to /select-context, the password gate sends them straight back, and the two bounce
+  // off each other forever — which renders as a blank white page, not as an error. The first
+  // invited SuperAdmin the product ever had hit this on their first sign-in.
   const CONTEXT_ROLES = ["SuperAdmin", "Admin"];
-  if (userRoles.some((r) => CONTEXT_ROLES.includes(r)) && !auth.contextChosen && pathname !== "/select-context") {
+  if (!onboarding && userRoles.some((r) => CONTEXT_ROLES.includes(r)) && !auth.contextChosen && pathname !== "/select-context") {
     return <Navigate to="/select-context" replace />;
   }
 
