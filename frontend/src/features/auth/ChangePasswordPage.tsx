@@ -7,6 +7,7 @@ import { setAuth, clearAuth } from "../../app/store";
 import type { RootState } from "../../app/store";
 import { Button, Card, CardBody, Icon, Input, cn, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
+import { BRAND } from "../../shared/constants/brand";
 
 /**
  * Forced first-login password change.
@@ -93,7 +94,7 @@ export function ChangePasswordPage() {
           <div className="flex items-center gap-3 mb-5">
             <BrandLogo variant="mark" size={36} />
             <div className="leading-tight">
-              <div className="text-sm font-semibold text-ink-900">Rock Communication</div>
+              <div className="text-sm font-semibold text-ink-900">{BRAND.name}</div>
               <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Insurance Agency</div>
             </div>
           </div>

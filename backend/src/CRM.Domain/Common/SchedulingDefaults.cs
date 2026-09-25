@@ -34,5 +34,5 @@ public static class SchedulingDefaults
 
     /// <summary>Friendly product name rendered in invite emails (kept out of provider options
     /// so the Application layer needn't depend on Infrastructure email configuration).</summary>
-    public const string ProductName = "Rock Communication CRM";
+    public const string ProductName = "SMH Achievers Life Group";
 }

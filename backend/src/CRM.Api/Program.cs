@@ -32,6 +32,8 @@ builder.Services.AddScoped<ICurrentUser, CurrentUserService>();
 // commits, so a disabled user is refused on their very next request rather than after the TTL.
 builder.Services.AddSingleton<CRM.Application.Common.Interfaces.IActiveUserCache,
     CRM.Api.Middleware.ActiveUserCache>();
+// The network allowlist, cached off the per-request hot path.
+builder.Services.AddSingleton<CRM.Api.Middleware.IIpAllowlistCache, CRM.Api.Middleware.IpAllowlistCache>();
 
 // Real-time agent push
 builder.Services.AddSingleton<IAgentNotifier,
@@ -250,8 +252,10 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseCors();
-app.UseMiddleware<IpAllowlistMiddleware>();
 app.UseAuthentication();
+// Network allowlist. Deliberately AFTER authentication: SuperAdmin is exempt, and before this line
+// there is no identity to exempt — which would make one bad entry an unrecoverable lockout.
+app.UseMiddleware<IpAllowlistMiddleware>();
 // Force-logout-on-deactivation gate: kicks any request from an `IsActive=false`
 // user even if they still hold a valid (unexpired) JWT.
 app.UseMiddleware<ActiveUserGateMiddleware>();

@@ -20,6 +20,7 @@ import { AgentStatusBar } from "./AgentStatusBar";
 import { usePersistentState } from "../hooks/usePersistentState";
 
 import { NAV, type NavNode } from "../constants/nav";
+import { BRAND } from "../constants/brand";
 
 interface NavCtx { modules: string[]; roles: string[]; isAdmin: boolean; isSuperAdmin: boolean }
 
@@ -349,7 +350,7 @@ function SidebarContent({
         />
         {!collapsed && (
           <div className="leading-tight min-w-0">
-            <div className="text-sm font-semibold text-ink-900 tracking-tight">Rock Communication</div>
+            <div className="text-sm font-semibold text-ink-900 tracking-tight">{BRAND.name}</div>
             <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500 truncate max-w-[160px]" title={orgLabel}>{orgLabel}</div>
             {callCenterName && (
               <div

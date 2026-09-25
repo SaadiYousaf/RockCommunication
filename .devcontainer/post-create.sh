@@ -27,7 +27,7 @@ SMTP_PORT=465
 SMTP_USERNAME=
 SMTP_PASSWORD=
 EMAIL_FROM=no-reply@crm.local
-EMAIL_FROM_NAME=Rock Communication CRM
+EMAIL_FROM_NAME=SMH Achievers Life Group
 SUPPORT_EMAIL=support@crm.local
 
 SMS_PROVIDER=Stub

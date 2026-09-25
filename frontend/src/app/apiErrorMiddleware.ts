@@ -1,6 +1,7 @@
 import { isRejectedWithValue, type Middleware } from "@reduxjs/toolkit";
 import { emitToast } from "../shared/ui/Toast";
 import { LOAD_ERROR } from "../shared/constants/messages";
+import { setNetworkBlocked } from "./authSlice";
 
 /**
  * Raises a visible toast whenever an API call FAILS.
@@ -23,6 +24,20 @@ function isHandledElsewhere(status: unknown): boolean {
   // 429 → the baseQuery retries it with backoff. It is throttling, not failure; by the time the
   //       user could read a toast the request has usually already succeeded.
   return status === 401 || status === 429;
+}
+
+/**
+ * The server's machine-readable code, when it sent one. Used to separate a refusal we can explain
+ * properly from a generic 403.
+ */
+function errorCode(payload: unknown): string | undefined {
+  const data = (payload as { data?: { code?: unknown } } | undefined)?.data;
+  return typeof data?.code === "string" ? data.code : undefined;
+}
+
+function blockedAddress(payload: unknown): string | undefined {
+  const data = (payload as { data?: { address?: unknown } } | undefined)?.data;
+  return typeof data?.address === "string" ? data.address : undefined;
 }
 
 function describe(status: unknown): { title: string; description: string } {
@@ -55,10 +70,18 @@ function shouldReport(now: number): boolean {
   return true;
 }
 
-export const apiErrorMiddleware: Middleware = () => (next) => (action) => {
+export const apiErrorMiddleware: Middleware = (store) => (next) => (action) => {
   if (isRejectedWithValue(action)) {
     try {
       const status = (action.payload as { status?: unknown } | undefined)?.status;
+
+      // A refused network is not a per-request problem — every request will fail the same way until
+      // the address is approved. It gets a full screen of its own instead of a toast, so raise it
+      // into state and stop here rather than adding to the pile.
+      if (errorCode(action.payload) === "ip_not_allowed") {
+        store.dispatch(setNetworkBlocked(blockedAddress(action.payload) ?? ""));
+        return next(action);
+      }
 
       // A MUTATION failing is already reported by the component that fired it (every call site
       // toasts in its catch), so only report QUERY failures here — the silent ones.

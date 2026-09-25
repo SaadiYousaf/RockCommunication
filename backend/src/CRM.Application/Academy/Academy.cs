@@ -490,7 +490,7 @@ public class AcademyHandlers :
         Span<byte> bytes = stackalloc byte[4];
         RandomNumberGenerator.Fill(bytes);
         var hex = Convert.ToHexString(bytes);
-        return $"RC-{hex[..4]}-{hex[4..]}";
+        return $"SMH-{hex[..4]}-{hex[4..]}";
     }
 
     private static IReadOnlyList<string> ParseOptions(string json)

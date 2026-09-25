@@ -157,7 +157,7 @@ public class AcademyCertificate : TenantEntity
     public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Short human-quotable code printed on the certificate (e.g. "RC-4F2A-9C11"). Verification looks
+    /// Short human-quotable code printed on the certificate (e.g. "SMH-4F2A-9C11"). Verification looks
     /// this up, so it is unique and never reused. Not derived from the user or course id, so the code
     /// alone leaks nothing about who holds it.
     /// </summary>

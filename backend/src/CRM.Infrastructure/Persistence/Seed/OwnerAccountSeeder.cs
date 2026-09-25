@@ -151,8 +151,8 @@ public static class OwnerAccountSeeder
 
             await File.WriteAllTextAsync(path,
                 $"""
-                Rock Communication CRM — go-live owner account
-                ==============================================
+                SMH Achievers Life Group — go-live owner account
+                ================================================
 
                 The invitation email could not be delivered, so the sign-in details are here instead.
 

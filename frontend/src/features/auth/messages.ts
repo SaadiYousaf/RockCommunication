@@ -8,6 +8,13 @@
  * (retrying will not help, go talk to a person).
  */
 export const AUTH_MSG = {
+  networkBlockedTitle: "This network isn't approved",
+  networkBlockedBody: (app: string) =>
+    `${app} can only be used from an approved network. Ask your administrator to approve the address below, then try again.`,
+  networkBlockedAddressLabel: "Your address",
+  networkBlockedRetry: "Try again",
+  networkBlockedSignOut: "Sign out",
+
   /** Lowercase noun for the "Couldn't load <x>" error state on the register-user role picker. */
   rolesResourceName: "the list of roles",
 

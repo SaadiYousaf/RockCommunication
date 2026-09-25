@@ -138,7 +138,7 @@ public class AcademyTests : IClassFixture<CrmWebAppFactory>
 
         Assert.Single(mine);
         var serial = mine[0].GetProperty("serialNumber").GetString()!;
-        Assert.StartsWith("RC-", serial);
+        Assert.StartsWith("SMH-", serial);
 
         // …and the printed serial verifies.
         var verified = await admin.GetJsonAsync($"/api/academy/certificates/{serial}");

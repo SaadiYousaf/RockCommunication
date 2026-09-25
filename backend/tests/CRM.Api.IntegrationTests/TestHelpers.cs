@@ -54,6 +54,10 @@ internal static class TestHelpers
     public static Task<HttpClient> LoginAdminAsync(this CrmWebAppFactory factory)
         => factory.LoginAsync("admin", "Admin@123!");
 
+    /// <summary>The unscoped, cross-tenant operator. Seeded alongside "admin" by DbSeeder.</summary>
+    public static Task<HttpClient> LoginSuperAdminAsync(this CrmWebAppFactory factory)
+        => factory.LoginAsync("superadmin", "SuperAdmin@123!");
+
     public static async Task<JsonElement> PostJsonAsync(this HttpClient client, string url, object body)
     {
         var resp = await client.PostAsJsonAsync(url, body);

@@ -2,7 +2,9 @@ import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "./cn";
 
-const APP_NAME = "Rock Communication";
+import { BRAND } from "../constants/brand";
+
+const APP_NAME = BRAND.name;
 
 function titleToString(t: ReactNode): string | null {
   if (typeof t === "string" || typeof t === "number") return String(t);

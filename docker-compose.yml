@@ -37,7 +37,7 @@ services:
       Integrations__Email__Username: ${SMTP_USERNAME:-}
       Integrations__Email__Password: ${SMTP_PASSWORD:-}
       Integrations__Email__FromAddress: ${EMAIL_FROM:-no-reply@crm.local}
-      Integrations__Email__FromName: ${EMAIL_FROM_NAME:-Rock Communication CRM}
+      Integrations__Email__FromName: ${EMAIL_FROM_NAME:-SMH Achievers Life Group}
       Integrations__Email__AppUrl: ${APP_URL:-http://localhost:8080}
       Integrations__Email__SupportEmail: ${SUPPORT_EMAIL:-support@crm.local}
       # ---- Optional vendors (leave blank for stubs)

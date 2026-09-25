@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
 import { ForbiddenPage } from "./ForbiddenPage";
+import { NetworkBlockedPage } from "../../features/auth/NetworkBlockedPage";
 
 interface ProtectedRouteProps {
   roles?: string[];
@@ -25,6 +26,13 @@ export function ProtectedRoute({ roles, modules }: ProtectedRouteProps) {
   const auth = useSelector((s: RootState) => s.auth);
   const { pathname } = useLocation();
   if (!auth.accessToken || !auth.user) return <Navigate to="/login" replace />;
+
+  // Refused network. Checked before every other gate: while this holds, no request the app makes
+  // can succeed, so sending them on to a password or 2FA screen would only produce a page whose
+  // every action fails.
+  if (auth.networkBlockedAddress !== null && auth.networkBlockedAddress !== undefined) {
+    return <NetworkBlockedPage />;
+  }
 
   // Onboarding = anything the user must finish before the app is theirs to use. Every gate below
   // has to agree on this, or two of them redirect at each other and the app renders nothing.

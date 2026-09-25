@@ -61,7 +61,7 @@ public class HrPayrollController : ControllerBase
     public async Task<IActionResult> Slip([FromQuery] Guid employeeId, [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
     {
         var row = await _mediator.Send(new GetPayrollSlipQuery(employeeId, year, month), ct);
-        var company = _config["Company:Name"] ?? "Rock Communication";
+        var company = _config["Company:Name"] ?? "SMH Achievers Life Group";
         var pdf = PayrollSlipPdf.Build(row, company);
         return File(pdf, "application/pdf", $"salary-slip-{row.AgentCode}-{year}-{month:D2}.pdf");
     }

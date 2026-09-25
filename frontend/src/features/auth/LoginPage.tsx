@@ -7,6 +7,7 @@ import { markSessionRecovered, useLoginMutation, useVerify2FaMutation } from "..
 import { setAuth } from "../../app/store";
 import { Button, Icon, Input, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
+import { BRAND } from "../../shared/constants/brand";
 
 export function LoginPage() {
   const [userNameOrEmail, setU] = useState("");
@@ -94,7 +95,7 @@ export function LoginPage() {
           <div className="flex items-center gap-3">
             <BrandLogo variant="mark" size={44} className="drop-shadow-[0_4px_18px_rgba(31,126,255,0.5)]" />
             <div>
-              <div className="text-base font-semibold tracking-tight">Rock Communication</div>
+              <div className="text-base font-semibold tracking-tight">{BRAND.name}</div>
               <div className="text-[10px] uppercase tracking-[0.18em] text-white/70">Insurance Agency</div>
             </div>
           </div>
@@ -122,7 +123,7 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="text-xs text-white/60">© {new Date().getFullYear()} Rock Communication Insurance Agency. All rights reserved.</div>
+          <div className="text-xs text-white/60">{BRAND.copyright(new Date().getFullYear())}</div>
         </div>
       </div>
 
@@ -132,7 +133,7 @@ export function LoginPage() {
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <BrandLogo variant="mark" size={36} />
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Rock Communication</div>
+              <div className="text-sm font-semibold">{BRAND.name}</div>
               <div className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Insurance Agency</div>
             </div>
           </div>

@@ -179,7 +179,7 @@ public class MeetingInviteSender : IMeetingInviteSender
         sb.Append($"PRODID:-//{Esc(SchedulingDefaults.ProductName)}//Scheduler//EN\r\n");
         sb.Append($"METHOD:{(cancelled ? "CANCEL" : "REQUEST")}\r\n");
         sb.Append("BEGIN:VEVENT\r\n");
-        sb.Append($"UID:meeting-{m.Id}@rockcommunication\r\n");
+        sb.Append($"UID:meeting-{m.Id}@smhachieverslifegroup\r\n");
         sb.Append($"DTSTAMP:{Stamp(DateTime.UtcNow)}\r\n");
         sb.Append($"DTSTART:{Stamp(m.StartsAt)}\r\n");
         sb.Append($"DTEND:{Stamp(m.EndsAt)}\r\n");

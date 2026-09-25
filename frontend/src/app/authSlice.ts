@@ -7,6 +7,13 @@ export interface AuthState {
   user: UserSummary | null;
   /** True once an admin has picked their working context (or "all") this session. Gates the picker. */
   contextChosen?: boolean;
+  /**
+   * Set when the server refuses this network. Held here rather than shown as a toast because EVERY
+   * request fails the same way — a toast per query would bury the one thing they need to read, and
+   * the app behind it would be an empty shell. Not persisted: it describes where they are sitting
+   * right now, so it must not survive into a session started somewhere else.
+   */
+  networkBlockedAddress?: string | null;
 }
 
 const persisted = (() => {
@@ -36,15 +43,20 @@ const authSlice = createSlice({
         user: state.user, contextChosen: state.contextChosen,
       }));
     },
+    /** The server refused this network. `null` clears it — used when a request succeeds again. */
+    setNetworkBlocked(state, action: PayloadAction<string | null>) {
+      state.networkBlockedAddress = action.payload;
+    },
     clearAuth(state) {
       state.accessToken = null;
       state.refreshToken = null;
       state.user = null;
       state.contextChosen = false;
+      state.networkBlockedAddress = null;
       localStorage.removeItem("auth");
     },
   },
 });
 
-export const { setAuth, clearAuth } = authSlice.actions;
+export const { setAuth, clearAuth, setNetworkBlocked } = authSlice.actions;
 export default authSlice.reducer;

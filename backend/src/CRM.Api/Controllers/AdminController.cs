@@ -15,7 +15,13 @@ namespace CRM.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AdminController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
+    private readonly Middleware.IIpAllowlistCache _ipCache;
+
+    public AdminController(IMediator mediator, Middleware.IIpAllowlistCache ipCache)
+    {
+        _mediator = Guard.AgainstNull(mediator);
+        _ipCache = Guard.AgainstNull(ipCache);
+    }
 
     [HttpGet("ip-allowlist")]
     [HasPermission(Permissions.IpAllowlistManage)]
@@ -29,7 +35,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> AddIp([FromBody] IpEntryBody body, CancellationToken ct)
     {
         Guard.AgainstNull(body);
-        return Ok(await _mediator.Send(new AddIpAllowlistCommand(body.CidrOrIp, body.Note), ct));
+        var added = await _mediator.Send(new AddIpAllowlistCommand(body.CidrOrIp, body.Note), ct);
+        // Drop the cached list so the new entry applies to the very next request rather than
+        // whenever the cache happens to expire.
+        _ipCache.Invalidate();
+        return Ok(added);
     }
 
     [HttpDelete("ip-allowlist/{id:guid}")]
@@ -37,6 +47,8 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> RemoveIp(Guid id, CancellationToken ct)
     {
         await _mediator.Send(new RemoveIpAllowlistCommand(id), ct);
+        // Revoking an address must take effect immediately — that is the whole point of revoking it.
+        _ipCache.Invalidate();
         return NoContent();
     }
 
