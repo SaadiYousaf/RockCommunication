@@ -184,4 +184,11 @@ export const LEADS_MSG = {
   queueNoMatchTitle: "Nothing matches your filter",
   queueEmptyDesc: "Leads assigned to you will appear here. Speak to your team lead about pulling some.",
   queueNoMatchDesc: "Try clearing the search or switching the tab.",
+
+  // ---- Closing ----
+  // The closing screen is where a sale is actually recorded. Since the queues were consolidated it
+  // is only reachable from the lead itself, so the way in has to be obvious on this page.
+  openClosingApp: "Close this lead",
+  openClosingHint: "Take the application and record the sale.",
+  continueClosingApp: "Continue closing",
 } as const;

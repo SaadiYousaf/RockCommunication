@@ -28,6 +28,8 @@ import {
 } from "../../shared/constants/leadStage";
 import { formatPhone } from "../../shared/lib/format";
 import { LEADS_MSG } from "./messages";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
 
 const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","CallBack","DoNotCall","Sold","NotQualified","Voicemail","NoAnswer","WrongNumber"];
 // The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
@@ -39,9 +41,16 @@ function nextActionFor(stage: WorkflowStage, owned: boolean): string {
   return LEADS_MSG.nextAction[stage] ?? "—";
 }
 
+/**
+ * Stages at which closing is the real next step. Before Verified the lead has not been through
+ * verification; after Closed the sale is already recorded and the work has moved to validation.
+ */
+const CLOSEABLE_STAGES: WorkflowStage[] = ["Verified", "JrClosed"];
+
 export function LeadDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const myRoles = useSelector((s: RootState) => s.auth.user?.roles ?? []);
   const { data: lead, refetch: refetchLead, isLoading: leadLoading, isError: leadError } = useLeadDetailQuery(id);
   const { data: timeline } = useLeadTimelineQuery(id);
   const { data: scripts } = useListScriptsQuery({ stage: lead?.stage });
@@ -119,6 +128,14 @@ export function LeadDetailPage() {
       toast.error(LEADS_MSG.placeCallFailedTitle, getErrorDetail(err) ?? LEADS_MSG.retry);
     }
   }
+
+  // Exactly the roles the closing endpoints accept — Closer, plus Admin/SuperAdmin who routinely
+  // work a lead through on someone's behalf. Deliberately NOT JrCloser: the API refuses them, and
+  // offering a button that 403s is how this page came to have a dead end in the first place.
+  const canClose =
+    !!lead &&
+    CLOSEABLE_STAGES.includes(lead.stage as WorkflowStage) &&
+    myRoles.some((r) => ["Closer", "Admin", "SuperAdmin"].includes(r));
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {
@@ -300,6 +317,20 @@ export function LeadDetailPage() {
               <option value="">Drop voicemail…</option>
               {voicemails.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </Select>
+          )}
+          {/* Closing. The closing screen is where the application is taken and the sale recorded,
+              and since the queues were consolidated nothing links to it any more — a Closer could
+              reach it only by typing the URL. Shown on the stages where closing is the actual next
+              step, so it never appears on a lead that isn't ready for it. */}
+          {canClose && (
+            <Button
+              variant="accent"
+              onClick={() => navigate(`/close-queue/${id}`)}
+              leftIcon={<Icon name="briefcase" size={16} />}
+              title={LEADS_MSG.openClosingHint}
+            >
+              {lead.stage === "Verified" ? LEADS_MSG.openClosingApp : LEADS_MSG.continueClosingApp}
+            </Button>
           )}
           {lead.jornayaVerified ? (
             <Button

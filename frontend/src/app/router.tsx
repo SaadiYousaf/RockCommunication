@@ -208,8 +208,11 @@ const router = createBrowserRouter([
           },
 
           // Intake pipeline — role-gated (Admin/SuperAdmin bypass in ProtectedRoute)
+          // Add Lead serves both roles: a Fronter starts the pipeline, a Closer adds a prospect
+          // they have already spoken to. The sidebar has always offered it to both, so gating the
+          // route to Fronter alone sent every Closer who clicked it to a 403.
           {
-            element: <ProtectedRoute roles={["Fronter"]} />,
+            element: <ProtectedRoute roles={["Fronter", "Closer"]} />,
             children: [{ path: "/intake", element: <IntakeFormPage /> }],
           },
           {

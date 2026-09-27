@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Xunit;
 
 namespace CRM.Api.IntegrationTests;
@@ -95,6 +96,73 @@ public class CloserAddsLeadTests : IClassFixture<CrmWebAppFactory>
         var created = await fronter.PostJsonAsync("/api/intake/leads", Lead("Frontedlead"));
         Assert.NotEqual(Guid.Empty, created.GetProperty("leadId").GetGuid());
     }
+
+    /// <summary>
+    /// The whole job, end to end: a Closer adds their own lead, takes the application, and the sale
+    /// is recorded.
+    ///
+    /// Worth doing as one test rather than three, because what broke in production was not any
+    /// single step — each worked — but the fact that nothing in the UI joined them up. The closing
+    /// screen was reachable only from a queue page the sidebar no longer pointed at, so a Closer
+    /// could add a lead and then had nowhere to take it.
+    /// </summary>
+    [Fact]
+    public async Task A_closer_can_take_their_own_lead_all_the_way_to_a_recorded_sale()
+    {
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Marisol"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+
+        var result = await closer.PostJsonAsync($"/api/intake/close/{leadId}", new
+        {
+            status = "CompleteAndSold",
+            application = Application(),
+        });
+
+        Assert.Equal("CompleteAndSold", result.GetProperty("status").GetString());
+
+        // A sale actually exists on the other side of it — the point of the whole exercise.
+        Assert.True(result.TryGetProperty("saleId", out var saleId) && saleId.ValueKind != JsonValueKind.Null,
+            "closing a lead as sold should record a sale");
+    }
+
+    /// <summary>A complete application. Every field is required; the closer types them on the call.</summary>
+    private static object Application() => new
+    {
+        healthConditions = "None disclosed",
+        gender = "Female",
+        age = 64,
+        smokerStatus = "Non-smoker",
+        name = "Marisol Testcase",
+        dateOfBirth = new DateTime(1962, 4, 11),
+        address = "27 S 750 E, Phoenix AZ 85004",
+        carrier = "Mutual of Omaha",
+        plan = "Whole Life",
+        faceAmount = 10000m,
+        premium = 40m,
+        email = $"marisol-{Guid.NewGuid():N}@example.com",
+        beneficiary = "Ana Testcase (daughter)",
+        secondBeneficiary = (string?)null,
+        initialDraftDate = DateTime.UtcNow.AddDays(14),
+        futureDraftDate = (DateTime?)null,
+        phoneNumber = $"555{Random.Shared.Next(1000000, 9999999)}",
+        altPhone = (string?)null,
+        primaryDoctor = "Dr Hayden",
+        social = "000-00-0000",
+        bornIn = "Arizona",
+        driversLicense = "D1234567",
+        height = "5'4\"",
+        weight = "150",
+        accountType = "Checking",
+        bankName = "Wells Fargo",
+        accountNumber = "000123456789",
+        routingNumber = "121000248",
+        // The bank check flags this account (code 198), which a closer resolves on the call by
+        // recording why it is safe to proceed. Supplying it is part of the real flow, not a
+        // shortcut around it.
+        banking198Reason = "Customer confirmed the account on the recorded line.",
+    };
 
     /// <summary>Each capture path stays closed to the other role's holder.</summary>
     [Fact]
