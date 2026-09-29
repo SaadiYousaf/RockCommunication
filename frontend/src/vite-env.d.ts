@@ -12,3 +12,6 @@ interface Window {
   /** Safari legacy prefix for AudioContext. */
   webkitAudioContext?: typeof AudioContext;
 }
+
+/** Build id injected by vite.config.ts — the commit SHA in CI, "dev" locally. */
+declare const __BUILD_ID__: string;

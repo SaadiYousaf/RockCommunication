@@ -96,3 +96,12 @@ export const LOAD_ERROR = {
   serverBody: "The server had a problem. Please try again in a moment.",
   genericBody: "Please try again.",
 } as const;
+
+/**
+ * App-wide notices that aren't tied to one feature.
+ */
+export const APP_MSG = {
+  newVersionTitle: "An update is ready",
+  newVersionBody: "You're using an older version of the app. Reload to pick up the latest fixes.",
+  newVersionAction: "Reload",
+} as const;

@@ -11,6 +11,11 @@ const buildId = (process.env.VITE_BUILD_ID || 'dev').slice(0, 12)
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Exposed to the app so it can tell whether the build it is RUNNING matches the build the server
+  // is SERVING. See shared/hooks/useBuildVersion.ts.
+  define: {
+    __BUILD_ID__: JSON.stringify(buildId),
+  },
   build: {
     rollupOptions: {
       output: {

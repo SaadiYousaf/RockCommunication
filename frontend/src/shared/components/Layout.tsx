@@ -21,6 +21,8 @@ import { usePersistentState } from "../hooks/usePersistentState";
 
 import { NAV, type NavNode } from "../constants/nav";
 import { BRAND } from "../constants/brand";
+import { BUILD_ID } from "../hooks/useBuildVersion";
+import { NewVersionBanner } from "./NewVersionBanner";
 
 interface NavCtx { modules: string[]; roles: string[]; isAdmin: boolean; isSuperAdmin: boolean }
 
@@ -280,6 +282,9 @@ function LayoutInner() {
           {/* pb-28 reserves room for the fixed "Report a bug" button (bottom-5 + h-11) which is
               always on screen. Without it the button sat on top of whatever ends the page — most
               visibly the pagination controls, making Next/Previous unclickable on every list. */}
+          {/* Sits above the page, inside the shell, so it is visible on every route without
+              covering the work. A stale tab is an app-wide condition, not a per-page one. */}
+          <NewVersionBanner />
           <div className="max-w-[1920px] 2xl:max-w-[2200px] mx-auto p-4 sm:p-6 lg:p-8 xl:p-10 2xl:p-12 pb-28 sm:pb-28 lg:pb-28 xl:pb-28 2xl:pb-28">
             <Breadcrumbs />
             {/* Per-page error boundary keeps a single crashing page from taking
@@ -395,7 +400,14 @@ function SidebarContent({
             <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-emerald-700">
               Production
             </span>
-            <span className="ml-auto text-[10px] text-ink-500 font-mono tabular-nums">v1.0</span>
+            {/* The running build, not a marketing version. When someone reports a bug this is the
+                first question worth answering: are they even on the build that has the fix? */}
+            <span
+              className="ml-auto text-[10px] text-ink-500 font-mono tabular-nums"
+              title={`Build ${BUILD_ID}`}
+            >
+              {BUILD_ID === "dev" ? "dev" : BUILD_ID.slice(0, 7)}
+            </span>
           </div>
         )}
         {/* Collapse toggle is desktop-only; the mobile drawer closes via backdrop / X. */}
