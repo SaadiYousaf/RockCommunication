@@ -19,7 +19,7 @@ public class UserAdminService : IUserAdminService
     // internal role codes — the affected user is told their access changed, not the raw role names.
     private const string AccessChangedTitle = "Your access was updated";
     private const string AccessChangedBody =
-        "An administrator updated your access. Sign out and back in for the changes to take effect.";
+        "An administrator updated your access. You'll be asked to sign in again shortly, and your new access takes effect straight away.";
 
     private const string DeactivatedTitle = "Your account was deactivated";
     private const string DeactivatedBody =
@@ -193,10 +193,25 @@ public class UserAdminService : IUserAdminService
             if (!add.Succeeded) throw new ConflictException(string.Join("; ", add.Errors.Select(e => e.Description)));
         }
 
-        // Notify the affected user their access changed — required whenever an action touches another
-        // user. Only when something actually changed, so a no-op save stays silent.
         if (toRemove.Count > 0 || toAdd.Count > 0)
+        {
+            // Make the change take effect instead of merely asking for it.
+            //
+            // Roles live in the access token's claims, and the DB write above does not touch a token
+            // already in someone's browser. Without this the change was advisory: the notice said
+            // "sign out and back in", and until they did, the API kept authorising them as whatever
+            // they used to be. An agent promoted to Closer went on being refused by every closing
+            // endpoint, and one demoted from a role kept its access — the more serious direction.
+            //
+            // Revoking the refresh tokens ends that: their next refresh fails, they sign in again,
+            // and the new session carries the roles they actually have.
+            await _jwt.RevokeAllForUserAsync(user.Id, ct);
+            _activeUsers.Invalidate(user.Id);
+
+            // Notify the affected user their access changed — required whenever an action touches
+            // another user. Only when something actually changed, so a no-op save stays silent.
             await NotifyAccessChangedAsync(user, ct);
+        }
 
         var assigned = await _users.GetRolesAsync(user);
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId, assigned.ToList(), Array.Empty<string>());

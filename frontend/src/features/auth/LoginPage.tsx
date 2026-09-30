@@ -2,12 +2,26 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { AUTH_MSG, isUnavailableAccount } from "./messages";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { markSessionRecovered, useLoginMutation, useVerify2FaMutation } from "../../shared/api/baseApi";
 import { setAuth } from "../../app/store";
 import { Button, Icon, Input, useToast } from "../../shared/ui";
 import { BrandLogo } from "../../shared/components/BrandLogo";
 import { BRAND } from "../../shared/constants/brand";
+
+/**
+ * Enter the app with a real page load rather than a client-side navigation.
+ *
+ * Signing in is the one moment in a working day when a full load costs nothing — the app is about
+ * to render from scratch anyway — and it is the only reliable point at which a tab that has been
+ * open for days picks up a newer build. Client-side routing never re-fetches index.html, so a stale
+ * tab that merely signed out and back in would keep running the same old code.
+ *
+ * `replace` keeps the login page out of the back-button history.
+ */
+function enterApp(path: string): void {
+  window.location.replace(path);
+}
 
 export function LoginPage() {
   const [userNameOrEmail, setU] = useState("");
@@ -22,7 +36,6 @@ export function LoginPage() {
   const [login, { isLoading: loggingIn }] = useLoginMutation();
   const [verify2fa, { isLoading: verifying }] = useVerify2FaMutation();
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const toast = useToast();
 
   async function handleLogin(e: React.FormEvent) {
@@ -38,10 +51,10 @@ export function LoginPage() {
         dispatch(setAuth({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user }));
         if (result.user.mustChangePassword) {
           toast.info("Set your password", "You're using a temporary password — pick a new one to continue.");
-          navigate("/change-password");
+          enterApp("/change-password");
         } else {
           toast.success("Welcome back", `Signed in as ${result.user.userName}`);
-          navigate("/dashboard");
+          enterApp("/dashboard");
         }
       }
     } catch (err: unknown) {
@@ -69,10 +82,10 @@ export function LoginPage() {
         markSessionRecovered();
         dispatch(setAuth({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user }));
         if (result.user.mustChangePassword) {
-          navigate("/change-password");
+          enterApp("/change-password");
         } else {
           toast.success("Verified", "Two-factor authentication successful.");
-          navigate("/dashboard");
+          enterApp("/dashboard");
         }
       }
     } catch (err: unknown) {
