@@ -42,10 +42,18 @@ function nextActionFor(stage: WorkflowStage, owned: boolean): string {
 }
 
 /**
- * Stages at which closing is the real next step. Before Verified the lead has not been through
- * verification; after Closed the sale is already recorded and the work has moved to validation.
+ * The one stage at which a lead can still BE closed. The server enforces the same thing — submitting
+ * an application on anything else is refused — so offering it anywhere wider would be a button that
+ * fills in a whole form and then fails.
  */
-const CLOSEABLE_STAGES: WorkflowStage[] = ["Verified", "JrClosed"];
+const CLOSING_STAGE: WorkflowStage = "Verified";
+
+/**
+ * Stages where the closing application already exists and is worth reading back: the policy, the
+ * carrier, the premium, the draft dates. A closer asked where this had gone on a sold lead — the
+ * record was there the whole time, with nothing linking to it.
+ */
+const POLICY_STAGES: WorkflowStage[] = ["JrClosed", "Closed", "Validated", "Funded"];
 
 export function LeadDetailPage() {
   const { id = "" } = useParams();
@@ -132,10 +140,10 @@ export function LeadDetailPage() {
   // Exactly the roles the closing endpoints accept — Closer, plus Admin/SuperAdmin who routinely
   // work a lead through on someone's behalf. Deliberately NOT JrCloser: the API refuses them, and
   // offering a button that 403s is how this page came to have a dead end in the first place.
-  const canClose =
-    !!lead &&
-    CLOSEABLE_STAGES.includes(lead.stage as WorkflowStage) &&
-    myRoles.some((r) => ["Closer", "Admin", "SuperAdmin"].includes(r));
+  const closingRole = myRoles.some((r) => ["Closer", "Admin", "SuperAdmin"].includes(r));
+  const stage = lead?.stage as WorkflowStage | undefined;
+  const canClose = !!lead && closingRole && stage === CLOSING_STAGE;
+  const canViewPolicy = !!lead && closingRole && !!stage && POLICY_STAGES.includes(stage);
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {
@@ -322,14 +330,14 @@ export function LeadDetailPage() {
               and since the queues were consolidated nothing links to it any more — a Closer could
               reach it only by typing the URL. Shown on the stages where closing is the actual next
               step, so it never appears on a lead that isn't ready for it. */}
-          {canClose && (
+          {(canClose || canViewPolicy) && (
             <Button
-              variant="accent"
+              variant={canClose ? "accent" : "secondary"}
               onClick={() => navigate(`/close-queue/${id}`)}
-              leftIcon={<Icon name="briefcase" size={16} />}
-              title={LEADS_MSG.openClosingHint}
+              leftIcon={<Icon name={canClose ? "briefcase" : "doc"} size={16} />}
+              title={canClose ? LEADS_MSG.openClosingHint : LEADS_MSG.viewPolicyHint}
             >
-              {lead.stage === "Verified" ? LEADS_MSG.openClosingApp : LEADS_MSG.continueClosingApp}
+              {canClose ? LEADS_MSG.openClosingApp : LEADS_MSG.viewPolicy}
             </Button>
           )}
           {lead.jornayaVerified ? (

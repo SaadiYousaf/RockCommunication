@@ -8,6 +8,7 @@ import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, Icon, InfoHint, Input, PageHeader, Select, Skeleton, Textarea, useToast,
 } from "../../shared/ui";
 import { INTAKE_MSG } from "./messages";
+import { stageLabel } from "../../shared/constants/leadStage";
 
 
 const blank = {
@@ -100,13 +101,28 @@ export function ClosingApplicationPage() {
 
   const sold = status === "CompleteAndSold";
 
+  // A lead can only be closed from Verified — the server refuses an application on anything else.
+  // Past that, this screen is the RECORD of what was sold, not a form: showing an editable one with
+  // a live Submit button would invite a closer to fill it in and be rejected at the end.
+  const locked = data.stage !== "Verified";
+
   return (
     <>
       <PageHeader
         eyebrow="Closer"
-        title={`Closing — ${data.firstName} ${data.lastName}`}
-        description="Complete the application. All fields are typed (no paste). 'Complete and Sold' validates banking via Lyons and creates the sale."
+        title={locked
+          ? `Policy — ${data.firstName} ${data.lastName}`
+          : `Closing — ${data.firstName} ${data.lastName}`}
+        description={locked ? INTAKE_MSG.policyReadOnlyDescription : INTAKE_MSG.closingDescription}
       />
+      {locked && (
+        <Card className="max-w-4xl mb-4" accent="brand">
+          <CardBody className="flex items-start gap-3 py-3">
+            <Icon name="info" size={16} className="mt-0.5 shrink-0 text-brand-600" />
+            <p className="text-sm text-ink-700">{INTAKE_MSG.policyLockedReason(stageLabel(data.stage))}</p>
+          </CardBody>
+        </Card>
+      )}
       {/* Read-only intake context captured by the fronter, so the closer has the full picture. */}
       <Card className="max-w-4xl mb-4">
         <CardHeader title="Lead info (from intake)" />
@@ -128,7 +144,10 @@ export function ClosingApplicationPage() {
           </div>
         </CardBody>
       </Card>
+      {/* `disabled` on a fieldset cascades to every control inside it, so the record cannot be
+          edited and the browser skips it for submission — no per-field prop to forget. */}
       <form onSubmit={onSubmit} className="space-y-4 max-w-4xl">
+       <fieldset disabled={locked} className={locked ? "opacity-95" : undefined}>
         <Card>
           <CardHeader title={
               <span className="inline-flex items-center gap-1">
@@ -243,11 +262,22 @@ export function ClosingApplicationPage() {
             placeholder="Why proceed on a flagged account?" value={f.banking198Reason} onChange={set("banking198Reason")} />
         </Section>
 
+       </fieldset>
+
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/close-queue")}>Cancel</Button>
-          <Button type="submit" loading={saving} leftIcon={<Icon name="check" size={16} />}>
-            {sold ? "Complete & create sale" : "Submit"}
-          </Button>
+          {locked ? (
+            // Back to the lead, which is where they came from now that queues are consolidated.
+            <Button type="button" variant="outline" onClick={() => navigate(`/leads/${data.leadId}`)}>
+              {INTAKE_MSG.backToLead}
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={() => navigate(`/leads/${data.leadId}`)}>Cancel</Button>
+              <Button type="submit" loading={saving} leftIcon={<Icon name="check" size={16} />}>
+                {sold ? "Complete & create sale" : "Submit"}
+              </Button>
+            </>
+          )}
         </div>
       </form>
     </>

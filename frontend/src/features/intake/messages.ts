@@ -4,6 +4,13 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  closingDescription:
+    "Complete the application. All fields are typed (no paste). 'Complete and Sold' validates banking via Lyons and creates the sale.",
+  policyReadOnlyDescription: "The application and policy recorded for this lead.",
+  policyLockedReason: (stage: string) =>
+    `This lead has already been closed and is now ${stage}, so the application is a record and can't be edited. Ask an administrator if something needs correcting.`,
+  backToLead: "Back to lead",
+
   // ---- The Add Lead form, which serves two different jobs ----
   // A Fronter is starting the pipeline: their lead goes on to a Verifier. A Closer adding their own
   // lead has already done that conversation, so it lands in their own work instead. Same form, and

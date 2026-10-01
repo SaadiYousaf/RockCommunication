@@ -191,4 +191,7 @@ export const LEADS_MSG = {
   openClosingApp: "Close this lead",
   openClosingHint: "Take the application and record the sale.",
   continueClosingApp: "Continue closing",
+  // Once a lead is closed the application becomes a record to read, not a form to fill.
+  viewPolicy: "View policy",
+  viewPolicyHint: "See the application and policy details recorded for this lead.",
 } as const;
