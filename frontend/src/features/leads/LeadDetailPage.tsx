@@ -19,7 +19,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import { Can, Perm, usePermission } from "../../shared/auth/permissions";
-import { Avatar, Badge, type BadgeTone, Button, Card, CardBody, EmptyState, Icon, InfoHint, Select, Skeleton, useSecureEntry, useToast } from "../../shared/ui";
+import { Avatar, Badge, type BadgeTone, Button, Card, CardBody, EmptyState, Icon, InfoHint, Modal, Select, Skeleton, Textarea, useSecureEntry, useToast } from "../../shared/ui";
 import { getErrorDetail } from "../../shared/api/apiError";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import {
@@ -30,6 +30,7 @@ import { formatPhone } from "../../shared/lib/format";
 import { LEADS_MSG } from "./messages";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
+import { useDeleteLeadMutation } from "../../shared/api/baseApi";
 
 const DISPOSITIONS: LeadDisposition[] = ["None","Interested","NotInterested","CallBack","DoNotCall","Sold","NotQualified","Voicemail","NoAnswer","WrongNumber"];
 // The linear pipeline shown in the stepper (off-track stages Followup/Winback/Lost sit outside it).
@@ -55,10 +56,19 @@ const CLOSING_STAGE: WorkflowStage = "Verified";
  */
 const POLICY_STAGES: WorkflowStage[] = ["JrClosed", "Closed", "Validated", "Funded"];
 
+/**
+ * Stages an administrator may remove a lead from. Mirrors the server's own list — this is for
+ * retiring finished work, not for clearing leads nobody wants to call.
+ */
+const REMOVABLE_STAGES: WorkflowStage[] = ["JrClosed", "Closed", "Validated", "Funded"];
+
 export function LeadDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const myRoles = useSelector((s: RootState) => s.auth.user?.roles ?? []);
+  const [deleteLead, { isLoading: deleting }] = useDeleteLeadMutation();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
   const { data: lead, refetch: refetchLead, isLoading: leadLoading, isError: leadError } = useLeadDetailQuery(id);
   const { data: timeline } = useLeadTimelineQuery(id);
   const { data: scripts } = useListScriptsQuery({ stage: lead?.stage });
@@ -141,9 +151,11 @@ export function LeadDetailPage() {
   // work a lead through on someone's behalf. Deliberately NOT JrCloser: the API refuses them, and
   // offering a button that 403s is how this page came to have a dead end in the first place.
   const closingRole = myRoles.some((r) => ["Closer", "Admin", "SuperAdmin"].includes(r));
+  const isAdmin = myRoles.some((r) => ["Admin", "SuperAdmin"].includes(r));
   const stage = lead?.stage as WorkflowStage | undefined;
   const canClose = !!lead && closingRole && stage === CLOSING_STAGE;
   const canViewPolicy = !!lead && closingRole && !!stage && POLICY_STAGES.includes(stage);
+  const canDelete = !!lead && isAdmin && !!stage && REMOVABLE_STAGES.includes(stage);
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {
@@ -330,6 +342,16 @@ export function LeadDetailPage() {
               and since the queues were consolidated nothing links to it any more — a Closer could
               reach it only by typing the URL. Shown on the stages where closing is the actual next
               step, so it never appears on a lead that isn't ready for it. */}
+          {canDelete && (
+            <Button
+              variant="ghost"
+              className="text-rose-600 hover:bg-rose-50"
+              leftIcon={<Icon name="trash" size={16} />}
+              onClick={() => { setDeleteReason(""); setConfirmingDelete(true); }}
+            >
+              {LEADS_MSG.deleteLead}
+            </Button>
+          )}
           {(canClose || canViewPolicy) && (
             <Button
               variant={canClose ? "accent" : "secondary"}
@@ -646,6 +668,61 @@ export function LeadDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Deleting a sold lead withdraws a sale and someone's commission, so the dialog says that
+          outright rather than asking a generic "are you sure?". */}
+      <Modal
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        title={LEADS_MSG.deleteLeadTitle(`${lead.firstName} ${lead.lastName}`.trim())}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              loading={deleting}
+              disabled={deleteReason.trim().length < 5 || deleting}
+              title={deleteReason.trim().length < 5 ? LEADS_MSG.deleteLeadReasonTooShort : undefined}
+              onClick={async () => {
+                try {
+                  await deleteLead({ id, reason: deleteReason.trim() }).unwrap();
+                  toast.success(
+                    LEADS_MSG.deleteLeadDone,
+                    LEADS_MSG.deleteLeadDoneDesc(`${lead.firstName} ${lead.lastName}`.trim()),
+                  );
+                  setConfirmingDelete(false);
+                  navigate("/leads");
+                } catch (err: unknown) {
+                  toast.error(LEADS_MSG.deleteLeadFailed, getErrorDetail(err) ?? LEADS_MSG.retry);
+                }
+              }}
+            >
+              {LEADS_MSG.deleteLeadConfirm}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {/* Only shown when there is actually money attached, so the stronger warning keeps its
+              meaning instead of being wallpaper on every deletion. */}
+          {POLICY_STAGES.includes(lead.stage as WorkflowStage) && (
+            <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-amber-600" />
+              <span>{LEADS_MSG.deleteLeadWarningSold}</span>
+            </div>
+          )}
+          <p className="text-sm text-ink-600">{LEADS_MSG.deleteLeadWarning}</p>
+          <Textarea
+            label={LEADS_MSG.deleteLeadReasonLabel}
+            hint={LEADS_MSG.deleteLeadReasonHint}
+            placeholder={LEADS_MSG.deleteLeadReasonPlaceholder}
+            rows={3}
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            autoFocus
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -19,7 +19,7 @@ const blank = {
   accountNumber: "", routingNumber: "", banking198Reason: "",
 };
 
-/** Closer's closing application. All fields typed (no paste). "Complete and Sold" creates the sale. */
+/** Closer's closing application. Paste in is allowed; copying out is blocked. "Complete and Sold" creates the sale. */
 export function ClosingApplicationPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -157,7 +157,7 @@ export function ClosingApplicationPage() {
                 </InfoHint>
               </span>
             }
-            action={<Badge tone="warning" variant="soft" dot>Typing only</Badge>} />
+            action={<Badge tone="warning" variant="soft" dot>{INTAKE_MSG.typingOnlyBadge}</Badge>} />
           <CardBody>
             <Select label="Status (select at least one)" required value={status} onChange={(e) => setStatus(e.target.value as CloserStatusValue)} containerClassName="max-w-sm">
               <option value="">Select…</option>

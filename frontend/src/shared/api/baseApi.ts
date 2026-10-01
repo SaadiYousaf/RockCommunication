@@ -1313,6 +1313,13 @@ export const baseApi = createApi({
       invalidatesTags: ["Feed"],
     }),
 
+    // Removing a closed or sold lead also withdraws its sale and commission, so the lists that
+    // count money have to be re-read, not just the lead lists.
+    deleteLead: b.mutation<void, { id: string; reason: string }>({
+      query: ({ id, reason }) => ({ url: `/api/leads/${id}`, method: "DELETE", body: { reason } }),
+      invalidatesTags: ["Leads", "Lead", "Sales", "Commissions", "Metrics", "Available", "QueueCounts"],
+    }),
+
     // ── Learning Academy ───────────────────────────────────────────────────────
     // One "Academy" tag covers courses, progress and certificates: finishing a lesson moves all
     // three at once, so splitting them would only mean remembering to invalidate three tags.
@@ -1735,4 +1742,5 @@ export const {
   useCompleteAcademyLessonMutation, useSubmitAcademyQuizMutation,
   useAcademyProgressQuery, useAcademyCertificatesQuery,
   useChangeUserEmailMutation,
+  useDeleteLeadMutation,
 } = baseApi;

@@ -156,7 +156,7 @@ export function CloseQueuePage() {
         open={open}
         onClose={() => setOpen(false)}
         title="Get Yourself Protected — Add Lead"
-        description="Capture the prospect's details. All fields are required and must be typed (no paste). The lead lands in your closer queue."
+        description="Capture the prospect's details. All fields are required. The lead lands in your closer queue."
         size="lg"
       >
         <IntakeLeadForm onSubmit={onAdd} isLoading={adding} submitLabel="Add to closer queue" />

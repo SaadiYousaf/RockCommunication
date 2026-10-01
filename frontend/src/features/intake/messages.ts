@@ -5,7 +5,7 @@
  */
 export const INTAKE_MSG = {
   closingDescription:
-    "Complete the application. All fields are typed (no paste). 'Complete and Sold' validates banking via Lyons and creates the sale.",
+    "Complete the application. 'Complete and Sold' validates banking via Lyons and creates the sale.",
   policyReadOnlyDescription: "The application and policy recorded for this lead.",
   policyLockedReason: (stage: string) =>
     `This lead has already been closed and is now ${stage}, so the application is a record and can't be edited. Ask an administrator if something needs correcting.`,
@@ -18,7 +18,7 @@ export const INTAKE_MSG = {
   addLeadFronterEyebrow: "Fronter intake",
   addLeadFronterTitle: "Get Yourself Protected — Lead Intake",
   addLeadFronterDescription:
-    "Capture the prospect's Jornaya details. All fields are required and must be typed (no paste).",
+    "Capture the prospect's Jornaya details. All fields are required.",
   addLeadFronterSubmit: "Submit to verifier",
   addLeadFronterSubtitle: "Final-expense intake",
 
@@ -30,9 +30,9 @@ export const INTAKE_MSG = {
   addLeadCloserSubtitle: "Goes straight to you",
 
   addLeadTitle: "New lead",
-  typingOnlyBadge: "Typing only",
+  typingOnlyBadge: "No copying",
   typingOnlyHint:
-    "Every field must be typed by the agent — copy/paste is blocked. This keeps the lead captured live and TCPA-compliant, and stops recycled or pre-filled data.",
+    "These details can't be copied out of the CRM — they include bank and identity information. You can still paste a value in.",
 
   // Form group headings — they name the QUESTION each block answers, not the database tables the
   // fields come from.

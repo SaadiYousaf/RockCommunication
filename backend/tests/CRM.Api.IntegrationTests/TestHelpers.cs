@@ -84,6 +84,16 @@ internal static class TestHelpers
             : JsonDocument.Parse(raw).RootElement.Clone();
     }
 
+    /// <summary>DELETE with a body — HttpClient has no built-in overload for it.</summary>
+    public static Task<HttpResponseMessage> DeleteAsJsonAsync(this HttpClient client, string url, object body)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Delete, url)
+        {
+            Content = JsonContent.Create(body),
+        };
+        return client.SendAsync(req);
+    }
+
     public static async Task<JsonElement> GetJsonAsync(this HttpClient client, string url)
     {
         var resp = await client.GetAsync(url);

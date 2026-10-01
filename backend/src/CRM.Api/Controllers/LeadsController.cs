@@ -5,6 +5,7 @@ using CRM.Application.Leads.Commands;
 using CRM.Application.Leads.Dtos;
 using CRM.Application.Leads.Queries;
 using CRM.Application.Ai;
+using CRM.Application.Leads;
 using CRM.Domain.Common;
 using CRM.Domain.Enums;
 using MediatR;
@@ -23,6 +24,23 @@ public class LeadsController : ControllerBase
     public LeadsController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     /// <summary>"Lead troubleshooting" — full diagnostic for why a lead may be stuck.</summary>
+    public record DeleteLeadBody(string Reason);
+
+    /// <summary>
+    /// Remove a closed or sold lead, with a reason recorded against it.
+    ///
+    /// Administrators only, and deliberately not behind leads.manage: this withdraws a sale and the
+    /// commission paid on it, which is a different kind of authority from editing a lead.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<IActionResult> Delete(Guid id, [FromBody] DeleteLeadBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(new DeleteLeadCommand(id, body.Reason), ct);
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}/diagnostics")]
     [HasPermission(Permissions.LeadsRead)]
     public async Task<ActionResult<LeadDiagnosticsDto>> Diagnostics(Guid id, CancellationToken ct)

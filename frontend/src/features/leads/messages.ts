@@ -194,4 +194,20 @@ export const LEADS_MSG = {
   // Once a lead is closed the application becomes a record to read, not a form to fill.
   viewPolicy: "View policy",
   viewPolicyHint: "See the application and policy details recorded for this lead.",
+
+  // ---- Removing a closed or sold lead (admin) ----
+  deleteLead: "Delete lead",
+  deleteLeadTitle: (name: string) => `Delete ${name}?`,
+  deleteLeadWarningSold:
+    "This lead has a sale recorded against it. Deleting it also withdraws that sale and any commission paid on it, so it stops counting towards revenue and payroll.",
+  deleteLeadWarning:
+    "The lead is removed from every list, queue and report. It isn't destroyed — an administrator can still find it in the audit log with the reason below.",
+  deleteLeadReasonLabel: "Why is this being deleted?",
+  deleteLeadReasonHint: "Recorded against the lead and shown in the audit log. The closer who worked it is notified.",
+  deleteLeadReasonPlaceholder: "e.g. Duplicate of an earlier policy for the same customer",
+  deleteLeadReasonTooShort: "Give a little more detail first",
+  deleteLeadConfirm: "Delete lead",
+  deleteLeadDone: "Lead deleted",
+  deleteLeadDoneDesc: (name: string) => `${name} has been removed and the people who worked it were notified.`,
+  deleteLeadFailed: "Couldn't delete this lead",
 } as const;

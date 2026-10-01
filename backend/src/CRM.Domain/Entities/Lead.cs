@@ -31,6 +31,20 @@ public class Lead : CallCenterEntity
     /// <summary>Username of the app user who ran the Jornaya verification (audit trail).</summary>
     public string? JornayaVerifiedBy { get; set; }
 
+    // ── Deletion provenance ──────────────────────────────────────────────────
+    // A soft delete that records nothing is indistinguishable from a bug: the row vanishes from
+    // every screen and nobody can say who removed it or why. A sold lead carries a sale and someone's
+    // commission, so "where did it go?" is a question that WILL be asked. These answer it.
+    //
+    // The name is stored, not just the id, so the record still reads correctly after a rename or
+    // after that administrator's own account is gone.
+    public DateTime? DeletedAt { get; set; }
+    public Guid? DeletedByUserId { get; set; }
+    public string? DeletedByName { get; set; }
+
+    /// <summary>Why it was removed, in the administrator's own words. Required — see DeleteLead.</summary>
+    public string? DeletionReason { get; set; }
+
     public Guid? AssignedUserId { get; set; }
     public Guid? TeamId { get; set; }
     public Guid? VerticalId { get; set; }
