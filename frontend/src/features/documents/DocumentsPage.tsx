@@ -206,10 +206,17 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         if (doc.kind === "spreadsheet") {
           // Lazy-import xlsx so it doesn't bloat the main bundle (mirrors mammoth below).
           const XLSX = await import("xlsx");
-          const wb = XLSX.read(buf, { type: "array" });
+          // `cellDates` keeps real dates as dates — without it every date in the sheet renders as
+          // the raw serial number (45321), which reads as corrupted data to anyone looking at it.
+          const wb = XLSX.read(buf, { type: "array", cellDates: true });
           rendered = wb.SheetNames.map((sn) => {
             const sheetHtml = XLSX.utils.sheet_to_html(wb.Sheets[sn]);
-            return `<h3 class="doc-sheet-title">${escapeHtml(sn)}</h3>${sheetHtml}`;
+            // Each sheet gets its own horizontal scroller: a states-by-carrier grid is far wider
+            // than the panel, and without this the whole page scrolls sideways instead.
+            const title = wb.SheetNames.length > 1
+              ? `<h3 class="doc-sheet-title">${escapeHtml(sn)}</h3>`
+              : "";
+            return `${title}<div class="doc-sheet">${sheetHtml}</div>`;
           }).join("");
         } else {
           // Lazy-import mammoth so it doesn't bloat the main bundle.
@@ -301,6 +308,10 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
             {html && (
               <div
                 // Rendered, inert HTML. Selection/copy already blocked at the container.
+                // `doc-rendered` carries the typography and table styling — without it a
+                // spreadsheet arrives as a bare <table> with no borders or padding, which is
+                // what made a perfectly well-converted sheet look broken.
+                className="doc-rendered"
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             )}

@@ -140,6 +140,8 @@ export function ChatPage() {
   activeRoomRef.current = activeRoom;
   const refetchUnreadRef = useRef(refetchUnread);
   refetchUnreadRef.current = refetchUnread;
+  const refetchMessagesRef = useRef(refetch);
+  refetchMessagesRef.current = refetch;
   const markReadRef = useRef(markRead);
   markReadRef.current = markRead;
   const lastActiveMarkReadRef = useRef(0);
@@ -150,11 +152,17 @@ export function ChatPage() {
     const conn = new HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/chat`, { accessTokenFactory: () => tokenRef.current ?? "" })
       .withAutomaticReconnect({
-        nextRetryDelayInMilliseconds: (ctx) => {
-          if (!tokenRef.current) return null;
-          if (ctx.previousRetryCount >= 4) return null;
-          return Math.min(1000 * 2 ** ctx.previousRetryCount, 15_000);
-        },
+        // Keep trying for as long as the user is signed in.
+        //
+        // This used to give up after four attempts — roughly half a minute — and returning null
+        // ends reconnection PERMANENTLY, with nothing short of a page reload to bring it back.
+        // Every API deploy restarts the server, and a call centre's wifi drops all day, so chats
+        // simply stopped arriving and stayed stopped. That is what "chats don't update" was.
+        //
+        // Backoff is capped at 30s, so a long outage costs two requests a minute per client
+        // rather than a reconnect storm.
+        nextRetryDelayInMilliseconds: (ctx) =>
+          tokenRef.current ? Math.min(1000 * 2 ** Math.min(ctx.previousRetryCount, 5), 30_000) : null,
       })
       .build();
 
@@ -198,15 +206,45 @@ export function ChatPage() {
       setOverrides((prev) => ({ ...prev, [e.messageId]: { ...prev[e.messageId], deleted: true } }));
     });
     conn.onreconnecting(() => setConnectionState("connecting"));
-    conn.onreconnected(() => setConnectionState("connected"));
+    conn.onreconnected(() => {
+      setConnectionState("connected");
+      // Messages sent while we were disconnected were pushed to a connection that no longer
+      // existed, so they are simply absent from the view. Re-read the room to fill the gap —
+      // reconnecting without this leaves a silent hole in the conversation.
+      refetchMessagesRef.current();
+      refetchUnreadRef.current();
+    });
     conn.onclose(() => setConnectionState("disconnected"));
 
-    setConnectionState("connecting");
-    conn.start()
-      .then(() => { connRef.current = conn; setConnectionState("connected"); })
-      .catch(() => setConnectionState("disconnected"));
+    // Automatic reconnect only covers a connection that was established at least once. If the very
+    // first attempt fails — which is exactly what happens to every open tab during a deploy — there
+    // is no retry at all, so start() has to own that case itself.
+    let cancelled = false;
+    let startTimer: number | undefined;
+    const start = (attempt = 0) => {
+      if (cancelled) return;
+      setConnectionState("connecting");
+      conn.start()
+        .then(() => {
+          if (cancelled) return;
+          connRef.current = conn;
+          setConnectionState("connected");
+          if (attempt > 0) { refetchMessagesRef.current(); refetchUnreadRef.current(); }
+        })
+        .catch(() => {
+          if (cancelled || !tokenRef.current) { setConnectionState("disconnected"); return; }
+          setConnectionState("disconnected");
+          startTimer = window.setTimeout(
+            () => start(attempt + 1),
+            Math.min(1000 * 2 ** Math.min(attempt, 5), 30_000),
+          );
+        });
+    };
+    start();
 
     return () => {
+      cancelled = true;
+      if (startTimer) window.clearTimeout(startTimer);
       connRef.current = null;
       if (conn.state !== HubConnectionState.Disconnected) {
         conn.stop().catch(() => {});
@@ -222,11 +260,17 @@ export function ChatPage() {
     const conn = new HubConnectionBuilder()
       .withUrl(`${API_URL}/hubs/presence`, { accessTokenFactory: () => tokenRef.current ?? "" })
       .withAutomaticReconnect({
-        nextRetryDelayInMilliseconds: (ctx) => {
-          if (!tokenRef.current) return null;
-          if (ctx.previousRetryCount >= 4) return null;
-          return Math.min(1000 * 2 ** ctx.previousRetryCount, 15_000);
-        },
+        // Keep trying for as long as the user is signed in.
+        //
+        // This used to give up after four attempts — roughly half a minute — and returning null
+        // ends reconnection PERMANENTLY, with nothing short of a page reload to bring it back.
+        // Every API deploy restarts the server, and a call centre's wifi drops all day, so chats
+        // simply stopped arriving and stayed stopped. That is what "chats don't update" was.
+        //
+        // Backoff is capped at 30s, so a long outage costs two requests a minute per client
+        // rather than a reconnect storm.
+        nextRetryDelayInMilliseconds: (ctx) =>
+          tokenRef.current ? Math.min(1000 * 2 ** Math.min(ctx.previousRetryCount, 5), 30_000) : null,
       })
       .build();
 

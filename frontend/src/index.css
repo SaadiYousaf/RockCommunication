@@ -257,3 +257,82 @@
   body.printing-academy .academy-print-sheet { display: block; padding: 2rem; }
   @page { margin: 1.5cm; }
 }
+
+/* ── Protected document viewer ───────────────────────────────────────────────
+   Word and spreadsheet files are converted to HTML in the browser (mammoth / xlsx) and injected
+   here. The converters emit structure and no styling at all, and the sanitiser strips <style> on
+   purpose — so without these rules a spreadsheet renders as an unstyled table: no borders, no
+   padding, columns collapsing into each other and long cells wrapping across their neighbours.
+   The file was converting correctly all along; it only looked unreadable. */
+.doc-rendered {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgb(var(--text));
+}
+
+.doc-rendered .doc-sheet-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(var(--text-muted));
+  margin: 1.5rem 0 0.5rem;
+}
+.doc-rendered .doc-sheet-title:first-child { margin-top: 0; }
+
+/* A sheet is usually far wider than the panel. Give each table its own horizontal scroller so the
+   page itself never scrolls sideways and the columns keep their real widths. */
+.doc-rendered .doc-sheet {
+  overflow-x: auto;
+  border: 1px solid rgb(var(--border));
+  border-radius: 0.5rem;
+  background: rgb(var(--surface));
+}
+
+.doc-rendered table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-rendered th,
+.doc-rendered td {
+  border: 1px solid rgb(var(--border));
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+  /* Keep a cell on one line up to a point, then wrap inside its own column rather than pushing
+     the column wider than the screen. */
+  max-width: 22rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* xlsx emits the header as the first row of <tbody>, not <thead>, so target both. */
+.doc-rendered thead th,
+.doc-rendered thead td,
+.doc-rendered tr:first-child td {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgb(var(--surface-muted));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.doc-rendered tbody tr:nth-child(even) td { background: rgb(var(--bg) / 0.5); }
+
+/* Word documents: plain prose, so give it readable rhythm rather than table rules. */
+.doc-rendered p { margin: 0 0 0.75rem; }
+.doc-rendered h1, .doc-rendered h2, .doc-rendered h3 {
+  font-weight: 600;
+  color: rgb(var(--text));
+  margin: 1.25rem 0 0.5rem;
+}
+.doc-rendered h1 { font-size: 1.25rem; }
+.doc-rendered h2 { font-size: 1.1rem; }
+.doc-rendered h3 { font-size: 1rem; }
+.doc-rendered ul, .doc-rendered ol { margin: 0 0 0.75rem 1.25rem; }
+.doc-rendered li { margin-bottom: 0.25rem; }
+.doc-rendered img { max-width: 100%; height: auto; }

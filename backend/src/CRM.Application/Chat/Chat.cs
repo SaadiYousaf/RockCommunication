@@ -1,5 +1,6 @@
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
+using CRM.Application.Common.Notifications;
 using CRM.Domain.Common;
 using CRM.Domain.Entities;
 using FluentValidation;
@@ -174,10 +175,13 @@ public class SendMessageHandler : IRequestHandler<SendMessageCommand, ChatMessag
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IChatBroadcaster _broadcaster;
+    private readonly INotificationDispatcher _notify;
 
-    public SendMessageHandler(IApplicationDbContext db, ICurrentUser user, IChatBroadcaster broadcaster)
+    public SendMessageHandler(
+        IApplicationDbContext db, ICurrentUser user, IChatBroadcaster broadcaster, INotificationDispatcher notify)
     {
         _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _broadcaster = Guard.AgainstNull(broadcaster);
+        _notify = Guard.AgainstNull(notify);
     }
 
     public async Task<ChatMessageDto> Handle(SendMessageCommand request, CancellationToken ct)
@@ -212,7 +216,77 @@ public class SendMessageHandler : IRequestHandler<SendMessageCommand, ChatMessag
         // Push to every connected SignalR client in this room — that's what makes
         // the message appear in real time without the receiver having to refresh.
         await _broadcaster.BroadcastMessageAsync(msg.RoomId, dto, ct);
+
+        await NotifyRoomAsync(msg, ct);
         return dto;
+    }
+
+    /// <summary>
+    /// Raise a notification for the other people in the room.
+    ///
+    /// The broadcast above only reaches clients that have JOINED this room's SignalR group — in
+    /// practice, someone sitting on the chat page with this very room open. Everybody else, on any
+    /// other screen in the CRM, got nothing at all: no bell, no badge, no idea they had been
+    /// messaged until they next happened to open chat. That is what "no notification on new
+    /// messages" meant.
+    ///
+    /// COLLAPSED PER ROOM, deliberately. One notification per message would be unusable — a short
+    /// back-and-forth would bury every other notice the person has. So a room raises a notice only
+    /// while the recipient has no unread one from it; once they read it, the next message raises a
+    /// fresh one.
+    /// </summary>
+    private async Task NotifyRoomAsync(ChatMessage msg, CancellationToken ct)
+    {
+        try
+        {
+            var recipients = await _db.ChatRoomMembers
+                .Where(m => m.RoomId == msg.RoomId && m.UserId != msg.SenderUserId)
+                .Select(m => m.UserId)
+                .ToListAsync(ct);
+            if (recipients.Count == 0) return;
+
+            var room = await _db.ChatRooms.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == msg.RoomId, ct);
+
+            // The sender IS the caller, so their name is already on the request — no lookup.
+            var senderName = _user.UserName ?? "Someone";
+
+            // A direct room is named for its members, which reads oddly from the outside ("New
+            // message in Anas, Laraib"). Name the person instead; for a group, name the room.
+            var title = room is { IsDirect: true } || room is null
+                ? $"New message from {senderName}"
+                : $"New message in {room.Name}";
+
+            var preview = Preview(msg);
+            var url = $"/chat?room={msg.RoomId}";
+
+            var alreadyPending = await _db.Notifications
+                .Where(n => n.Url == url && !n.IsRead && recipients.Contains(n.UserId))
+                .Select(n => n.UserId)
+                .ToListAsync(ct);
+
+            foreach (var userId in recipients.Except(alreadyPending))
+            {
+                await _notify.DispatchAsync(
+                    new NotificationPayload(msg.AgencyId, userId, title, preview, url),
+                    new[] { NotificationChannelType.InApp }, ct);
+            }
+        }
+        catch
+        {
+            // Never let a notification problem fail the send. The message is already saved and
+            // broadcast; losing the bell is far better than losing the message.
+        }
+    }
+
+    /// <summary>A one-line preview. Trimmed, because a notification is a nudge, not the message.</summary>
+    private static string Preview(ChatMessage msg)
+    {
+        if (string.IsNullOrWhiteSpace(msg.Body))
+            return msg.AttachmentName is { Length: > 0 } name ? $"Sent an attachment: {name}" : "Sent an attachment";
+
+        var body = msg.Body.Trim();
+        return body.Length <= 140 ? body : body[..140].TrimEnd() + "…";
     }
 }
 
