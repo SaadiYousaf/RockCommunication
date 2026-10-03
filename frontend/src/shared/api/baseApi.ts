@@ -129,6 +129,12 @@ export function markSessionRecovered() { sessionInvalid = false; }
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery,
+  // Stop polling in a tab nobody is looking at. Eighteen polled queries across the product, times
+  // every agent who leaves the CRM open in a background tab, is a constant load on the API for data
+  // nobody can see. Returning to the tab refetches immediately, so what they come back to is fresh
+  // rather than however stale the last poll left it.
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
   tagTypes: ["Leads", "Lead", "Users", "Me", "Sales", "Commissions", "Callbacks", "Metrics", "Rubrics", "Rooms", "Messages", "Ip", "Verticals", "CommissionConfig", "Session", "WrapUpCodes", "Dnc", "Campaigns", "LeadSources", "Skills", "Scripts", "LiveAgents", "Calls", "Workflows", "WorkflowExecutions", "AiScore", "AiRecs", "Roles", "Modules", "LeadLists", "ImportBatches", "Cadences", "CadenceEnrollments", "Voicemails", "Queues", "Ivr", "KbArticles", "PublicEndpoints", "Wallboard", "Leaderboard", "Agencies", "Permissions", "RolePermissions", "Documents", "Horizontals", "Available", "ClosingApp", "ValidatorQueue", "CallCenters", "Notifications", "QueueCounts", "PortalCredentials", "Employees", "Attendance", "Interviews", "Payroll", "PayrollRuns", "PayrollConfig", "SocialReports", "Meetings", "Profile", "Feed", "Bugs", "Bug", "Retention", "CommissionDesk", "CarrierRules", "Academy"],
   endpoints: (b) => ({
     login: b.mutation<LoginResponse, { userNameOrEmail: string; password: string }>({
@@ -1315,6 +1321,12 @@ export const baseApi = createApi({
 
     // Removing a closed or sold lead also withdraws its sale and commission, so the lists that
     // count money have to be re-read, not just the lead lists.
+    // Calling a colleague by id: the caller never sees their number, which is the point — the
+    // phone number stays on the server.
+    callColleague: b.mutation<{ callId: string; status: string; provider: string }, { userId: string }>({
+      query: (body) => ({ url: "/api/cc/calls/call-colleague", method: "POST", body }),
+      invalidatesTags: ["Calls"],
+    }),
     deleteLead: b.mutation<void, { id: string; reason: string }>({
       query: ({ id, reason }) => ({ url: `/api/leads/${id}`, method: "DELETE", body: { reason } }),
       invalidatesTags: ["Leads", "Lead", "Sales", "Commissions", "Metrics", "Available", "QueueCounts"],
@@ -1742,5 +1754,5 @@ export const {
   useCompleteAcademyLessonMutation, useSubmitAcademyQuizMutation,
   useAcademyProgressQuery, useAcademyCertificatesQuery,
   useChangeUserEmailMutation,
-  useDeleteLeadMutation,
+  useDeleteLeadMutation, useCallColleagueMutation,
 } = baseApi;

@@ -30,6 +30,22 @@ public record GetMyActiveCallQuery() : IRequest<ActiveCallDto?>;
 public record TestDialCommand(string PhoneNumber) : IRequest<TestDialResult>;
 public record TestDialResult(string CallId, string Status, string Provider, IReadOnlyList<string> Warnings);
 
+/// <summary>
+/// Call a colleague, by their user id rather than a number anyone has to know or type.
+///
+/// Separate from <see cref="TestDialCommand"/> on purpose. That one dials a raw number and so has to
+/// run the full DNC/compliance gauntlet, because the number could be anyone's. This dials a known
+/// member of the caller's own agency — an internal call, not an outbound sales call — so the rules
+/// that exist to protect consumers from cold calls do not apply, and applying them anyway would mean
+/// a colleague who happens to appear on a DNC list cannot be reached by their own team.
+/// </summary>
+public record CallColleagueCommand(Guid UserId) : IRequest<TestDialResult>;
+
+public class CallColleagueValidator : AbstractValidator<CallColleagueCommand>
+{
+    public CallColleagueValidator() => RuleFor(x => x.UserId).NotEmpty();
+}
+
 public class StartOutboundCallValidator : AbstractValidator<StartOutboundCallCommand>
 {
     public StartOutboundCallValidator() => RuleFor(x => x.LeadId).NotEmpty();
@@ -44,7 +60,8 @@ public class CallControlHandler :
     IRequestHandler<SendDtmfCommand, Unit>,
     IRequestHandler<SendQuickSmsCommand, Unit>,
     IRequestHandler<GetMyActiveCallQuery, ActiveCallDto?>,
-    IRequestHandler<TestDialCommand, TestDialResult>
+    IRequestHandler<TestDialCommand, TestDialResult>,
+    IRequestHandler<CallColleagueCommand, TestDialResult>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -57,10 +74,13 @@ public class CallControlHandler :
     // For production with multiple API instances behind a load balancer, push to Redis.
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, CallState> _state = new();
 
+    private readonly IIdentityService _identity;
+
     public CallControlHandler(IApplicationDbContext db, ICurrentUser user, IDialerProvider dialer,
-        ISmsProvider sms, IComplianceGuard compliance, IAgentNotifier notifier)
+        ISmsProvider sms, IComplianceGuard compliance, IAgentNotifier notifier, IIdentityService identity)
     {
         _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _dialer = Guard.AgainstNull(dialer); _sms = Guard.AgainstNull(sms); _compliance = Guard.AgainstNull(compliance); _notifier = Guard.AgainstNull(notifier);
+        _identity = Guard.AgainstNull(identity);
     }
 
     public async Task<ActiveCallDto> Handle(StartOutboundCallCommand request, CancellationToken ct)
@@ -113,6 +133,29 @@ public class CallControlHandler :
 
         var dial = await _dialer.DialAsync(_user.UserId!.Value, phone, Guid.Empty, ct);
         return new TestDialResult(dial.CallId, dial.Status, _dialer.Name, compliance.Warnings);
+    }
+
+    public async Task<TestDialResult> Handle(CallColleagueCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        EnsureAgent();
+
+        if (request.UserId == _user.UserId) throw new ConflictException("You can't call yourself.");
+
+        var colleague = await _identity.GetUserAsync(request.UserId, ct)
+            ?? throw new NotFoundException("User", request.UserId);
+
+        // Same-office guard, mirroring the one on starting a direct message. Without it a user id
+        // from another agency would be dialable by anyone who could guess it.
+        if (colleague.AgencyId != _user.AgencyId)
+            throw new ForbiddenAccessException("You can only call colleagues in your own office.");
+
+        var phone = (await _identity.GetUserPhoneAsync(request.UserId, ct) ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(phone))
+            throw new ConflictException($"{colleague.UserName} hasn't added a phone number to their profile yet.");
+
+        var dial = await _dialer.DialAsync(_user.UserId!.Value, phone, Guid.Empty, ct);
+        return new TestDialResult(dial.CallId, dial.Status, _dialer.Name, Array.Empty<string>());
     }
 
     public async Task<ActiveCallDto> Handle(AnswerCallCommand request, CancellationToken ct)

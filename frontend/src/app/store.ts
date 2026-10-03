@@ -1,3 +1,4 @@
+import { setupListeners } from "@reduxjs/toolkit/query";
 import { configureStore, createListenerMiddleware, isAnyOf } from "@reduxjs/toolkit";
 import { baseApi } from "../shared/api/baseApi";
 import authReducer, { setAuth, clearAuth } from "./authSlice";
@@ -40,6 +41,11 @@ export const store = configureStore({
   middleware: (getDefault) =>
     getDefault().prepend(authListener.middleware).concat(baseApi.middleware, apiErrorMiddleware),
 });
+
+// Enables RTK Query's focus / online listeners. Without this call, refetchOnFocus and
+// refetchOnReconnect are inert and polling never pauses — an agent's CRM tab sitting in the
+// background all day kept querying the API as hard as the one they were actually looking at.
+setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

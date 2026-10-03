@@ -68,6 +68,16 @@ public interface IIdentityService
     /// </summary>
     Task<LoginResponse> SetContextAsync(Guid userId, Guid? agencyId, Guid? callCenterId, CancellationToken ct = default);
     Task<UserSummaryDto?> GetUserAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// A user's own phone number, for calling them internally.
+    ///
+    /// Deliberately its own lookup rather than a field on <see cref="UserSummaryDto"/>: that DTO is
+    /// handed to the client for colleagues all over the product, and a staff phone number is not
+    /// something to broadcast as a side effect of listing people. The caller here needs it to place
+    /// a call, and never sees it.
+    /// </summary>
+    Task<string?> GetUserPhoneAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid? agencyId, CancellationToken ct = default);
 
     /// <summary>

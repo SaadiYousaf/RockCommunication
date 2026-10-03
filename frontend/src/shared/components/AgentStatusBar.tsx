@@ -56,7 +56,7 @@ export function AgentStatusBar() {
   // Hooks must always run (rules of hooks); we just guard the render below.
   const sessionQuery = useMySessionQuery(undefined, {
     skip: !auth.accessToken || !hasAgentModule,
-    pollingInterval: 60_000,
+    pollingInterval: 60_000, skipPollingIfUnfocused: true,
     refetchOnFocus: true,
   });
   const callsQuery = useMyRecentCallsQuery(20, { skip: !auth.accessToken || !hasAgentModule });

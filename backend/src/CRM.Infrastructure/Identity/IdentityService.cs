@@ -368,6 +368,12 @@ public class IdentityService : IIdentityService
     public Task LogoutAsync(string refreshToken, CancellationToken ct = default)
         => _jwt.RevokeAsync(refreshToken, ct);
 
+    public async Task<string?> GetUserPhoneAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString());
+        return user?.PhoneNumber;
+    }
+
     public async Task<UserSummaryDto?> GetUserAsync(Guid userId, CancellationToken ct = default)
     {
         var user = await _users.FindByIdAsync(userId.ToString());

@@ -34,7 +34,7 @@ export function AvailableLeadsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { data, isLoading, isError, error, refetch } = useAvailableLeadsQuery(undefined, {
-    pollingInterval: 30_000,
+    pollingInterval: 30_000, skipPollingIfUnfocused: true,
   });
   const [claim, { isLoading: claiming }] = useClaimLeadMutation();
   const [claimingId, setClaimingId] = useState<string | null>(null);

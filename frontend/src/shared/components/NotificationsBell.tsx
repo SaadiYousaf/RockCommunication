@@ -31,14 +31,14 @@ export function NotificationsBell() {
   const gated = !auth.accessToken || onboarding;
   const { data: unread = [], refetch: refetchUnread } = useChatUnreadQuery(undefined, {
     skip: gated,
-    pollingInterval: 30_000,
+    pollingInterval: 30_000, skipPollingIfUnfocused: true,
   });
   const { data: rooms } = useChatRoomsQuery(undefined, { skip: gated });
   const { data: users } = useListUsersQuery(undefined, { skip: gated });
 
   // Work-assignment / pipeline notifications (durable inbox, not just a transient toast).
   const { data: notifUnread = 0, refetch: refetchNotifCount } = useNotificationsUnreadCountQuery(undefined, {
-    skip: gated, pollingInterval: 30_000,
+    skip: gated, pollingInterval: 30_000, skipPollingIfUnfocused: true,
   });
   const { data: notifs = [], refetch: refetchNotifs } = useNotificationsQuery({ take: 15 }, { skip: gated });
   const [markNotifRead] = useMarkNotificationReadMutation();

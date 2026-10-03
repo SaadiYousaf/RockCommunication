@@ -6,6 +6,7 @@ import { HubConnectionBuilder, HubConnectionState, type HubConnection } from "@m
 import {
   useChatRoomsQuery, useChatUnreadQuery, useCreateRoomMutation, useListUsersQuery,
   useStartDirectMessageMutation,
+  useCallColleagueMutation,
   useMarkRoomReadMutation, useRoomMessagesQuery, useSendAttachmentMutation,
   useSendMessageMutation, useUserDirectoryQuery,
   useToggleReactionMutation, useEditChatMessageMutation, useDeleteChatMessageMutation,
@@ -67,7 +68,7 @@ export function ChatPage() {
   } = useChatRoomsQuery();
   const { data: users } = useListUsersQuery();
   const { data: directory } = useUserDirectoryQuery();
-  const { data: unread, refetch: refetchUnread } = useChatUnreadQuery(undefined, { pollingInterval: 15_000 });
+  const { data: unread, refetch: refetchUnread } = useChatUnreadQuery(undefined, { pollingInterval: 15_000, skipPollingIfUnfocused: true });
   const [createRoom, { isLoading: creatingRoom }] = useCreateRoomMutation();
   const [send, { isLoading: sending }] = useSendMessageMutation();
   const [sendAttachment, { isLoading: uploading }] = useSendAttachmentMutation();
@@ -138,6 +139,7 @@ export function ChatPage() {
   tokenRef.current = auth.accessToken;
   const activeRoomRef = useRef<string | null>(activeRoom);
   activeRoomRef.current = activeRoom;
+  const [callColleague, { isLoading: callingColleague }] = useCallColleagueMutation();
   const refetchUnreadRef = useRef(refetchUnread);
   refetchUnreadRef.current = refetchUnread;
   const refetchMessagesRef = useRef(refetch);
@@ -711,6 +713,28 @@ export function ChatPage() {
               {showMsgSearch && (
                 <Input autoFocus leftIcon={<Icon name="search" size={14} />} placeholder={CHAT_MSG.searchInConversation}
                   value={msgSearch} onChange={(e) => setMsgSearch(e.target.value)} className="h-9 w-40 sm:w-56" />
+              )}
+              {/* Call the other person. Direct conversations only — a group room has no single
+                  person to ring, and dialling all of them is a conference, not this. */}
+              {activeRoomData?.isDirect && otherMembers.length === 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={CHAT_MSG.callColleague}
+                  title={CHAT_MSG.callColleagueHint(roomLabel(activeRoomData?.name ?? "", true))}
+                  loading={callingColleague}
+                  onClick={async () => {
+                    const name = roomLabel(activeRoomData?.name ?? "", true);
+                    try {
+                      await callColleague({ userId: otherMembers[0] }).unwrap();
+                      toast.success(CHAT_MSG.callStarted, CHAT_MSG.callStartedDesc(name));
+                    } catch (err: unknown) {
+                      toast.error(CHAT_MSG.callFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+                    }
+                  }}
+                >
+                  <Icon name="phone" size={18} />
+                </Button>
               )}
               <Button variant="ghost" size="icon" aria-label="Search messages"
                 onClick={() => setShowMsgSearch((v) => { if (v) setMsgSearch(""); return !v; })}>

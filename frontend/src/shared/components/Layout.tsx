@@ -340,7 +340,7 @@ function SidebarContent({
   // Live "N waiting" counts for the queue nav items (RTK dedupes across the two sidebar instances).
   const token = useSelector((s: RootState) => s.auth.accessToken);
   const onboarding = useSelector((s: RootState) => !!(s.auth.user?.mustChangePassword || s.auth.user?.twoFactorSetupRequired));
-  const { data: counts } = useQueueCountsQuery(undefined, { skip: !token || onboarding, pollingInterval: 30_000 });
+  const { data: counts } = useQueueCountsQuery(undefined, { skip: !token || onboarding, pollingInterval: 30_000, skipPollingIfUnfocused: true });
   return (
     <>
       {/* Soft brand glow — bottom corner only, very subtle */}

@@ -44,7 +44,7 @@ export function MyQueuePage() {
   const navigate = useNavigate();
   const toast = useToast();
   // Poll: managers/round-robin can assign leads to me while I'm on this page.
-  const { data: leads, isLoading, isError, error, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000 });
+  const { data: leads, isLoading, isError, error, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [transition] = useTransitionLeadMutation();
   const [release] = useReleaseLeadMutation();
   const confirm = useConfirm();

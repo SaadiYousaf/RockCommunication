@@ -11,7 +11,7 @@ import { WORK_MSG } from "./workMessages";
  * shown as an empty tile, so the section is never padded with things you do not have to do.
  */
 export function MyWorkCard() {
-  const { data, isLoading } = useQueueCountsQuery(undefined, { pollingInterval: 30_000 });
+  const { data, isLoading } = useQueueCountsQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
 
   const tiles = [
     {

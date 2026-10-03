@@ -25,7 +25,7 @@ import { INTAKE_MSG } from "./messages";
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
   // Poll: sales arrive as closers submit them, so the submission queue stays live across users.
-  const { data: queue, isLoading } = useValidatorQueueQuery(undefined, { pollingInterval: 30_000 });
+  const { data: queue, isLoading } = useValidatorQueueQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [active, setActive] = useState<ValidatorQueueItem | null>(null);
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");

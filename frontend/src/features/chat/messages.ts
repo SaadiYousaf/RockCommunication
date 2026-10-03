@@ -3,6 +3,14 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const CHAT_MSG = {
+  // Calling a colleague from a direct conversation.
+  callColleague: "Call",
+  callColleagueHint: (name: string) => `Call ${name} on their work number`,
+  callingColleague: "Calling…",
+  callStarted: "Calling",
+  callStartedDesc: (name: string) => `Dialling ${name} now — pick up on your softphone.`,
+  callFailed: "Couldn't start the call",
+
   /** Lowercase noun for the "Couldn't load <x>" error state. */
   resourceName: "your conversations",
 

@@ -21,7 +21,7 @@ import { INTAKE_MSG } from "./messages";
 /** Verifier work queue — fronted leads awaiting a verification status. */
 export function VerifyQueuePage() {
   // Poll: leads land here from other users' actions (fronters capturing), so refresh without a reload.
-  const { data: queue, isLoading, isError, error, refetch } = useVerifierQueueQuery(undefined, { pollingInterval: 30_000 });
+  const { data: queue, isLoading, isError, error, refetch } = useVerifierQueueQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const filtered = (queue ?? []).filter((l) =>

@@ -44,13 +44,15 @@ public static class DependencyInjection
         Guard.AgainstNull(config);
 
         services.AddScoped<AuditInterceptor>();
+        services.AddSingleton<SqlitePragmaInterceptor>();
         services.AddScoped<TenantInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, opts) =>
         {
             var conn = config.GetConnectionString("Default") ?? "Data Source=crm.db";
             var provider = config.GetValue("Database:Provider", "Sqlite");
-            if (string.Equals(provider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+            var isSqlite = !string.Equals(provider, "SqlServer", StringComparison.OrdinalIgnoreCase);
+            if (!isSqlite)
                 opts.UseSqlServer(conn);
             // MySQL provider intentionally omitted; add Pomelo.EntityFrameworkCore.MySql + UseMySql later if needed.
             else
@@ -59,6 +61,12 @@ public static class DependencyInjection
             opts.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
                 sp.GetRequiredService<TenantInterceptor>());
+
+            // Without WAL a single write locks the whole database against every reader. See
+            // SqlitePragmaInterceptor — on a busy floor this is the difference between a responsive
+            // product and one that queues behind whoever is saving.
+            if (isSqlite)
+                opts.AddInterceptors(sp.GetRequiredService<SqlitePragmaInterceptor>());
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());

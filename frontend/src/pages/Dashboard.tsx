@@ -115,13 +115,13 @@ export function Dashboard() {
 
   // Poll so the KPI strip, pipeline, activity feed and open-callback count stay near-real-time
   // without a manual refresh (mirrors the wallboard/leaderboard cadence below).
-  const { data, isLoading, isError, refetch } = useDashboardSummaryQuery(undefined, { pollingInterval: 30_000 });
+  const { data, isLoading, isError, refetch } = useDashboardSummaryQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const { data: leaders } = useLeaderboardQuery("today", {
-    pollingInterval: 60_000,
+    pollingInterval: 60_000, skipPollingIfUnfocused: true,
     skip: !canSeeSupervision,
   });
   const { data: wall } = useWallboardQuery(undefined, {
-    pollingInterval: 30_000,
+    pollingInterval: 30_000, skipPollingIfUnfocused: true,
     skip: !canSeeSupervision,
   });
 
@@ -998,7 +998,7 @@ function eventHref(type: string): string {
 
 function UpcomingEventsCard() {
   // Poll so newly-scheduled callbacks/trainings surface without a refresh.
-  const { data: events, isLoading } = useUpcomingEventsQuery(14, { pollingInterval: 60_000 });
+  const { data: events, isLoading } = useUpcomingEventsQuery(14, { pollingInterval: 60_000, skipPollingIfUnfocused: true });
   const { page, setPage, pageItems, pageCount, total, from, to } = usePagination(events, 10);
 
   return (
@@ -1101,7 +1101,7 @@ function TeamStatusCard() {
   // Refresh hourly so attendance/status stays current without hammering the endpoint.
   // 60s so the live work-state column (On call/Available/On break) tracks the floor, not an hour behind.
   const { data, isLoading, isError } = useTeamStatusQuery(undefined, {
-    pollingInterval: 60_000,
+    pollingInterval: 60_000, skipPollingIfUnfocused: true,
     skip: !isSupervisor,
   });
   // Cap the widget at 10 people per page; group the current page by call centre for display.

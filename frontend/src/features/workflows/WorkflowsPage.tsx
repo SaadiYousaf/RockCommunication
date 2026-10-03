@@ -54,7 +54,7 @@ export function WorkflowsPage() {
   const { data: eventTypes } = useWorkflowEventTypesQuery();
   const { data: actionTypes } = useWorkflowActionTypesQuery();
   // Poll: execution rows are produced entirely by the background engine, never by a UI mutation.
-  const { data: executions } = useWorkflowExecutionsQuery(undefined, { pollingInterval: 30_000 });
+  const { data: executions } = useWorkflowExecutionsQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [upsert, { isLoading: saving }] = useUpsertWorkflowRuleMutation();
   const [del] = useDeleteWorkflowRuleMutation();
   const toast = useToast();

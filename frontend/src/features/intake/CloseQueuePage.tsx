@@ -18,7 +18,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 /** Closer work queue — verified leads awaiting a closing application. */
 export function CloseQueuePage() {
   // Poll: leads flow in as verifiers promote them, so keep the pool live without a manual reload.
-  const { data: queue, isLoading, isError, error, refetch } = useCloserQueueQuery(undefined, { pollingInterval: 30_000 });
+  const { data: queue, isLoading, isError, error, refetch } = useCloserQueueQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [addLead, { isLoading: adding }] = useCaptureCloserLeadMutation();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");

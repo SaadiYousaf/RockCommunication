@@ -37,7 +37,7 @@ function formatDuration(d: string) {
 }
 
 export function SupervisorPage() {
-  const { data: agents, isLoading, refetch } = useLiveAgentsQuery(undefined, { pollingInterval: 5_000 });
+  const { data: agents, isLoading, refetch } = useLiveAgentsQuery(undefined, { pollingInterval: 5_000, skipPollingIfUnfocused: true });
   const [forceStatus] = useForceAgentStatusMutation();
   const [coach] = useCoachAgentMutation();
   const toast = useToast();

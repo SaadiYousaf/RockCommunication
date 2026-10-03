@@ -99,7 +99,7 @@ export function PulsePage() {
   const me = useSelector((s: RootState) => s.auth.user);
   const navigate = useNavigate();
   const { data: users } = useUserDirectoryQuery();
-  const { data: posts, isLoading, isError, error, refetch } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000 });
+  const { data: posts, isLoading, isError, error, refetch } = useListFeedQuery({ take: 30 }, { pollingInterval: 20_000, skipPollingIfUnfocused: true });
 
   // Clicking a @mention or an author opens a direct message with that person.
   const usersByName = useMemo(() => new Map((users ?? []).map((u) => [u.userName.toLowerCase(), u.id])), [users]);

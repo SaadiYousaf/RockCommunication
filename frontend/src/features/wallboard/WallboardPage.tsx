@@ -39,8 +39,8 @@ function LivePulse() {
 }
 
 export function WallboardPage() {
-  const { data: w, isLoading } = useWallboardQuery(undefined, { pollingInterval: 5_000 });
-  const { data: leaders } = useLeaderboardQuery("today", { pollingInterval: 30_000 });
+  const { data: w, isLoading } = useWallboardQuery(undefined, { pollingInterval: 5_000, skipPollingIfUnfocused: true });
+  const { data: leaders } = useLeaderboardQuery("today", { pollingInterval: 30_000, skipPollingIfUnfocused: true });
 
   // The "today" tiles count today's rows, so the list they open must be filtered the same way —
   // otherwise the destination shows a different number than the tile the user just clicked.

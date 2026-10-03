@@ -43,7 +43,7 @@ function formatDuration(ms: number) {
 
 export function AgentPanelPage() {
   const { data: rawSession, error: sessionError, refetch: refetchSession, isLoading: sessionLoading } = useMySessionQuery(undefined, {
-    pollingInterval: 30_000,
+    pollingInterval: 30_000, skipPollingIfUnfocused: true,
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
