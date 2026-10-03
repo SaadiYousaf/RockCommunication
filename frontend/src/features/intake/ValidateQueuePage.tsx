@@ -21,6 +21,7 @@ import { useTableSort } from "../../shared/hooks/useTableSort";
 import { formatUsd, formatPhone } from "../../shared/lib/format";
 import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 import { INTAKE_MSG } from "./messages";
+import { StatusFilterBar } from "../../shared/components/StatusFilterBar";
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
@@ -29,8 +30,10 @@ export function ValidateQueuePage() {
   const [active, setActive] = useState<ValidatorQueueItem | null>(null);
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ValidatorStatusValue | null>(null);
   const filtered = (queue ?? []).filter((s) =>
-    !q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+    (statusFilter === null || s.status === statusFilter) &&
+    (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())));
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => LABEL[s.status] },
   });
@@ -72,8 +75,21 @@ export function ValidateQueuePage() {
         <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
+          {/* Counts come from the whole queue, not the search result, so the chips keep telling the
+              truth about the workload while someone is searching inside it. */}
+          {queue && total > 0 && (
+            <StatusFilterBar
+              rows={queue}
+              statusOf={(s) => s.status}
+              options={STATUSES.map((o) => ({ value: o.value, label: o.label, tone: TONE[o.value] }))}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              className="mb-4"
+            />
+          )}
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle} description={q ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
+            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle}
+              description={q || statusFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
           ) : (
             <Table>
               <THead>

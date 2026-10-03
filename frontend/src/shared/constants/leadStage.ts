@@ -121,8 +121,27 @@ export const DISPOSITION_DESCRIPTIONS: Record<string, string> = {
 };
 
 /** Badge tone per stage. String-keyed so callers can index with a raw API value + `?? "neutral"`. */
+/**
+ * One colour per stage.
+ *
+ * Ten stages previously shared six tones — Fronted and Verified were the same blue, JrClosed and
+ * Closed the same amber, Validated and Funded the same green. Since this badge appears on every
+ * lead row in the product, two neighbouring stages looking identical is the difference between
+ * reading a pipeline and counting it.
+ *
+ * The main line runs grey → sky → teal → violet → gold → orange → green, so progress reads as
+ * movement and Funded is the only green. The three off-pipeline states sit deliberately outside
+ * that run: amber, pink and red, none of which appear on the main line.
+ */
 export const STAGE_TONE: Record<string, BadgeTone> = {
-  New: "brand", Fronted: "info", Verified: "info", JrClosed: "warning",
-  Closed: "warning", Validated: "success", Funded: "success",
-  Followup: "neutral", Winback: "neutral", Lost: "danger",
+  New: "neutral",
+  Fronted: "info",
+  Verified: "brand",
+  JrClosed: "purple",
+  Closed: "accent",
+  Validated: "orange",
+  Funded: "success",
+  Followup: "warning",
+  Winback: "pink",
+  Lost: "danger",
 };

@@ -108,3 +108,9 @@ export const APP_MSG = {
   newVersionBody: "You're using an older version of the app. Reload to pick up the latest fixes.",
   newVersionAction: "Reload",
 } as const;
+
+/** Copy for the shared status filter chips. */
+export const STATUS_FILTER_MSG = {
+  label: "Filter by status",
+  all: "All",
+} as const;

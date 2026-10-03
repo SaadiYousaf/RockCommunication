@@ -55,14 +55,23 @@ export const VALIDATOR_STATUS_LABEL: Record<ValidatorStatusValue, string> = Obje
   VALIDATOR_STATUSES.map((s) => [s.value, s.label]),
 ) as Record<ValidatorStatusValue, string>;
 
+/**
+ * One colour per status — nine statuses, nine distinct tones.
+ *
+ * Four of these used to be the same red and two the same grey, so scanning the column told you
+ * something had gone wrong without telling you WHAT, and a submission agent had to read every row
+ * to find the bad banks among the declines. The grouping still reads at a glance — greens are good,
+ * warm colours need chasing, and the failures sit apart from each other — but no two states look
+ * alike.
+ */
 export const VALIDATOR_STATUS_TONE: Record<ValidatorStatusValue, BadgeTone> = {
-  Completed: "neutral",
-  Approved: "info",
-  ActivePaid: "success",
-  NoUpdateInCommission: "warning",
-  BadBank: "danger",
-  Nsf: "danger",
-  Decline: "danger",
-  ClientCancelled: "neutral",
-  ErrorInApplicationInformation: "danger",
+  Completed: "brand",                      // submitted, working its way through
+  Approved: "info",                        // carrier said yes, not yet paying
+  ActivePaid: "success",                   // the finished article
+  NoUpdateInCommission: "warning",         // chase the carrier
+  BadBank: "danger",                       // our side: the account is wrong
+  Nsf: "orange",                           // their side: the money wasn't there
+  Decline: "purple",                       // the carrier refused it
+  ClientCancelled: "neutral",              // the customer walked away
+  ErrorInApplicationInformation: "pink",   // fixable paperwork, not a lost sale
 };

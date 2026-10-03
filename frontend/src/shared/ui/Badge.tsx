@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
-type Tone = "default" | "brand" | "accent" | "success" | "warning" | "danger" | "info" | "neutral";
+// Eleven tones, not eight, and every one visually distinct. Several queues in this product carry
+// more states than the original palette could tell apart — the submission queue has nine, four of
+// which all rendered the same red, so a glance down the column said "something is wrong" without
+// saying which thing. The extra hues exist to be read, not to decorate.
+type Tone =
+  | "default" | "brand" | "accent" | "success" | "warning" | "danger" | "info" | "neutral"
+  | "purple" | "orange" | "pink";
 /** Canonical badge/tone union — reuse this instead of re-declaring `Tone` per page. */
 export type BadgeTone = Tone;
 type Variant = "soft" | "solid" | "outline";
@@ -38,15 +44,32 @@ const tones: Record<Tone, Record<Variant, string>> = {
     solid:   "bg-rose-600 text-white",
     outline: "border border-rose-200 text-rose-700 bg-white",
   },
+  // Was an exact copy of `brand`, which made "informational" and "this is our brand colour"
+  // impossible to tell apart anywhere the two appeared together. Now genuinely its own blue.
   info: {
-    soft:    "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/70",
-    solid:   "bg-brand-600 text-white",
-    outline: "border border-brand-200 text-brand-700 bg-white",
+    soft:    "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200/70",
+    solid:   "bg-sky-600 text-white",
+    outline: "border border-sky-200 text-sky-700 bg-white",
   },
   neutral: {
     soft:    "bg-ink-50 text-ink-600 ring-1 ring-inset ring-ink-200/60",
     solid:   "bg-ink-500 text-white",
     outline: "border border-ink-200 text-ink-500 bg-white",
+  },
+  purple: {
+    soft:    "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200/70",
+    solid:   "bg-violet-600 text-white",
+    outline: "border border-violet-200 text-violet-700 bg-white",
+  },
+  orange: {
+    soft:    "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200/70",
+    solid:   "bg-orange-500 text-white",
+    outline: "border border-orange-200 text-orange-700 bg-white",
+  },
+  pink: {
+    soft:    "bg-fuchsia-50 text-fuchsia-700 ring-1 ring-inset ring-fuchsia-200/70",
+    solid:   "bg-fuchsia-600 text-white",
+    outline: "border border-fuchsia-200 text-fuchsia-700 bg-white",
   },
 };
 
