@@ -15,6 +15,7 @@ import { useAgentHub } from "../hooks/useAgentHub";
 import { timeAgo } from "../lib/time";
 import { getErrorDetail } from "../api/apiError";
 import { MESSAGES } from "../constants/messages";
+import { isNotificationSoundMuted, setNotificationSoundMuted, useNotificationSound } from "../hooks/useNotificationSound";
 
 /**
  * Header notifications bell — shows live unread count + a dropdown of rooms with unread.
@@ -44,6 +45,8 @@ export function NotificationsBell() {
   const [markNotifRead] = useMarkNotificationReadMutation();
   const [markAllNotifRead] = useMarkAllNotificationsReadMutation();
 
+  const playAlert = useNotificationSound();
+  const [soundMuted, setSoundMuted] = useState(isNotificationSoundMuted());
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -51,6 +54,7 @@ export function NotificationsBell() {
   // Live pipeline notifications (a lead/sale forwarded to this user's queue) → popup toast.
   useAgentHub((ev, payload) => {
     if (ev !== "notification") return;
+    playAlert();
     const url = payload.url;
     toast.show({
       title: payload.title ?? "New notification",
@@ -66,6 +70,19 @@ export function NotificationsBell() {
   const unreadRooms = unread.filter((u) => u.unreadCount > 0);
   // The bell badge = work notifications + chat messages.
   const totalUnread = chatUnread + notifUnread;
+
+  // Sound whenever the badge GOES UP. The live hub push above covers a connected client, but most
+  // notices arrive on the polling refresh — and a chat message raises the chat count, which the hub
+  // event does not carry at all. Watching the total catches every route in one place.
+  //
+  // Seeded with null rather than 0 so the first read after a page load is treated as the starting
+  // point. Without that, signing in with eight unread messages would set the whole room ringing.
+  const lastTotalRef = useRef<number | null>(null);
+  useEffect(() => {
+    const previous = lastTotalRef.current;
+    lastTotalRef.current = totalUnread;
+    if (previous !== null && totalUnread > previous) playAlert();
+  }, [totalUnread, playAlert]);
 
   async function openNotification(id: string, url: string | null, isRead: boolean) {
     setOpen(false);
@@ -218,17 +235,35 @@ export function NotificationsBell() {
                   {totalUnread > 0 ? `${totalUnread} unread` : "You're all caught up"}
                 </div>
               </div>
-              {notifUnread > 0 && (
+              <div className="flex items-center gap-1">
+                {/* A chime that cuts through a call floor is the point, but someone on a call needs
+                    to be able to silence it without digging through settings. */}
                 <button
-                  onClick={async () => {
-                    try { await markAllNotifRead().unwrap(); }
-                    catch (err: unknown) {
-                      toast.error(MESSAGES.markAllReadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
-                    }
+                  onClick={() => {
+                    const next = !soundMuted;
+                    setSoundMuted(next);
+                    setNotificationSoundMuted(next);
+                    if (!next) playAlert();   // unmuting previews it, so the choice is audible
                   }}
-                  className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1 rounded transition-colors"
-                >Mark all read</button>
-              )}
+                  title={soundMuted ? MESSAGES.soundOffTitle : MESSAGES.soundOnTitle}
+                  aria-label={soundMuted ? MESSAGES.soundOffTitle : MESSAGES.soundOnTitle}
+                  aria-pressed={!soundMuted}
+                  className="p-1.5 rounded text-ink-500 hover:text-ink-900 hover:bg-ink-100/70 transition-colors"
+                >
+                  <Icon name={soundMuted ? "mute" : "volume"} size={15} />
+                </button>
+                {notifUnread > 0 && (
+                  <button
+                    onClick={async () => {
+                      try { await markAllNotifRead().unwrap(); }
+                      catch (err: unknown) {
+                        toast.error(MESSAGES.markAllReadFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
+                      }
+                    }}
+                    className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1 rounded transition-colors"
+                  >Mark all read</button>
+                )}
+              </div>
             </div>
           </div>
 

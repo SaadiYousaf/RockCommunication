@@ -24,6 +24,20 @@ public class LeadsController : ControllerBase
     public LeadsController(IMediator mediator) => _mediator = Guard.AgainstNull(mediator);
 
     /// <summary>"Lead troubleshooting" — full diagnostic for why a lead may be stuck.</summary>
+    /// <summary>
+    /// Administrative correction of a lead's own details. Every field is optional — send only what
+    /// is being corrected, so fixing one digit of a phone number can't blank the rest of the record.
+    /// </summary>
+    [HttpPut("{id:guid}/details")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<IActionResult> UpdateDetails(
+        Guid id, [FromBody] AdminUpdateLeadCommand body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(body with { LeadId = id }, ct);
+        return NoContent();
+    }
+
     public record DeleteLeadBody(string Reason);
 
     /// <summary>

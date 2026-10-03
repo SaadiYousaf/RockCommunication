@@ -6,6 +6,9 @@
  * to end users. Use these helpers — they speak in plain language about what the user can/can't do.
  */
 export const MESSAGES = {
+  soundOnTitle: "Notification sound is on — click to mute",
+  soundOffTitle: "Notification sound is off — click to unmute",
+
   /** Global header search placeholder (shared chrome — no copy inline). */
   globalSearchPlaceholder: "Search leads, users, sales…   ⌘K",
   /** Read-only banner: the user can view `resource` but not change it. e.g. readOnly("the team"). */

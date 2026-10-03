@@ -4,6 +4,8 @@ using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Sales.Commands;
 using CRM.Domain.Common;
+using CRM.Domain.Enums;
+using CRM.Application.Leads;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -78,6 +80,21 @@ public class SalesController : ControllerBase
     public record AssignLicenseAgentBody(Guid? LicenseAgentUserId);
 
     /// <summary>Assign (or clear, when null) the License Agent on a recorded sale.</summary>
+    /// <summary>
+    /// Administrative correction of the policy recorded on a sale. Optional fields, as above.
+    /// Commission already written is not recalculated — the closer is notified instead, so a
+    /// premium correction is settled deliberately rather than silently rewriting paid money.
+    /// </summary>
+    [HttpPut("{id:guid}/details")]
+    [Authorize(Roles = Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<IActionResult> UpdateDetails(
+        Guid id, [FromBody] AdminUpdateSaleCommand body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(body with { SaleId = id }, ct);
+        return NoContent();
+    }
+
     [HttpPut("{id:guid}/license-agent")]
     [HasPermission(Permissions.SalesValidate)]
     public async Task<IActionResult> AssignLicenseAgent(Guid id, [FromBody] AssignLicenseAgentBody body, CancellationToken ct)
