@@ -20,6 +20,7 @@ import {
 } from "../../shared/ui";
 import { MESSAGES } from "../../shared/constants/messages";
 import { CHAT_MSG } from "./messages";
+import { useChatLive } from "../../shared/components/ChatLiveProvider";
 
 
 function formatTime(iso: string) {
@@ -148,27 +149,27 @@ export function ChatPage() {
   markReadRef.current = markRead;
   const lastActiveMarkReadRef = useRef(0);
 
-  // SignalR setup — runs only when the access token actually changes.
-  useEffect(() => {
-    if (!auth.accessToken) return;
-    const conn = new HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/chat`, { accessTokenFactory: () => tokenRef.current ?? "" })
-      .withAutomaticReconnect({
-        // Keep trying for as long as the user is signed in.
-        //
-        // This used to give up after four attempts — roughly half a minute — and returning null
-        // ends reconnection PERMANENTLY, with nothing short of a page reload to bring it back.
-        // Every API deploy restarts the server, and a call centre's wifi drops all day, so chats
-        // simply stopped arriving and stayed stopped. That is what "chats don't update" was.
-        //
-        // Backoff is capped at 30s, so a long outage costs two requests a minute per client
-        // rather than a reconnect storm.
-        nextRetryDelayInMilliseconds: (ctx) =>
-          tokenRef.current ? Math.min(1000 * 2 ** Math.min(ctx.previousRetryCount, 5), 30_000) : null,
-      })
-      .build();
+  // The chat connection is owned by ChatLiveProvider in the layout, not by this page.
+  //
+  // It used to be built here, which meant it existed only while this page was open — so a message
+  // reached you only if you were already looking at chat. Now one connection is held for the whole
+  // session; this page attaches its own handlers to it and lets the provider do the alerting.
+  const { connection: chatConn, state: chatState, setActiveRoom: setLiveActiveRoom } = useChatLive();
 
-    conn.on("MessageReceived", (msg: ChatMessage) => {
+  useEffect(() => { setConnectionState(chatState); }, [chatState]);
+  useEffect(() => { connRef.current = chatConn; }, [chatConn]);
+
+  // Tell the provider which conversation is on screen, so it doesn't also announce a message the
+  // user is watching arrive. Cleared on the way out — once they leave, every room is "not open".
+  useEffect(() => {
+    setLiveActiveRoom(activeRoom);
+    return () => setLiveActiveRoom(null);
+  }, [activeRoom, setLiveActiveRoom]);
+
+  useEffect(() => {
+    if (!chatConn) return;
+
+    const onMessage = (msg: ChatMessage) => {
       setLiveMessages((prev) => [...prev, msg]);
       if (msg.roomId !== activeRoomRef.current) {
         refetchUnreadRef.current();
@@ -180,79 +181,56 @@ export function ChatPage() {
         const room = activeRoomRef.current;
         if (room) markReadRef.current(room).unwrap().then(() => refetchUnreadRef.current()).catch(() => {});
       }
-    });
-    // Other members' read receipts. Server fires this whenever any member calls
-    // markRead — we use it to upgrade our own messages from "delivered" to "seen".
-    conn.on("RoomRead", (e: { roomId: string; userId: string; readAt: string }) => {
+    };
+    // Other members' read receipts. Server fires this whenever any member calls markRead — we use
+    // it to upgrade our own messages from "delivered" to "seen".
+    const onRoomRead = (e: { roomId: string; userId: string; readAt: string }) => {
       setRoomReads((prev) => {
         const room = { ...(prev[e.roomId] ?? {}) };
         room[e.userId] = e.readAt;
         return { ...prev, [e.roomId]: room };
       });
-    });
-    // Live "someone is typing" — the server broadcasts this to a room's other members.
-    conn.on("Typing", (roomId: string, uid: string) => {
+    };
+    const onTyping = (roomId: string, uid: string) => {
       if (roomId !== activeRoomRef.current || uid === auth.user?.id) return;
       setTypingUsers((prev) => ({ ...prev, [uid]: Date.now() }));
-    });
-    conn.on("ReactionsChanged", (e: { roomId: string; messageId: string; reactions: ChatReaction[] }) => {
+    };
+    const onReactions = (e: { roomId: string; messageId: string; reactions: ChatReaction[] }) => {
       if (e.roomId !== activeRoomRef.current) return;
       setOverrides((prev) => ({ ...prev, [e.messageId]: { ...prev[e.messageId], reactions: e.reactions } }));
-    });
-    conn.on("MessageEdited", (m: ChatMessage) => {
+    };
+    const onEdited = (m: ChatMessage) => {
       if (m.roomId !== activeRoomRef.current) return;
       setOverrides((prev) => ({ ...prev, [m.id]: { ...prev[m.id], body: m.body, editedAt: m.editedAt, reactions: m.reactions ?? undefined } }));
-    });
-    conn.on("MessageDeleted", (e: { roomId: string; messageId: string }) => {
+    };
+    const onDeleted = (e: { roomId: string; messageId: string }) => {
       if (e.roomId !== activeRoomRef.current) return;
       setOverrides((prev) => ({ ...prev, [e.messageId]: { ...prev[e.messageId], deleted: true } }));
-    });
-    conn.onreconnecting(() => setConnectionState("connecting"));
-    conn.onreconnected(() => {
-      setConnectionState("connected");
-      // Messages sent while we were disconnected were pushed to a connection that no longer
-      // existed, so they are simply absent from the view. Re-read the room to fill the gap —
-      // reconnecting without this leaves a silent hole in the conversation.
-      refetchMessagesRef.current();
-      refetchUnreadRef.current();
-    });
-    conn.onclose(() => setConnectionState("disconnected"));
-
-    // Automatic reconnect only covers a connection that was established at least once. If the very
-    // first attempt fails — which is exactly what happens to every open tab during a deploy — there
-    // is no retry at all, so start() has to own that case itself.
-    let cancelled = false;
-    let startTimer: number | undefined;
-    const start = (attempt = 0) => {
-      if (cancelled) return;
-      setConnectionState("connecting");
-      conn.start()
-        .then(() => {
-          if (cancelled) return;
-          connRef.current = conn;
-          setConnectionState("connected");
-          if (attempt > 0) { refetchMessagesRef.current(); refetchUnreadRef.current(); }
-        })
-        .catch(() => {
-          if (cancelled || !tokenRef.current) { setConnectionState("disconnected"); return; }
-          setConnectionState("disconnected");
-          startTimer = window.setTimeout(
-            () => start(attempt + 1),
-            Math.min(1000 * 2 ** Math.min(attempt, 5), 30_000),
-          );
-        });
     };
-    start();
+
+    chatConn.on("MessageReceived", onMessage);
+    chatConn.on("RoomRead", onRoomRead);
+    chatConn.on("Typing", onTyping);
+    chatConn.on("ReactionsChanged", onReactions);
+    chatConn.on("MessageEdited", onEdited);
+    chatConn.on("MessageDeleted", onDeleted);
+
+    // Anything sent while this page was closed was pushed to a connection whose handlers weren't
+    // attached, so re-read on mount to pick it up.
+    refetchMessagesRef.current();
+    refetchUnreadRef.current();
 
     return () => {
-      cancelled = true;
-      if (startTimer) window.clearTimeout(startTimer);
-      connRef.current = null;
-      if (conn.state !== HubConnectionState.Disconnected) {
-        conn.stop().catch(() => {});
-      }
+      // Remove only OUR handlers — the connection outlives this page and the provider's own
+      // listener must survive leaving chat, or the alerts stop the moment you navigate away.
+      chatConn.off("MessageReceived", onMessage);
+      chatConn.off("RoomRead", onRoomRead);
+      chatConn.off("Typing", onTyping);
+      chatConn.off("ReactionsChanged", onReactions);
+      chatConn.off("MessageEdited", onEdited);
+      chatConn.off("MessageDeleted", onDeleted);
     };
-  }, [auth.accessToken]);
+  }, [chatConn, auth.user?.id]);
 
   // PresenceHub — tracks who else is online so the chat header / room list
   // can show a green dot, and so we can decide between "delivered" vs "sent"

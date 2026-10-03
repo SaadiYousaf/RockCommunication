@@ -23,6 +23,7 @@ import { NAV, type NavNode } from "../constants/nav";
 import { BRAND } from "../constants/brand";
 import { BUILD_ID } from "../hooks/useBuildVersion";
 import { NewVersionBanner } from "./NewVersionBanner";
+import { ChatLiveProvider } from "./ChatLiveProvider";
 
 interface NavCtx { modules: string[]; roles: string[]; isAdmin: boolean; isSuperAdmin: boolean }
 
@@ -144,9 +145,12 @@ function LayoutInner() {
   const { data: myProfile } = useMyProfileQuery(undefined, { skip: !auth.accessToken || onboarding });
 
   return (
-    // overflow-x-clip is a mobile safety net: no stray-wide descendant can ever
-    // push the whole page sideways. `clip` (not `hidden`) keeps sticky headers /
-    // the fixed drawer working since it doesn't create a scroll container.
+    // The chat connection is held HERE rather than on the chat page, so a message reaches the user
+    // wherever they are in the CRM — and, when the tab isn't in front, on their desktop.
+    <ChatLiveProvider>
+    {/* overflow-x-clip is a mobile safety net: no stray-wide descendant can ever
+        push the whole page sideways. `clip` (not `hidden`) keeps sticky headers /
+        the fixed drawer working since it doesn't create a scroll container. */}
     <div className="min-h-screen flex overflow-x-clip">
       {/* Desktop sidebar — hidden below lg, where the drawer takes over */}
       <aside
@@ -301,6 +305,7 @@ function LayoutInner() {
       <CallDock />
       <ReportBugButton />
     </div>
+    </ChatLiveProvider>
   );
 }
 

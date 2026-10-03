@@ -295,7 +295,40 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public ListMyRoomsHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+    private readonly IIdentityService _identity;
+
+    public ListMyRoomsHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    {
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
+    }
+
+    /// <summary>
+    /// What to call a conversation, from THIS user's point of view.
+    ///
+    /// A direct room's stored name is written once, by whoever started it, as "DM: <the other
+    /// person>". That is correct for the creator and wrong for everybody else — the person who did
+    /// not start it sees their OWN name as the title. Someone with five colleagues who had each
+    /// messaged them first saw five conversations all labelled with their own name, and no way to
+    /// tell which was which.
+    ///
+    /// So a direct room is named from its membership at read time, not from the stored string. A
+    /// group room keeps the name it was given, which is the whole point of naming a group.
+    /// </summary>
+    private string DisplayName(ChatRoom room, Guid me, IReadOnlyDictionary<Guid, string> names)
+    {
+        if (!room.IsDirect) return room.Name;
+
+        var other = room.Members.Select(m => m.UserId).FirstOrDefault(id => id != me);
+        if (other != Guid.Empty && names.TryGetValue(other, out var name) && !string.IsNullOrWhiteSpace(name))
+            return name;
+
+        // A direct room with nobody else in it — the other account was removed. Fall back to the
+        // stored name with its prefix stripped, which is still better than showing "DM: ".
+        var stored = room.Name.StartsWith("DM: ", StringComparison.OrdinalIgnoreCase)
+            ? room.Name[4..]
+            : room.Name;
+        return string.IsNullOrWhiteSpace(stored) ? "Conversation" : stored;
+    }
 
     public async Task<IReadOnlyList<ChatRoomDto>> Handle(ListMyRoomsQuery request, CancellationToken ct)
     {
@@ -317,6 +350,9 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
             .GroupBy(x => x.RoomId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.SentAt).First());
 
+        var names = await _identity.ListUserNamesAsync(_user.AgencyId, ct);
+        var me = _user.UserId.Value;
+
         return rooms.Select(r =>
         {
             lastByRoom.TryGetValue(r.Id, out var last);
@@ -325,7 +361,7 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
                 : last.AttachmentName is not null ? "📎 " + last.AttachmentName
                 : null;
             return new ChatRoomDto(
-                r.Id, r.Name, r.IsDirect,
+                r.Id, DisplayName(r, me, names), r.IsDirect,
                 r.Members.Select(m => m.UserId).ToList(),
                 r.Members.Select(m => new ChatRoomMemberDto(m.UserId, m.LastReadAt)).ToList(),
                 preview, last?.SentAt, last?.SenderUserId);

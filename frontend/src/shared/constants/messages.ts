@@ -114,3 +114,11 @@ export const STATUS_FILTER_MSG = {
   label: "Filter by status",
   all: "All",
 } as const;
+
+/** Copy for the app-wide chat alert — shown anywhere in the CRM, and on the desktop. */
+export const CHAT_LIVE_MSG = {
+  newMessage: "New message",
+  open: "Open",
+  sentAttachment: "Sent an attachment",
+  sentAttachmentNamed: (name: string) => `Sent an attachment: ${name}`,
+} as const;

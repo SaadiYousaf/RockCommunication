@@ -21,6 +21,35 @@ public class ChatHub : Hub
         _db = Guard.AgainstNull(db);
     }
 
+    /// <summary>
+    /// Put this connection into every room the user belongs to, as soon as it connects.
+    ///
+    /// Previously a client only received messages for rooms it had explicitly joined, and the only
+    /// thing that ever called JoinRoom was the chat page for the room being looked at. So a message
+    /// reached you only if you were already on the chat page, with that very conversation open —
+    /// anywhere else in the CRM, nothing arrived until a thirty-second poll noticed the count had
+    /// moved. That is not what being messaged should feel like.
+    ///
+    /// Joining here means one connection, held for as long as the app is open, receives everything
+    /// the user is entitled to. LeaveRoom is left alone: it is about an explicitly opened room, and
+    /// the per-connection groups are discarded when the connection ends anyway.
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        if (TryGetUserId(out var uid))
+        {
+            var roomIds = await _db.ChatRoomMembers
+                .Where(m => m.UserId == uid)
+                .Select(m => m.RoomId)
+                .ToListAsync();
+
+            foreach (var roomId in roomIds)
+                await Groups.AddToGroupAsync(Context.ConnectionId, RoomName(roomId));
+        }
+
+        await base.OnConnectedAsync();
+    }
+
     public async Task JoinRoom(Guid roomId)
     {
         // Membership check — WITHOUT it any authenticated user could join any room's group
