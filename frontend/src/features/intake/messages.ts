@@ -4,6 +4,13 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  // The submission queue's agent filter. One control covers all three roles a submitted sale
+  // carries, because "show me everything involving this person" is the actual question.
+  agentFilterLabel: "Agent",
+  agentFilterAll: "All agents",
+  agentFilterHint:
+    "Shows every sale this person is involved in — whether they closed it, are submitting it, or are the agent of record. The number is how many sales that is.",
+
   closingDescription:
     "Complete the application. 'Complete and Sold' validates banking via Lyons and creates the sale.",
   policyReadOnlyDescription: "The application and policy recorded for this lead.",

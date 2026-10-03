@@ -1,5 +1,5 @@
 import { getErrorDetail } from "../../shared/api/apiError";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useSetValidatorStatusMutation, useValidatorQueueQuery, useGetValidateLeadQuery,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery,
@@ -31,8 +31,33 @@ export function ValidateQueuePage() {
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<ValidatorStatusValue | null>(null);
+  const [agentFilter, setAgentFilter] = useState("");
+
+  // Everyone who appears on a row, in any of the three roles a submitted sale carries. A manager
+  // asking "what's going on with Laraib" means all of it — the sales she closed, the ones she is
+  // submitting, and the ones written under her licence — not whichever column happens to be hers.
+  const agentOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of queue ?? []) {
+      for (const name of new Set([s.closerName, s.validatorName, s.licenseAgentName])) {
+        if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+      }
+    }
+    const list = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+    // Keep the chosen agent listed even once their last row leaves the queue. Without this the
+    // select falls back to showing "All agents" while the filter is still applied, so the table
+    // looks empty for no visible reason.
+    if (agentFilter && !counts.has(agentFilter)) list.push([agentFilter, 0]);
+    return list;
+  }, [queue, agentFilter]);
+
+  const involves = (s: ValidatorQueueItem, name: string) =>
+    s.closerName === name || s.validatorName === name || s.licenseAgentName === name;
+
   const filtered = (queue ?? []).filter((s) =>
     (statusFilter === null || s.status === statusFilter) &&
+    (!agentFilter || involves(s, agentFilter)) &&
     (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())));
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => LABEL[s.status] },
@@ -78,18 +103,38 @@ export function ValidateQueuePage() {
           {/* Counts come from the whole queue, not the search result, so the chips keep telling the
               truth about the workload while someone is searching inside it. */}
           {queue && total > 0 && (
-            <StatusFilterBar
-              rows={queue}
-              statusOf={(s) => s.status}
-              options={STATUSES.map((o) => ({ value: o.value, label: o.label, tone: TONE[o.value] }))}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              className="mb-4"
-            />
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <StatusFilterBar
+                rows={queue}
+                statusOf={(s) => s.status}
+                options={STATUSES.map((o) => ({ value: o.value, label: o.label, tone: TONE[o.value] }))}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                className="min-w-0 flex-1"
+              />
+              {agentOptions.length > 0 && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Select
+                    aria-label={INTAKE_MSG.agentFilterLabel}
+                    value={agentFilter}
+                    onChange={(e) => setAgentFilter(e.target.value)}
+                    className="h-9 w-52 text-sm"
+                  >
+                    <option value="">{INTAKE_MSG.agentFilterAll}</option>
+                    {agentOptions.map(([name, count]) => (
+                      <option key={name} value={name}>{name} ({count})</option>
+                    ))}
+                  </Select>
+                  <InfoHint title={INTAKE_MSG.agentFilterLabel} side="left">
+                    {INTAKE_MSG.agentFilterHint}
+                  </InfoHint>
+                </div>
+              )}
+            </div>
           )}
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle}
-              description={q || statusFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
+              description={q || statusFilter || agentFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
           ) : (
             <Table>
               <THead>
