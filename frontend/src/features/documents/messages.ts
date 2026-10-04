@@ -3,6 +3,13 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const DOCUMENTS_MSG = {
+  fullScreen: "Full screen",
+  exitFullScreen: "Exit full screen (Esc)",
+  fetchFailed: "Couldn't load this document. It may have been removed.",
+  tooLargeToRender: "This file is too large to display in full. Ask whoever shared it for a smaller extract.",
+  truncatedRows: (shown: number, hidden: number) =>
+    `Showing the first ${shown.toLocaleString()} rows. ${hidden.toLocaleString()} more are in the file but aren't displayed here.`,
+
   /** What failed to load, for the shared ErrorState ("Couldn't load documents"). */
   resourceName: "documents",
 

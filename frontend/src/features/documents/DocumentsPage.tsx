@@ -13,6 +13,7 @@ import type { RootState } from "../../app/store";
 import {
   Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Icon, InfoHint, Input,
   PageHeader, Skeleton, useToast,
+  cn,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
 import { MESSAGES } from "../../shared/constants/messages";
@@ -186,15 +187,35 @@ export function DocumentsPage() {
 /* Protected viewer — renders client-side, blocks copy/print/download. */
 /* ------------------------------------------------------------------ */
 
+/**
+ * How many rows of a sheet are drawn. A lead export runs to tens of thousands; rendering them all
+ * builds a string the browser cannot hold, and the tab dies trying. This is a reading pane, not a
+ * spreadsheet application — a thousand rows is more than anyone scrolls, and the rest is still in
+ * the file.
+ */
+const MAX_SHEET_ROWS = 1000;
+
 function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: string; viewer: string }) {
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // A spreadsheet is wider than the panel it sits in, so reading one in a column beside the file
+  // list means scrolling two ways at once. Full screen hands the whole window to the document.
+  const [fullScreen, setFullScreen] = useState(false);
+
+  // Escape leaves full screen. Anyone who opens a document full-screen will try this key first.
+  useEffect(() => {
+    if (!fullScreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullScreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullScreen]);
 
   // Fetch + render. We never expose a download — bytes are converted to inert HTML.
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setHtml(null); setError(null);
+    setLoading(true); setHtml(null); setError(null); setNotice(null);
     (async () => {
       try {
         const res = await fetch(`${API_URL}/api/documents/${doc.id}/content`, {
@@ -203,12 +224,35 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buf = await res.arrayBuffer();
         let rendered = "";
+        let truncation: string | null = null;
         if (doc.kind === "spreadsheet") {
           // Lazy-import xlsx so it doesn't bloat the main bundle (mirrors mammoth below).
           const XLSX = await import("xlsx");
           // `cellDates` keeps real dates as dates — without it every date in the sheet renders as
           // the raw serial number (45321), which reads as corrupted data to anyone looking at it.
           const wb = XLSX.read(buf, { type: "array", cellDates: true });
+
+          // Only ever render the first slice of a sheet.
+          //
+          // A lead list runs to tens of thousands of rows, and sheet_to_html builds one string
+          // holding every cell — which then goes through the sanitiser and into the DOM. On a 7 MB
+          // export that is hundreds of megabytes of HTML and the tab either hangs or throws, which
+          // surfaced as "unsupported format" on a file that had parsed perfectly well. Capping the
+          // range is what makes a large sheet viewable at all.
+          let hiddenRows = 0;
+          for (const sn of wb.SheetNames) {
+            const ws = wb.Sheets[sn];
+            if (!ws?.["!ref"]) continue;
+            const range = XLSX.utils.decode_range(ws["!ref"] as string);
+            const rows = range.e.r - range.s.r + 1;
+            if (rows > MAX_SHEET_ROWS) {
+              hiddenRows += rows - MAX_SHEET_ROWS;
+              range.e.r = range.s.r + MAX_SHEET_ROWS - 1;
+              ws["!ref"] = XLSX.utils.encode_range(range);
+            }
+          }
+          if (hiddenRows > 0) truncation = DOCUMENTS_MSG.truncatedRows(MAX_SHEET_ROWS, hiddenRows);
+
           rendered = wb.SheetNames.map((sn) => {
             const sheetHtml = XLSX.utils.sheet_to_html(wb.Sheets[sn]);
             // Each sheet gets its own horizontal scroller: a states-by-carrier grid is far wider
@@ -232,9 +276,20 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "style"],
           FORBID_ATTR: ["srcdoc"],
         });
-        if (!cancelled) setHtml(safe);
+        if (!cancelled) { setHtml(safe); setNotice(truncation); }
       } catch (e) {
-        if (!cancelled) setError(DOCUMENTS_MSG.renderFailed);
+        // Say which way it failed. "Unsupported format" sent people hunting for a problem with
+        // their file when the real answer was usually that it was too big to draw in one go.
+        if (!cancelled) {
+          const message = e instanceof Error ? e.message : "";
+          setError(
+            message.startsWith("HTTP")
+              ? DOCUMENTS_MSG.fetchFailed
+              : /memory|allocation|string length|Invalid string/i.test(message)
+                ? DOCUMENTS_MSG.tooLargeToRender
+                : DOCUMENTS_MSG.renderFailed,
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -273,8 +328,8 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
     ));
   }, [viewer]);
 
-  return (
-    <Card>
+  const body = (
+    <Card className={fullScreen ? "h-full rounded-none border-0 shadow-none flex flex-col" : undefined}>
       <CardHeader
         title={doc.name}
         subtitle={`${doc.kind} · view-only`}
@@ -282,12 +337,30 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           <span className="inline-flex items-center gap-1.5">
             <Badge tone="warning" variant="soft" dot>Protected — no copy / print / download</Badge>
             <InfoHint title="Protected view" side="left">Your name and the time are stamped faintly across every page, and copying, printing, and downloading are switched off. Read it here instead of saving a copy.</InfoHint>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={fullScreen ? DOCUMENTS_MSG.exitFullScreen : DOCUMENTS_MSG.fullScreen}
+              title={fullScreen ? DOCUMENTS_MSG.exitFullScreen : DOCUMENTS_MSG.fullScreen}
+              onClick={() => setFullScreen((v) => !v)}
+            >
+              <Icon name={fullScreen ? "x" : "externalLink"} size={16} />
+            </Button>
           </span>
         }
       />
-      <CardBody>
+      <CardBody className={fullScreen ? "flex-1 min-h-0 flex flex-col" : undefined}>
+        {notice && (
+          <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <Icon name="info" size={16} className="mt-0.5 shrink-0 text-amber-600" />
+            <span>{notice}</span>
+          </div>
+        )}
         <div
-          className="relative max-h-[70vh] overflow-auto rounded-lg border border-ink-200 bg-white"
+          className={cn(
+            "relative overflow-auto rounded-lg border border-ink-200 bg-white",
+            fullScreen ? "flex-1 min-h-0" : "max-h-[70vh]",
+          )}
           onContextMenu={block}
           onCopy={block}
           onCut={block}
@@ -318,9 +391,19 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           </div>
         </div>
 
-        <NotesPanel documentId={doc.id} />
+        {/* Notes are about the document, not part of it — in full screen the document gets the
+            window to itself and the notes stay behind on the page. */}
+        {!fullScreen && <NotesPanel documentId={doc.id} />}
       </CardBody>
     </Card>
+  );
+
+  if (!fullScreen) return body;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      {body}
+    </div>
   );
 }
 
