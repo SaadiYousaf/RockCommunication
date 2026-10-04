@@ -41,6 +41,12 @@ jobs:
         with:
           node-version: '20'
 
+      # ---- Test backend. Runs BEFORE publishing so a failing suite stops the deploy.
+      #      The tests existed long before this step did; nothing was gating on them, so a
+      #      regression they would have caught could still reach production. ----
+      - name: Test backend
+        run: dotnet test backend/CRM.sln -c Release --nologo
+
       # ---- Build backend (framework-dependent = portable to the box's runtime) ----
       - name: Publish backend
         run: dotnet publish backend/src/CRM.Api/CRM.Api.csproj -c Release -o api-publish
@@ -57,6 +63,10 @@ jobs:
           VITE_BUILD_ID: ${{ github.sha }}
         run: |
           npm ci || npm install   # lockfile may be out of sync; fall back to install
+          # Front-end tests run BEFORE the build, so a broken route guard or a page that cannot
+          # mount stops the deploy here rather than reaching the floor. Four bugs in one week were
+          # front-end only and invisible to the API's own suite.
+          npm test
           npm run build
 
       # ---- Prepare SSH ----

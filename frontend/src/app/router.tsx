@@ -1,5 +1,5 @@
 import { lazy, type ComponentType } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider, type RouteObject } from "react-router-dom";
 // Small / always-hit pages stay eager so they're part of the initial bundle.
 import { LoginPage } from "../features/auth/LoginPage";
 import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage";
@@ -149,7 +149,15 @@ const M = {
   Admin: "admin",
 } as const;
 
-const router = createBrowserRouter([
+/**
+ * The route table, exported so it can be inspected.
+ *
+ * A test walks this against the sidebar definition to check the two agree about who may reach a
+ * page. They disagreed once — the sidebar offered Add Lead to Closers while the route allowed only
+ * Fronters — and the result was a 403 that took three attempts to diagnose because the API was
+ * right the whole time.
+ */
+export const appRoutes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
@@ -414,7 +422,9 @@ const router = createBrowserRouter([
   },
   { path: "/", element: <Navigate to="/dashboard" replace /> },
   { path: "*", element: <Navigate to="/dashboard" replace /> },
-]);
+];
+
+const router = createBrowserRouter(appRoutes);
 
 export function AppRouter() {
   return <RouterProvider router={router} />;
