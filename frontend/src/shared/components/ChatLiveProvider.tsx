@@ -7,6 +7,7 @@ import { HubConnectionBuilder, HubConnectionState, type HubConnection } from "@m
 import type { RootState } from "../../app/store";
 import { API_URL } from "../config";
 import { useToast } from "../ui";
+import { useChatRoomsQuery, useListUsersQuery } from "../api/baseApi";
 import { useNotificationSound } from "../hooks/useNotificationSound";
 import { CHAT_LIVE_MSG } from "../constants/messages";
 
@@ -57,11 +58,13 @@ interface IncomingMessage {
  * platform may not support it at all. Any of those simply means the message is still waiting in the
  * app — it must never surface as an error, and the sound has already played regardless.
  */
-function showDesktopNotification(body: string, roomId: string, navigate: (to: string) => void): void {
+function showDesktopNotification(
+  title: string, body: string, roomId: string, navigate: (to: string) => void,
+): void {
   try {
     if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
 
-    const n = new Notification(CHAT_LIVE_MSG.newMessage, {
+    const n = new Notification(title, {
       body,
       // One notification per conversation: ten messages from the same person replace each other
       // rather than stacking ten deep down the corner of the screen.
@@ -86,6 +89,15 @@ export function ChatLiveProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const toast = useToast();
   const playAlert = useNotificationSound();
+
+  // Names, so the alert says WHO and WHERE rather than just "New message". Both lists are already
+  // fetched by the notifications bell, so RTK Query serves these from cache.
+  const { data: rooms } = useChatRoomsQuery(undefined, { skip: !auth.accessToken });
+  const { data: users } = useListUsersQuery(undefined, { skip: !auth.accessToken });
+  const roomsRef = useRef(rooms);
+  roomsRef.current = rooms;
+  const usersRef = useRef(users);
+  usersRef.current = users;
 
   // Refs, so the message handler never has to be torn down and re-registered as these change —
   // re-registering would mean dropping messages during the swap.
@@ -144,6 +156,14 @@ export function ChatLiveProvider({ children }: { children: ReactNode }) {
       if (watching) return;
 
       playRef.current();
+
+      const sender = (usersRef.current ?? []).find((u) => u.id === msg.senderUserId);
+      const room = (roomsRef.current ?? []).find((r) => r.id === msg.roomId);
+      const senderName = sender?.userName ?? CHAT_LIVE_MSG.someone;
+      // A direct room is already named for the other person, so repeating it would read
+      // "Zuhaib · Zuhaib". A group is worth naming, because the sender alone doesn't say where.
+      const title = room && !room.isDirect ? `${senderName} · ${room.name}` : senderName;
+
       const preview = msg.body?.trim()
         ? (msg.body.length > 120 ? `${msg.body.slice(0, 120).trimEnd()}…` : msg.body)
         : msg.attachmentName
@@ -155,10 +175,11 @@ export function ChatLiveProvider({ children }: { children: ReactNode }) {
       // why messages were being missed entirely. When the page is hidden, ask the operating
       // system to show it instead; clicking it brings them straight to the conversation.
       if (document.visibilityState === "hidden") {
-        showDesktopNotification(preview, msg.roomId, navigateRef.current);
+        showDesktopNotification(title, preview, msg.roomId, navigateRef.current);
       } else {
         toastRef.current.show({
-          title: CHAT_LIVE_MSG.newMessage,
+          tone: "info",
+          title,
           description: preview,
           duration: 8000,
           action: {

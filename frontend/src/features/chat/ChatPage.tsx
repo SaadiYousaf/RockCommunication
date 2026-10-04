@@ -143,8 +143,12 @@ export function ChatPage() {
   const [callColleague, { isLoading: callingColleague }] = useCallColleagueMutation();
   const refetchUnreadRef = useRef(refetchUnread);
   refetchUnreadRef.current = refetchUnread;
-  const refetchMessagesRef = useRef(refetch);
-  refetchMessagesRef.current = refetch;
+  // Guarded, because the messages query is SKIPPED while no conversation is selected — and RTK
+  // Query throws when you refetch a query it never started. Opening Chat with nothing picked (the
+  // normal way anyone arrives) therefore crashed the whole page. Callers shouldn't have to know
+  // that, so the guard lives with the ref rather than at each call site.
+  const refetchMessagesRef = useRef<() => void>(() => {});
+  refetchMessagesRef.current = () => { if (activeRoomRef.current) refetch(); };
   const markReadRef = useRef(markRead);
   markReadRef.current = markRead;
   const lastActiveMarkReadRef = useRef(0);

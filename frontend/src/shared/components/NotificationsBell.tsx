@@ -1,14 +1,11 @@
-import { API_URL } from "../config";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
 import {
   useChatRoomsQuery, useChatUnreadQuery, useListUsersQuery,
   useNotificationsQuery, useNotificationsUnreadCountQuery,
   useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation,
 } from "../api/baseApi";
-import type { ChatMessage } from "../api/types";
 import type { RootState } from "../../app/store";
 import { Avatar, Badge, Button, Icon, Tooltip, useToast, cn } from "../ui";
 import { useAgentHub } from "../hooks/useAgentHub";
@@ -18,9 +15,10 @@ import { MESSAGES } from "../constants/messages";
 import { isNotificationSoundMuted, setNotificationSoundMuted, useNotificationSound } from "../hooks/useNotificationSound";
 
 /**
- * Header notifications bell — shows live unread count + a dropdown of rooms with unread.
- * Also subscribes to /hubs/chat globally so a toast appears whenever a message arrives
- * while the user is on a non-chat page.
+ * Header notifications bell — the unread count, and a dropdown of what is waiting.
+ *
+ * It used to hold its own /hubs/chat connection to raise toasts. ChatLiveProvider owns that now,
+ * so this component reads counts and renders; it no longer maintains a socket of its own.
  *
  * Mounted once in Layout, so it runs for the lifetime of the authenticated session.
  */
@@ -45,6 +43,14 @@ export function NotificationsBell() {
   const [markNotifRead] = useMarkNotificationReadMutation();
   const [markAllNotifRead] = useMarkAllNotificationsReadMutation();
 
+  // All three of these queries are SKIPPED during onboarding, and RTK Query throws if you refetch
+  // one it never started — which would take down the app shell, not just a page. Every refresh goes
+  // through here so no call site has to remember that.
+  const refreshInbox = useCallback(() => {
+    if (gated) return;
+    refetchUnread(); refetchNotifCount(); refetchNotifs();
+  }, [gated, refetchUnread, refetchNotifCount, refetchNotifs]);
+
   const playAlert = useNotificationSound();
   const [soundMuted, setSoundMuted] = useState(isNotificationSoundMuted());
   const navigate = useNavigate();
@@ -62,8 +68,7 @@ export function NotificationsBell() {
       action: url ? { label: "Open", onClick: () => navigate(url) } : undefined,
     });
     // Durable side: refresh the inbox count + list so the bell badge updates immediately.
-    refetchNotifCount();
-    refetchNotifs();
+    refreshInbox();
   });
 
   const chatUnread = unread.reduce((s, u) => s + (u.unreadCount || 0), 0);
@@ -104,13 +109,6 @@ export function NotificationsBell() {
   const roomsRef = useRef(rooms);
   roomsRef.current = rooms;
 
-  // Track the live connection + readiness so we can join rooms when both the
-  // connection AND the room list become available.
-  const connRef = useRef<import("@microsoft/signalr").HubConnection | null>(null);
-  const [hubReady, setHubReady] = useState(false);
-  // Track which room IDs we've already joined so room-list updates only join new ones.
-  const joinedRoomsRef = useRef(new Set<string>());
-
   // Click-outside close
   useEffect(() => {
     if (!open) return;
@@ -121,81 +119,13 @@ export function NotificationsBell() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  // Global chat hub — toasts a notification whenever the user is NOT on the chat page.
-  useEffect(() => {
-    if (!auth.accessToken || onboarding) return;
+  // The global chat hub used to live here, with its own connection, its own room-joining and its
+  // own toast. ChatLiveProvider in the layout now owns all of that — one connection for the whole
+  // session, a sound, and a desktop notification when the CRM isn't the tab in front. Keeping this
+  // copy meant two connections per user and two toasts per message.
+  //
+  // The bell still shows the count; it just no longer maintains a socket to do it.
 
-    const conn = new HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/chat`, { accessTokenFactory: () => tokenRef.current ?? "" })
-      .withAutomaticReconnect({
-        nextRetryDelayInMilliseconds: (ctx) => {
-          if (!tokenRef.current) return null;
-          if (ctx.previousRetryCount >= 4) return null;
-          return Math.min(1000 * 2 ** ctx.previousRetryCount, 15_000);
-        },
-      })
-      .build();
-
-    conn.on("MessageReceived", (msg: ChatMessage) => {
-      // Always refresh unread counts — the bell badge stays accurate.
-      refetchUnread();
-
-      // Skip toasts when the user is already in the chat UI (they'll see it inline).
-      if (pathRef.current.startsWith("/chat")) return;
-      // Don't toast our own messages echoed back.
-      if (msg.senderUserId === auth.user?.id) return;
-
-      const sender = (usersRef.current ?? []).find((u) => u.id === msg.senderUserId);
-      const room = (roomsRef.current ?? []).find((r) => r.id === msg.roomId);
-      const senderName = sender?.userName ?? "Someone";
-      const roomName = room?.name ?? "a conversation";
-      const preview = (msg.body ?? "").slice(0, 80);
-
-      toast.show({
-        tone: "info",
-        title: `${senderName} · ${roomName}`,
-        description: preview,
-        duration: 6000,
-        action: {
-          label: "Open chat",
-          onClick: () => navigate(`/chat?room=${msg.roomId}`),
-        },
-      });
-    });
-
-    // Re-join everything after a transparent reconnect.
-    conn.onreconnected(() => {
-      joinedRoomsRef.current.clear();
-      setHubReady(true);
-    });
-    conn.onclose(() => setHubReady(false));
-
-    conn.start()
-      .then(() => { connRef.current = conn; setHubReady(true); })
-      .catch(() => { /* offline / unauth — handled elsewhere */ });
-
-    return () => {
-      connRef.current = null;
-      setHubReady(false);
-      joinedRoomsRef.current.clear();
-      if (conn.state !== HubConnectionState.Disconnected) conn.stop().catch(() => {});
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.accessToken, onboarding]);
-
-  // Subscribe (JoinRoom) to every room the user belongs to once the connection
-  // is up and the room list has loaded. Without this, the chat hub never
-  // broadcasts MessageReceived to us → no toasts, no bell badge updates.
-  useEffect(() => {
-    if (!hubReady || !connRef.current || !rooms) return;
-    const conn = connRef.current;
-    for (const r of rooms) {
-      if (joinedRoomsRef.current.has(r.id)) continue;
-      conn.invoke("JoinRoom", r.id)
-        .then(() => joinedRoomsRef.current.add(r.id))
-        .catch(() => {});
-    }
-  }, [hubReady, rooms]);
 
   if (!auth.accessToken) return null;
 
@@ -333,7 +263,7 @@ export function NotificationsBell() {
 
           <div className="border-t hairline px-3 py-2 flex items-center justify-between">
             <button
-              onClick={() => { setOpen(false); refetchUnread(); refetchNotifCount(); refetchNotifs(); }}
+              onClick={() => { setOpen(false); refreshInbox(); }}
               className="text-xs text-ink-500 hover:text-ink-800 px-2 py-1 rounded transition-colors inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
               <Icon name="refresh" size={12} /> Refresh
