@@ -149,11 +149,12 @@ public class DeleteLeadTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
-    /// This is for retiring finished work, not for clearing leads nobody wants to call. A lead still
-    /// in play must not be removable.
+    /// A lead may be removed from any stage, not only the closed end (owner's instruction,
+    /// 6 Oct 2026). A duplicate or a junk import is most obviously junk long before anyone closes
+    /// it, and refusing to remove it just left it sitting in everyone's queue.
     /// </summary>
     [Fact]
-    public async Task A_lead_still_in_the_pipeline_cannot_be_removed()
+    public async Task A_lead_still_in_the_pipeline_can_be_removed()
     {
         var admin = await _factory.LoginAdminAsync();
 
@@ -165,11 +166,35 @@ public class DeleteLeadTests : IClassFixture<CrmWebAppFactory>
         });
         var fronter = await _factory.LoginAsync(userName, password);
 
-        var created = await fronter.PostJsonAsync("/api/intake/leads", Lead("Live"));
+        var created = await fronter.PostJsonAsync("/api/intake/leads", Lead("Duplicate"));
         var leadId = created.GetProperty("leadId").GetGuid();
 
-        var res = await admin.DeleteAsJsonAsync($"/api/leads/{leadId}", new { reason = "Trying to clear the queue." });
-        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var res = await admin.DeleteAsJsonAsync($"/api/leads/{leadId}",
+            new { reason = "Duplicate of an existing lead from the same import." });
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/leads/{leadId}")).StatusCode);
+    }
+
+    /// <summary>The safeguard that replaced the stage restriction: a reason, at every stage.</summary>
+    [Fact]
+    public async Task An_open_lead_still_needs_a_reason()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        var userName = $"fr{Guid.NewGuid():N}"[..16];
+        const string password = "FronterDel!456";
+        await admin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{userName}@example.com", userName, password, roles = new[] { "Fronter" },
+        });
+        var fronter = await _factory.LoginAsync(userName, password);
+
+        var created = await fronter.PostJsonAsync("/api/intake/leads", Lead("Reasonless"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await admin.DeleteAsJsonAsync($"/api/leads/{leadId}", new { reason = "" })).StatusCode);
         Assert.True((await admin.GetAsync($"/api/leads/{leadId}")).IsSuccessStatusCode);
     }
 

@@ -56,11 +56,7 @@ const CLOSING_STAGE: WorkflowStage = "Verified";
  */
 const POLICY_STAGES: WorkflowStage[] = ["JrClosed", "Closed", "Validated", "Funded"];
 
-/**
- * Stages an administrator may remove a lead from. Mirrors the server's own list — this is for
- * retiring finished work, not for clearing leads nobody wants to call.
- */
-const REMOVABLE_STAGES: WorkflowStage[] = ["JrClosed", "Closed", "Validated", "Funded"];
+
 
 export function LeadDetailPage() {
   const { id = "" } = useParams();
@@ -155,7 +151,10 @@ export function LeadDetailPage() {
   const stage = lead?.stage as WorkflowStage | undefined;
   const canClose = !!lead && closingRole && stage === CLOSING_STAGE;
   const canViewPolicy = !!lead && closingRole && !!stage && POLICY_STAGES.includes(stage);
-  const canDelete = !!lead && isAdmin && !!stage && REMOVABLE_STAGES.includes(stage);
+  // Any stage. A duplicate or a junk import is most obviously junk long before anyone closes it,
+  // and the safeguards that matter — a required reason, the audit entry, the notification, and
+  // admin-only — do not depend on how far down the pipeline the lead got.
+  const canDelete = !!lead && isAdmin;
 
   async function doTransition(toStage: WorkflowStage) {
     if (TERMINAL_STAGES.includes(toStage)) {

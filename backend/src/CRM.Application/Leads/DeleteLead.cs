@@ -37,15 +37,16 @@ public class DeleteLeadValidator : AbstractValidator<DeleteLeadCommand>
 
 public class DeleteLeadHandler : IRequestHandler<DeleteLeadCommand, Unit>
 {
-    /// <summary>
-    /// Stages a lead may be removed from. Deliberately the far end of the pipeline only: this exists
-    /// to retire finished work — a duplicate sale, a policy that was never real — not as a way to
-    /// clear leads somebody does not feel like calling.
-    /// </summary>
-    private static readonly WorkflowStage[] RemovableStages =
-    {
-        WorkflowStage.JrClosed, WorkflowStage.Closed, WorkflowStage.Validated, WorkflowStage.Funded,
-    };
+    // A lead may be removed from ANY stage (owner's instruction, 6 Oct 2026). It was originally
+    // restricted to the closed end of the pipeline, on the reasoning that this is for retiring
+    // finished work rather than clearing leads nobody wants to call — but a duplicate or a junk
+    // import is most obviously junk long before anyone closes it, and refusing to remove it just
+    // left it in everyone's queue.
+    //
+    // What makes that safe is not the stage restriction, which only moved the problem. It is that
+    // nothing is destroyed, a reason is required and kept on the record, the removal is audited with
+    // the administrator's name, the people whose work it was are told, and only an administrator can
+    // do it at all. Those are unchanged.
 
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
@@ -67,9 +68,6 @@ public class DeleteLeadHandler : IRequestHandler<DeleteLeadCommand, Unit>
 
         var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == request.LeadId, ct)
             ?? throw new NotFoundException(nameof(Lead), request.LeadId);
-
-        if (!RemovableStages.Contains(lead.Stage))
-            throw new ConflictException("Only a closed or sold lead can be removed.");
 
         var reason = request.Reason.Trim();
         var now = DateTime.UtcNow;

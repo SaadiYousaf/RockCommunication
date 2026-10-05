@@ -34,6 +34,7 @@ export const VALIDATOR_STATUSES: { value: ValidatorStatusValue; label: string }[
   { value: "Decline", label: "Decline" },
   { value: "ClientCancelled", label: "Client Cancelled" },
   { value: "ErrorInApplicationInformation", label: "Error in application information" },
+  { value: "ReferredToHo", label: "Referred to HO" },
 ];
 
 /** Sub-reasons for the "Error in application information" submission status. */
@@ -74,4 +75,5 @@ export const VALIDATOR_STATUS_TONE: Record<ValidatorStatusValue, BadgeTone> = {
   Decline: "purple",                       // the carrier refused it
   ClientCancelled: "neutral",              // the customer walked away
   ErrorInApplicationInformation: "pink",   // fixable paperwork, not a lost sale
+  ReferredToHo: "accent",                  // escalated out of the floor's hands, still open
 };

@@ -62,7 +62,13 @@ public enum ValidatorStatus
     /// Set by the Commission Agent: the sale's commission entries are negated and become editable
     /// so the desk can reconcile the true amounts. See CommissionDesk.
     /// </summary>
-    ChargedBack = 9
+    ChargedBack = 9,
+    /// <summary>
+    /// Handed to Head Office — the submission agent cannot resolve it from the floor and HO is now
+    /// carrying it. Still open work, not an outcome: the sale sits here until HO reports back and it
+    /// moves on to Approved, Decline or whatever HO finds.
+    /// </summary>
+    ReferredToHo = 10
 }
 
 /// <summary>Sub-reason for <see cref="ValidatorStatus.ErrorInApplicationInformation"/>.</summary>

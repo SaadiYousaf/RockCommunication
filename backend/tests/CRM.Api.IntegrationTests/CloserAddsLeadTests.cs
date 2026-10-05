@@ -164,6 +164,30 @@ public class CloserAddsLeadTests : IClassFixture<CrmWebAppFactory>
         banking198Reason = "Customer confirmed the account on the recorded line.",
     };
 
+    /// <summary>
+    /// "Referred to HO" — the submission agent cannot resolve it from the floor and Head Office is
+    /// now carrying it. It is open work, not an outcome: the sale stays at Closed rather than moving
+    /// to Validated, Funded or Lost, and no commission is settled on it either way.
+    /// </summary>
+    [Fact]
+    public async Task A_sale_can_be_referred_to_head_office()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Referred"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+        var sold = await closer.PostJsonAsync($"/api/intake/close/{leadId}",
+            new { status = "CompleteAndSold", application = Application() });
+        var saleId = sold.GetProperty("saleId").GetGuid();
+
+        var result = await admin.PostJsonAsync($"/api/intake/validate/{saleId}/status",
+            new { status = "ReferredToHo" });
+
+        Assert.Equal("ReferredToHo", result.GetProperty("status").GetString());
+        Assert.Equal("Closed", result.GetProperty("leadStage").GetString());
+    }
+
     /// <summary>Each capture path stays closed to the other role's holder.</summary>
     [Fact]
     public async Task A_fronter_is_refused_by_the_closer_capture_endpoint()

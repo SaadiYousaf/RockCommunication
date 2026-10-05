@@ -605,7 +605,8 @@ export type VerifierStatusValue = "None" | "Verified" | "NotInterested" | "Dnc" 
 export type CloserStatusValue = "None" | "CompleteAndSold" | "LostOnSocial" | "LostOnAccount" | "DncLead" | "NotInterestedCallback";
 export type ValidatorStatusValue =
   | "Completed" | "Approved" | "ActivePaid" | "NoUpdateInCommission"
-  | "BadBank" | "Nsf" | "Decline" | "ClientCancelled" | "ErrorInApplicationInformation";
+  | "BadBank" | "Nsf" | "Decline" | "ClientCancelled" | "ErrorInApplicationInformation"
+  | "ReferredToHo";
 
 export interface ValidatorQueueItem {
   saleId: string;
