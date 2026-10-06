@@ -306,6 +306,14 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.SeedAsync(scope.ServiceProvider);
 }
 
+// Says so loudly when outgoing mail cannot be authenticated as coming from us. The platform ran
+// for weeks sending every invitation from a gmail.com address through our relay — guaranteed spam,
+// and nothing anywhere said so.
+CRM.Api.Startup.EmailDeliverabilityCheck.Run(
+    app.Services,
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Email"),
+    app.Environment);
+
 app.Run();
 
 public partial class Program { }
