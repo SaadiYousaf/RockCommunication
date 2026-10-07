@@ -203,6 +203,12 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
   // A spreadsheet is wider than the panel it sits in, so reading one in a column beside the file
   // list means scrolling two ways at once. Full screen hands the whole window to the document.
   const [fullScreen, setFullScreen] = useState(false);
+  // A workbook's tabs, and which one is on screen. Held here rather than derived, because only the
+  // chosen sheet is ever converted to HTML.
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  const sheetRef = useRef<string | null>(null);
+  sheetRef.current = activeSheet;
 
   // Escape leaves full screen. Anyone who opens a document full-screen will try this key first.
   useEffect(() => {
@@ -232,36 +238,42 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
           // the raw serial number (45321), which reads as corrupted data to anyone looking at it.
           const wb = XLSX.read(buf, { type: "array", cellDates: true });
 
-          // Only ever render the first slice of a sheet.
+          // ONE SHEET AT A TIME.
           //
-          // A lead list runs to tens of thousands of rows, and sheet_to_html builds one string
-          // holding every cell — which then goes through the sanitiser and into the DOM. On a 7 MB
-          // export that is hundreds of megabytes of HTML and the tab either hangs or throws, which
-          // surfaced as "unsupported format" on a file that had parsed perfectly well. Capping the
-          // range is what makes a large sheet viewable at all.
-          let hiddenRows = 0;
-          for (const sn of wb.SheetNames) {
-            const ws = wb.Sheets[sn];
-            if (!ws?.["!ref"]) continue;
+          // A real workbook from this floor has eight tabs of several thousand rows each. Rendering
+          // them all built 9.5 MB of HTML even with every sheet capped — which then goes through the
+          // sanitiser and into the DOM — for seven tabs nobody was looking at. Rendering only the
+          // sheet in front of the reader costs about a megabyte, and the tabs reach the rest.
+          //
+          // A sheet with no `!ref` is an EMPTY TAB, and sheet_to_html throws on it
+          // ("Cannot read properties of undefined (reading 'indexOf')"). One empty tab in an
+          // otherwise perfect 7.6 MB workbook was failing the entire document with "unsupported
+          // format". They are listed, but shown as empty rather than rendered.
+          const names = wb.SheetNames.filter((n) => !!wb.Sheets[n]);
+          if (!cancelled) setSheetNames(names);
+
+          const wanted = sheetRef.current && names.includes(sheetRef.current)
+            ? sheetRef.current
+            : names.find((n) => !!wb.Sheets[n]?.["!ref"]) ?? names[0];
+          if (!cancelled) setActiveSheet(wanted ?? null);
+
+          const ws = wanted ? wb.Sheets[wanted] : undefined;
+          if (!ws?.["!ref"]) {
+            rendered = `<p><em>${escapeHtml(DOCUMENTS_MSG.emptySheet)}</em></p>`;
+          } else {
+            // Only ever render the first slice. A lead list runs to tens of thousands of rows, and
+            // sheet_to_html builds one string holding every cell.
             const range = XLSX.utils.decode_range(ws["!ref"] as string);
             const rows = range.e.r - range.s.r + 1;
             if (rows > MAX_SHEET_ROWS) {
-              hiddenRows += rows - MAX_SHEET_ROWS;
+              truncation = DOCUMENTS_MSG.truncatedRows(MAX_SHEET_ROWS, rows - MAX_SHEET_ROWS);
               range.e.r = range.s.r + MAX_SHEET_ROWS - 1;
               ws["!ref"] = XLSX.utils.encode_range(range);
             }
+            // Its own horizontal scroller: a states-by-carrier grid is far wider than the panel,
+            // and without this the whole page scrolls sideways instead.
+            rendered = `<div class="doc-sheet">${XLSX.utils.sheet_to_html(ws)}</div>`;
           }
-          if (hiddenRows > 0) truncation = DOCUMENTS_MSG.truncatedRows(MAX_SHEET_ROWS, hiddenRows);
-
-          rendered = wb.SheetNames.map((sn) => {
-            const sheetHtml = XLSX.utils.sheet_to_html(wb.Sheets[sn]);
-            // Each sheet gets its own horizontal scroller: a states-by-carrier grid is far wider
-            // than the panel, and without this the whole page scrolls sideways instead.
-            const title = wb.SheetNames.length > 1
-              ? `<h3 class="doc-sheet-title">${escapeHtml(sn)}</h3>`
-              : "";
-            return `${title}<div class="doc-sheet">${sheetHtml}</div>`;
-          }).join("");
         } else {
           // Lazy-import mammoth so it doesn't bloat the main bundle.
           const mammoth = (await import("mammoth")).default ?? (await import("mammoth"));
@@ -295,7 +307,7 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
       }
     })();
     return () => { cancelled = true; };
-  }, [doc.id, doc.kind, token]);
+  }, [doc.id, doc.kind, token, activeSheet]);
 
   // Block print while a protected doc is open (covers Ctrl/Cmd+P and menu print).
   useEffect(() => {
@@ -350,6 +362,33 @@ function ProtectedViewer({ doc, token, viewer }: { doc: DocumentMeta; token: str
         }
       />
       <CardBody className={fullScreen ? "flex-1 min-h-0 flex flex-col" : undefined}>
+        {/* A workbook's tabs. Only the selected one is converted and drawn, so a file with eight
+            sheets of several thousand rows costs a megabyte of HTML instead of nine and a half. */}
+        {sheetNames.length > 1 && (
+          <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label={DOCUMENTS_MSG.sheets}>
+            {sheetNames.map((name) => {
+              const active = name === activeSheet;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveSheet(name)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
+                    active
+                      ? "border-brand-300 bg-brand-50 text-brand-800"
+                      : "border-ink-200 text-ink-600 hover:border-ink-300 hover:bg-ink-50",
+                  )}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {notice && (
           <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
             <Icon name="info" size={16} className="mt-0.5 shrink-0 text-amber-600" />

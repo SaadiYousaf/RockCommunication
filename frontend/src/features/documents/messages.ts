@@ -3,6 +3,8 @@
  * Keep inline message strings out of the page — reference these instead.
  */
 export const DOCUMENTS_MSG = {
+  sheets: "Sheets in this workbook",
+  emptySheet: "This sheet is empty.",
   fullScreen: "Full screen",
   exitFullScreen: "Exit full screen (Esc)",
   fetchFailed: "Couldn't load this document. It may have been removed.",
