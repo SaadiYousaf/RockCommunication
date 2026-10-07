@@ -35,6 +35,10 @@ export const VALIDATOR_STATUSES: { value: ValidatorStatusValue; label: string }[
   { value: "ClientCancelled", label: "Client Cancelled" },
   { value: "ErrorInApplicationInformation", label: "Error in application information" },
   { value: "ReferredToHo", label: "Referred to HO" },
+  { value: "BadCustomer", label: "Bad Customer" },
+  { value: "NotInterestedOrDnc", label: "Not interested / DNC" },
+  { value: "CallDroppedOnSignature", label: "Call dropped on signature" },
+  { value: "StateNotAvailable", label: "State not available" },
 ];
 
 /** Sub-reasons for the "Error in application information" submission status. */
@@ -76,4 +80,8 @@ export const VALIDATOR_STATUS_TONE: Record<ValidatorStatusValue, BadgeTone> = {
   ClientCancelled: "neutral",              // the customer walked away
   ErrorInApplicationInformation: "pink",   // fixable paperwork, not a lost sale
   ReferredToHo: "accent",                  // escalated out of the floor's hands, still open
+  BadCustomer: "dark",                     // a flag on the person, not an outcome of the policy
+  NotInterestedOrDnc: "red",               // a hard stop, and DNC carries a compliance weight
+  CallDroppedOnSignature: "lime",          // fell over at the last step; the sale was nearly there
+  StateNotAvailable: "indigo",             // nobody's fault — no carrier writes in that state
 };

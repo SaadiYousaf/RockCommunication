@@ -96,6 +96,10 @@ const TONE_DOT: Record<BadgeTone, string> = {
   success: "bg-emerald-500",
   warning: "bg-amber-500",
   danger: "bg-rose-500",
+  dark: "bg-ink-800",
+  indigo: "bg-indigo-500",
+  lime: "bg-lime-500",
+  red: "bg-red-600",
 };
 
 function Chip({

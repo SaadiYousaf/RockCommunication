@@ -64,7 +64,18 @@ export function ValidateQueuePage() {
   });
   const total = queue?.length ?? 0;
   const approved = (queue ?? []).filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
-  const premiumTotal = (queue ?? []).reduce((sum, s) => sum + (s.monthlyPremium ?? 0), 0);
+  // Premium that is actually worth something: carrier-approved, plus what Head Office is still
+  // carrying. Summing the whole queue counted declines, bad banks and NSFs as revenue, so the
+  // figure a submission agent read all day was never money anyone was going to see.
+  //
+  // ActivePaid is included because it IS approved — and paid. Leaving it out would make the total
+  // DROP as sales progressed, which is the opposite of what the card is for.
+  const PREMIUM_COUNTED: ValidatorStatusValue[] = ["Approved", "ActivePaid", "ReferredToHo"];
+  const premiumTotal = (queue ?? [])
+    .filter((s) => PREMIUM_COUNTED.includes(s.status))
+    // The approved figure once a carrier has set one; what the closer recorded until then, which is
+    // all there is for a sale still sitting with Head Office.
+    .reduce((sum, s) => sum + (s.premiumApproved ?? s.monthlyPremium ?? 0), 0);
   const toast = useToast();
   const sel = useRowSelection(sorted.map((s) => s.saleId));
 
@@ -93,7 +104,7 @@ export function ValidateQueuePage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
           <Stat className="stagger-item" label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />
           <Stat className="stagger-item" label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
-          <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint="Total across the queue" />
+          <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint={INTAKE_MSG.premiumApprovedHint} />
         </div>
       )}
       <Card>
@@ -178,7 +189,7 @@ export function ValidateQueuePage() {
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.licenseAgentName ?? "—"}</TD>
                     <TD>
                       <Badge tone={TONE[s.status]} variant="soft">{LABEL[s.status]}</Badge>
-                      {(s.status === "Decline" || s.status === "ErrorInApplicationInformation") && s.declineReason && (
+                      {(s.status === "Decline" || s.status === "ErrorInApplicationInformation" || s.status === "BadCustomer") && s.declineReason && (
                         <div className="text-xs text-ink-500 mt-0.5 max-w-[16rem] truncate" title={s.declineReason}>{s.declineReason}</div>
                       )}
                     </TD>
@@ -325,6 +336,8 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
 
   const isError = status === "ErrorInApplicationInformation";
   const isDecline = status === "Decline";
+  // The note IS the status — "bad customer" with nothing written down warns nobody.
+  const isBadCustomer = status === "BadCustomer";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -336,7 +349,7 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
         coverageApproved: status === "Approved" ? parseFloat(coverageApproved) || 0 : undefined,
         premiumApproved: status === "Approved" ? parseFloat(premiumApproved) || 0 : undefined,
         planApproved: status === "Approved" ? planApproved : undefined,
-        declineReason: isDecline || isError ? reason : undefined,
+        declineReason: isDecline || isError || isBadCustomer ? reason : undefined,
         licenseAgentUserId: status === "Approved" && licenseAgentUserId ? licenseAgentUserId : undefined,
       }).unwrap();
       toast.success(INTAKE_MSG.statusUpdatedTitle, INTAKE_MSG.statusUpdatedDesc(sale.leadName, LABEL[status]));
@@ -404,6 +417,17 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
           </>
         )}
 
+        {isBadCustomer && (
+          <Textarea
+            label={INTAKE_MSG.badCustomerNotesLabel}
+            hint={INTAKE_MSG.badCustomerNotesHint}
+            required
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={INTAKE_MSG.badCustomerNotesPlaceholder}
+          />
+        )}
         {isDecline && (
           <Textarea label="Reason for decline" required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why was the application declined?" />
         )}

@@ -68,7 +68,23 @@ public enum ValidatorStatus
     /// carrying it. Still open work, not an outcome: the sale sits here until HO reports back and it
     /// moves on to Approved, Decline or whatever HO finds.
     /// </summary>
-    ReferredToHo = 10
+    ReferredToHo = 10,
+    /// <summary>
+    /// The customer themselves is the problem — abusive, fraudulent, or not to be sold to again.
+    /// Requires a note saying why.
+    ///
+    /// Unlike every other status, this one REMOVES the sale from the submission queue: there is no
+    /// submission work left to do on it and leaving it there means a submission agent re-reads the
+    /// same dead row every day. It stays in the sales list, because the sale happened and the
+    /// figures have to reconcile.
+    /// </summary>
+    BadCustomer = 11,
+    /// <summary>Customer does not want it, or asked not to be contacted again.</summary>
+    NotInterestedOrDnc = 12,
+    /// <summary>The call ended at the signature step — the application was never completed.</summary>
+    CallDroppedOnSignature = 13,
+    /// <summary>No carrier available to write this policy in the customer's state.</summary>
+    StateNotAvailable = 14
 }
 
 /// <summary>Sub-reason for <see cref="ValidatorStatus.ErrorInApplicationInformation"/>.</summary>

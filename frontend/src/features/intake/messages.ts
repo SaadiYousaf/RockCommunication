@@ -4,6 +4,12 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  badCustomerNotesLabel: "Notes",
+  badCustomerNotesHint:
+    "Required. This is the warning the next person who meets this customer will read, so say what actually happened.",
+  badCustomerNotesPlaceholder: "What happened? e.g. abusive on the call, gave false banking details twice",
+  premiumApprovedHint: "Approved + with Head Office",
+
   // The submission queue's agent filter. One control covers all three roles a submitted sale
   // carries, because "show me everything involving this person" is the actual question.
   agentFilterLabel: "Agent",

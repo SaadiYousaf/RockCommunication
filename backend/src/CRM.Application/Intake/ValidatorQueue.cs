@@ -80,6 +80,11 @@ public class SetValidatorStatusValidator : AbstractValidator<SetValidatorStatusC
         When(x => x.Status == ValidatorStatus.Decline, () =>
             RuleFor(x => x.DeclineReason).NotEmpty().WithMessage("A decline reason is required."));
 
+        // "Bad customer" requires a note. The whole point of the status is the warning it carries
+        // to whoever meets this customer next; without the note it says nothing.
+        When(x => x.Status == ValidatorStatus.BadCustomer, () =>
+            RuleFor(x => x.DeclineReason).NotEmpty().WithMessage("Say what happened — this note is the warning."));
+
         // "Error in application information" requires the specific sub-reason.
         When(x => x.Status == ValidatorStatus.ErrorInApplicationInformation, () =>
             RuleFor(x => x.DeclineReason).NotEmpty().WithMessage("Select the application error (banking/payor or identity)."));
@@ -127,6 +132,12 @@ public class ValidatorQueueHandler :
         salesQ = central
             ? salesQ.IgnoreQueryFilters().Where(s => !s.IsDeleted)
             : salesQ.Where(s => s.AgencyId == _user.AgencyId);
+
+        // A sale flagged BadCustomer leaves this queue. There is no submission work left on it, and
+        // leaving it in means a submission agent re-reads the same dead row every morning. It is not
+        // deleted and it still appears in the sales list — the sale happened and the figures have to
+        // reconcile; it is only this working queue it drops out of.
+        salesQ = salesQ.Where(s => s.ValidatorStatus != ValidatorStatus.BadCustomer);
 
         var sales = await salesQ.OrderByDescending(s => s.SoldAt).Take(take).ToListAsync(ct);
 

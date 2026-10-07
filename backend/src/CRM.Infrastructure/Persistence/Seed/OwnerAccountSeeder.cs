@@ -40,14 +40,36 @@ public static class OwnerAccountSeeder
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(logger);
 
-        var email = config["GoLive:SuperAdminEmail"]?.Trim();
-        if (string.IsNullOrWhiteSpace(email)) return;
+        // The platform's SuperAdmins, declared in configuration rather than made by hand.
+        //
+        // GoLive:SuperAdminEmail is the original owner. GoLive:AdditionalSuperAdmins is everyone
+        // else who holds the platform — they are ensured on every start, so an account that is lost
+        // comes back rather than needing someone with access to rebuild it. Each is created exactly
+        // once; an existing email is skipped, so this never disturbs a live account.
+        var emails = new List<string>();
+        if (config["GoLive:SuperAdminEmail"]?.Trim() is { Length: > 0 } owner) emails.Add(owner);
+        foreach (var extra in config.GetSection("GoLive:AdditionalSuperAdmins").Get<string[]>() ?? Array.Empty<string>())
+            if (!string.IsNullOrWhiteSpace(extra)) emails.Add(extra.Trim());
 
+        foreach (var address in emails.Distinct(StringComparer.OrdinalIgnoreCase))
+            await EnsureOneAsync(db, users, emailSender, config, logger, address, ct);
+    }
+
+    private static async Task EnsureOneAsync(
+        AppDbContext db,
+        UserManager<ApplicationUser> users,
+        AuthEmailSender emailSender,
+        IConfiguration config,
+        ILogger logger,
+        string email,
+        CancellationToken ct)
+    {
         // Idempotent on the email, not on a flag: if the account is already there, this has run.
         if (await users.FindByEmailAsync(email) is not null) return;
 
-        var displayName = config["GoLive:SuperAdminName"]?.Trim();
-        if (string.IsNullOrWhiteSpace(displayName)) displayName = "Platform Owner";
+        var isOwner = string.Equals(email, config["GoLive:SuperAdminEmail"]?.Trim(), StringComparison.OrdinalIgnoreCase);
+        var displayName = (isOwner ? config["GoLive:SuperAdminName"]?.Trim() : null);
+        if (string.IsNullOrWhiteSpace(displayName)) displayName = "Platform Administrator";
 
         var userName = DeriveUserName(email);
         var temporary = IdentityService.GenerateTemporaryPassword();
@@ -95,7 +117,7 @@ public static class OwnerAccountSeeder
 
         db.PlatformStates.Add(new PlatformState
         {
-            Key = "go-live-owner-account",
+            Key = $"superadmin-account:{email}",
             AppliedAt = DateTime.UtcNow,
             Detail = $"SuperAdmin {userName} <{email}> created. " +
                      (emailed ? "Invitation emailed." : $"Invitation email FAILED; credentials written to {BreakGlassFileName}."),

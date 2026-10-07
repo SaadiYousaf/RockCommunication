@@ -7,7 +7,7 @@ import { cn } from "./cn";
 // saying which thing. The extra hues exist to be read, not to decorate.
 type Tone =
   | "default" | "brand" | "accent" | "success" | "warning" | "danger" | "info" | "neutral"
-  | "purple" | "orange" | "pink";
+  | "purple" | "orange" | "pink" | "dark" | "indigo" | "lime" | "red";
 /** Canonical badge/tone union — reuse this instead of re-declaring `Tone` per page. */
 export type BadgeTone = Tone;
 type Variant = "soft" | "solid" | "outline";
@@ -70,6 +70,31 @@ const tones: Record<Tone, Record<Variant, string>> = {
     soft:    "bg-fuchsia-50 text-fuchsia-700 ring-1 ring-inset ring-fuchsia-200/70",
     solid:   "bg-fuchsia-600 text-white",
     outline: "border border-fuchsia-200 text-fuchsia-700 bg-white",
+  },
+  // Three more, for the submission queue's fifteen outcomes. Picked for distance from what is
+  // already here: indigo sits away from sky and violet, lime away from emerald and amber, and a
+  // true red away from rose.
+  indigo: {
+    soft:    "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200/70",
+    solid:   "bg-indigo-600 text-white",
+    outline: "border border-indigo-200 text-indigo-700 bg-white",
+  },
+  lime: {
+    soft:    "bg-lime-50 text-lime-800 ring-1 ring-inset ring-lime-300/70",
+    solid:   "bg-lime-600 text-white",
+    outline: "border border-lime-300 text-lime-800 bg-white",
+  },
+  red: {
+    soft:    "bg-red-100 text-red-800 ring-1 ring-inset ring-red-300/70",
+    solid:   "bg-red-700 text-white",
+    outline: "border border-red-300 text-red-800 bg-white",
+  },
+  // Deliberately heavier than every other soft badge. It marks a PERSON rather than the fate of a
+  // policy, and it has to be the thing the eye lands on in a column of outcomes.
+  dark: {
+    soft:    "bg-ink-800 text-white ring-1 ring-inset ring-ink-900",
+    solid:   "bg-ink-900 text-white",
+    outline: "border border-ink-700 text-ink-800 bg-white",
   },
 };
 

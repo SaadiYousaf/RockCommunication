@@ -69,6 +69,14 @@ public class GoLiveResetTests : IDisposable
                     ["GoLive:ConfirmPhrase"] = "",
                     ["GoLive:SuperAdminEmail"] = "",
                 };
+
+                // appsettings.json also declares the platform's OTHER SuperAdmins. A test host must
+                // not inherit them, or "exactly one account exists" quietly becomes "exactly one,
+                // plus whoever happens to be in config" — which is how these two tests started
+                // failing the moment a second administrator was added. Indices, because an array
+                // cannot be unset through in-memory configuration.
+                for (var i = 0; i < 10; i++) settings[$"GoLive:AdditionalSuperAdmins:{i}"] = "";
+
                 foreach (var (k, v) in _extra) settings[k] = v;
                 config.AddInMemoryCollection(settings);
             });
@@ -286,5 +294,37 @@ public class GoLiveResetTests : IDisposable
         {
             try { File.Delete(path); } catch { /* a leftover temp file is not worth failing a test over */ }
         }
+    }
+
+    /// <summary>
+    /// The platform can hold more than one administrator, declared in configuration rather than
+    /// made by hand. Each is created once, invited, and must change their password on first use —
+    /// the same treatment as the owner, with no privileged back door that skips those steps.
+    /// </summary>
+    [Fact]
+    public async Task Additional_superadmins_from_configuration_are_created_and_invited()
+    {
+        await WithHostAsync(Armed(
+            ("GoLive:SuperAdminEmail", "owner-under-test@example.com"),
+            ("GoLive:AdditionalSuperAdmins:0", "second-admin@example.com")),
+            async (_, users) =>
+        {
+            var second = await users.FindByEmailAsync("second-admin@example.com");
+            Assert.NotNull(second);
+            Assert.Contains(Roles.SuperAdmin, await users.GetRolesAsync(second!));
+
+            // Invited, not handed a standing password.
+            Assert.True(second!.MustChangePassword);
+            Assert.NotNull(second.InvitationSentAt);
+        });
+
+        // Booting again must not disturb the account or re-invite it.
+        await WithHostAsync(Armed(
+            ("GoLive:SuperAdminEmail", "owner-under-test@example.com"),
+            ("GoLive:AdditionalSuperAdmins:0", "second-admin@example.com")),
+            async (_, users) =>
+        {
+            Assert.Single(users.Users.Where(u => u.Email == "second-admin@example.com").ToList());
+        });
     }
 }
