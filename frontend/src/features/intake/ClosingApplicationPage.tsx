@@ -17,6 +17,7 @@ const blank = {
   initialDraftDate: "", futureDraftDate: "", phoneNumber: "", altPhone: "", primaryDoctor: "", social: "",
   bornIn: "", driversLicense: "", height: "", weight: "", accountType: "checking", bankName: "",
   accountNumber: "", routingNumber: "", banking198Reason: "",
+  cardNumber: "", cardHolderName: "", cardExpiry: "", cardCvv: "",
 };
 
 /** Closer's closing application. Paste in is allowed; copying out is blocked. "Complete and Sold" creates the sale. */
@@ -52,6 +53,10 @@ export function ClosingApplicationPage() {
       altPhone: a?.altPhone ?? "", primaryDoctor: a?.primaryDoctor ?? "", social: a?.social ?? "",
       bornIn: a?.bornIn ?? "", driversLicense: a?.driversLicense ?? "", height: a?.height ?? "", weight: a?.weight ?? "",
       accountType: a?.accountType ?? "checking", bankName: a?.bankName ?? "", accountNumber: "", routingNumber: a?.routingNumber ?? "",
+      // Card number is deliberately NOT prefilled, exactly like the account number: a stored value
+      // is not re-displayed, it is re-entered. The CVV is never stored at all, so there is nothing
+      // to prefill and the box always starts empty.
+      cardNumber: "", cardHolderName: a?.cardHolderName ?? "", cardExpiry: a?.cardExpiry ?? "", cardCvv: "",
     });
   }, [data]);
 
@@ -72,6 +77,9 @@ export function ClosingApplicationPage() {
           phoneNumber: f.phoneNumber, altPhone: f.altPhone || undefined, primaryDoctor: f.primaryDoctor,
           social: f.social, bornIn: f.bornIn, driversLicense: f.driversLicense, height: f.height, weight: f.weight,
           accountType: f.accountType, bankName: f.bankName, accountNumber: f.accountNumber, routingNumber: f.routingNumber,
+          // cardCvv is absent on purpose — it is read to the carrier on the call and never leaves
+          // the browser. Adding it here is all it would take to start breaking PCI DSS.
+          cardNumber: f.cardNumber, cardHolderName: f.cardHolderName, cardExpiry: f.cardExpiry,
           banking198Reason: f.banking198Reason || undefined,
         },
       }).unwrap();
@@ -260,6 +268,27 @@ export function ClosingApplicationPage() {
           <Input label="Routing number" required={sold} secure inputMode="numeric" placeholder="9-digit routing number" value={f.routingNumber} onChange={set("routingNumber")} />
           <Input label="Reason (only if Lyons flags the account — code 198)" secure containerClassName="sm:col-span-2"
             placeholder="Why proceed on a flagged account?" value={f.banking198Reason} onChange={set("banking198Reason")} />
+        </Section>
+
+        <Section title={
+          <span className="inline-flex items-center gap-1">
+            {INTAKE_MSG.cardSectionTitle}
+            <InfoHint title={INTAKE_MSG.cardSectionTitle} side="right">
+              {INTAKE_MSG.cardSectionHint}
+            </InfoHint>
+          </span>
+        }>
+          <Input label="Card number" secure inputMode="numeric" autoComplete="off"
+            value={f.cardNumber} onChange={set("cardNumber")} />
+          <Input label="Name on the card" secure autoComplete="off"
+            value={f.cardHolderName} onChange={set("cardHolderName")} />
+          <Input label="Expiration date" secure placeholder="MM/YY" autoComplete="off"
+            value={f.cardExpiry} onChange={set("cardExpiry")} />
+          {/* Collected so the closer can read it to the carrier on the call, and never sent to the
+              server. PCI DSS forbids retaining the security code after authorisation outright. */}
+          <Input label="CVV" secure inputMode="numeric" autoComplete="off"
+            hint={INTAKE_MSG.cvvNotStored}
+            value={f.cardCvv} onChange={set("cardCvv")} />
         </Section>
 
        </fieldset>

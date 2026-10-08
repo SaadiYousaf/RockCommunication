@@ -4,6 +4,11 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  cardSectionTitle: "Card details",
+  cardSectionHint:
+    "For carriers that draft from a card instead of a bank account. Leave blank if the policy drafts from the bank details above.",
+  cvvNotStored: "Read this to the carrier on the call — it is never saved.",
+
   badCustomerNotesLabel: "Notes",
   badCustomerNotesHint:
     "Required. This is the warning the next person who meets this customer will read, so say what actually happened.",

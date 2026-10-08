@@ -44,6 +44,14 @@ public record ClosingApplicationDto(
     string BankName,
     string AccountNumber,
     string RoutingNumber,
+    // Card details, for carriers that draft from a card. Optional — most policies use the bank
+    // fields above, and requiring both would block every ordinary sale.
+    //
+    // No CVV. PCI DSS forbids retaining the security code after authorisation, so the form collects
+    // it for the closer to read to the carrier on the call and it is never sent here.
+    string? CardNumber = null,
+    string? CardHolderName = null,
+    string? CardExpiry = null,
     string? Banking198Reason = null);
 
 public record SubmitClosingApplicationCommand(Guid LeadId, CloserStatus Status, ClosingApplicationDto Input)
@@ -237,6 +245,9 @@ public class SubmitClosingApplicationHandler : IRequestHandler<SubmitClosingAppl
         // the carrier portal. It's encrypted at rest (EncryptedStringConverter, same as SSN/DL),
         // so a stolen DB doesn't expose it in cleartext.
         a.AccountNumber = d.AccountNumber;
+        a.CardNumber = string.IsNullOrWhiteSpace(d.CardNumber) ? null : d.CardNumber.Trim();
+        a.CardHolderName = string.IsNullOrWhiteSpace(d.CardHolderName) ? null : d.CardHolderName.Trim();
+        a.CardExpiry = string.IsNullOrWhiteSpace(d.CardExpiry) ? null : d.CardExpiry.Trim();
         a.RoutingNumber = d.RoutingNumber;
     }
 

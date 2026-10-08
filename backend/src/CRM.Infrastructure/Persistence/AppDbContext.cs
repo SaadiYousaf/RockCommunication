@@ -270,6 +270,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // value (the submission agent needs it for the carrier portal). Routing numbers are
             // public bank identifiers, so they stay plaintext.
             e.Property(x => x.AccountNumber).HasConversion(enc);
+            // Same treatment for the card number — a full PAN at rest is at least as sensitive as
+            // an account number. Holder name and expiry are not secret on their own.
+            e.Property(x => x.CardNumber).HasConversion(enc);
             e.HasOne<Lead>().WithOne(l => l.Application).HasForeignKey<LeadApplication>(x => x.LeadId).OnDelete(DeleteBehavior.Cascade);
         });
 

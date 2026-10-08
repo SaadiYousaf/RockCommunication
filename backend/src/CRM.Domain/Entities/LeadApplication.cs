@@ -56,6 +56,20 @@ public class LeadApplication : CallCenterEntity
     public string? AccountNumber { get; set; }
     public string? RoutingNumber { get; set; }
 
+    // ---- Card (sensitive) ----
+    // Some carriers draft from a card rather than a bank account. Handled exactly like the bank
+    // fields above: the number is encrypted at rest, the rest is ordinary application data.
+    //
+    // THERE IS NO CVV FIELD, DELIBERATELY. PCI DSS forbids retaining the security code after
+    // authorisation outright — there is no encryption or retention period that makes it allowed,
+    // and holding it is the single finding that voids a merchant agreement. The closer is given a
+    // CVV box on the form so they can read it to the carrier during the call; it is never sent to
+    // this server and never written down.
+    public string? CardNumber { get; set; }
+    public string? CardHolderName { get; set; }
+    /// <summary>As printed on the card, MM/YY.</summary>
+    public string? CardExpiry { get; set; }
+
     // ---- Outcome ----
     public CloserStatus CloserStatus { get; set; } = CloserStatus.None;
     public Guid? SubmittedByUserId { get; set; }

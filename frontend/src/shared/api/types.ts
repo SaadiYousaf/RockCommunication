@@ -742,6 +742,9 @@ export interface ClosingApplicationInput {
   bankName: string;
   accountNumber: string;
   routingNumber: string;
+  cardNumber?: string | null;
+  cardHolderName?: string | null;
+  cardExpiry?: string | null;
   /** Reason the closer is proceeding when Lyons flags the account (banking code 198). */
   banking198Reason?: string;
 }

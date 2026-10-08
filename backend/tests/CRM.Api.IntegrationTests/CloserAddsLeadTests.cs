@@ -162,6 +162,10 @@ public class CloserAddsLeadTests : IClassFixture<CrmWebAppFactory>
         // recording why it is safe to proceed. Supplying it is part of the real flow, not a
         // shortcut around it.
         banking198Reason = "Customer confirmed the account on the recorded line.",
+        // Some carriers draft from a card. Optional, so an ordinary bank-draft sale sends none of it.
+        cardNumber = "4111111111111111",
+        cardHolderName = "Marisol Testcase",
+        cardExpiry = "04/29",
     };
 
     /// <summary>
@@ -186,6 +190,60 @@ public class CloserAddsLeadTests : IClassFixture<CrmWebAppFactory>
 
         Assert.Equal("ReferredToHo", result.GetProperty("status").GetString());
         Assert.Equal("Closed", result.GetProperty("leadStage").GetString());
+    }
+
+    /// <summary>
+    /// Card details are stored the way the bank fields are, and read back to the closer.
+    /// </summary>
+    [Fact]
+    public async Task Card_details_are_saved_with_the_application()
+    {
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Cardholder"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+        await closer.PostJsonAsync($"/api/intake/close/{leadId}",
+            new { status = "CompleteAndSold", application = Application() });
+
+        var view = await closer.GetJsonAsync($"/api/intake/close/{leadId}");
+        var app = view.GetProperty("application");
+        Assert.Equal("4111111111111111", app.GetProperty("cardNumber").GetString());
+        Assert.Equal("Marisol Testcase", app.GetProperty("cardHolderName").GetString());
+        Assert.Equal("04/29", app.GetProperty("cardExpiry").GetString());
+    }
+
+    /// <summary>
+    /// THE one that matters. PCI DSS forbids retaining the security code after authorisation
+    /// outright — no encryption and no retention window makes it permitted, and holding it is the
+    /// single finding that voids a merchant agreement.
+    ///
+    /// The closer's form collects a CVV so it can be read to the carrier on the call, and never
+    /// sends it. This proves the server has nowhere to put one even when a client sends it anyway:
+    /// the field is not on the DTO, so it is dropped on the way in rather than quietly persisted.
+    /// </summary>
+    [Fact]
+    public async Task A_cvv_is_never_stored_even_if_a_client_sends_one()
+    {
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Cvvcheck"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+
+        // A client that sends one anyway — a stale build, or someone calling the API directly.
+        var app = Application();
+        var withCvv = app.GetType().GetProperties().ToDictionary(x => x.Name, x => x.GetValue(app));
+        // A sentinel rather than a plausible "123", so finding it in the response can only mean
+        // the value was persisted — never a coincidental match on an id or a phone number.
+        const string sentinel = "CVV-SENTINEL-7Q4";
+        withCvv["cardCvv"] = sentinel;
+        withCvv["cvv"] = sentinel;
+        withCvv["securityCode"] = sentinel;
+
+        await closer.PostJsonAsync($"/api/intake/close/{leadId}",
+            new { status = "CompleteAndSold", application = withCvv });
+
+        var raw = await (await closer.GetAsync($"/api/intake/close/{leadId}")).Content.ReadAsStringAsync();
+        Assert.DoesNotContain(sentinel, raw, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Each capture path stays closed to the other role's holder.</summary>

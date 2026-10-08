@@ -38,6 +38,7 @@ public record LeadApplicationDto(
     DateTime? InitialDraftDate, DateTime? FutureDraftDate, string? PhoneNumber, string? AltPhone,
     string? PrimaryDoctor, string? Social, string? BornIn, string? DriversLicense, string? Height,
     string? Weight, string? AccountType, string? BankName, string? AccountNumber, string? RoutingNumber,
+    string? CardNumber, string? CardHolderName, string? CardExpiry,
     CloserStatus CloserStatus, Guid? SaleId);
 
 public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicationQuery, ClosingApplicationView>
@@ -87,7 +88,13 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
             canSeeBankingPii ? a.Social : null,
             a.BornIn, canSeeBankingPii ? a.DriversLicense : null, a.Height, a.Weight, a.AccountType, a.BankName,
             canSeeBankingPii ? a.AccountNumber : null,
-            canSeeBankingPii ? a.RoutingNumber : null, a.CloserStatus, a.SaleId);
+            canSeeBankingPii ? a.RoutingNumber : null,
+            // Behind the same gate as the bank number — a Fronter or Verifier reaches this handler
+            // but must never see a card.
+            canSeeBankingPii ? a.CardNumber : null,
+            canSeeBankingPii ? a.CardHolderName : null,
+            canSeeBankingPii ? a.CardExpiry : null,
+            a.CloserStatus, a.SaleId);
 
         return new ClosingApplicationView(
             lead.Id, lead.FirstName, lead.LastName, lead.PhoneNumber, lead.Email, lead.Address,
