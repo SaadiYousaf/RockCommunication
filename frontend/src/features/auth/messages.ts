@@ -11,7 +11,9 @@ export const AUTH_MSG = {
   networkBlockedTitle: "This network isn't approved",
   networkBlockedBody: (app: string) =>
     `${app} can only be used from an approved network. Ask your administrator to approve the address below, then try again.`,
-  networkBlockedAddressLabel: "Your address",
+  networkBlockedAddressLabel: "Give your administrator this",
+  networkBlockedIpv6Hint:
+    "This is an IPv6 network, so approve the whole range above rather than a single address — your exact address changes every day or so. Your current one is:",
   networkBlockedRetry: "Try again",
   networkBlockedSignOut: "Sign out",
 

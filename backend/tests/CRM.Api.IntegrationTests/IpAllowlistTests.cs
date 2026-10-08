@@ -226,6 +226,56 @@ public class IpAllowlistTests : IClassFixture<IpAllowlistTests.ProxiedFactory>
         Assert.NotEqual(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/users")).StatusCode);
     }
 
+    /// <summary>
+    /// IPv4 and IPv6 are different address families and never match each other.
+    ///
+    /// This locked a whole office out. Their allowlist held the office's IPv4 address, their
+    /// machines connected over IPv6, and the entry could not possibly match — the screen said the
+    /// network was unapproved while the administrator was looking at it in the list.
+    /// </summary>
+    [Fact]
+    public async Task An_ipv4_entry_does_not_admit_an_ipv6_client()
+    {
+        var superAdmin = await _factory.LoginSuperAdminAsync();
+        var entry = await AllowAsync(superAdmin, "115.186.155.110");
+        try
+        {
+            var admin = await _factory.LoginAdminAsync();
+            From(admin, "2407:d000:1c:d340:667a:4453:35d8:f580");
+            Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/users")).StatusCode);
+        }
+        finally { await RevokeAsync(superAdmin, entry); }
+    }
+
+    /// <summary>
+    /// An IPv6 /64 is the unit worth allowlisting. The host half of a home or office IPv6 address
+    /// rotates — privacy extensions change it daily — so allowlisting the single address someone
+    /// reads off the blocked screen works today and fails tomorrow. The prefix is stable.
+    /// </summary>
+    [Fact]
+    public async Task An_ipv6_prefix_admits_every_address_behind_it()
+    {
+        var superAdmin = await _factory.LoginSuperAdminAsync();
+        var entry = await AllowAsync(superAdmin, "2407:d000:1c:d340::/64");
+        try
+        {
+            var admin = await _factory.LoginAdminAsync();
+
+            // The address that was blocked…
+            From(admin, "2407:d000:1c:d340:667a:4453:35d8:f580");
+            Assert.NotEqual(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/users")).StatusCode);
+
+            // …and the one the same machine will have tomorrow.
+            From(admin, "2407:d000:1c:d340:9999:1111:2222:3333");
+            Assert.NotEqual(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/users")).StatusCode);
+
+            // A neighbouring prefix is still refused.
+            From(admin, "2407:d000:1c:d341:667a:4453:35d8:f580");
+            Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/users")).StatusCode);
+        }
+        finally { await RevokeAsync(superAdmin, entry); }
+    }
+
     /// <summary>Only SuperAdmin decides which networks are approved.</summary>
     [Fact]
     public async Task An_ordinary_admin_cannot_change_the_allowlist()

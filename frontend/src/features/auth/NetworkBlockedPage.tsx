@@ -17,9 +17,37 @@ import { AUTH_MSG } from "./messages";
  * user to tell an administrator which address to approve, so it has to be easy to copy and read
  * aloud down a phone line.
  */
+/**
+ * What an administrator should actually put on the allowlist.
+ *
+ * For IPv4 it is the address itself. For IPv6 it is the /64 PREFIX, because the host half of a
+ * home or office IPv6 address rotates — privacy extensions change it roughly daily. Someone who
+ * reads the full address off this screen and allowlists it gets in today and is locked out
+ * tomorrow, which is a far worse experience than being locked out plainly.
+ */
+function approvableForm(address: string): { value: string; isPrefix: boolean } {
+  if (!address.includes(":")) return { value: address, isPrefix: false };
+
+  // Expand "::" so the first four groups can be taken reliably.
+  const [head, tail = ""] = address.split("::");
+  const headGroups = head ? head.split(":") : [];
+  const tailGroups = tail ? tail.split(":") : [];
+  const groups = address.includes("::")
+    ? [
+        ...headGroups,
+        ...Array(Math.max(0, 8 - headGroups.length - tailGroups.length)).fill("0"),
+        ...tailGroups,
+      ]
+    : address.split(":");
+
+  if (groups.length < 4) return { value: address, isPrefix: false };
+  return { value: `${groups.slice(0, 4).join(":")}::/64`, isPrefix: true };
+}
+
 export function NetworkBlockedPage() {
   const dispatch = useDispatch();
   const address = useSelector((s: RootState) => s.auth.networkBlockedAddress) || "";
+  const approvable = address ? approvableForm(address) : null;
 
   return (
     <div className="min-h-screen grid place-items-center p-6 bg-ink-50">
@@ -38,15 +66,23 @@ export function NetworkBlockedPage() {
             </p>
           </div>
 
-          {address && (
-            <div className="w-full rounded-xl border border-ink-200 bg-white px-4 py-3">
+          {approvable && (
+            <div className="w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-left">
               <div className="text-[11px] uppercase tracking-[0.16em] text-ink-500">
                 {AUTH_MSG.networkBlockedAddressLabel}
               </div>
               {/* Selectable and monospaced — this is the value they have to read out or paste. */}
               <div className="mt-1 select-all font-mono text-base font-semibold text-ink-900 break-all">
-                {address}
+                {approvable.value}
               </div>
+              {approvable.isPrefix && (
+                <p className="mt-2 text-xs leading-5 text-ink-600">
+                  {AUTH_MSG.networkBlockedIpv6Hint}
+                  <span className="mt-1 block select-all font-mono text-[11px] text-ink-500 break-all">
+                    {address}
+                  </span>
+                </p>
+              )}
             </div>
           )}
 
