@@ -287,7 +287,14 @@ public class PayrollHandlers :
         // Agency narrowing is only meaningful for a caller who can see more than one — the global
         // tenant filter already confines everyone else to their own.
         if (agencyId is { } ag && ag != Guid.Empty) q = q.Where(e => e.AgencyId == ag);
-        if (callCenterId is { } cc) q = q.Where(e => e.CallCenterId == cc);
+        // Guid.Empty means "the ones belonging to no call centre at all" — an office boy, a
+        // cleaner, agency-level HR. They are in payroll but invisible the moment a centre is
+        // chosen, and without a way to ask for them there is no screen that lists them. A real
+        // centre id filters to that centre as before.
+        if (callCenterId == Guid.Empty && callCenterId is not null)
+            q = q.Where(e => e.CallCenterId == null);
+        else if (callCenterId is { } cc)
+            q = q.Where(e => e.CallCenterId == cc);
         return q.OrderBy(e => e.FullName);
     }
 

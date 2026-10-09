@@ -209,4 +209,45 @@ public class HrPayrollTests : IClassFixture<CrmWebAppFactory>
         var fetched = await admin.GetJsonAsync($"/api/hr/interviews/{id}");
         Assert.Equal("Training", fetched.GetProperty("status").GetString());
     }
+
+    /// <summary>
+    /// Staff who belong to no call centre — an office boy, a cleaner, agency-level HR — are in
+    /// payroll, but vanish the moment a centre is chosen, and HR is scoped to a centre by default.
+    /// There was no way to list them at all; Guid.Empty asks for exactly that group.
+    /// </summary>
+    [Fact]
+    public async Task Employees_with_no_call_centre_can_be_listed_on_their_own()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        var name = $"Office Boy {Guid.NewGuid():N}"[..18];
+        await admin.PostJsonAsync("/api/hr/employees", new
+        {
+            fullName = name,
+            agentCode = $"ob{Guid.NewGuid():N}"[..12],
+            designation = "OfficeBoy",
+            employmentStatus = "Permanent",
+            callCenterId = (Guid?)null,     // serves the agency, not one centre
+            userId = (Guid?)null,           // and has no CRM login
+        });
+
+        var now = DateTime.UtcNow;
+
+        // Visible with no centre filter…
+        var all = await admin.GetJsonAsync($"/api/hr/payroll?year={now.Year}&month={now.Month}");
+        Assert.Contains(all.EnumerateArray(), r => r.GetProperty("fullName").GetString() == name);
+
+        // …and isolatable with the "no call centre" sentinel.
+        var unassigned = await admin.GetJsonAsync(
+            $"/api/hr/payroll?year={now.Year}&month={now.Month}&callCenterId={Guid.Empty}");
+        var rows = unassigned.EnumerateArray().ToList();
+        Assert.Contains(rows, r => r.GetProperty("fullName").GetString() == name);
+        Assert.All(rows, r => Assert.True(
+            r.GetProperty("callCenterId").ValueKind == JsonValueKind.Null,
+            "the unassigned view must contain only employees with no call centre"));
+
+        // The row says what they do, so an office boy is identifiable in the run.
+        var mine = rows.First(r => r.GetProperty("fullName").GetString() == name);
+        Assert.Equal("OfficeBoy", mine.GetProperty("designation").GetString());
+    }
 }

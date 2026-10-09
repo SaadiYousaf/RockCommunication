@@ -61,6 +61,9 @@ const toInput = (r: PayrollRow): SavePayrollInput => ({
  * basic salary + advance carry from last month, HR fills the rest, and each row exports a
  * PDF salary slip.
  */
+/** Asks the server for employees attached to no call centre at all. Mirrors Guid.Empty there. */
+const NO_CALL_CENTRE = "00000000-0000-0000-0000-000000000000";
+
 export function PayrollPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -297,6 +300,10 @@ export function PayrollPage() {
           )}
           <Select aria-label="Call centre" value={callCenterId} onChange={(e) => setCallCenterId(e.target.value)} className="w-48">
             <option value="">{HR_MSG.payrollAllCallCentres}</option>
+            {/* Guid.Empty asks the server for employees belonging to NO centre — an office boy, a
+                cleaner, agency-level HR. They are in payroll but vanish the moment a centre is
+                picked, and this is the only way to list them on their own. */}
+            <option value={NO_CALL_CENTRE}>{HR_MSG.payrollNoCallCentre}</option>
             {centreOptions.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}{c.isActive ? "" : ` — ${STATUS.disabled}`}
@@ -370,7 +377,18 @@ export function PayrollPage() {
       ) : list.length === 0 ? (
         <Card><CardBody><EmptyState icon={<Icon name="users" size={20} />} title={HR_MSG.noEmployeesTitle} description={HR_MSG.payrollEmptyDesc} /></CardBody></Card>
       ) : visible.length === 0 ? (
-        <Card><CardBody><EmptyState icon={<Icon name="search" size={20} />} title={HR_MSG.noMatchesTitle} description={HR_MSG.noEmployeeSearchMatchesDesc} /></CardBody></Card>
+        <Card><CardBody><EmptyState
+          icon={<Icon name="search" size={20} />}
+          title={HR_MSG.noMatchesTitle}
+          description={
+            // A role filter that finds nothing is the common case — someone looking for the office
+            // boys who were never added as employees. Say that, rather than "no matches", which
+            // leaves them to guess whether it is the filter, the month or the data.
+            designation
+              ? HR_MSG.noRoleMatchesDesc(hrLabel(designation))
+              : HR_MSG.noEmployeeSearchMatchesDesc
+          }
+        /></CardBody></Card>
       ) : (
         <div className="overflow-x-auto">
           <Table>

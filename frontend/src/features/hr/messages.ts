@@ -6,6 +6,10 @@
  * Short UI labels (buttons, headers, placeholders) stay in the components — this holds messages.
  */
 export const HR_MSG = {
+  payrollNoCallCentre: "No call centre (agency staff)",
+  noRoleMatchesDesc: (role: string) =>
+    `No ${role} in this month for the selected call centre. If they have no CRM login they won't appear automatically — add them under HR → Employees, then they'll be in the run.`,
+
   payrollRoleColumn: "Role",
   payrollRoleFilter: "Filter by role",
   payrollAllRoles: "All roles",
