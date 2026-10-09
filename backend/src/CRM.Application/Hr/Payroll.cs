@@ -14,6 +14,10 @@ namespace CRM.Application.Hr;
 /// <summary>One employee's payroll for a month — values plus the computed totals.</summary>
 public record PayrollRowDto(
     Guid EmployeeId, string FullName, string AgentCode, Guid? CallCenterId, string? CallCenterName, int Year, int Month,
+    // What the person does. Payroll already included every employee regardless of role, but the
+    // list never said which was which — so an office boy or a cleaner was in the run and
+    // indistinguishable from a closer, and HR had no way to pull up just that group.
+    EmployeeDesignation Designation,
     decimal BasicSalary, decimal Punctuality, decimal DailyBonus, decimal MonthlyCommissions,
     decimal TransportAllowance, decimal SpecialAllowance, decimal AdvanceSalary, decimal Docks,
     int WorkingDays, int PresentDays, int LeavesApproved, int LateComing, int HalfDays, int AbsentDays, int Ncns,
@@ -236,9 +240,15 @@ public class PayrollHandlers :
 
         var gross = basic + punctuality + dailyBonus + commission + transport + special;
         var deductions = advance + docks + lateAmt + halfAmt + absentAmt + ncnsAmt;
-        var net = gross - deductions;
+
+        // Daily bonus counts towards GROSS but not towards NET (owner's rule, 9 Oct 2026). It is
+        // paid separately from the salary transfer, so it belongs in what the employee earned for
+        // the month and not in what the bank run pays them. Subtracting it here rather than leaving
+        // it out of gross keeps the earnings line honest: the slip still shows the bonus was earned.
+        var net = gross - deductions - dailyBonus;
 
         return new PayrollRowDto(e.Id, e.FullName, e.AgentCode, e.CallCenterId, callCenterName, year, month,
+            e.Designation,
             basic, punctuality, dailyBonus, commission, transport, special, advance, docks,
             working, present, leave, late, half, absent, ncns,
             lateAmt, halfAmt, absentAmt, ncnsAmt,

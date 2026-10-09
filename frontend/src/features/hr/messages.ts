@@ -6,6 +6,16 @@
  * Short UI labels (buttons, headers, placeholders) stay in the components — this holds messages.
  */
 export const HR_MSG = {
+  payrollRoleColumn: "Role",
+  payrollRoleFilter: "Filter by role",
+  payrollAllRoles: "All roles",
+
+  // The daily bonus is earned (so it is in gross) but handed over separately from the salary
+  // transfer (so it is not in net). Both screens say so, or the arithmetic looks broken.
+  dailyBonusPaidSeparately: "Daily bonus (paid separately)",
+  netPayHint: "Total earnings minus deductions. The daily bonus is paid separately, so it counts towards gross but not towards the salary transfer.",
+  totalNetHint: "Earnings − deductions, summed across employees. Excludes daily bonus, which is paid separately.",
+
   payrollResourceName: "payroll",
   /** What failed to load, for the shared ErrorState ("Couldn't load employees"). */
   employeesResourceName: "employees",

@@ -34,6 +34,8 @@ public record ValidatorQueueItem(
     decimal? PremiumApproved,
     string? PlanApproved,
     string? DeclineReason,
+    /// <summary>The submission agent's own note about this sale. Optional.</summary>
+    string? SubmissionComment,
     Guid? ValidatorUserId,
     string? ValidatorName,
     Guid? LicenseAgentUserId,
@@ -60,6 +62,24 @@ public record SetValidatorStatusCommand(
     Guid? LicenseAgentUserId = null) : IRequest<ValidatorStatusResult>;
 
 public record ValidatorStatusResult(Guid SaleId, ValidatorStatus Status, WorkflowStage LeadStage);
+
+/// <summary>
+/// Set (or clear) the submission agent's note on a sale.
+///
+/// Separate from SetValidatorStatusCommand on purpose: a comment is optional and independent of the
+/// outcome, and making someone re-pick a status just to leave a note would mean the note never got
+/// written. Passing null or blank clears it.
+/// </summary>
+public record SetSubmissionCommentCommand(Guid SaleId, string? Comment) : IRequest<Unit>;
+
+public class SetSubmissionCommentValidator : AbstractValidator<SetSubmissionCommentCommand>
+{
+    public SetSubmissionCommentValidator()
+    {
+        RuleFor(x => x.SaleId).NotEmpty();
+        RuleFor(x => x.Comment!).MaximumLength(2000).When(x => x.Comment is not null);
+    }
+}
 
 public class SetValidatorStatusValidator : AbstractValidator<SetValidatorStatusCommand>
 {
@@ -93,7 +113,8 @@ public class SetValidatorStatusValidator : AbstractValidator<SetValidatorStatusC
 
 public class ValidatorQueueHandler :
     IRequestHandler<ValidatorQueueQuery, IReadOnlyList<ValidatorQueueItem>>,
-    IRequestHandler<SetValidatorStatusCommand, ValidatorStatusResult>
+    IRequestHandler<SetValidatorStatusCommand, ValidatorStatusResult>,
+    IRequestHandler<SetSubmissionCommentCommand, Unit>
 {
     // User-facing notification copy. Kept as constants next to the sender and free of internal
     // status names — the closer is told what happened in plain language.
@@ -171,11 +192,46 @@ public class ValidatorQueueHandler :
                 s.Carrier, s.PolicyNumber, s.MonthlyPremium,
                 s.CloserUserId, Name(s.CloserUserId),
                 s.ValidatorStatus, s.CarrierApproved, s.CoverageApproved, s.PremiumApproved,
-                s.PlanApproved, s.DeclineReason,
+                s.PlanApproved, s.DeclineReason, s.SubmissionComment,
                 s.ValidatorUserId, Name(s.ValidatorUserId),
                 s.LicenseAgentUserId, Name(s.LicenseAgentUserId),
                 s.SoldAt, s.ValidatedAt);
         }).ToList();
+    }
+
+    public async Task<Unit> Handle(SetSubmissionCommentCommand request, CancellationToken ct)
+    {
+        Guard.AgainstNull(request);
+        if (_user.UserId is null) throw new ForbiddenAccessException();
+
+        var sale = await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId, ct)
+            ?? throw new NotFoundException(nameof(Sale), request.SaleId);
+
+        var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+        if (comment == sale.SubmissionComment) return Unit.Value;
+
+        sale.SubmissionComment = comment;
+        await _db.SaveChangesAsync(ct);
+
+        // The closer is told, because a note on their sale is usually a question for them — "carrier
+        // wants a second signature", "bank details bounced". Left silent it is a message nobody
+        // receives. Cleared comments say nothing; there is nothing to read.
+        if (comment is not null && sale.CloserUserId != _user.UserId)
+        {
+            try
+            {
+                await _notify.DispatchAsync(
+                    new NotificationPayload(
+                        sale.AgencyId, sale.CloserUserId,
+                        $"Note on sale #{sale.SaleNumber}",
+                        comment.Length <= 140 ? comment : comment[..140].TrimEnd() + "…",
+                        "/my-sales"),
+                    new[] { NotificationChannelType.InApp }, ct);
+            }
+            catch { /* graceful — the note is saved either way */ }
+        }
+
+        return Unit.Value;
     }
 
     public async Task<ValidatorStatusResult> Handle(SetValidatorStatusCommand request, CancellationToken ct)

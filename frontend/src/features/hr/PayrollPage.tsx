@@ -17,6 +17,7 @@ import { exportRowsToCsv } from "../../shared/lib/csv";
 import { HR_MSG } from "./messages";
 import { STATUS } from "../../shared/constants/messages";
 import { useStatusTabs } from "../../shared/hooks/useStatusTabs";
+import { DESIGNATIONS, hrLabel } from "../../shared/constants/hr";
 
 // Salaries are paid in PKR.
 const money = (n: number | null | undefined) =>
@@ -69,6 +70,8 @@ export function PayrollPage() {
   const [callCenterId, setCallCenterId] = useState(scopedCallCenter);
   useEffect(() => { setCallCenterId(scopedCallCenter); }, [scopedCallCenter]);
   const [search, setSearch] = useState("");
+  // Role filter — the reason this exists is so HR can pull up just the office boys, or just closers.
+  const [designation, setDesignation] = useState("");
   const monthValue = `${year}-${String(month).padStart(2, "0")}`;
 
   // A SuperAdmin's list spans tenants, and SEVEN agencies each have a call centre named "Main" —
@@ -135,9 +138,15 @@ export function PayrollPage() {
     }
   }
 
-  // Live totals for the edit modal: net = gross earnings − all deductions, recomputed as HR edits.
+  // Live totals for the edit modal, recomputed as HR edits. Mirrors the server's own arithmetic in
+  // Payroll.cs — if these two ever disagree, HR sees one number while the slip prints another.
   const gross = form ? form.basicSalary + form.punctuality + form.dailyBonus + form.monthlyCommissions + form.transportAllowance + form.specialAllowance : 0;
-  const totalDeductions = form ? form.advanceSalary + form.docks + form.lateComingAmount + form.halfDaysAmount + form.absentDaysAmount + form.ncnsAmount : 0;
+  // The daily bonus is earned, so it counts in gross — but it is handed over separately from the
+  // salary transfer, so it comes back out before net. Carried as a deduction line rather than left
+  // out of gross: the employee earned it, and the totals still have to reconcile on screen.
+  const dailyBonusOut = form?.dailyBonus ?? 0;
+  const totalDeductions = (form ? form.advanceSalary + form.docks + form.lateComingAmount + form.halfDaysAmount + form.absentDaysAmount + form.ncnsAmount : 0)
+    + dailyBonusOut;
   const netPay = gross - totalDeductions;
   const dailyWage = form && form.workingDays > 0 ? form.basicSalary / form.workingDays : 0;
 
@@ -168,11 +177,12 @@ export function PayrollPage() {
   // Client-side search over the month's already-loaded rows — the query above is untouched.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const all = rows ?? [];
+    const all = (rows ?? []).filter((r) => !designation || r.designation === designation);
     if (!q) return all;
     return all.filter((r) =>
-      [r.fullName, r.agentCode, r.callCenterName].some((v) => (v ?? "").toLowerCase().includes(q)));
-  }, [rows, search]);
+      [r.fullName, r.agentCode, r.callCenterName, hrLabel(r.designation)]
+        .some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [rows, search, designation]);
 
   // Employees whose agency or call centre has been disabled still carry payroll history, so their
   // rows are kept — but they do not belong in the month an admin is actually working. Tabbed away,
@@ -188,6 +198,7 @@ export function PayrollPage() {
     exportRowsToCsv(chosen, [
       { header: "Name", value: (r) => r.fullName },
       { header: "Agent ID", value: (r) => r.agentCode },
+      { header: "Role", value: (r) => hrLabel(r.designation) },
       { header: "Basic", value: (r) => Math.round(r.basicSalary) },
       { header: "Deductions", value: (r) => Math.round(r.deductions) },
       { header: "Net", value: (r) => Math.round(r.netPay) },
@@ -263,7 +274,7 @@ export function PayrollPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         <Stat label="Employees" value={list.length} icon={<Icon name="users" size={16} />} tone="brand" />
-        <Stat label="Total net pay" value={money(totalNet)} hint="Earnings − deductions, summed across employees" icon={<Icon name="dollar" size={16} />} tone="success" />
+        <Stat label="Total net pay" value={money(totalNet)} hint={HR_MSG.totalNetHint} icon={<Icon name="dollar" size={16} />} tone="success" />
         <Stat label="Finalized" value={list.filter((r) => r.finalized).length} hint="Rows locked for the month and no longer auto-recalculated" icon={<Icon name="check" size={16} />} tone="accent" />
       </div>
 
@@ -290,6 +301,13 @@ export function PayrollPage() {
               <option key={c.id} value={c.id}>
                 {c.name}{c.isActive ? "" : ` — ${STATUS.disabled}`}
               </option>
+            ))}
+          </Select>
+          <Select aria-label={HR_MSG.payrollRoleFilter} value={designation}
+            onChange={(e) => setDesignation(e.target.value)} className="w-44">
+            <option value="">{HR_MSG.payrollAllRoles}</option>
+            {DESIGNATIONS.map((d) => (
+              <option key={d} value={d}>{hrLabel(d)}</option>
             ))}
           </Select>
           <SearchInput value={search} onChange={setSearch} placeholder={HR_MSG.payrollSearchPlaceholder} className="w-64" />
@@ -363,6 +381,7 @@ export function PayrollPage() {
                   <InfoHint title="Agent ID" side="bottom">The mono code beneath each name is the employee's unique Agent ID.</InfoHint>
                 </span>
               </TH>
+              <TH>{HR_MSG.payrollRoleColumn}</TH>
               <TH numeric>Basic</TH>
               <TH numeric>
                 <span className="inline-flex items-center gap-1">Commission
@@ -381,7 +400,7 @@ export function PayrollPage() {
               </TH>
               <TH numeric>
                 <span className="inline-flex items-center gap-1">Net pay
-                  <InfoHint title="Net pay" side="bottom">Total earnings minus total deductions — the take-home amount.</InfoHint>
+                  <InfoHint title="Net pay" side="bottom">{HR_MSG.netPayHint}</InfoHint>
                 </span>
               </TH>
               <TH>
@@ -408,6 +427,7 @@ export function PayrollPage() {
                       </div>
                     )}
                   </TD>
+                  <TD><Badge tone="neutral">{hrLabel(r.designation)}</Badge></TD>
                   <TD numeric className="tabular-nums text-ink-600">{money(r.basicSalary)}</TD>
                   <TD numeric className="tabular-nums text-ink-600">{money(r.monthlyCommissions)}</TD>
                   <TD numeric className="tabular-nums text-ink-600">{money(r.punctuality + r.dailyBonus + r.transportAllowance + r.specialAllowance)}</TD>
@@ -463,6 +483,12 @@ export function PayrollPage() {
               <LedgerLine label="NCNS" count={form.ncns} onCount={numAuto("ncns")} amount={form.ncnsAmount} />
               <LedgerLine label="Advance salary" amount={form.advanceSalary} onAmount={num("advanceSalary")} />
               <LedgerLine label="Docks" amount={form.docks} onAmount={num("docks")} />
+              {/* Read-only: it mirrors the Daily bonus field in Earnings above. Shown here so the
+                  three totals below reconcile — a panel where gross minus deductions does not
+                  equal net is a panel HR stops believing. */}
+              {dailyBonusOut > 0 && (
+                <LedgerLine label={HR_MSG.dailyBonusPaidSeparately} amount={dailyBonusOut} />
+              )}
             </Ledger>
             {/* Live net-salary summary — recomputed automatically after every deduction. */}
             <div className="rounded-xl border border-ink-200 bg-ink-50/60 p-3 grid grid-cols-3 gap-2 text-center">

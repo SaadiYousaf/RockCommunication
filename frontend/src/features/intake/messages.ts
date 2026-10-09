@@ -4,6 +4,18 @@
  * across the intake pages. Never surface internal identifiers here — speak in plain language.
  */
 export const INTAKE_MSG = {
+  commentAdd: "Add a note",
+  commentEdit: "Edit this note",
+  commentTitle: (name: string) => `Note — ${name}`,
+  commentDescription: "Optional. For what the carrier said, what is outstanding, or who to chase.",
+  commentLabel: "Note",
+  commentHint: "The closer is notified so they see what you've written. Clear the box to remove the note.",
+  commentPlaceholder: "e.g. Carrier wants a second signature — emailed the closer 9 Oct",
+  commentSave: "Save note",
+  commentSaved: "Note saved",
+  commentCleared: "Note removed",
+  commentFailed: "Couldn't save the note",
+
   cardSectionTitle: "Card details",
   cardSectionHint:
     "For carriers that draft from a card instead of a bank account. Leave blank if the policy drafts from the bank details above.",

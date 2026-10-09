@@ -1323,6 +1323,15 @@ export const baseApi = createApi({
     // count money have to be re-read, not just the lead lists.
     // Calling a colleague by id: the caller never sees their number, which is the point — the
     // phone number stays on the server.
+    // A submission agent's note on a sale. Its own endpoint, not folded into the status call:
+    // a comment is optional and independent, and making someone re-pick a status to leave one
+    // would mean the note never got written.
+    setSubmissionComment: b.mutation<void, { saleId: string; comment: string | null }>({
+      query: ({ saleId, comment }) => ({
+        url: `/api/intake/validate/${saleId}/comment`, method: "PUT", body: { comment },
+      }),
+      invalidatesTags: ["ValidatorQueue"],
+    }),
     callColleague: b.mutation<{ callId: string; status: string; provider: string }, { userId: string }>({
       query: (body) => ({ url: "/api/cc/calls/call-colleague", method: "POST", body }),
       invalidatesTags: ["Calls"],
@@ -1754,5 +1763,5 @@ export const {
   useCompleteAcademyLessonMutation, useSubmitAcademyQuizMutation,
   useAcademyProgressQuery, useAcademyCertificatesQuery,
   useChangeUserEmailMutation,
-  useDeleteLeadMutation, useCallColleagueMutation,
+  useDeleteLeadMutation, useCallColleagueMutation, useSetSubmissionCommentMutation,
 } = baseApi;

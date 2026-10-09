@@ -122,6 +122,14 @@ public class Sale : CallCenterEntity
     /// <summary>Closer's reason for proceeding when Lyons flags the account (banking code 198).</summary>
     public string? BankingNote { get; set; }
 
+    /// <summary>
+    /// A submission agent's free note about this sale — what the carrier said, what is still
+    /// outstanding, who to chase. Optional and editable, and deliberately separate from
+    /// DeclineReason, which belongs to a particular status: a comment survives the sale moving
+    /// between statuses, and a decline reason should not be overwritten by general chatter.
+    /// </summary>
+    public string? SubmissionComment { get; set; }
+
     // ---- Lyons bank-account validation (banking code is derived from this, never entered by hand) ----
     /// <summary>ABA routing number of the validated bank account (not sensitive).</summary>
     public string? BankRoutingNumber { get; set; }

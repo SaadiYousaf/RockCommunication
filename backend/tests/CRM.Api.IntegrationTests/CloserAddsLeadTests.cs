@@ -246,6 +246,66 @@ public class CloserAddsLeadTests : IClassFixture<CrmWebAppFactory>
         Assert.DoesNotContain(sentinel, raw, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// A submission agent's note on a sale: optional, editable, and independent of the status —
+    /// leaving one must not require re-picking an outcome, or the note never gets written.
+    /// </summary>
+    [Fact]
+    public async Task A_submission_comment_can_be_written_edited_and_cleared()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Commented"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+        var sold = await closer.PostJsonAsync($"/api/intake/close/{leadId}",
+            new { status = "CompleteAndSold", application = Application() });
+        var saleId = sold.GetProperty("saleId").GetGuid();
+
+        async Task<string?> CommentOnQueueAsync()
+        {
+            var queue = await admin.GetJsonAsync("/api/intake/validate/queue");
+            var row = queue.EnumerateArray().First(x => x.GetProperty("saleId").GetGuid() == saleId);
+            return row.GetProperty("submissionComment").GetString();
+        }
+
+        Assert.Null(await CommentOnQueueAsync());
+
+        await admin.PutJsonAsync($"/api/intake/validate/{saleId}/comment",
+            new { comment = "Carrier wants a second signature." });
+        Assert.Equal("Carrier wants a second signature.", await CommentOnQueueAsync());
+
+        await admin.PutJsonAsync($"/api/intake/validate/{saleId}/comment",
+            new { comment = "Signature received, resubmitted." });
+        Assert.Equal("Signature received, resubmitted.", await CommentOnQueueAsync());
+
+        // Blank clears it rather than storing an empty string, so the icon goes back to "no note".
+        await admin.PutJsonAsync($"/api/intake/validate/{saleId}/comment", new { comment = "   " });
+        Assert.Null(await CommentOnQueueAsync());
+    }
+
+    /// <summary>A note belongs to the sale, not to a status, so changing the status keeps it.</summary>
+    [Fact]
+    public async Task A_submission_comment_survives_a_status_change()
+    {
+        var admin = await _factory.LoginAdminAsync();
+        var closer = await AsRoleAsync("Closer");
+
+        var created = await closer.PostJsonAsync("/api/intake/close/leads", Lead("Persisted"));
+        var leadId = created.GetProperty("leadId").GetGuid();
+        var sold = await closer.PostJsonAsync($"/api/intake/close/{leadId}",
+            new { status = "CompleteAndSold", application = Application() });
+        var saleId = sold.GetProperty("saleId").GetGuid();
+
+        await admin.PutJsonAsync($"/api/intake/validate/{saleId}/comment", new { comment = "Chasing the carrier." });
+        await admin.PostJsonAsync($"/api/intake/validate/{saleId}/status", new { status = "ReferredToHo" });
+
+        var queue = await admin.GetJsonAsync("/api/intake/validate/queue");
+        var row = queue.EnumerateArray().First(x => x.GetProperty("saleId").GetGuid() == saleId);
+        Assert.Equal("Chasing the carrier.", row.GetProperty("submissionComment").GetString());
+        Assert.Equal("ReferredToHo", row.GetProperty("status").GetString());
+    }
+
     /// <summary>Each capture path stays closed to the other role's holder.</summary>
     [Fact]
     public async Task A_fronter_is_refused_by_the_closer_capture_endpoint()

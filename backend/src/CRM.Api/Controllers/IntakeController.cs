@@ -110,6 +110,18 @@ public class IntakeController : ControllerBase
         decimal? PremiumApproved, string? PlanApproved, string? DeclineReason,
         Guid? LicenseAgentUserId = null);
 
+    public record SubmissionCommentBody(string? Comment);
+
+    /// <summary>Set or clear the submission agent's note on a sale. Optional, and independent of status.</summary>
+    [HttpPut("validate/{saleId:guid}/comment")]
+    [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
+    public async Task<IActionResult> SetComment(Guid saleId, [FromBody] SubmissionCommentBody body, CancellationToken ct)
+    {
+        Guard.AgainstNull(body);
+        await _mediator.Send(new SetSubmissionCommentCommand(saleId, body.Comment), ct);
+        return NoContent();
+    }
+
     [HttpPost("validate/{saleId:guid}/status")]
     [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
     public async Task<ActionResult<ValidatorStatusResult>> SetValidatorStatus(Guid saleId, [FromBody] ValidatorStatusBody body, CancellationToken ct)

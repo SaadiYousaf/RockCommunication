@@ -82,7 +82,12 @@ public static class PayrollSlipPdf
                             ("NCNS", p.Ncns.ToString(), p.NcnsAmount),
                             ("Advance salary", "", p.AdvanceSalary),
                             ("Docks", "", p.Docks),
-                        }, p.Deductions, Colors.Red.Darken1));
+                            // The daily bonus is earned, so it belongs in Gross — but it is handed
+                            // over separately from the salary transfer, so it is taken back out
+                            // here. Shown as its own line rather than quietly dropped: a slip whose
+                            // gross minus deductions does not equal its net is a slip nobody trusts.
+                            ("Daily bonus (paid separately)", "", p.DailyBonus),
+                        }, p.Deductions + p.DailyBonus, Colors.Red.Darken1));
                     });
 
                     col.Item().PaddingTop(6).Background(Colors.Green.Lighten5).Padding(10).Row(r =>

@@ -2,12 +2,13 @@ import { getErrorDetail } from "../../shared/api/apiError";
 import { useEffect, useMemo, useState } from "react";
 import {
   useSetValidatorStatusMutation, useValidatorQueueQuery, useGetValidateLeadQuery,
+  useSetSubmissionCommentMutation,
   useAgencyOptionsQuery, useAgencyLicenseAgentsQuery,
 } from "../../shared/api/baseApi";
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, SensitiveValue, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, useToast,
+  SearchInput, Select, SensitiveValue, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -32,6 +33,10 @@ export function ValidateQueuePage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<ValidatorStatusValue | null>(null);
   const [agentFilter, setAgentFilter] = useState("");
+  // The sale whose note is open, and the draft being typed into it.
+  const [commenting, setCommenting] = useState<ValidatorQueueItem | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [saveComment, { isLoading: savingComment }] = useSetSubmissionCommentMutation();
 
   // Everyone who appears on a row, in any of the three roles a submitted sale carries. A manager
   // asking "what's going on with Laraib" means all of it — the sales she closed, the ones she is
@@ -184,7 +189,32 @@ export function ValidateQueuePage() {
                     </TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
                     <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
-                    <TD className="text-sm tabular-nums whitespace-nowrap">{formatUsd(s.monthlyPremium)}</TD>
+                    <TD className="text-sm tabular-nums whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        {formatUsd(s.monthlyPremium)}
+                        {/* Beside the premium, where the submission agent is already looking.
+                            Filled notes get a solid icon so a glance down the column shows which
+                            sales have something written on them. */}
+                        <button
+                          type="button"
+                          aria-label={s.submissionComment ? INTAKE_MSG.commentEdit : INTAKE_MSG.commentAdd}
+                          title={s.submissionComment || INTAKE_MSG.commentAdd}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCommenting(s);
+                            setCommentDraft(s.submissionComment ?? "");
+                          }}
+                          className={cn(
+                            "rounded p-1 transition-colors",
+                            s.submissionComment
+                              ? "text-brand-600 hover:bg-brand-50"
+                              : "text-ink-300 hover:text-ink-600 hover:bg-ink-100",
+                          )}
+                        >
+                          <Icon name="chat" size={14} />
+                        </button>
+                      </span>
+                    </TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.closerName ?? "—"}</TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.licenseAgentName ?? "—"}</TD>
                     <TD>
@@ -216,6 +246,45 @@ export function ValidateQueuePage() {
 
       {active && <UpdateModal sale={active} onClose={() => setActive(null)} />}
       {viewing && <LeadDetailModal leadId={viewing.leadId} title={viewing.leadName} onClose={() => setViewing(null)} />}
+
+      {/* The note. Optional throughout — saving an empty box clears it. */}
+      <Modal
+        open={commenting !== null}
+        onClose={() => setCommenting(null)}
+        title={commenting ? INTAKE_MSG.commentTitle(commenting.leadName) : ""}
+        description={INTAKE_MSG.commentDescription}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setCommenting(null)}>Cancel</Button>
+            <Button
+              loading={savingComment}
+              onClick={async () => {
+                if (!commenting) return;
+                try {
+                  await saveComment({
+                    saleId: commenting.saleId,
+                    comment: commentDraft.trim() || null,
+                  }).unwrap();
+                  toast.success(commentDraft.trim() ? INTAKE_MSG.commentSaved : INTAKE_MSG.commentCleared);
+                  setCommenting(null);
+                } catch (err: unknown) {
+                  toast.error(INTAKE_MSG.commentFailed, getErrorDetail(err) ?? INTAKE_MSG.retry);
+                }
+              }}
+            >{INTAKE_MSG.commentSave}</Button>
+          </>
+        }
+      >
+        <Textarea
+          label={INTAKE_MSG.commentLabel}
+          hint={INTAKE_MSG.commentHint}
+          rows={5}
+          value={commentDraft}
+          onChange={(e) => setCommentDraft(e.target.value)}
+          placeholder={INTAKE_MSG.commentPlaceholder}
+          autoFocus
+        />
+      </Modal>
     </>
   );
 }

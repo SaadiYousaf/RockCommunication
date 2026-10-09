@@ -209,6 +209,8 @@ export interface PayrollRow {
   employeeId: string;
   fullName: string;
   agentCode: string;
+  /** What the person does — so an office boy is identifiable in the run, not just a name. */
+  designation: string;
   callCenterId?: string | null;
   callCenterName?: string | null;
   year: number;
@@ -628,6 +630,8 @@ export interface ValidatorQueueItem {
   premiumApproved: number | null;
   planApproved: string | null;
   declineReason: string | null;
+  /** The submission agent's own note about this sale. Optional. */
+  submissionComment: string | null;
   validatorUserId: string | null;
   validatorName: string | null;
   licenseAgentUserId: string | null;
