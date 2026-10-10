@@ -75,11 +75,14 @@ export function ValidateQueuePage() {
   //
   // ActivePaid is included because it IS approved — and paid. Leaving it out would make the total
   // DROP as sales progressed, which is the opposite of what the card is for.
-  const PREMIUM_COUNTED: ValidatorStatusValue[] = ["Approved", "ActivePaid", "ReferredToHo"];
+  // Approved sales only (owner's instruction, 11 Oct 2026 — this started as the whole queue, then
+  // briefly included Referred to HO). Nothing with an outcome short of approval counts: a decline,
+  // a bad bank or a sale still sitting with Head Office is not money anyone is going to see.
+  //
+  // The amount is the carrier's APPROVED premium, not what the closer recorded at the point of
+  // sale — those differ, and the approved figure is the one the carrier will actually draft.
   const premiumTotal = (queue ?? [])
-    .filter((s) => PREMIUM_COUNTED.includes(s.status))
-    // The approved figure once a carrier has set one; what the closer recorded until then, which is
-    // all there is for a sale still sitting with Head Office.
+    .filter((s) => s.status === "Approved")
     .reduce((sum, s) => sum + (s.premiumApproved ?? s.monthlyPremium ?? 0), 0);
   const toast = useToast();
   const sel = useRowSelection(sorted.map((s) => s.saleId));
