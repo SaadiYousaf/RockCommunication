@@ -3,13 +3,14 @@ import { getErrorDetail } from "../api/apiError";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { NAV, type NavNode } from "../constants/nav";
-import { useDispatch, useSelector } from "react-redux";
-import { clearAuth, type RootState } from "../../app/store";
+import { useSelector } from "react-redux";
+import { type RootState } from "../../app/store";
 import {
   useClockInMutation, useClockOutMutation, useDialLeadMutation,
   useListUsersQuery, useSearchKbQuery, useSearchLeadsQuery, useSetAgentStatusMutation,
 } from "../api/baseApi";
 import { Icon, useToast, type IconName } from "../ui";
+import { useSignOut } from "./SignOutProvider";
 import { cn } from "../ui/cn";
 
 /**
@@ -244,7 +245,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const isAdmin = roles.includes("Admin") || roles.includes("SuperAdmin");
   const isSuperAdmin = roles.includes("SuperAdmin");
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const signOut = useSignOut();
   const toast = useToast();
   const palette = useCommandPalette();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -303,9 +304,10 @@ function Palette({ onClose }: { onClose: () => void }) {
     },
     {
       id: "act-signout", label: "Sign out", group: "Actions", icon: "x", keywords: ["log out", "logout"],
-      onRun: () => { dispatch(clearAuth()); navigate("/login"); },
+      // Same end-of-day dialog as the user menu — there is one way out of the app, not two.
+      onRun: () => signOut(),
     },
-  ], [clockIn, clockOut, dispatch, navigate, setAgentStatus, toast, palette]);
+  ], [clockIn, clockOut, signOut, navigate, setAgentStatus, toast, palette]);
 
   // Live result items (Leads / Users / Knowledge / Dial-this-lead)
   const liveItems: PaletteItem[] = useMemo(() => {

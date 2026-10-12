@@ -4241,6 +4241,59 @@ namespace CRM.Infrastructure.Persistence.Migrations
                     b.ToTable("Scripts");
                 });
 
+            modelBuilder.Entity("CRM.Domain.Entities.ShiftReflection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CallCenterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("DidJustice")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JusticeNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Learned")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ShiftDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgencyId", "ShiftDate");
+
+                    b.HasIndex("UserId", "ShiftDate");
+
+                    b.ToTable("ShiftReflections");
+                });
+
             modelBuilder.Entity("CRM.Domain.Entities.Skill", b =>
                 {
                     b.Property<Guid>("Id")

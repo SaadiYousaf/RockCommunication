@@ -148,6 +148,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<BugReportActivity> BugReportActivities => Set<BugReportActivity>();
     public DbSet<CarrierAdvancingRule> CarrierAdvancingRules => Set<CarrierAdvancingRule>();
     public DbSet<PlatformState> PlatformStates => Set<PlatformState>();
+    public DbSet<ShiftReflection> ShiftReflections => Set<ShiftReflection>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -434,6 +435,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             e.Property(x => x.Comment).HasMaxLength(2000);
             e.HasIndex(x => x.BugReportId);
+        });
+
+        b.Entity<ShiftReflection>(e =>
+        {
+            e.Property(x => x.Learned).HasMaxLength(4000);
+            e.Property(x => x.JusticeNote).HasMaxLength(2000);
+            // The handler upserts on this pair, so a second sign-out the same day edits that day's
+            // answer rather than filing a duplicate.
+            //
+            // NOT unique, deliberately. A unique constraint here would turn two sign-out submits
+            // racing each other — a double-click on the button — into a failed save at the exact
+            // moment somebody is trying to leave. A duplicate row for one day is untidy; a 500 on
+            // the way out of the building is a bug people remember.
+            e.HasIndex(x => new { x.UserId, x.ShiftDate });
+            // How a manager reads a floor: a date window across the agency.
+            e.HasIndex(x => new { x.AgencyId, x.ShiftDate });
         });
 
         b.Entity<Interview>(e =>

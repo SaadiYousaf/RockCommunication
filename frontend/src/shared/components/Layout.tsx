@@ -1,8 +1,8 @@
 import { roleLabel } from "../constants/roles";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { clearAuth, type RootState } from "../../app/store";
+import { useSelector } from "react-redux";
+import { type RootState } from "../../app/store";
 import { Badge, Icon, Spinner, cn } from "../ui";
 import { useQueueCountsQuery } from "../api/baseApi";
 import { useMyProfileQuery } from "../../features/profile/baseApi";
@@ -12,6 +12,7 @@ import { CallDock } from "../../features/softphone/CallDock";
 import { ReportBugButton } from "../../features/bugs/ReportBugButton";
 import { ContextSwitcher } from "../../features/context/ContextSwitcher";
 import { CommandPaletteProvider, useCommandPalette } from "./CommandPalette";
+import { SignOutProvider, useSignOut } from "./SignOutProvider";
 import { BrandLogo } from "./BrandLogo";
 import { NotificationsBell } from "./NotificationsBell";
 import { ScrollToTop } from "./ScrollToTop";
@@ -85,17 +86,21 @@ function breadcrumbTrail(nodes: NavNode[], pathname: string): { label: string; t
 
 export function Layout() {
   return (
-    <CommandPaletteProvider>
-      <ScrollToTop />
-      <LayoutInner />
-    </CommandPaletteProvider>
+    // Outside the palette provider so the palette's own "Sign out" action can reach it too —
+    // one end-of-day dialog, however somebody chooses to leave.
+    <SignOutProvider>
+      <CommandPaletteProvider>
+        <ScrollToTop />
+        <LayoutInner />
+      </CommandPaletteProvider>
+    </SignOutProvider>
   );
 }
 
 function LayoutInner() {
   const auth = useSelector((s: RootState) => s.auth);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const signOut = useSignOut();
   const location = useLocation();
   const [collapsed, setCollapsed] = usePersistentState<boolean>("ui.sidebar.collapsed", false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -268,7 +273,7 @@ function LayoutInner() {
                 </nav>
                 <div className="border-t hairline p-1.5">
                   <button
-                    onClick={() => { dispatch(clearAuth()); navigate("/login"); }}
+                    onClick={() => { setMenuOpen(false); signOut(); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-rose-600 hover:bg-rose-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                   >
                     <Icon name="logout" size={16} /> Sign out

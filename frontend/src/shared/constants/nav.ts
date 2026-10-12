@@ -130,6 +130,10 @@ export const NAV: NavNode[] = [
       { key: "hr-interviews", to: "/hr/interviews", label: "Interviews",   icon: "userPlus", roles: ["HR"] },
       { key: "hr-payroll",    to: "/hr/payroll",    label: "Payroll",      icon: "doc",      roles: ["HR"] },
       { key: "hr-social",     to: "/hr/social",     label: "Social Media", icon: "chat",     roles: ["HR"] },
+      {
+        key: "hr-reflections", to: "/hr/reflections", label: "Check-ins", icon: "chat",
+        roles: ["HR", "CEO", "CallCenterAdmin", "ProjectManager", "ProgramManager", "TeamLead", "QAManager"],
+      },
     ],
   },
   {

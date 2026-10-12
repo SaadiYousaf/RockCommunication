@@ -81,6 +81,7 @@ const HrAttendancePage = lazyWithReload(() => import("../features/hr/HrAttendanc
 const InterviewsPage = lazyWithReload(() => import("../features/hr/InterviewsPage").then(m => ({ default: m.InterviewsPage })));
 const PayrollPage = lazyWithReload(() => import("../features/hr/PayrollPage").then(m => ({ default: m.PayrollPage })));
 const SocialReportsPage = lazyWithReload(() => import("../features/hr/SocialReportsPage").then(m => ({ default: m.SocialReportsPage })));
+const ReflectionsPage = lazyWithReload(() => import("../features/hr/ReflectionsPage").then(m => ({ default: m.ReflectionsPage })));
 const CallsHistoryPage = lazyWithReload(() => import("../features/callcenter/CallsHistoryPage").then(m => ({ default: m.CallsHistoryPage })));
 const RolesPage = lazyWithReload(() => import("../features/admin/RolesPage").then(m => ({ default: m.RolesPage })));
 const GlobalSearchPage = lazyWithReload(() => import("../features/search/GlobalSearchPage").then(m => ({ default: m.GlobalSearchPage })));
@@ -393,6 +394,15 @@ export const appRoutes: RouteObject[] = [
               { path: "/hr/interviews", element: <InterviewsPage /> },
               { path: "/hr/payroll", element: <PayrollPage /> },
               { path: "/hr/social", element: <SocialReportsPage /> },
+            ],
+          },
+          {
+            // End-of-day check-ins. Wider than the rest of HR on purpose: the people who run a
+            // floor are the ones who need to read their own floor's answers, and the handler
+            // narrows anyone without review rights to their own history rather than refusing them.
+            element: <ProtectedRoute roles={["HR", "CEO", "CallCenterAdmin", "ProjectManager", "ProgramManager", "TeamLead", "QAManager"]} />,
+            children: [
+              { path: "/hr/reflections", element: <ReflectionsPage /> },
             ],
           },
           {

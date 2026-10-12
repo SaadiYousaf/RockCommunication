@@ -115,6 +115,38 @@ export const STATUS_FILTER_MSG = {
   all: "All",
 } as const;
 
+/**
+ * The end-of-day check-in, asked when somebody signs out.
+ *
+ * The two questions are the owner's own words and are left as he wrote them — this is his daily
+ * ritual with the floor, not copy for us to improve. Everything around them is ours, and it says
+ * plainly that answering is optional, because it is.
+ */
+export const SIGN_OUT_MSG = {
+  title: "Before you go",
+  description: "Two quick questions about today. Both are optional.",
+
+  learnedLabel: "What new thing did you learn regarding your job today?",
+  learnedPlaceholder: "Anything at all — a rebuttal that worked, a carrier rule, a shortcut.",
+
+  justiceLabel: "Do you think you did justice with your job today?",
+  justiceYes: "Yes",
+  justiceNo: "No",
+  justiceNoteLabel: "Anything you'd like to add",
+  justiceNotePlaceholder: "Only if you want to.",
+  justiceNoHint: "This goes to management so somebody can help.",
+
+  submit: "Submit & sign out",
+  // Says what the button does, not just what it declines. Both buttons end the session, and an
+  // agent at the end of a shift should not have to guess which one keeps them logged in.
+  skip: "Skip & sign out",
+  signingOut: "Signing out…",
+  saved: "Thanks — noted.",
+  // Shown when the answer couldn't be saved. The sign-out itself still happens: nobody should be
+  // held inside the application because a form failed.
+  saveFailed: "Couldn't save your answer, but you've been signed out.",
+} as const;
+
 /** Copy for the app-wide chat alert — shown anywhere in the CRM, and on the desktop. */
 export const CHAT_LIVE_MSG = {
   newMessage: "New message",

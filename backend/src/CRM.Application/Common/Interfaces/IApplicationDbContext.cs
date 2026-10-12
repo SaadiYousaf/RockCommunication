@@ -98,6 +98,8 @@ public interface IApplicationDbContext
     DbSet<PlatformState> PlatformStates { get; }
     DbSet<BugReportActivity> BugReportActivities { get; }
     DbSet<CarrierAdvancingRule> CarrierAdvancingRules { get; }
+    /// <summary>End-of-day reflections, filed (optionally) when a person signs out.</summary>
+    DbSet<ShiftReflection> ShiftReflections { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
