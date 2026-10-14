@@ -34,6 +34,14 @@ export const INTAKE_MSG = {
   agentFilterHint:
     "Shows every sale this person is involved in — whether they closed it, are submitting it, or are the agent of record. The number is how many sales that is.",
 
+  // The Carrier and Premium columns show the APPROVED figures once a submission agent records
+  // them. The closer's originals are on the cell's hover title, and only when they differ.
+  premiumColumnTitle: "Monthly premium",
+  premiumColumnHint:
+    "What the carrier approved, once that's been recorded — this is the amount the carrier will draft each month. Until then it's the premium the closer submitted.",
+  closerSubmittedTitle: (carrier: string, premium: string) =>
+    `Closer submitted: ${carrier} · ${premium}/mo`,
+
   // Shown only to someone whose queue holds more than one company — a central submission agent.
   // "Company" rather than "agency": it is the word the owner and the floor both use.
   agencyFilterLabel: "Company",

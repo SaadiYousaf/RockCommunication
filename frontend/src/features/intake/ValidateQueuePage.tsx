@@ -24,6 +24,36 @@ import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline"
 import { INTAKE_MSG } from "./messages";
 import { StatusFilterBar } from "../../shared/components/StatusFilterBar";
 
+/**
+ * The carrier and premium this queue SHOWS: the approved figures once the submission agent has
+ * recorded them, and the closer's originals only until then.
+ *
+ * The closer writes down what they sold; the carrier decides what it actually issued, and the two
+ * routinely differ — a different plan, a loaded premium. Showing the closer's figure after approval
+ * meant the whole column was stale the moment the work was done, and the number a submission agent
+ * read all day was not the one the carrier would draft.
+ *
+ * One pair of helpers rather than the expression repeated per column, because the table, the sort,
+ * the search and the CSV export all have to agree about which figure is on screen.
+ */
+const shownCarrier = (s: ValidatorQueueItem) => s.carrierApproved?.trim() || s.carrier;
+const shownPremium = (s: ValidatorQueueItem) => s.premiumApproved ?? s.monthlyPremium;
+
+/**
+ * What the closer originally submitted, for the hover title — but only when it differs from the
+ * approved figure now on screen.
+ *
+ * The column deliberately shows one number. Dropping the original entirely would hide every
+ * discrepancy between sold and approved, which is exactly what the commission desk chases, so it
+ * stays reachable without taking up room.
+ */
+const originalIfChanged = (s: ValidatorQueueItem): string | undefined => {
+  const carrierChanged = !!s.carrierApproved?.trim() && s.carrierApproved.trim() !== s.carrier;
+  const premiumChanged = s.premiumApproved != null && s.premiumApproved !== s.monthlyPremium;
+  if (!carrierChanged && !premiumChanged) return undefined;
+  return INTAKE_MSG.closerSubmittedTitle(s.carrier, formatUsd(s.monthlyPremium));
+};
+
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
   // Poll: sales arrive as closers submit them, so the submission queue stays live across users.
@@ -86,27 +116,29 @@ export function ValidateQueuePage() {
     (statusFilter === null || s.status === statusFilter) &&
     (!agentFilter || involves(s, agentFilter)) &&
     (!agencyFilter || s.agencyName === agencyFilter) &&
-    (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())));
+    // Both carriers are searchable: the one on screen, and the one the closer submitted. Searching
+    // a carrier name should find the sale whichever of the two the person remembers.
+    (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.carrierApproved ?? ""} ${s.closerName ?? ""}`
+      .toLowerCase().includes(q.trim().toLowerCase())));
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
-    accessors: { status: (s) => LABEL[s.status] },
+    // Carrier and premium sort by the figure ON SCREEN, not the closer's original. Without these
+    // the column would order itself by numbers nobody can see.
+    accessors: {
+      status: (s) => LABEL[s.status],
+      carrier: (s) => shownCarrier(s),
+      monthlyPremium: (s) => shownPremium(s),
+    },
   });
   const total = queue?.length ?? 0;
   const approved = (queue ?? []).filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
-  // Premium that is actually worth something: carrier-approved, plus what Head Office is still
-  // carrying. Summing the whole queue counted declines, bad banks and NSFs as revenue, so the
-  // figure a submission agent read all day was never money anyone was going to see.
-  //
-  // ActivePaid is included because it IS approved — and paid. Leaving it out would make the total
-  // DROP as sales progressed, which is the opposite of what the card is for.
   // Approved sales only (owner's instruction, 11 Oct 2026 — this started as the whole queue, then
-  // briefly included Referred to HO). Nothing with an outcome short of approval counts: a decline,
-  // a bad bank or a sale still sitting with Head Office is not money anyone is going to see.
+  // briefly included Referred to HO). Nothing short of approval counts: a decline, a bad bank or a
+  // sale still sitting with Head Office is not money anyone is going to see.
   //
-  // The amount is the carrier's APPROVED premium, not what the closer recorded at the point of
-  // sale — those differ, and the approved figure is the one the carrier will actually draft.
+  // The amount is the carrier's APPROVED premium — see shownPremium.
   const premiumTotal = (queue ?? [])
     .filter((s) => s.status === "Approved")
-    .reduce((sum, s) => sum + (s.premiumApproved ?? s.monthlyPremium ?? 0), 0);
+    .reduce((sum, s) => sum + (shownPremium(s) ?? 0), 0);
   const toast = useToast();
   const sel = useRowSelection(sorted.map((s) => s.saleId));
 
@@ -114,9 +146,9 @@ export function ValidateQueuePage() {
     const chosen = sorted.filter((s) => sel.isSelected(s.saleId));
     exportRowsToCsv(chosen, [
       { header: "Customer", value: (s) => s.leadName },
-      { header: "Carrier", value: (s) => s.carrier },
+      { header: "Carrier", value: (s) => shownCarrier(s) },
       { header: "Plan", value: (s) => s.planApproved ?? s.policyNumber ?? "" },
-      { header: "Premium", value: (s) => formatUsd(s.monthlyPremium) },
+      { header: "Premium", value: (s) => formatUsd(shownPremium(s)) },
       { header: "Status", value: (s) => LABEL[s.status] },
       { header: "Agency", value: (s) => s.agencyName },
     ], `submission-queue-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -201,7 +233,7 @@ export function ValidateQueuePage() {
               <THead>
                 <TR>
                   <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
-                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title="Monthly premium" side="bottom">The amount the customer pays each month for this policy.</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
+                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title={INTAKE_MSG.premiumColumnTitle} side="bottom">{INTAKE_MSG.premiumColumnHint}</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
                   <TH sortDir={dirFor("licenseAgentName")} onClick={() => toggle("licenseAgentName")}>
                     <span className="inline-flex items-center gap-1">
                       Agent
@@ -233,10 +265,10 @@ export function ValidateQueuePage() {
                       <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{formatPhone(s.leadPhone)}</div>
                     </TD>
                     <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
-                    <TD className="text-sm whitespace-nowrap">{s.carrier}</TD>
-                    <TD className="text-sm tabular-nums whitespace-nowrap">
+                    <TD className="text-sm whitespace-nowrap" title={originalIfChanged(s)}>{shownCarrier(s)}</TD>
+                    <TD className="text-sm tabular-nums whitespace-nowrap" title={originalIfChanged(s)}>
                       <span className="inline-flex items-center gap-1.5">
-                        {formatUsd(s.monthlyPremium)}
+                        {formatUsd(shownPremium(s))}
                         {/* Beside the premium, where the submission agent is already looking.
                             Filled notes get a solid icon so a glance down the column shows which
                             sales have something written on them. */}
@@ -474,7 +506,10 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
   }
 
   return (
-    <Modal open onClose={onClose} title={`Submission — ${sale.leadName}`} description={`${sale.carrier} · ${formatUsd(sale.monthlyPremium)}/mo · closer ${sale.closerName ?? "—"}`} size="lg">
+    // The header carries the same approved figures as the queue row behind it. Showing the
+    // closer's originals here contradicted the Approved fields in this very dialog — two carriers
+    // and two premiums on one screen, with nothing saying which was which.
+    <Modal open onClose={onClose} title={`Submission — ${sale.leadName}`} description={`${shownCarrier(sale)} · ${formatUsd(shownPremium(sale))}/mo · closer ${sale.closerName ?? "—"}`} size="lg">
       <form onSubmit={submit} className="space-y-4">
         <div>
           <div className="flex items-center gap-1 mb-1.5">
