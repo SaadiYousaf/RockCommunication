@@ -67,3 +67,28 @@ export const canManageUser = (
   if (target.roles.includes("SuperAdmin")) return false;
   return rankOf(target.roles) < rankOf(caller.roles);
 };
+
+/**
+ * Platform level: a user with no agency, who works across every one of them.
+ *
+ * On the wire this arrives as the empty GUID rather than null — the server stores the agency as a
+ * non-nullable column where "none" is Guid.Empty — so both forms have to be treated as the same
+ * thing. Checking only for null is how a central agent ends up rendered as if they belonged to an
+ * agency whose id happens to be all zeroes.
+ */
+export const NO_AGENCY = "00000000-0000-0000-0000-000000000000";
+
+export const isCrossAgency = (agencyId: string | null | undefined): boolean =>
+  agencyId == null || agencyId === NO_AGENCY;
+
+/**
+ * The roles that have a cross-agency mode at all — mirrors the backend Roles.CrossAgencyCapable.
+ *
+ * Submission and commission agents have queues written to span tenants. Every other role is scoped
+ * by agency at the query level, so taking their agency away does not widen their reach, it empties
+ * their screens. Keep this in step with the backend list; the server refuses the rest anyway.
+ */
+export const CROSS_AGENCY_CAPABLE_ROLES = ["SuperAdmin", "Validator", "CommissionAgent"] as const;
+
+export const canWorkAcrossAgencies = (roles: readonly string[] | undefined): boolean =>
+  (roles ?? []).some((r) => (CROSS_AGENCY_CAPABLE_ROLES as readonly string[]).includes(r));

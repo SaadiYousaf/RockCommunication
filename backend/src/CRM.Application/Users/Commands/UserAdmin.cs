@@ -26,7 +26,11 @@ public record ResendInvitationCommand(Guid UserId) : IRequest<Unit>;
 /// The capability already existed on IUserAdminService but was never routed, so a SuperAdmin who
 /// created a user in the wrong agency had no way to correct it short of deleting and re-inviting.
 /// </summary>
-public record SetUserAgencyCommand(Guid UserId, Guid AgencyId) : IRequest<UserSummaryDto>;
+/// <summary>
+/// Re-scopes a user to one agency, or — with a null <paramref name="AgencyId"/> — to platform
+/// level, where a Submission Agent works across every agency.
+/// </summary>
+public record SetUserAgencyCommand(Guid UserId, Guid? AgencyId) : IRequest<UserSummaryDto>;
 /// <summary>
 /// Change the address a user signs in with. Admin-initiated only — never self-service: the email is
 /// the login identity and the password-reset destination, so letting people edit their own would
@@ -204,7 +208,10 @@ public interface IUserAdminService
     /// Move a user to a different tenant. SuperAdmin only — destructive: clears the user's
     /// team membership and any team-lead pointers, since teams live inside agencies.
     /// </summary>
-    Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid agencyId, CancellationToken ct = default);
+    /// <summary>
+    /// Moves a user between agencies, or to platform level (null = no agency, works across all).
+    /// </summary>
+    Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid? agencyId, CancellationToken ct = default);
     /// <summary>
     /// Throws if the caller may not manage the target user (cross-agency / cross-call-center /
     /// SuperAdmin target). Reuses the same rule as every other user-admin operation.

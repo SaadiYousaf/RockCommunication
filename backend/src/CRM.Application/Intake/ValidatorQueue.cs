@@ -204,7 +204,13 @@ public class ValidatorQueueHandler :
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
-        var sale = await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId, ct)
+        // A central Submission Agent carries no agency, so the global tenant filter would scope this
+        // read to Guid.Empty and match nothing — every note on every sale came back as "not found",
+        // on the one role whose whole job is working other agencies' sales. Mirrors the status path.
+        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        var sale = (central
+            ? await _db.Sales.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
+            : await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId, ct))
             ?? throw new NotFoundException(nameof(Sale), request.SaleId);
 
         var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();

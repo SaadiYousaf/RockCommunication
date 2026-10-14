@@ -33,6 +33,7 @@ export function ValidateQueuePage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<ValidatorStatusValue | null>(null);
   const [agentFilter, setAgentFilter] = useState("");
+  const [agencyFilter, setAgencyFilter] = useState("");
   // The sale whose note is open, and the draft being typed into it.
   const [commenting, setCommenting] = useState<ValidatorQueueItem | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
@@ -60,9 +61,31 @@ export function ValidateQueuePage() {
   const involves = (s: ValidatorQueueItem, name: string) =>
     s.closerName === name || s.validatorName === name || s.licenseAgentName === name;
 
+  /**
+   * The companies represented in the queue, with a count each.
+   *
+   * Only shown when there is more than one: an agency-scoped submission agent sees a single
+   * company and a filter offering that one company is a control that can do nothing. A central
+   * agent works the whole platform, and for them this is the difference between one queue and
+   * one unusable queue.
+   */
+  const agencyOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of queue ?? []) {
+      if (s.agencyName) counts.set(s.agencyName, (counts.get(s.agencyName) ?? 0) + 1);
+    }
+    const list = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    // Keep the chosen company listed once its last row leaves, for the same reason as the agent
+    // filter: otherwise the select reads "All companies" while still filtering, and the empty
+    // table has no visible cause.
+    if (agencyFilter && !counts.has(agencyFilter)) list.push([agencyFilter, 0]);
+    return list;
+  }, [queue, agencyFilter]);
+
   const filtered = (queue ?? []).filter((s) =>
     (statusFilter === null || s.status === statusFilter) &&
     (!agentFilter || involves(s, agentFilter)) &&
+    (!agencyFilter || s.agencyName === agencyFilter) &&
     (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.closerName ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())));
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     accessors: { status: (s) => LABEL[s.status] },
@@ -131,6 +154,25 @@ export function ValidateQueuePage() {
                 onChange={setStatusFilter}
                 className="min-w-0 flex-1"
               />
+              {/* Only once the queue actually spans companies — see agencyOptions. */}
+              {agencyOptions.length > 1 && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Select
+                    aria-label={INTAKE_MSG.agencyFilterLabel}
+                    value={agencyFilter}
+                    onChange={(e) => setAgencyFilter(e.target.value)}
+                    className="h-9 w-52 text-sm"
+                  >
+                    <option value="">{INTAKE_MSG.agencyFilterAll}</option>
+                    {agencyOptions.map(([name, count]) => (
+                      <option key={name} value={name}>{name} ({count})</option>
+                    ))}
+                  </Select>
+                  <InfoHint title={INTAKE_MSG.agencyFilterLabel} side="left">
+                    {INTAKE_MSG.agencyFilterHint}
+                  </InfoHint>
+                </div>
+              )}
               {agentOptions.length > 0 && (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Select
@@ -153,7 +195,7 @@ export function ValidateQueuePage() {
           )}
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
             <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle}
-              description={q || statusFilter || agentFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
+              description={q || statusFilter || agentFilter || agencyFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
           ) : (
             <Table>
               <THead>

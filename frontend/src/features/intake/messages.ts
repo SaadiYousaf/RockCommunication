@@ -34,6 +34,13 @@ export const INTAKE_MSG = {
   agentFilterHint:
     "Shows every sale this person is involved in — whether they closed it, are submitting it, or are the agent of record. The number is how many sales that is.",
 
+  // Shown only to someone whose queue holds more than one company — a central submission agent.
+  // "Company" rather than "agency": it is the word the owner and the floor both use.
+  agencyFilterLabel: "Company",
+  agencyFilterAll: "All companies",
+  agencyFilterHint:
+    "You verify sales for every company on the platform. Pick one to work its sales on their own; the number is how many are waiting.",
+
   closingDescription:
     "Complete the application. 'Complete and Sold' validates banking via Lyons and creates the sale.",
   policyReadOnlyDescription: "The application and policy recorded for this lead.",

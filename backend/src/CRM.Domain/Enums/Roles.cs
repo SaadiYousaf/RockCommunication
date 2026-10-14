@@ -162,6 +162,21 @@ public static class Roles
     public static bool IsCentralCommissionAgent(Guid? agencyId, IEnumerable<string> roles) =>
         (agencyId is null || agencyId == Guid.Empty) &&
         roles.Contains(CommissionAgent, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The roles that have a cross-agency mode at all: a Submission Agent and a Commission Agent,
+    /// whose queues are written to span tenants, plus the platform operator.
+    ///
+    /// Everything else is scoped by agency at the query level, so taking a user's agency away does
+    /// not widen their reach — it empties their screens. Sending a Closer or a Fronter to platform
+    /// level would hand them a working day of nothing, which is why this gate exists rather than
+    /// trusting whoever is clicking.
+    /// </summary>
+    public static readonly string[] CrossAgencyCapable = { SuperAdmin, Validator, CommissionAgent };
+
+    /// <summary>True when at least one of these roles is meaningful without an agency.</summary>
+    public static bool CanWorkAcrossAgencies(IEnumerable<string> roles) =>
+        roles.Any(r => CrossAgencyCapable.Contains(r, StringComparer.OrdinalIgnoreCase));
 }
 
 public enum WorkflowStage

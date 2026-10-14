@@ -32,6 +32,12 @@ public class UserAdminService : IUserAdminService
     private const string TeamMovedBodyFormat = "An administrator moved you to the {0} team.";
     private const string TeamRemovedBody = "An administrator removed you from your team.";
 
+    private const string AgencyScopeChangedTitle = "You now work across all companies";
+    private const string AgencyScopeChangedBody =
+        "An administrator gave you access to work across every company on the platform. You'll be asked to sign in again shortly, and you'll then see work from all of them in one queue.";
+    private const string AgencyScopeNarrowedBodyFormat =
+        "An administrator moved you to {0}. You'll be asked to sign in again shortly, and you'll then see that company's work only.";
+
     private const string CallCenterChangedTitle = "Your call center was changed";
     private const string CallCenterMovedBodyFormat = "An administrator moved you to the {0} call center.";
     private const string CallCenterRemovedBody = "An administrator removed you from your call center.";
@@ -486,40 +492,84 @@ public class UserAdminService : IUserAdminService
             TeamId: user.TeamId, CallCenterId: user.CallCenterId);
     }
 
-    public async Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid agencyId, CancellationToken ct = default)
+    /// <summary>
+    /// Moves a user to another agency, or — with a null <paramref name="agencyId"/> — to platform
+    /// level, where they work across EVERY agency.
+    ///
+    /// Platform level is how a central Submission Agent exists: the role grants nothing on its own,
+    /// and it is having no agency that opens the cross-tenant queue (see
+    /// <see cref="Roles.IsCentralSubmissionAgent"/>). Before this, the only way to get one was to
+    /// create a brand-new account — an agency-scoped submission agent already doing the job could
+    /// not be promoted, because this method insisted on a real agency row.
+    /// </summary>
+    public async Task<UserSummaryDto> SetAgencyAsync(Guid userId, Guid? agencyId, CancellationToken ct = default)
     {
         var user = await _users.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
 
-        var agency = await _db.Agencies.FirstOrDefaultAsync(a => a.Id == agencyId, ct)
-            ?? throw new NotFoundException(nameof(Agency), agencyId);
+        // Guid.Empty and null mean the same thing on the wire and in the token: no agency.
+        var target = agencyId is { } a && a != Guid.Empty ? a : (Guid?)null;
+        var roles = await _users.GetRolesAsync(user);
 
-        if (user.AgencyId == agencyId)
+        if (target is { } realAgency)
         {
-            // No-op: caller is already in this agency. Return the current snapshot.
-            var rolesNow = await _users.GetRolesAsync(user);
-            return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
-                rolesNow.ToList(), Array.Empty<string>(), TeamId: user.TeamId);
+            _ = await _db.Agencies.FirstOrDefaultAsync(ag => ag.Id == realAgency, ct)
+                ?? throw new NotFoundException(nameof(Agency), realAgency);
+        }
+        else
+        {
+            // Only the roles that HAVE a cross-agency mode may be sent platform-level. A
+            // platform-level Closer is not powerful, it is broken: every lead queue is scoped by
+            // agency, so they would sign in to a working day of empty screens.
+            if (!Roles.CanWorkAcrossAgencies(roles))
+                throw new ConflictException(
+                    "Only a Submission Agent or a Commission Agent can work across all companies. " +
+                    "Change their role first, or move them to a single company.");
         }
 
-        // Moving a user to a new tenant invalidates anything that lives inside their old
-        // tenant — team membership, team-lead pointer, ownership of cross-references.
-        // Clear those before updating AgencyId so we don't leave dangling state.
+        var effective = target ?? Guid.Empty;
+        if (user.AgencyId == effective)
+        {
+            // No-op: already scoped this way. Return the current snapshot without signing them out.
+            return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
+                roles.ToList(), Array.Empty<string>(), TeamId: user.TeamId, CallCenterId: user.CallCenterId);
+        }
+
+        // Moving a user out of a tenant invalidates everything that lived inside it — team
+        // membership, team-lead pointer, and the call centre, which belongs to one agency and is
+        // meaningless at platform level. Clear those before updating AgencyId so nothing dangles.
         var oldTeamId = user.TeamId;
+        var oldCallCenterId = user.CallCenterId;
         user.TeamId = null;
-        user.AgencyId = agencyId;
+        user.CallCenterId = null;
+        user.AgencyId = effective;
         var update = await _users.UpdateAsync(user);
         if (!update.Succeeded) throw new ConflictException(string.Join("; ", update.Errors.Select(e => e.Description)));
 
         // If they were leading any team back in their old agency, clear that pointer.
         var leadOf = await _db.Teams.Where(t => t.TeamLeadUserId == userId).ToListAsync(ct);
         foreach (var t in leadOf) t.TeamLeadUserId = null;
-        if (leadOf.Count > 0 || oldTeamId is not null) await _db.SaveChangesAsync(ct);
+        if (leadOf.Count > 0 || oldTeamId is not null || oldCallCenterId is not null)
+            await _db.SaveChangesAsync(ct);
 
-        var roles = await _users.GetRolesAsync(user);
-        _ = agency; // referenced for validation above
+        // Make the move take effect rather than merely recording it.
+        //
+        // The agency is a CLAIM in the access token, and the write above does not touch a token
+        // already in somebody's browser. Without this the promotion was advisory: the administrator
+        // flipped the switch, the agent's queue went on showing one agency, and nothing looked
+        // wrong anywhere. The same hole runs the other way and matters more — a user narrowed back
+        // to one agency would keep cross-tenant reach until they happened to sign out.
+        await _jwt.RevokeAllForUserAsync(user.Id, ct);
+        _activeUsers.Invalidate(user.Id);
+
+        var name = target is { } moved
+            ? await _db.Agencies.AsNoTracking().Where(ag => ag.Id == moved).Select(ag => ag.Name).FirstOrDefaultAsync(ct)
+            : null;
+        await NotifyTargetAsync(user, AgencyScopeChangedTitle,
+            target is null ? AgencyScopeChangedBody : string.Format(AgencyScopeNarrowedBodyFormat, name ?? "another company"), ct);
+
         return new UserSummaryDto(user.Id, user.UserName!, user.Email!, user.AgencyId,
-            roles.ToList(), Array.Empty<string>(), TeamId: user.TeamId);
+            roles.ToList(), Array.Empty<string>(), TeamId: user.TeamId, CallCenterId: user.CallCenterId);
     }
 
     public async Task SetTeamLeadAsync(Guid teamId, Guid? userId, CancellationToken ct = default)

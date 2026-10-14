@@ -527,7 +527,9 @@ export const baseApi = createApi({
       invalidatesTags: ["Users"],
     }),
     /** Move a user into another agency. SuperAdmin only — the server enforces it. */
-    setUserAgency: b.mutation<UserSummary, { userId: string; agencyId: string }>({
+    // agencyId null = platform level: no agency, works across every one of them. That is how a
+    // central Submission Agent exists, so this must stay nullable all the way to the server.
+    setUserAgency: b.mutation<UserSummary, { userId: string; agencyId: string | null }>({
       query: ({ userId, agencyId }) => ({ url: `/api/admin/users/${userId}/agency`, method: "PUT", body: { agencyId } }),
       invalidatesTags: ["Users", "Agencies"],
     }),

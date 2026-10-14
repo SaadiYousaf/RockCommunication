@@ -19,7 +19,18 @@ import {
 } from "../../shared/ui";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../app/store";
-import { ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser } from "../../shared/constants/roles";
+import {
+  ALL_ROLES, roleLabel, ROLE_TONES as roleTones, canManageUser,
+  canWorkAcrossAgencies, isCrossAgency,
+} from "../../shared/constants/roles";
+
+/**
+ * The <Select> value standing for "all companies".
+ *
+ * Deliberately not "" — that already means "nothing picked", and reusing it would fire a promotion
+ * every time the control reset itself.
+ */
+const CROSS_AGENCY = "__all_companies__";
 import { RolePicker } from "../../shared/components/RolePicker";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { CreateUserModal } from "./CreateUserModal";
@@ -91,18 +102,31 @@ export function UserManagementPage() {
 
   // Moving agencies is destructive — it drops the user's team and call centre, because both belong
   // to the agency they are leaving. Confirm before doing it rather than surprising the admin.
+  //
+  // CROSS_AGENCY is its own option rather than the empty value: "" already means "nothing picked"
+  // in a <Select>, and conflating the two would send a promotion every time the control was reset.
   async function assignAgency(userId: string, userName: string, value: string) {
     if (!value) return;
-    if (!(await confirm({
+    const toAll = value === CROSS_AGENCY;
+
+    if (!(await confirm(toAll ? {
+      title: ADMIN_MSG.userMgmt.crossAgencyConfirmTitle(userName),
+      description: ADMIN_MSG.userMgmt.crossAgencyConfirmDesc,
+      consequences: ADMIN_MSG.userMgmt.crossAgencyConsequences,
+      confirmLabel: ADMIN_MSG.userMgmt.crossAgencyConfirmLabel,
+      danger: true,
+    } : {
       title: ADMIN_MSG.userMgmt.moveAgencyConfirmTitle(userName),
       description: ADMIN_MSG.userMgmt.moveAgencyConfirmDesc,
       consequences: ADMIN_MSG.userMgmt.moveAgencyConsequences,
       confirmLabel: ADMIN_MSG.userMgmt.moveAgencyConfirmLabel,
       danger: true,
     }))) return;
+
     try {
-      await setUserAgency({ userId, agencyId: value }).unwrap();
-      toast.success(ADMIN_MSG.userMgmt.agencyUpdated);
+      await setUserAgency({ userId, agencyId: toAll ? null : value }).unwrap();
+      if (toAll) toast.success(ADMIN_MSG.userMgmt.crossAgencyUpdated, ADMIN_MSG.userMgmt.crossAgencyUpdatedDesc(userName));
+      else toast.success(ADMIN_MSG.userMgmt.agencyUpdated);
     } catch (err: unknown) {
       toast.error(ADMIN_MSG.userMgmt.agencyUpdateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
@@ -463,12 +487,19 @@ export function UserManagementPage() {
                 {isSuperAdmin && (
                   <TD>
                     <Select
-                      value={u.agencyId ?? ""}
+                      value={isCrossAgency(u.agencyId) ? CROSS_AGENCY : (u.agencyId ?? "")}
                       onChange={(e) => assignAgency(u.id, u.userName, e.target.value)}
                       className="text-xs min-w-[9rem]"
                       aria-label={`Agency for ${u.userName}`}
                     >
                       <option value="">—</option>
+                      {/* Offered only where it means something. A platform-level Closer is not
+                          powerful, they are broken: every lead queue is scoped by company, so
+                          they would sign in to a day of empty screens. The server refuses it
+                          too — this just avoids offering what would be rejected. */}
+                      {canWorkAcrossAgencies(u.roles) && (
+                        <option value={CROSS_AGENCY}>{ADMIN_MSG.userMgmt.crossAgencyOption}</option>
+                      )}
                       {(agencies ?? []).map((a) => (
                         <option key={a.id} value={a.id}>{a.name}</option>
                       ))}

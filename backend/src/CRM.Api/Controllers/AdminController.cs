@@ -140,11 +140,16 @@ public class AdminController : ControllerBase
         return Ok(await _mediator.Send(new SetUserCallCenterCommand(userId, body.CallCenterId), ct));
     }
 
-    public record SetUserAgencyBody(Guid AgencyId);
+    /// <summary>Null (or an empty guid) means platform level — no agency, works across all of them.</summary>
+    public record SetUserAgencyBody(Guid? AgencyId);
     /// <summary>
-    /// Move a user into another agency. SuperAdmin only (enforced in the handler) — this is the
-    /// correction path for a user created in the wrong tenant, which previously required deleting
-    /// and re-inviting them.
+    /// Move a user into another agency, or to platform level (<c>agencyId: null</c>) where a
+    /// Submission Agent works across every agency. SuperAdmin only (enforced in the handler) — this
+    /// is the correction path for a user created in the wrong tenant, which previously required
+    /// deleting and re-inviting them, and the promotion path for a submission agent who should be
+    /// working the whole platform rather than one company.
+    ///
+    /// Either direction signs the user out, because the agency is a claim in their access token.
     /// </summary>
     [HttpPut("users/{userId:guid}/agency")]
     [HasPermission(Permissions.UsersManage)]
