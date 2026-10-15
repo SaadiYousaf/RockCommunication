@@ -218,6 +218,144 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
         Assert.Equal(before + 1, after);
     }
 
+    /// <summary>Approves a sale, naming the licence agent it should be written under.</summary>
+    private static Task<HttpResponseMessage> ApproveAsync(HttpClient client, Guid saleId, Guid licenseAgentId)
+        => client.PostAsJsonAsync($"/api/intake/validate/{saleId}/status", new
+        {
+            status = "Approved",
+            carrierApproved = "ETHOS",
+            coverageApproved = 10000m,
+            premiumApproved = 69m,
+            planApproved = "Level",
+            licenseAgentUserId = licenseAgentId,
+        });
+
+    /// <summary>Creates a licence agent inside a named agency and returns their id and username.</summary>
+    private static async Task<(Guid Id, string UserName)> CreateLicenseAgentAsync(HttpClient superAdmin, Guid agencyId)
+    {
+        var userName = $"la{Guid.NewGuid():N}"[..16];
+        var created = await superAdmin.PostJsonAsync("/api/auth/register", new
+        {
+            email = $"{userName}@example.com", userName, password = Password,
+            agencyId, roles = new[] { "LicenseAgent" },
+        });
+        return (created.GetProperty("id").GetGuid(), userName);
+    }
+
+    /// <summary>
+    /// A sale sold by one agency, written under a licensed agent at another.
+    ///
+    /// This is the reported bug. The approval screen's Agency picker offers every agency and lists
+    /// that agency's licence agents, but the save checked the agent against the SALE's agency — so
+    /// choosing any other agency produced a list of names that could never be assigned, and a
+    /// "not a License Agent in this sale's agency" error about an agent who plainly was one.
+    /// </summary>
+    [Fact]
+    public async Task A_sale_can_be_written_under_a_license_agent_at_another_agency()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = await CreateAgencyAsync(sa, $"Selling {Guid.NewGuid():N}"[..20]);
+        var writing = await CreateAgencyAsync(sa, $"Writing {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "India");
+        var (agentId, _) = await CreateLicenseAgentAsync(sa, writing);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+
+        var res = await ApproveAsync(central, sale, agentId);
+        Assert.True(res.IsSuccessStatusCode,
+            $"a licence agent at another agency should be assignable; got {res.StatusCode} {await res.Content.ReadAsStringAsync()}");
+    }
+
+    /// <summary>
+    /// The money has to reach the agent.
+    ///
+    /// Commission rows are read back scoped to the reader's own agency, so a line filed under the
+    /// SELLING agency would be invisible to an agent at another one — earned, owed, and never shown
+    /// or paid. It follows the agent instead; the sale stays with the agency that sold it.
+    /// </summary>
+    [Fact]
+    public async Task The_commission_lands_where_the_license_agent_can_see_it()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = await CreateAgencyAsync(sa, $"Sell2 {Guid.NewGuid():N}"[..20]);
+        var writing = await CreateAgencyAsync(sa, $"Write2 {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Juliet");
+        var (agentId, agentName) = await CreateLicenseAgentAsync(sa, writing);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+        (await ApproveAsync(central, sale, agentId)).EnsureSuccessStatusCode();
+
+        // The agent signs in to their OWN agency and finds the commission waiting.
+        var agent = await _factory.LoginAsync(agentName, Password);
+        var mine = await agent.GetJsonAsync("/api/sales/commissions");
+        Assert.Contains(mine.EnumerateArray(), c => c.GetProperty("saleId").GetGuid() == sale);
+    }
+
+    /// <summary>
+    /// Re-assigning to an agent at a different agency MOVES the commission rather than leaving the
+    /// first one behind. The old lookup was keyed on the sale's agency, so a cross-agency
+    /// re-assignment missed the existing row and stranded it — the first agent still owed
+    /// commission on a sale that was no longer theirs.
+    /// </summary>
+    [Fact]
+    public async Task Re_assigning_across_agencies_moves_the_commission_instead_of_stranding_it()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = await CreateAgencyAsync(sa, $"Sell3 {Guid.NewGuid():N}"[..20]);
+        var first = await CreateAgencyAsync(sa, $"First3 {Guid.NewGuid():N}"[..20]);
+        var second = await CreateAgencyAsync(sa, $"Second3 {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Kilo");
+
+        var (firstAgentId, firstAgentName) = await CreateLicenseAgentAsync(sa, first);
+        var (secondAgentId, secondAgentName) = await CreateLicenseAgentAsync(sa, second);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+
+        (await ApproveAsync(central, sale, firstAgentId)).EnsureSuccessStatusCode();
+        (await ApproveAsync(central, sale, secondAgentId)).EnsureSuccessStatusCode();
+
+        var secondAgent = await _factory.LoginAsync(secondAgentName, Password);
+        Assert.Contains((await secondAgent.GetJsonAsync("/api/sales/commissions")).EnumerateArray(),
+            c => c.GetProperty("saleId").GetGuid() == sale);
+
+        // And the agent it was taken from is no longer owed anything on this sale.
+        var firstAgent = await _factory.LoginAsync(firstAgentName, Password);
+        Assert.DoesNotContain((await firstAgent.GetJsonAsync("/api/sales/commissions")).EnumerateArray(),
+            c => c.GetProperty("saleId").GetGuid() == sale);
+    }
+
+    /// <summary>
+    /// The limit. Cross-agency assignment is for someone who works across agencies; an agency's own
+    /// validator must not be able to attribute commission to another agency's people — that is
+    /// money crossing a tenant boundary on the say-so of one tenant's staff.
+    /// </summary>
+    [Fact]
+    public async Task An_agency_scoped_validator_cannot_assign_another_agencys_license_agent()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = (await sa.GetJsonAsync("/api/agencies")).EnumerateArray().First().GetProperty("id").GetGuid();
+        var elsewhere = await CreateAgencyAsync(sa, $"Else {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Lima");
+        var (outsiderId, _) = await CreateLicenseAgentAsync(sa, elsewhere);
+
+        var scopedName = await CreateUserAsync(sa, selling, "Validator");
+        var scoped = await _factory.LoginAsync(scopedName, Password);
+
+        var res = await ApproveAsync(scoped, sale, outsiderId);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+
+        // And the refusal is in plain language — no role codes for a salesperson to decode.
+        var body = await res.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("LicenseAgent", body);
+    }
+
     /// <summary>
     /// Leaving a note on a sale in another agency.
     ///

@@ -467,13 +467,34 @@ public class ValidatorQueueHandler :
     /// </summary>
     private async Task AssignLicenseAgentAsync(Sale sale, Guid licenseAgentId, CancellationToken ct)
     {
-        var agencyUsers = await _identity.ListUsersAsync(sale.AgencyId, ct);
-        var agent = agencyUsers.FirstOrDefault(u => u.Id == licenseAgentId
-            && u.Roles.Contains(DomainRoles.LicenseAgent, StringComparer.OrdinalIgnoreCase));
+        // The sale's own agency first — the ordinary case, and the only one an agency-scoped
+        // validator is allowed.
+        var agent = (await _identity.ListUsersAsync(sale.AgencyId, ct))
+            .FirstOrDefault(u => u.Id == licenseAgentId
+                && u.Roles.Contains(DomainRoles.LicenseAgent, StringComparer.OrdinalIgnoreCase));
+
+        // Then anywhere, but only for a caller who legitimately works across agencies.
+        //
+        // A sale closed by one company is routinely written under a licensed agent at another — the
+        // agent of record is whoever holds the carrier appointment, not whoever took the call. The
+        // approval screen has always offered those agents in its Agency picker; it was the save that
+        // refused them, so the picker listed names that could never be assigned.
+        //
+        // An agency-scoped validator is deliberately NOT given this: letting one agency's staff
+        // attribute commission to another agency's people would put money across a tenant boundary.
+        var crossAgency = false;
+        if (agent is null && (_user.IsSuperAdmin || DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles)))
+        {
+            agent = (await _identity.ListUsersAsync(null, ct))
+                .FirstOrDefault(u => u.Id == licenseAgentId
+                    && u.Roles.Contains(DomainRoles.LicenseAgent, StringComparer.OrdinalIgnoreCase));
+            crossAgency = agent is not null;
+        }
+
         if (agent is null)
             throw new ValidationException(new Dictionary<string, string[]>
             {
-                ["licenseAgentUserId"] = new[] { "The selected agent is not a License Agent in this sale's agency." }
+                ["licenseAgentUserId"] = new[] { "That person isn't a licence agent you can assign this sale to." }
             });
 
         sale.LicenseAgentUserId = licenseAgentId;
@@ -482,17 +503,35 @@ public class ValidatorQueueHandler :
             .FirstOrDefault();
         if (line is null) return; // e.g. internal sale — no license-agent commission
 
-        // IgnoreQueryFilters + explicit agency: a central Submission Agent has Guid.Empty as their
-        // tenant, so the filtered lookup would never match the sale's real-agency entry and every
-        // re-approval would insert a DUPLICATE commission. Scope to the sale's agency instead.
+        // The commission follows the AGENT, not the sale.
+        //
+        // Commission rows are read back scoped to the reader's own agency (MyCommissions, payroll),
+        // so a row filed under the selling company would be invisible to an agent at another one —
+        // earned, owed, and never shown or paid. The sale itself stays with the company that sold
+        // it; only the licence agent's line moves.
+        // Guid.Empty would mean an agent belonging to no agency at all — not a thing a licence agent
+        // should be, and a commission filed there would be unreachable. Fall back to the sale's.
+        var commissionAgency = crossAgency && agent.AgencyId != Guid.Empty ? agent.AgencyId : sale.AgencyId;
+        // The sale's call centre belongs to the selling company and means nothing in another one.
+        // Licence agents are agency-level anyway (no call centre), and an agency-level reader sees
+        // every call centre in their agency, so an empty one is both honest and visible.
+        var commissionCallCenter = crossAgency ? Guid.Empty : sale.CallCenterId;
+
+        // Keyed on the sale and the rule ONLY — no agency predicate.
+        //
+        // A sale id already identifies one sale, so the agency added nothing; worse, re-assigning
+        // from an agent at one company to an agent at another would miss the existing row and
+        // strand it, leaving the first agent still owed commission on a sale that is no longer
+        // theirs. IgnoreQueryFilters because a central Submission Agent's own tenant is empty and
+        // a soft-deleted row from a previous unassign has to be found to be revived.
         var existing = await _db.CommissionEntries.IgnoreQueryFilters().FirstOrDefaultAsync(
-            c => c.SaleId == sale.Id && c.AgencyId == sale.AgencyId && c.RuleName == line.RuleName, ct);
+            c => c.SaleId == sale.Id && c.RuleName == line.RuleName, ct);
         if (existing is null)
         {
             _db.CommissionEntries.Add(new CommissionEntry
             {
-                AgencyId = sale.AgencyId,
-                CallCenterId = sale.CallCenterId,
+                AgencyId = commissionAgency,
+                CallCenterId = commissionCallCenter,
                 SaleId = sale.Id,
                 AgentUserId = licenseAgentId,
                 RuleName = line.RuleName,
@@ -508,6 +547,10 @@ public class ValidatorQueueHandler :
             // invisible to lists/MyCommissions/payroll, and is never paid.
             existing.IsDeleted = false;
             existing.AgentUserId = licenseAgentId;
+            // Moved too, so the row lands with whoever is now owed it rather than staying with the
+            // company of the agent it was taken from.
+            existing.AgencyId = commissionAgency;
+            existing.CallCenterId = commissionCallCenter;
             existing.Amount = line.Amount;
             existing.Note = line.Note;
         }
@@ -520,10 +563,15 @@ public class ValidatorQueueHandler :
         {
             await _notify.DispatchAsync(
                 new NotificationPayload(
-                    sale.AgencyId, licenseAgentId,
+                    // The agent's own agency, for the same reason the commission goes there: a
+                    // notice filed under the selling company never reaches someone outside it.
+                    commissionAgency, licenseAgentId,
                     "A sale was assigned to you",
                     $"Sale #{sale.SaleNumber} ({sale.Carrier}, {sale.MonthlyPremium:C}/mo) is now assigned to you for approval.",
-                    $"/sales/{sale.Id}"),
+                    // The sale record itself belongs to the selling company and stays readable only
+                    // inside it, so sending an agent at another company to /sales/{id} would land
+                    // them on a page they cannot open. Their commission is the part that IS theirs.
+                    crossAgency ? "/commissions" : $"/sales/{sale.Id}"),
                 new[] { NotificationChannelType.InApp, NotificationChannelType.Email }, ct);
         }
         catch { /* advisory only — never fail the approval */ }

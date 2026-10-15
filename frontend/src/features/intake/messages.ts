@@ -42,12 +42,15 @@ export const INTAKE_MSG = {
   closerSubmittedTitle: (carrier: string, premium: string) =>
     `Closer submitted: ${carrier} · ${premium}/mo`,
 
-  // Shown only to someone whose queue holds more than one company — a central submission agent.
-  // "Company" rather than "agency": it is the word the owner and the floor both use.
-  agencyFilterLabel: "Company",
-  agencyFilterAll: "All companies",
+  // Shown only to someone whose queue holds more than one agency — a central submission agent.
+  agencyFilterLabel: "Agency",
+  agencyFilterAll: "All agencies",
   agencyFilterHint:
-    "You verify sales for every company on the platform. Pick one to work its sales on their own; the number is how many are waiting.",
+    "You verify sales for every agency on the platform. Pick one to work its sales on their own; the number is how many are waiting.",
+
+  assignAgentTitle: "Assigning a License Agent",
+  assignAgentHint:
+    "Pick the agency the licence agent belongs to, then the agent. It doesn't have to be the agency that sold the policy — the agent of record is whoever holds the carrier appointment. Their commission is recorded against their own agency so it reaches them and gets paid.",
 
   closingDescription:
     "Complete the application. 'Complete and Sold' validates banking via Lyons and creates the sale.",

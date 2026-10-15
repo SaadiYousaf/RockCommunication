@@ -96,19 +96,19 @@ export const ADMIN_MSG = {
     // ── Working across every company ─────────────────────────────────────────
     // Offered only to the roles that have a cross-agency mode (submission and commission
     // agents); for anyone else the server refuses it, so the option isn't shown.
-    crossAgencyOption: "All companies",
-    crossAgencyConfirmTitle: (name: string) => `Let ${name} work across all companies?`,
+    crossAgencyOption: "All agencies",
+    crossAgencyConfirmTitle: (name: string) => `Let ${name} work across all agencies?`,
     crossAgencyConfirmDesc:
-      "They'll see one queue holding work from every company, instead of just the one they're in now.",
+      "They'll see one queue holding work from every agency, instead of just the one they're in now.",
     crossAgencyConsequences: [
-      "They will see and verify sales from every company on the platform.",
-      "Their team and call centre are cleared — both belong to a single company.",
+      "They will see and verify sales from every agency on the platform.",
+      "Their team and call centre are cleared — both belong to a single agency.",
       "They'll be signed out and will need to sign in again for this to take effect.",
-      "Two-step verification becomes mandatory for them, because they read across companies.",
+      "Two-step verification becomes mandatory for them, because they read across agencies.",
     ],
     crossAgencyConfirmLabel: "Give access to all",
-    crossAgencyUpdated: "Now working across all companies",
-    crossAgencyUpdatedDesc: (name: string) => `${name} will see every company's work after signing in again.`,
+    crossAgencyUpdated: "Now working across all agencies",
+    crossAgencyUpdatedDesc: (name: string) => `${name} will see every agency's work after signing in again.`,
 
     // ── Creating a user ──────────────────────────────────────────────────────
     createTitle: "Add user",

@@ -32,9 +32,9 @@ public class UserAdminService : IUserAdminService
     private const string TeamMovedBodyFormat = "An administrator moved you to the {0} team.";
     private const string TeamRemovedBody = "An administrator removed you from your team.";
 
-    private const string AgencyScopeChangedTitle = "You now work across all companies";
+    private const string AgencyScopeChangedTitle = "You now work across all agencies";
     private const string AgencyScopeChangedBody =
-        "An administrator gave you access to work across every company on the platform. You'll be asked to sign in again shortly, and you'll then see work from all of them in one queue.";
+        "An administrator gave you access to work across every agency on the platform. You'll be asked to sign in again shortly, and you'll then see work from all of them in one queue.";
     private const string AgencyScopeNarrowedBodyFormat =
         "An administrator moved you to {0}. You'll be asked to sign in again shortly, and you'll then see that company's work only.";
 
@@ -523,8 +523,8 @@ public class UserAdminService : IUserAdminService
             // agency, so they would sign in to a working day of empty screens.
             if (!Roles.CanWorkAcrossAgencies(roles))
                 throw new ConflictException(
-                    "Only a Submission Agent or a Commission Agent can work across all companies. " +
-                    "Change their role first, or move them to a single company.");
+                    "Only a Submission Agent or a Commission Agent can work across all agencies. " +
+                    "Change their role first, or move them to a single agency.");
         }
 
         var effective = target ?? Guid.Empty;

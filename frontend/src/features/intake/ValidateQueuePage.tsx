@@ -544,8 +544,8 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
               <div>
                 <div className="flex items-center gap-1 mb-1.5">
                   <span className="text-[12px] font-medium text-ink-700 leading-none">Agency</span>
-                  <InfoHint title="Assigning a License Agent" side="right">
-                    The License Agent must belong to the selected agency, so Agency defaults to the sale's own. Central submission agents can pick any agency; agency-scoped validators are pinned to their own.
+                  <InfoHint title={INTAKE_MSG.assignAgentTitle} side="right">
+                    {INTAKE_MSG.assignAgentHint}
                   </InfoHint>
                 </div>
                 <Select value={agencyId}
