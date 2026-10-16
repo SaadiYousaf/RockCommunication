@@ -636,6 +636,13 @@ export interface ValidatorQueueItem {
   validatorName: string | null;
   licenseAgentUserId: string | null;
   licenseAgentName: string | null;
+  /**
+   * The agency the assigned licence agent belongs to — not always the agency that sold the policy.
+   * The approval screen reopens its Agency picker on this, so the agent is in the list it loads.
+   */
+  licenseAgentAgencyId: string | null;
+  /** That agency's name, so the picker never has to show a bare id. */
+  licenseAgentAgencyName: string | null;
   soldAt: string;
   validatedAt: string | null;
 }

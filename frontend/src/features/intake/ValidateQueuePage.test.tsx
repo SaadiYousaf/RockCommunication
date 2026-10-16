@@ -23,6 +23,7 @@ function aSale(overrides: Partial<ValidatorQueueItem> = {}): ValidatorQueueItem 
     declineReason: null, submissionComment: null,
     validatorUserId: null, validatorName: null,
     licenseAgentUserId: null, licenseAgentName: null,
+    licenseAgentAgencyId: null, licenseAgentAgencyName: null,
     soldAt: "2026-10-01T00:00:00Z", validatedAt: null,
     ...overrides,
   };

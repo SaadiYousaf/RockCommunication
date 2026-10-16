@@ -48,6 +48,13 @@ export const INTAKE_MSG = {
   agencyFilterHint:
     "You verify sales for every agency on the platform. Pick one to work its sales on their own; the number is how many are waiting.",
 
+  agentsLoading: "Loading…",
+  agentUnassigned: "Unassigned",
+  agentInactiveSuffix: " (inactive)",
+  /** Stand-ins for a name we couldn't resolve — never a raw id on screen. */
+  otherAgency: "Another agency",
+  assignedAgent: "Assigned agent",
+
   assignAgentTitle: "Assigning a License Agent",
   assignAgentHint:
     "Pick the agency the licence agent belongs to, then the agent. It doesn't have to be the agency that sold the policy — the agent of record is whoever holds the carrier appointment. Their commission is recorded against their own agency so it reaches them and gets paid.",

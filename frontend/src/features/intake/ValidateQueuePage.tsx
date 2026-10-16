@@ -453,20 +453,57 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
   const [premiumApproved, setPremiumApproved] = useState(sale.premiumApproved?.toString() ?? sale.monthlyPremium?.toString() ?? "");
   const [planApproved, setPlanApproved] = useState(sale.planApproved ?? sale.policyNumber ?? "");
   const [reason, setReason] = useState(sale.declineReason ?? "");
-  // Agency → Agent assignment. The License Agent must belong to the sale's agency, so the
-  // Agency picker defaults to (and normally stays) the sale's own agency.
-  const [agencyId, setAgencyId] = useState(sale.agencyId);
+  // Agency → Agent assignment.
+  //
+  // Opens on the agency of whoever is ALREADY assigned, and only falls back to the sale's own
+  // agency when nobody is. The picker drives the agent list, so defaulting to the sale's agency
+  // loaded a list the assigned agent wasn't in — and the Licence Agent field came back empty on
+  // a sale that plainly had one, which then saved as unassigned.
+  const [agencyId, setAgencyId] = useState(sale.licenseAgentAgencyId ?? sale.agencyId);
   const [licenseAgentUserId, setLicenseAgentUserId] = useState(sale.licenseAgentUserId ?? "");
 
   // Agency options: SuperAdmin / central Submission Agents get every agency; agency-scoped
   // validators are forbidden the /options endpoint, so we fall back to the sale's own agency.
   const { data: agencyOptions } = useAgencyOptionsQuery();
-  const agencyList = agencyOptions && agencyOptions.length
-    ? agencyOptions
-    : [{ id: sale.agencyId, name: sale.agencyName }];
+  const agencyList = useMemo(() => {
+    const list = agencyOptions && agencyOptions.length
+      ? [...agencyOptions]
+      : [{ id: sale.agencyId, name: sale.agencyName }];
+
+    // The assigned agent's agency always belongs in the list, even when the caller isn't allowed
+    // to pick agencies. An agency-scoped validator is offered only their own, so a sale assigned
+    // to an outside agent would leave the picker on an id with no matching option — rendering
+    // blank, and taking the agent field down with it.
+    const assigned = sale.licenseAgentAgencyId;
+    if (assigned && !list.some((a) => a.id === assigned)) {
+      list.push({ id: assigned, name: sale.licenseAgentAgencyName ?? INTAKE_MSG.otherAgency, isActive: true });
+    }
+    return list;
+  }, [agencyOptions, sale.agencyId, sale.agencyName, sale.licenseAgentAgencyId, sale.licenseAgentAgencyName]);
+
   // Dependent Agent picker — populated only once an agency is chosen.
   const { data: licenseAgents, isFetching: agentsLoading } =
     useAgencyLicenseAgentsQuery(agencyId, { skip: !agencyId });
+
+  /**
+   * The agents to offer: the chosen agency's roster, plus whoever is already assigned if the
+   * roster hasn't arrived or no longer contains them (deactivated, moved agency).
+   *
+   * A <select> whose value matches no option renders empty, which read as "Unspecified" on a sale
+   * that had an agent — and saving from there would have quietly unassigned them.
+   */
+  const agentChoices = useMemo(() => {
+    const list = [...(licenseAgents ?? [])];
+    if (sale.licenseAgentUserId && !list.some((a) => a.id === sale.licenseAgentUserId)) {
+      list.unshift({
+        id: sale.licenseAgentUserId,
+        name: sale.licenseAgentName ?? INTAKE_MSG.assignedAgent,
+        email: "",
+        isActive: true,
+      });
+    }
+    return list;
+  }, [licenseAgents, sale.licenseAgentUserId, sale.licenseAgentName]);
 
   // Reset editable fields whenever a different sale is opened.
   useEffect(() => {
@@ -476,7 +513,7 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
     setPremiumApproved(sale.premiumApproved?.toString() ?? sale.monthlyPremium?.toString() ?? "");
     setPlanApproved(sale.planApproved ?? sale.policyNumber ?? "");
     setReason(sale.declineReason ?? "");
-    setAgencyId(sale.agencyId);
+    setAgencyId(sale.licenseAgentAgencyId ?? sale.agencyId);
     setLicenseAgentUserId(sale.licenseAgentUserId ?? "");
   }, [sale]);
 
@@ -557,9 +594,9 @@ function UpdateModal({ sale, onClose }: { sale: ValidatorQueueItem; onClose: () 
                 disabled={!agencyId || agentsLoading}
                 title={agentsLoading ? "Loading agents for this agency…" : !agencyId ? "Choose an agency first to list its agents" : undefined}
                 onChange={(e) => setLicenseAgentUserId(e.target.value)}>
-                <option value="">{agentsLoading ? "Loading…" : "Unassigned"}</option>
-                {(licenseAgents ?? []).map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : " (inactive)"}</option>
+                <option value="">{agentsLoading ? INTAKE_MSG.agentsLoading : INTAKE_MSG.agentUnassigned}</option>
+                {agentChoices.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}{a.isActive ? "" : INTAKE_MSG.agentInactiveSuffix}</option>
                 ))}
               </Select>
             </div>

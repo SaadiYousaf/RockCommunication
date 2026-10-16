@@ -40,6 +40,17 @@ public record ValidatorQueueItem(
     string? ValidatorName,
     Guid? LicenseAgentUserId,
     string? LicenseAgentName,
+    /// <summary>
+    /// The agency the assigned licence agent belongs to, which is NOT always the agency that sold
+    /// the policy — the agent of record is whoever holds the carrier appointment.
+    ///
+    /// The approval screen needs it to reopen on the right agency: its Agency picker drives the
+    /// list of agents, so defaulting to the sale's agency loaded a list the assigned agent was not
+    /// in, and the Licence Agent field came back empty on a sale that plainly had one.
+    /// </summary>
+    Guid? LicenseAgentAgencyId,
+    /// <summary>That agency's name, so the picker never has to show a bare id.</summary>
+    string? LicenseAgentAgencyName,
     DateTime SoldAt,
     DateTime? ValidatedAt);
 
@@ -170,16 +181,41 @@ public class ValidatorQueueHandler :
             .ToListAsync(ct);
         var leadById = leads.ToDictionary(l => l.Id);
 
-        var agencyIds = sales.Select(s => s.AgencyId).Distinct().ToList();
+        // Cross-agency queues need names from every agency; scoped queues only their own.
+        var users = await _identity.ListUsersAsync(central ? null : _user.AgencyId, ct);
+        var byId = users.ToDictionary(u => u.Id);
+
+        // A licence agent may sit OUTSIDE the caller's agency — a sale is routinely written under
+        // the agent holding the carrier appointment, who works for someone else. For an
+        // agency-scoped validator those people are missing from the roster above, so the column
+        // read "—" on a sale that plainly had an agent assigned. Fetch just the handful referenced.
+        var missingAgentIds = sales
+            .Select(s => s.LicenseAgentUserId)
+            .Where(id => id is { } g && !byId.ContainsKey(g))
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+        if (missingAgentIds.Count > 0)
+        {
+            foreach (var u in (await _identity.ListUsersAsync(null, ct)).Where(u => missingAgentIds.Contains(u.Id)))
+                byId[u.Id] = u;
+        }
+
+        string? Name(Guid? id) => id is { } g && byId.TryGetValue(g, out var u) ? u.UserName : null;
+        Guid? AgencyOf(Guid? id) => id is { } g && byId.TryGetValue(g, out var u) && u.AgencyId != Guid.Empty
+            ? u.AgencyId : null;
+
+        // Agency names for both the selling agency and whichever agency each licence agent belongs
+        // to — resolved in one pass so the approval screen never has to show a bare id.
+        var agencyIds = sales.Select(s => s.AgencyId)
+            .Concat(sales.Select(s => AgencyOf(s.LicenseAgentUserId)).Where(id => id is not null).Select(id => id!.Value))
+            .Distinct().ToList();
         var agencyById = (await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
                 .Where(a => agencyIds.Contains(a.Id) && !a.IsDeleted)
                 .Select(a => new { a.Id, a.Name }).ToListAsync(ct))
             .ToDictionary(a => a.Id, a => a.Name);
 
-        // Cross-agency queues need names from every agency; scoped queues only their own.
-        var users = await _identity.ListUsersAsync(central ? null : _user.AgencyId, ct);
-        var byId = users.ToDictionary(u => u.Id);
-        string? Name(Guid? id) => id is { } g && byId.TryGetValue(g, out var u) ? u.UserName : null;
+        string? AgencyNameOf(Guid? id) => id is { } g && agencyById.TryGetValue(g, out var n) ? n : null;
 
         return sales.Select(s =>
         {
@@ -195,6 +231,7 @@ public class ValidatorQueueHandler :
                 s.PlanApproved, s.DeclineReason, s.SubmissionComment,
                 s.ValidatorUserId, Name(s.ValidatorUserId),
                 s.LicenseAgentUserId, Name(s.LicenseAgentUserId),
+                AgencyOf(s.LicenseAgentUserId), AgencyNameOf(AgencyOf(s.LicenseAgentUserId)),
                 s.SoldAt, s.ValidatedAt);
         }).ToList();
     }
@@ -482,8 +519,17 @@ public class ValidatorQueueHandler :
         //
         // An agency-scoped validator is deliberately NOT given this: letting one agency's staff
         // attribute commission to another agency's people would put money across a tenant boundary.
+        // Leaving the existing agent exactly as they are is always allowed, whoever is saving.
+        //
+        // Without this, an agency-scoped validator could not touch a sale that a central submission
+        // agent had assigned to an outside agent: re-saving sends the agent already on the sale,
+        // the cross-agency lookup is not theirs to use, and they would be refused — unable to change
+        // the status of their own agency's sale because of an assignment somebody else made.
+        var unchanged = sale.LicenseAgentUserId == licenseAgentId;
+
         var crossAgency = false;
-        if (agent is null && (_user.IsSuperAdmin || DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles)))
+        if (agent is null
+            && (unchanged || _user.IsSuperAdmin || DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles)))
         {
             agent = (await _identity.ListUsersAsync(null, ct))
                 .FirstOrDefault(u => u.Id == licenseAgentId
@@ -555,6 +601,18 @@ public class ValidatorQueueHandler :
             existing.Note = line.Note;
         }
         // else: already paid out — leave the historical entry untouched.
+
+        // Only when the agent actually CHANGED.
+        //
+        // Two reasons. It is the honest one — re-saving an approved sale to correct a premium is
+        // not news to an agent who was told days ago, and "a sale was assigned to you" arriving
+        // again every time somebody edits it is noise. And it is the safe one: the notice is filed
+        // in the agent's agency, which for an agency-scoped validator is somebody else's tenant —
+        // the write is refused at save time, and because that happens in the CALLER's
+        // SaveChangesAsync rather than here, the try/catch below would not have caught it. A
+        // validator re-saving their own agency's sale was getting "Access denied" because of an
+        // assignment another person had made.
+        if (unchanged) return;
 
         // Let the License Agent know a sale is now theirs (bell + live push + email). Best-effort:
         // the SaveChangesAsync happens in the caller, so we only queue the notification write here —

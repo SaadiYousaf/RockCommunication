@@ -331,6 +331,96 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
+    /// Reopening a sale shows the agent who is on it.
+    ///
+    /// The approval screen's Agency picker drives the list of agents, and it opened on the SELLING
+    /// agency — which does not contain an outside agent — so the Licence Agent field came back
+    /// empty on a sale that plainly had one. It read as "Unspecified", and saving from there would
+    /// have quietly unassigned them. The queue has to say which agency the agent belongs to.
+    /// </summary>
+    [Fact]
+    public async Task The_assigned_agent_and_their_agency_come_back_on_the_sale()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = await CreateAgencyAsync(sa, $"Sell4 {Guid.NewGuid():N}"[..20]);
+        var writing = await CreateAgencyAsync(sa, $"Write4 {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Mike");
+        var (agentId, agentName) = await CreateLicenseAgentAsync(sa, writing);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+        (await ApproveAsync(central, sale, agentId)).EnsureSuccessStatusCode();
+
+        var row = (await central.GetJsonAsync("/api/intake/validate/queue"))
+            .EnumerateArray().Single(s => s.GetProperty("saleId").GetGuid() == sale);
+
+        Assert.Equal(agentId, row.GetProperty("licenseAgentUserId").GetGuid());
+        Assert.Equal(agentName, row.GetProperty("licenseAgentName").GetString());
+
+        // The agent's OWN agency, not the one that sold it — this is what the picker reopens on.
+        Assert.Equal(writing, row.GetProperty("licenseAgentAgencyId").GetGuid());
+        Assert.False(string.IsNullOrWhiteSpace(row.GetProperty("licenseAgentAgencyName").GetString()),
+            "the picker must have a name to show rather than a bare id");
+    }
+
+    /// <summary>
+    /// The selling agency's own validator sees the outside agent's NAME.
+    ///
+    /// Names were resolved from the caller's own agency roster, so an agent belonging to another
+    /// one was simply missing and the column showed a dash — on a sale that was assigned.
+    /// </summary>
+    [Fact]
+    public async Task An_agency_validator_sees_the_name_of_an_outside_agent()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = (await sa.GetJsonAsync("/api/agencies")).EnumerateArray().First().GetProperty("id").GetGuid();
+        var writing = await CreateAgencyAsync(sa, $"Write5 {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "November");
+        var (agentId, agentName) = await CreateLicenseAgentAsync(sa, writing);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+        (await ApproveAsync(central, sale, agentId)).EnsureSuccessStatusCode();
+
+        var scopedName = await CreateUserAsync(sa, selling, "Validator");
+        var scoped = await _factory.LoginAsync(scopedName, Password);
+
+        var row = (await scoped.GetJsonAsync("/api/intake/validate/queue"))
+            .EnumerateArray().Single(s => s.GetProperty("saleId").GetGuid() == sale);
+        Assert.Equal(agentName, row.GetProperty("licenseAgentName").GetString());
+    }
+
+    /// <summary>
+    /// …and they are not stuck with it. Re-saving a sale whose agent was assigned by somebody else
+    /// sends that same agent back, which the cross-agency gate is not theirs to pass — so without
+    /// an explicit allowance for "unchanged", they could not set the status on their own agency's
+    /// sale because of an assignment they did not make.
+    /// </summary>
+    [Fact]
+    public async Task An_agency_validator_can_still_resave_a_sale_assigned_to_an_outside_agent()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = (await sa.GetJsonAsync("/api/agencies")).EnumerateArray().First().GetProperty("id").GetGuid();
+        var writing = await CreateAgencyAsync(sa, $"Write6 {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Oscar");
+        var (agentId, _) = await CreateLicenseAgentAsync(sa, writing);
+
+        var centralName = await CreateUserAsync(sa, Guid.Empty, "Validator");
+        var central = await _factory.LoginAsync(centralName, Password);
+        (await ApproveAsync(central, sale, agentId)).EnsureSuccessStatusCode();
+
+        var scopedName = await CreateUserAsync(sa, selling, "Validator");
+        var scoped = await _factory.LoginAsync(scopedName, Password);
+
+        var res = await ApproveAsync(scoped, sale, agentId);
+        Assert.True(res.IsSuccessStatusCode,
+            $"re-saving with the agent already on the sale must be allowed; got {res.StatusCode} {await res.Content.ReadAsStringAsync()}");
+    }
+
+    /// <summary>
     /// The limit. Cross-agency assignment is for someone who works across agencies; an agency's own
     /// validator must not be able to attribute commission to another agency's people — that is
     /// money crossing a tenant boundary on the say-so of one tenant's staff.
