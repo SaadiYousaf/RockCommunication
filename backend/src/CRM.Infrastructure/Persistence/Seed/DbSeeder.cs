@@ -143,6 +143,11 @@ public static class DbSeeder
             await OwnerAccountSeeder.RunAsync(db, users, emailSender, config, logger);
         }
 
+        // Networks declared in configuration. Not gated on isLive: an allowlist that exists at all
+        // can lock people out, and the way back in should not depend on how far through go-live the
+        // installation happens to be.
+        await IpAllowlistSeeder.RunAsync(db, config, logger);
+
         // Ensure every agency has a default call center and stamp any pre-existing pipeline
         // rows (including freshly-seeded dummy data) onto it. Additive + idempotent.
         await CallCenterBackfill.RunAsync(db);

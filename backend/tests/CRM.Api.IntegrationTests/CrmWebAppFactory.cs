@@ -48,6 +48,19 @@ public class CrmWebAppFactory : WebApplicationFactory<Program>
                 // Tests can't complete a TOTP enrolment; verify the gate separately.
                 ["Security:EnforceMandatoryTwoFactor"] = "false",
             });
+
+            // appsettings.json also declares the platform's approved NETWORKS, which are seeded on
+            // every start. A test host must not inherit them, or "an empty allowlist" silently
+            // becomes "whatever the real platform happens to allow" — which is how the allowlist
+            // tests started failing the moment a real office was added to config. Indices, because
+            // an array cannot be unset through in-memory configuration.
+            var clearNetworks = new Dictionary<string, string?>();
+            for (var i = 0; i < 10; i++)
+            {
+                clearNetworks[$"Security:IpAllowlist:{i}:CidrOrIp"] = "";
+                clearNetworks[$"Security:IpAllowlist:{i}:Note"] = "";
+            }
+            config.AddInMemoryCollection(clearNetworks);
         });
         return base.CreateHost(builder);
     }
