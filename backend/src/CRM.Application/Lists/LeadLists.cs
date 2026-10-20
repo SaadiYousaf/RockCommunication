@@ -93,10 +93,19 @@ public class LeadListHandler :
         _db.LeadImportBatches.Add(batch);
         await _db.SaveChangesAsync(ct);
 
+        // Normalised, so the comparison below is digits against digits.
+        //
+        // This set used to hold the numbers exactly as stored. An import writes normalised numbers,
+        // but a lead typed into the intake form keeps whatever punctuation the agent used — so a
+        // row for a customer the floor had already added came through as new, and the same person
+        // was dialled twice from two records.
         var existingPhones = await _db.Leads.AsNoTracking()
             .Where(l => l.AgencyId == list.AgencyId)
             .Select(l => l.PhoneNumber).ToListAsync(ct);
-        var existingSet = existingPhones.ToHashSet();
+        var existingSet = existingPhones
+            .Select(p => _phone.Normalize(p))
+            .Where(p => p.Length > 0)
+            .ToHashSet();
 
         foreach (var r in request.Rows)
         {
@@ -104,7 +113,7 @@ public class LeadListHandler :
             {
                 var normalized = _phone.Normalize(r.PhoneNumber);
                 if (string.IsNullOrEmpty(normalized) || normalized.Length < 10) { batch.Errors++; continue; }
-                if (existingSet.Contains(r.PhoneNumber) || existingSet.Contains(normalized)) { batch.Duplicates++; continue; }
+                if (existingSet.Contains(normalized)) { batch.Duplicates++; continue; }
                 if (await _dnc.IsBlockedAsync(list.AgencyId, normalized, ct)) { batch.DncScrubbed++; continue; }
 
                 var lead = new Lead

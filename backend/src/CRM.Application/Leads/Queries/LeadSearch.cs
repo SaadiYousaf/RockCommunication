@@ -1,4 +1,5 @@
 using CRM.Application.Common.Authorization;
+using CRM.Application.Common.Compliance;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Leads.Dtos;
@@ -54,9 +55,22 @@ public record DuplicateScanQuery() : IRequest<IReadOnlyList<DuplicateGroup>>;
 
 public class DuplicateScanHandler : IRequestHandler<DuplicateScanQuery, IReadOnlyList<DuplicateGroup>>
 {
+    /// <summary>
+    /// How many ids go into one IN clause. SQLite has a ceiling on bound parameters, and a tenant
+    /// with thousands of duplicates would sail past it in a single query.
+    /// </summary>
+    private const int IdChunk = 400;
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
-    public DuplicateScanHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+    private readonly IPhoneNormalizer _phone;
+
+    public DuplicateScanHandler(IApplicationDbContext db, ICurrentUser user, IPhoneNormalizer phone)
+    {
+        _db = Guard.AgainstNull(db);
+        _user = Guard.AgainstNull(user);
+        _phone = Guard.AgainstNull(phone);
+    }
 
     public async Task<IReadOnlyList<DuplicateGroup>> Handle(DuplicateScanQuery request, CancellationToken ct)
     {
@@ -64,30 +78,55 @@ public class DuplicateScanHandler : IRequestHandler<DuplicateScanQuery, IReadOnl
         // null == spans agencies (an unscoped SuperAdmin); otherwise confined to one. See TenantScope.
         var scope2 = TenantScope.ConfinedTo(_user);
 
-        // Find the colliding phone numbers entirely in SQL (COUNT is int → safe on SQLite), then load
-        // ONLY the duplicate leads. Materialising every agency lead here OOM'd large tenants and threw
-        // most of the DTOs away immediately.
-        var dupPhones = await _db.Leads
+        // Grouped on the DIGITS, not on the text as typed.
+        //
+        // This used to GROUP BY PhoneNumber in SQL, which only ever found duplicates that happened
+        // to have been punctuated identically. Nobody types a number the same way twice — one agent
+        // writes 555-123-4567, the next (555) 123 4567, a web form sends +1 555 123 4567, an import
+        // stores 5551234567 — and all four are one telephone. The screen reported a clean database
+        // to people looking straight at two copies of the same customer.
+        //
+        // SQLite cannot strip punctuation in a query, so the grouping happens here. Only the id and
+        // the number are pulled, which is a fraction of the row: it was materialising the full DTO
+        // for every lead that exhausted memory on large tenants, and that part stays fixed.
+        var rows = await _db.Leads
             .Where(l => (scope2 == null || l.AgencyId == scope2) && l.PhoneNumber != null && l.PhoneNumber != "")
-            .GroupBy(l => l.PhoneNumber)
+            .Select(l => new { l.Id, l.PhoneNumber })
+            .ToListAsync(ct);
+
+        var duplicateGroups = rows
+            .Select(r => new { r.Id, Digits = _phone.Normalize(r.PhoneNumber) })
+            // A number with no digits in it at all is a typo, not a duplicate of every other typo.
+            .Where(r => r.Digits.Length > 0)
+            .GroupBy(r => r.Digits)
             .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToListAsync(ct);
-
-        if (dupPhones.Count == 0)
-            return Array.Empty<DuplicateGroup>();
-
-        var leads = await _db.Leads
-            .Where(l => (scope2 == null || l.AgencyId == scope2) && dupPhones.Contains(l.PhoneNumber))
-            .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State,
-                l.Stage, l.Disposition, l.AssignedUserId, l.TeamId, l.JornayaVerified, l.CreatedAt))
-            .ToListAsync(ct);
-
-        var groups = leads
-            .GroupBy(l => l.PhoneNumber)
-            .Select(g => new DuplicateGroup($"phone:{g.Key}", g.ToList()))
             .ToList();
 
-        return groups;
+        if (duplicateGroups.Count == 0)
+            return Array.Empty<DuplicateGroup>();
+
+        // Load the full rows for just those leads, in chunks.
+        var ids = duplicateGroups.SelectMany(g => g.Select(r => r.Id)).ToList();
+        var byId = new Dictionary<Guid, LeadDto>();
+        for (var i = 0; i < ids.Count; i += IdChunk)
+        {
+            var chunk = ids.Skip(i).Take(IdChunk).ToList();
+            var page = await _db.Leads
+                .Where(l => chunk.Contains(l.Id))
+                .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.PhoneNumber, l.Email, l.State,
+                    l.Stage, l.Disposition, l.AssignedUserId, l.TeamId, l.JornayaVerified, l.CreatedAt))
+                .ToListAsync(ct);
+            foreach (var lead in page) byId[lead.Id] = lead;
+        }
+
+        return duplicateGroups
+            .Select(g => new DuplicateGroup(
+                $"phone:{g.Key}",
+                g.Select(r => byId.TryGetValue(r.Id, out var lead) ? lead : null)
+                 .Where(l => l is not null).Select(l => l!).ToList()))
+            // A group can fall below two if a lead was deleted between the two reads; it is not a
+            // duplicate any more and showing it would send someone to clean up nothing.
+            .Where(g => g.Leads.Count > 1)
+            .ToList();
     }
 }
