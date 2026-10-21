@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Application.Common.Notifications;
@@ -46,8 +47,12 @@ public class CreateRoomHandler : IRequestHandler<CreateRoomCommand, ChatRoomDto>
 {
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUser _user;
+    private readonly IIdentityService _identity;
 
-    public CreateRoomHandler(IApplicationDbContext db, ICurrentUser user) { _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); }
+    public CreateRoomHandler(IApplicationDbContext db, ICurrentUser user, IIdentityService identity)
+    {
+        _db = Guard.AgainstNull(db); _user = Guard.AgainstNull(user); _identity = Guard.AgainstNull(identity);
+    }
 
     public async Task<ChatRoomDto> Handle(CreateRoomCommand request, CancellationToken ct)
     {
@@ -60,9 +65,23 @@ public class CreateRoomHandler : IRequestHandler<CreateRoomCommand, ChatRoomDto>
             IsDirect = request.Input.IsDirect
         };
         var members = request.Input.MemberUserIds.Append(_user.UserId.Value).Distinct().ToList();
+
+        // Each member's row carries THEIR OWN agency, not the room's.
+        //
+        // That is what lets a cross-agency group work: every member finds their own membership row
+        // through their ordinary tenant filter, and membership is what the room and message reads
+        // gate on. A row stamped with the room's agency would be invisible to a member outside it,
+        // so they would be in a group they could not see.
+        var agencyOf = (await _identity.ListUsersAsync(null, ct))
+            .ToDictionary(u => u.Id, u => u.AgencyId);
+
         foreach (var uid in members)
         {
-            room.Members.Add(new ChatRoomMember { AgencyId = room.AgencyId, UserId = uid });
+            room.Members.Add(new ChatRoomMember
+            {
+                AgencyId = agencyOf.TryGetValue(uid, out var a) && a != Guid.Empty ? a : room.AgencyId,
+                UserId = uid,
+            });
         }
         _db.ChatRooms.Add(room);
         await _db.SaveChangesAsync(ct);
@@ -100,19 +119,25 @@ public class StartDirectMessageHandler : IRequestHandler<StartDirectMessageComma
 
         var other = await _identity.GetUserAsync(request.OtherUserId, ct)
             ?? throw new NotFoundException("User", request.OtherUserId);
-        // Same-office guard.
-        if (other.AgencyId != _user.AgencyId.Value)
+        // Same-office guard — unless you work across offices.
+        //
+        // A central Submission Agent (and the platform operator) handle every company's sales, so
+        // "message the closer about their sale" means messaging someone in another agency. For
+        // everyone else this is unchanged: your own office only.
+        if (other.AgencyId != _user.AgencyId.Value && !TenantScope.ReadsEveryAgency(_user))
             throw new ForbiddenAccessException("You can only message colleagues in your own office.");
 
         // Reuse an existing direct room between exactly these two users.
-        var myRoomIds = await _db.ChatRoomMembers
-            .Where(m => m.UserId == me)
+        // Own membership, so the filter bypass cannot widen anything — without it a cross-agency
+        // conversation is never found and a duplicate room is created on every message.
+        var myRoomIds = await _db.ChatRoomMembers.IgnoreQueryFilters()
+            .Where(m => m.UserId == me && !m.IsDeleted)
             .Select(m => m.RoomId)
             .ToListAsync(ct);
 
-        var existing = await _db.ChatRooms
+        var existing = await _db.ChatRooms.IgnoreQueryFilters()
             .Include(r => r.Members)
-            .Where(r => r.IsDirect && myRoomIds.Contains(r.Id))
+            .Where(r => r.IsDirect && myRoomIds.Contains(r.Id) && !r.IsDeleted)
             .ToListAsync(ct);
 
         var match = existing.FirstOrDefault(r =>
@@ -132,8 +157,14 @@ public class StartDirectMessageHandler : IRequestHandler<StartDirectMessageComma
             Name = $"DM: {other.UserName}",
             IsDirect = true,
         };
-        room.Members.Add(new ChatRoomMember { AgencyId = room.AgencyId, UserId = me });
-        room.Members.Add(new ChatRoomMember { AgencyId = room.AgencyId, UserId = request.OtherUserId });
+        // Each side's row carries their own agency, so each finds their own membership — see
+        // CreateRoomHandler for why that is what makes a cross-agency conversation readable.
+        room.Members.Add(new ChatRoomMember { AgencyId = _user.AgencyId.Value, UserId = me });
+        room.Members.Add(new ChatRoomMember
+        {
+            AgencyId = other.AgencyId != Guid.Empty ? other.AgencyId : room.AgencyId,
+            UserId = request.OtherUserId,
+        });
         _db.ChatRooms.Add(room);
         await _db.SaveChangesAsync(ct);
 
@@ -192,8 +223,10 @@ public class SendMessageHandler : IRequestHandler<SendMessageCommand, ChatMessag
         if (string.IsNullOrWhiteSpace(request.Body) && !hasAttachment)
             throw new ConflictException("Message cannot be empty.");
 
-        var member = await _db.ChatRoomMembers.FirstOrDefaultAsync(
-            m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct)
+        // Own membership, so the bypass cannot let anyone post anywhere they are not already a
+        // member — it only stops the tenant filter hiding their own row in a cross-agency room.
+        var member = await _db.ChatRoomMembers.IgnoreQueryFilters().FirstOrDefaultAsync(
+            m => m.RoomId == request.RoomId && m.UserId == _user.UserId && !m.IsDeleted, ct)
             ?? throw new ForbiddenAccessException("Not a member of this room.");
 
         var msg = new ChatMessage
@@ -334,23 +367,35 @@ public class ListMyRoomsHandler : IRequestHandler<ListMyRoomsQuery, IReadOnlyLis
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null || _user.AgencyId is null) throw new ForbiddenAccessException();
-        var roomIds = await _db.ChatRoomMembers
-            .Where(m => m.UserId == _user.UserId).Select(m => m.RoomId).ToListAsync(ct);
-        var rooms = await _db.ChatRooms
+
+        // Your rooms are the rooms you are IN. That was already how this list was built — the
+        // agency predicate underneath it was a second lock on the same door, and it is the one
+        // that hid a cross-agency group from its own members.
+        //
+        // Pinned to the caller's own user id, so bypassing the filter cannot widen what they see:
+        // it returns rooms they are a member of, and nothing else.
+        var roomIds = await _db.ChatRoomMembers.IgnoreQueryFilters()
+            .Where(m => m.UserId == _user.UserId && !m.IsDeleted)
+            .Select(m => m.RoomId).ToListAsync(ct);
+
+        var rooms = await _db.ChatRooms.IgnoreQueryFilters()
             .Include(r => r.Members)
-            .Where(r => roomIds.Contains(r.Id) && r.AgencyId == _user.AgencyId)
+            .Where(r => roomIds.Contains(r.Id) && !r.IsDeleted)
             .ToListAsync(ct);
 
         // Latest message per room, for the list preview + sort. Projected lightweight and grouped in
         // memory (internal chat volume is modest; the (RoomId, SentAt) index keeps the scan cheap).
-        var lastByRoom = (await _db.ChatMessages
-                .Where(m => roomIds.Contains(m.RoomId))
+        var lastByRoom = (await _db.ChatMessages.IgnoreQueryFilters()
+                .Where(m => roomIds.Contains(m.RoomId) && !m.IsDeleted)
                 .Select(m => new { m.RoomId, m.SentAt, m.Body, m.AttachmentName, m.SenderUserId })
                 .ToListAsync(ct))
             .GroupBy(x => x.RoomId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.SentAt).First());
 
-        var names = await _identity.ListUserNamesAsync(_user.AgencyId, ct);
+        // Names across agencies: a member of a cross-agency room has co-members outside their own,
+        // and a direct room is NAMED for the other person — scoped to one agency they showed as
+        // "Conversation" with no clue who it was with.
+        var names = await _identity.ListUserNamesAsync(null, ct);
         var me = _user.UserId.Value;
 
         return rooms.Select(r =>
@@ -409,11 +454,23 @@ public class RoomMessagesHandler : IRequestHandler<RoomMessagesQuery, IReadOnlyL
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
-        var member = await _db.ChatRoomMembers.AnyAsync(
-            m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct);
+
+        // MEMBERSHIP is the gate here, not the agency.
+        //
+        // A room can legitimately span agencies — a submission agent working every company needs a
+        // group with the agents on each floor — and the tenant filter would hide both the
+        // membership row and the messages from everyone outside the room's own agency, leaving a
+        // group that its own members could not read.
+        //
+        // Bypassing the filter on this lookup is safe BECAUSE it is pinned to the caller's own
+        // user id: it can only ever match a row that says "this person is in this room".
+        var member = await _db.ChatRoomMembers.IgnoreQueryFilters().AnyAsync(
+            m => m.RoomId == request.RoomId && m.UserId == _user.UserId && !m.IsDeleted, ct);
         if (!member) throw new ForbiddenAccessException();
-        var msgs = await _db.ChatMessages
-            .Where(m => m.RoomId == request.RoomId)
+
+        // Only now, with membership proven, are the room's messages read without the filter.
+        var msgs = await _db.ChatMessages.IgnoreQueryFilters()
+            .Where(m => m.RoomId == request.RoomId && !m.IsDeleted)
             .OrderByDescending(m => m.SentAt).Take(Math.Clamp(request.Take, 1, 200))   // negative Take => LIMIT -1 (unbounded) on SQLite
             .OrderBy(m => m.SentAt)
             .Select(m => new

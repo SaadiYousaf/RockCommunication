@@ -21,14 +21,17 @@ public class UnreadCountsHandler : IRequestHandler<UnreadCountsQuery, IReadOnlyL
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
-        var memberships = await _db.ChatRoomMembers
-            .Where(m => m.UserId == _user.UserId)
+        // Own membership only, so the bypass cannot widen what is counted. Without it a
+        // cross-agency room never appears here and its messages stay silently unread — the badge
+        // says nothing while the conversation fills up.
+        var memberships = await _db.ChatRoomMembers.IgnoreQueryFilters()
+            .Where(m => m.UserId == _user.UserId && !m.IsDeleted)
             .Select(m => new { m.RoomId, m.LastReadAt })
             .ToListAsync(ct);
 
         var roomIds = memberships.Select(m => m.RoomId).ToList();
-        var msgCounts = await _db.ChatMessages
-            .Where(m => roomIds.Contains(m.RoomId))
+        var msgCounts = await _db.ChatMessages.IgnoreQueryFilters()
+            .Where(m => roomIds.Contains(m.RoomId) && !m.IsDeleted)
             .GroupBy(m => m.RoomId)
             .Select(g => new { RoomId = g.Key, Messages = g.Select(x => new { x.SentAt, x.SenderUserId }).ToList() })
             .ToListAsync(ct);
@@ -59,8 +62,9 @@ public class MarkRoomReadHandler : IRequestHandler<MarkRoomReadCommand, Unit>
     {
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
-        var member = await _db.ChatRoomMembers.FirstOrDefaultAsync(
-            m => m.RoomId == request.RoomId && m.UserId == _user.UserId, ct)
+        // Pinned to the caller's own id — it can only ever find their own membership row.
+        var member = await _db.ChatRoomMembers.IgnoreQueryFilters().FirstOrDefaultAsync(
+            m => m.RoomId == request.RoomId && m.UserId == _user.UserId && !m.IsDeleted, ct)
             ?? throw new ForbiddenAccessException();
         var now = DateTime.UtcNow;
         member.LastReadAt = now;
