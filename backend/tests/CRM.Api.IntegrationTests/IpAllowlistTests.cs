@@ -276,6 +276,62 @@ public class IpAllowlistTests : IClassFixture<IpAllowlistTests.ProxiedFactory>
         finally { await RevokeAsync(superAdmin, entry); }
     }
 
+    /// <summary>
+    /// An expired session answers "sign in again", not "this network isn't approved".
+    ///
+    /// The reported failure: a SuperAdmin — exempt from this list entirely — was shown the blocked
+    /// screen roughly every fifteen minutes. An access token lasts that long; once it expired the
+    /// next request carried no principal, so the exemption above could not recognise them and this
+    /// middleware refused the request as a network violation. The browser took that at face value,
+    /// showed the blocked page and never called refresh, so the only way back was signing in by
+    /// hand.
+    ///
+    /// 401 is what lets the client recover on its own. Nothing leaks by deferring: every endpoint
+    /// behind this carries [Authorize].
+    /// </summary>
+    [Fact]
+    public async Task An_expired_session_is_told_to_sign_in_again_not_that_the_network_is_blocked()
+    {
+        var superAdmin = await _factory.LoginSuperAdminAsync();
+        var entry = await AllowAsync(superAdmin, "198.51.100.0/24");
+        try
+        {
+            // A client holding a token the server will not accept — exactly an expired one.
+            var stale = _factory.CreateClient();
+            stale.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "expired.token.value");
+            From(stale, "203.0.113.50");               // deliberately outside the approved range
+
+            var res = await stale.GetAsync("/api/users");
+
+            Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+            Assert.DoesNotContain("ip_not_allowed", await res.Content.ReadAsStringAsync());
+        }
+        finally { await RevokeAsync(superAdmin, entry); }
+    }
+
+    /// <summary>
+    /// …and once they hold a real token again, an unapproved network is still refused. The
+    /// deferral above must not have quietly turned the allowlist off.
+    /// </summary>
+    [Fact]
+    public async Task A_signed_in_user_on_an_unapproved_network_is_still_refused()
+    {
+        var superAdmin = await _factory.LoginSuperAdminAsync();
+        var entry = await AllowAsync(superAdmin, "198.51.100.0/24");
+        try
+        {
+            var admin = await _factory.LoginAdminAsync();
+            From(admin, "203.0.113.50");
+
+            var res = await admin.GetAsync("/api/users");
+
+            Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
+            Assert.Contains("ip_not_allowed", await res.Content.ReadAsStringAsync());
+        }
+        finally { await RevokeAsync(superAdmin, entry); }
+    }
+
     /// <summary>Only SuperAdmin decides which networks are approved.</summary>
     [Fact]
     public async Task An_ordinary_admin_cannot_change_the_allowlist()

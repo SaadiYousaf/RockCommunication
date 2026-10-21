@@ -75,6 +75,25 @@ public class IpAllowlistMiddleware
             return;
         }
 
+        // An UNAUTHENTICATED request is left to the endpoint, which answers 401.
+        //
+        // Nothing is given away by this: everything behind here carries [Authorize], so an
+        // anonymous caller still reaches nothing. What it fixes is the recoverable case. An access
+        // token lives fifteen minutes; when it expires the next request arrives with no principal,
+        // and refusing it HERE answered "this network isn't approved" instead of "your session
+        // expired". The browser believed the network had been revoked and showed the blocked
+        // screen — so it never called refresh, and the only way back was to sign in by hand. It hit
+        // SuperAdmins hardest, who are exempt from this list entirely and were being stopped by it
+        // every quarter of an hour.
+        //
+        // After a refresh the principal is back, and a genuinely unapproved network is refused on
+        // the very next request — with the explanation it should have had.
+        if (ctx.User?.Identity?.IsAuthenticated != true)
+        {
+            await _next(ctx);
+            return;
+        }
+
         var entries = await cache.GetAsync(db, ctx.RequestAborted);
         if (entries.Length == 0) { await _next(ctx); return; }
 
