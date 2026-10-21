@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Commission;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
@@ -166,7 +167,13 @@ public class ValidatorQueueHandler :
         // A "central" (SMH-level) Submission Agent validates sales across ALL agencies; an
         // agency-scoped validator only sees their own. Central reads bypass the tenant query
         // filter, so we must re-add the soft-delete predicate by hand (IgnoreQueryFilters drops it too).
-        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        // Everyone who works the whole platform, not just the central Submission Agent.
+        //
+        // This asked only "are you a Validator with no agency?", which a SuperAdmin is not — they
+        // hold no Validator role. So they fell to the agency-scoped branch and were filtered to an
+        // agency id of all zeroes, which matches no sale: the submission queue showed a SuperAdmin
+        // "0 of 0 sales" on a platform full of them. Exactly the trap TenantScope exists to close.
+        var central = TenantScope.ReadsEveryAgency(_user);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
         // Ceiling raised with the default above: a cross-agency queue pools every agency, and the
@@ -257,7 +264,13 @@ public class ValidatorQueueHandler :
         // A central Submission Agent carries no agency, so the global tenant filter would scope this
         // read to Guid.Empty and match nothing — every note on every sale came back as "not found",
         // on the one role whose whole job is working other agencies' sales. Mirrors the status path.
-        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        // Everyone who works the whole platform, not just the central Submission Agent.
+        //
+        // This asked only "are you a Validator with no agency?", which a SuperAdmin is not — they
+        // hold no Validator role. So they fell to the agency-scoped branch and were filtered to an
+        // agency id of all zeroes, which matches no sale: the submission queue showed a SuperAdmin
+        // "0 of 0 sales" on a platform full of them. Exactly the trap TenantScope exists to close.
+        var central = TenantScope.ReadsEveryAgency(_user);
         var sale = (central
             ? await _db.Sales.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
             : await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId, ct))
@@ -295,7 +308,13 @@ public class ValidatorQueueHandler :
         Guard.AgainstNull(request);
         if (_user.UserId is null) throw new ForbiddenAccessException();
 
-        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        // Everyone who works the whole platform, not just the central Submission Agent.
+        //
+        // This asked only "are you a Validator with no agency?", which a SuperAdmin is not — they
+        // hold no Validator role. So they fell to the agency-scoped branch and were filtered to an
+        // agency id of all zeroes, which matches no sale: the submission queue showed a SuperAdmin
+        // "0 of 0 sales" on a platform full of them. Exactly the trap TenantScope exists to close.
+        var central = TenantScope.ReadsEveryAgency(_user);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
         var sale = (central
@@ -542,7 +561,7 @@ public class ValidatorQueueHandler :
 
         var crossAgency = false;
         if (agent is null
-            && (unchanged || _user.IsSuperAdmin || DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles)))
+            && (unchanged || TenantScope.ReadsEveryAgency(_user)))
         {
             agent = (await _identity.ListUsersAsync(null, ct))
                 .FirstOrDefault(u => u.Id == licenseAgentId

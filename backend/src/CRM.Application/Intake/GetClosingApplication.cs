@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -63,7 +64,9 @@ public class GetClosingApplicationHandler : IRequestHandler<GetClosingApplicatio
         // A central (SMH-level) Submission Agent reviews closing applications across ALL agencies
         // to copy them into the carrier portal. That read bypasses the tenant filter, so re-add
         // the soft-delete predicate by hand. Agency-scoped users stay pinned to their own agency.
-        var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        // See ValidatorQueue: a SuperAdmin holds no Validator role, so the old check sent them down
+        // the agency-scoped path and they could not open a sale they could plainly see.
+        var central = TenantScope.ReadsEveryAgency(_user);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
         // A Verifier reaches this same handler (GetVerifyLead) but is walled off from the encrypted

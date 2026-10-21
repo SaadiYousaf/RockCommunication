@@ -447,6 +447,47 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
+    /// A SuperAdmin sees the submission queue.
+    ///
+    /// They did not. The queue asked "are you a Validator with no agency?" to decide whether to
+    /// span agencies — and a SuperAdmin holds no Validator role, so they fell to the agency-scoped
+    /// branch and were filtered to an agency id of all zeroes, which matches no sale. The platform
+    /// operator opened the Submission Queue on a database full of sales and read "0 of 0 sales".
+    ///
+    /// It is the exact failure TenantScope was written to prevent, reappearing in a handler that
+    /// rolled its own check.
+    /// </summary>
+    [Fact]
+    public async Task A_super_admin_sees_the_submission_queue()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var agency = await CreateAgencyAsync(sa, $"SaSees {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, agency, "Papa");
+
+        var queue = await sa.GetJsonAsync("/api/intake/validate/queue");
+        Assert.Contains(queue.EnumerateArray(), s => s.GetProperty("saleId").GetGuid() == sale);
+    }
+
+    /// <summary>And the sidebar badge agrees with it, rather than reporting nothing to do.</summary>
+    [Fact]
+    public async Task A_super_admins_queue_badge_counts_the_same_sales()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var before = (await sa.GetJsonAsync("/api/work-queues/counts"))
+            .GetProperty("submissionQueue").GetInt32();
+
+        var agency = await CreateAgencyAsync(sa, $"SaBadge {Guid.NewGuid():N}"[..20]);
+        await SellAsync(sa, agency, "Quebec");
+
+        var after = (await sa.GetJsonAsync("/api/work-queues/counts"))
+            .GetProperty("submissionQueue").GetInt32();
+
+        Assert.Equal(before + 1, after);
+    }
+
+    /// <summary>
     /// The queue's own limit must be far above what a cross-agency queue actually holds.
     ///
     /// This is the shape of a real incident. The limit was 200 and the queue is ordered newest

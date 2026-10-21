@@ -56,7 +56,9 @@ public class QueueCountsHandler : IRequestHandler<QueueCountsQuery, QueueCountsD
         var availableToClose = myPools.Contains(WorkflowStage.Verified)
             ? await _db.Leads.CountAsync(LeadQueuePredicates.Pool(WorkflowStage.Verified), ct) : 0;
 
-        var isCentral = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+        // See ValidatorQueue: the badge has to count what the queue shows, and a SuperAdmin holds
+        // no Validator role, so this previously counted an agency of all zeroes — always 0.
+        var isCentral = TenantScope.ReadsEveryAgency(_user);
         var pendingSales = _db.Sales.AsQueryable();
         if (isCentral) pendingSales = pendingSales.IgnoreQueryFilters().Where(s => !s.IsDeleted);
         // Exclude terminal-lost outcomes (declined / client-cancelled) — they keep ValidatedAt /
