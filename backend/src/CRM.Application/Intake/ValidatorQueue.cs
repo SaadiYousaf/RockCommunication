@@ -681,9 +681,13 @@ public class ValidatorQueueHandler :
         // the status of their own agency's sale because of an assignment somebody else made.
         var unchanged = sale.LicenseAgentUserId == licenseAgentId;
 
+        // ReachesOtherAgencies, not ReadsEveryAgency: a SuperAdmin who has picked a working context
+        // is still the platform operator. Scoping what they are LOOKING at must not remove their
+        // authority to assign — and this is the exact rule the agent dropdown lists under, so the
+        // two can no longer disagree about who is assignable.
         var crossAgency = false;
         if (agent is null
-            && (unchanged || TenantScope.ReadsEveryAgency(_user)))
+            && (unchanged || TenantScope.ReachesOtherAgencies(_user)))
         {
             agent = (await _identity.ListUsersAsync(null, ct))
                 .FirstOrDefault(u => u.Id == licenseAgentId

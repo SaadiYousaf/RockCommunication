@@ -1,4 +1,5 @@
 using CRM.Application.Admin;
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using CRM.Application.Common.Interfaces;
 using CRM.Domain.Common;
@@ -300,7 +301,13 @@ public class AgencyPanelHandler :
     }
 
     private bool IsSuperAdmin => _user.Roles.Contains(DomainRoles.SuperAdmin);
-    private bool IsCentralValidator => DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
+
+    /// <summary>
+    /// Whether this caller may reach another agency's people — the SAME rule the approval screen
+    /// assigns under (TenantScope.ReachesOtherAgencies). Listing agents a caller cannot then be
+    /// given is how this screen produced a dropdown of unassignable names; one rule, both sides.
+    /// </summary>
+    private bool IsCentralValidator => TenantScope.ReachesOtherAgencies(_user);
 
     private void EnsureSuperAdmin()
     {

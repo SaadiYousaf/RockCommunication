@@ -54,6 +54,26 @@ public static class TenantScope
         ReadsEveryAgency(user) && !WorksAcrossAgencies(user);
 
     /// <summary>
+    /// May this caller reach PEOPLE in another agency — list them, and assign work to them?
+    ///
+    /// Deliberately NOT the same question as <see cref="ReadsEveryAgency"/>. That one asks whether
+    /// a caller's queries span tenants, and a SuperAdmin who has picked a working context has
+    /// chosen to be scoped. Authority is not scope: choosing to look at one agency does not remove
+    /// the platform operator's power to assign a sale to whoever holds the carrier appointment.
+    ///
+    /// This exists because the two drifted. The approval screen listed another agency's licence
+    /// agents under one rule (any SuperAdmin) and refused to save them under another (an UNSCOPED
+    /// SuperAdmin), so a scoped operator was offered a dropdown of names that could never be
+    /// assigned — the same contradiction, in a new place, as the bug that started all this.
+    /// Both sides now call this. Keep it that way.
+    /// </summary>
+    public static bool ReachesOtherAgencies(ICurrentUser user) =>
+        user is not null
+        && (user.Roles.Contains(DomainRoles.SuperAdmin)
+            || DomainRoles.IsCentralSubmissionAgent(user.AgencyId, user.Roles)
+            || DomainRoles.IsCentralCommissionAgent(user.AgencyId, user.Roles));
+
+    /// <summary>
     /// The agency this caller is confined to, or null when they legitimately span agencies.
     ///
     /// Throws for a NON-SuperAdmin with no agency: that is a malformed token, and the safe response

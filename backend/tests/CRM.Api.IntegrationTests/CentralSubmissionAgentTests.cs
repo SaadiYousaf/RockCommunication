@@ -274,6 +274,41 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
+    /// A SuperAdmin who has picked a working context can still assign across agencies.
+    ///
+    /// The reported failure, and the original bug wearing a new face. The agent dropdown listed
+    /// another agency's licence agents for ANY SuperAdmin, while the save demanded an UNSCOPED
+    /// one — so an operator who had chosen a context was shown a list of names and refused every
+    /// one of them: "That person isn't a licence agent you can assign this sale to."
+    ///
+    /// Scope is not authority. Choosing which agency to look at does not stop the platform
+    /// operator writing a policy under whoever holds the carrier appointment.
+    /// </summary>
+    [Fact]
+    public async Task A_super_admin_scoped_to_one_agency_can_still_assign_an_outside_agent()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var selling = await CreateAgencyAsync(sa, $"ScopedSell {Guid.NewGuid():N}"[..20]);
+        var writing = await CreateAgencyAsync(sa, $"ScopedWrite {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, selling, "Victor");
+        var (agentId, _) = await CreateLicenseAgentAsync(sa, writing);
+
+        // Pick a working context — exactly what the context switcher does — and then ACTUALLY USE
+        // the token it returns. The login helper sets the Authorization header once, so without
+        // this the client keeps its original unscoped token and the test proves nothing: it passed
+        // with the fix reverted until the header was replaced here.
+        var scoped = await _factory.LoginSuperAdminAsync();
+        var ctx = await scoped.PostJsonAsync("/api/auth/context", new { agencyId = selling, callCenterId = (Guid?)null });
+        scoped.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ctx.GetProperty("accessToken").GetString());
+
+        var res = await ApproveAsync(scoped, sale, agentId);
+        Assert.True(res.IsSuccessStatusCode,
+            $"a scoped SuperAdmin should still be able to assign an outside licence agent; got {res.StatusCode} {await res.Content.ReadAsStringAsync()}");
+    }
+
+    /// <summary>
     /// The money has to reach the agent.
     ///
     /// Commission rows are read back scoped to the reader's own agency, so a line filed under the
