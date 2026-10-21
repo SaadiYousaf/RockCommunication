@@ -21,6 +21,13 @@ public record ValidatorQueueItem(
     Guid LeadId,
     Guid AgencyId,
     string AgencyName,
+    /// <summary>
+    /// The call centre the sale was made in, and its name. A submission agent working several
+    /// agencies needs to know which floor a sale came off, not just which company — that is who
+    /// they chase when something is wrong with it.
+    /// </summary>
+    Guid? CallCenterId,
+    string? CallCenterName,
     string LeadName,
     string LeadPhone,
     string? State,
@@ -252,12 +259,22 @@ public class ValidatorQueueHandler :
 
         string? AgencyNameOf(Guid? id) => id is { } g && agencyById.TryGetValue(g, out var n) ? n : null;
 
+        // Call-centre names, for the floor each sale came off. IgnoreQueryFilters because a central
+        // agent's own tenant is empty and would otherwise match none of them.
+        var callCenterIds = sales.Select(s => s.CallCenterId).Where(id => id != Guid.Empty).Distinct().ToList();
+        var callCenterById = (await _db.CallCenters.AsNoTracking().IgnoreQueryFilters()
+                .Where(c => callCenterIds.Contains(c.Id) && !c.IsDeleted)
+                .Select(c => new { c.Id, c.Name }).ToListAsync(ct))
+            .ToDictionary(c => c.Id, c => c.Name);
+
         return sales.Select(s =>
         {
             leadById.TryGetValue(s.LeadId, out var l);
             return new ValidatorQueueItem(
                 s.Id, s.LeadId,
                 s.AgencyId, agencyById.TryGetValue(s.AgencyId, out var an) ? an : "",
+                s.CallCenterId == Guid.Empty ? null : s.CallCenterId,
+                callCenterById.TryGetValue(s.CallCenterId, out var cn) ? cn : null,
                 l is null ? "" : $"{l.FirstName} {l.LastName}".Trim(),
                 l?.PhoneNumber ?? "", l?.State,
                 s.Carrier, s.PolicyNumber, s.MonthlyPremium,
@@ -336,6 +353,10 @@ public class ValidatorQueueHandler :
             ? await _db.Sales.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == request.SaleId && !s.IsDeleted, ct)
             : await _db.Sales.FirstOrDefaultAsync(s => s.Id == request.SaleId && s.AgencyId == _user.AgencyId, ct))
             ?? throw new NotFoundException(nameof(Sale), request.SaleId);
+
+        // Captured before the write: oversight is told only when the status actually MOVED, so
+        // re-saving a sale to correct a premium doesn't notify three people that nothing happened.
+        var previousStatus = sale.ValidatorStatus;
 
         sale.ValidatorStatus = request.Status;
         sale.ValidatorUserId = _user.UserId;
@@ -480,6 +501,11 @@ public class ValidatorQueueHandler :
         // reason the validator recorded.
         await NotifyCloserOfProblemAsync(sale, lead, request.Status, ct);
 
+        // And tell oversight about the move itself: the closer, their call centre's admin, and the
+        // platform operator. Asked for by the owner — the people accountable for a sale should not
+        // have to open the queue to discover that somebody changed its outcome.
+        await NotifySaleUpdatedAsync(sale, lead, previousStatus, request.Status, ct);
+
         return new ValidatorStatusResult(sale.Id, sale.ValidatorStatus, lead?.Stage ?? WorkflowStage.Closed);
     }
 
@@ -487,6 +513,87 @@ public class ValidatorQueueHandler :
     /// Best-effort in-app notice to the closer when the validator sets an outcome that needs their
     /// attention, carrying the recorded reason. Never notifies the validator about their own action.
     /// </summary>
+    /// <summary>
+    /// Tells the people accountable for a sale that its outcome changed: the closer who made it,
+    /// the admin of the call centre it came off, and the platform operator.
+    ///
+    /// Only on a real move. Re-saving a sale to correct an approved premium is not news, and a
+    /// notification that fires on every save is one people learn to ignore — which costs you the
+    /// ones that matter.
+    ///
+    /// Everything is filed under the SALE's agency. The closer and the call-centre admin live
+    /// there, and a SuperAdmin reads across every agency anyway, so one payload reaches all three.
+    /// </summary>
+    private async Task NotifySaleUpdatedAsync(
+        Sale sale, Lead? lead, ValidatorStatus previous, ValidatorStatus current, CancellationToken ct)
+    {
+        if (previous == current) return;
+
+        try
+        {
+            var customer = lead is null ? "a customer" : $"{lead.FirstName} {lead.LastName}".Trim();
+            if (customer.Length == 0) customer = "a customer";
+
+            // Every user who could be told, across agencies — a SuperAdmin belongs to none, so a
+            // roster scoped to the sale's agency would never include them.
+            var everyone = await _identity.ListUsersAsync(null, ct);
+
+            var recipients = everyone.Where(u =>
+                    u.IsActive
+                    && u.Id != _user.UserId                       // never notify yourself
+                    && (u.Id == sale.CloserUserId
+                        || u.Roles.Contains(DomainRoles.SuperAdmin, StringComparer.OrdinalIgnoreCase)
+                        || (u.AgencyId == sale.AgencyId
+                            && u.Roles.Contains(DomainRoles.CallCenterAdmin, StringComparer.OrdinalIgnoreCase)
+                            // An admin pinned to a call centre hears about their own floor; one at
+                            // agency level (no call centre) hears about all of theirs.
+                            && (u.CallCenterId is null || u.CallCenterId == sale.CallCenterId))))
+                .Select(u => u.Id)
+                .Distinct()
+                .ToList();
+
+            if (recipients.Count == 0) return;
+
+            var actor = _user.UserName ?? "A submission agent";
+            var title = $"Sale #{sale.SaleNumber} is now {StatusLabel(current)}";
+            var body = $"{actor} moved {customer}'s sale from {StatusLabel(previous)} to {StatusLabel(current)}.";
+            var reason = sale.DeclineReason?.Trim();
+            if (!string.IsNullOrWhiteSpace(reason)) body = $"{body} Note: {reason}";
+
+            foreach (var recipient in recipients)
+            {
+                await _notify.DispatchAsync(
+                    new NotificationPayload(sale.AgencyId, recipient, title, body, $"/sales/{sale.Id}"),
+                    new[] { NotificationChannelType.InApp }, ct);
+            }
+        }
+        catch { /* advisory only — never fail the status change over a notification */ }
+    }
+
+    /// <summary>
+    /// The status in words a salesperson reads, never the raw enum name. "ErrorInApplicationInformation"
+    /// is an internal code; "an application error" is what happened.
+    /// </summary>
+    private static string StatusLabel(ValidatorStatus status) => status switch
+    {
+        ValidatorStatus.Completed => "Submitted",
+        ValidatorStatus.Approved => "Approved",
+        ValidatorStatus.ActivePaid => "Active and paid",
+        ValidatorStatus.NoUpdateInCommission => "No update in commission",
+        ValidatorStatus.BadBank => "Bad bank details",
+        ValidatorStatus.Nsf => "Payment bounced",
+        ValidatorStatus.Decline => "Declined",
+        ValidatorStatus.ClientCancelled => "Cancelled by the customer",
+        ValidatorStatus.ErrorInApplicationInformation => "An application error",
+        ValidatorStatus.ChargedBack => "Charged back",
+        ValidatorStatus.ReferredToHo => "With Head Office",
+        ValidatorStatus.BadCustomer => "Bad customer",
+        ValidatorStatus.NotInterestedOrDnc => "Not interested / do not call",
+        ValidatorStatus.CallDroppedOnSignature => "Call dropped on signature",
+        ValidatorStatus.StateNotAvailable => "State not available",
+        _ => status.ToString(),
+    };
+
     private async Task NotifyCloserOfProblemAsync(Sale sale, Lead? lead, ValidatorStatus status, CancellationToken ct)
     {
         if (sale.CloserUserId == _user.UserId || sale.CloserUserId == Guid.Empty) return;

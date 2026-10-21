@@ -616,6 +616,9 @@ export interface ValidatorQueueItem {
   leadId: string;
   agencyId: string;
   agencyName: string;
+  /** The call centre the sale came off — which floor to chase, not just which company. */
+  callCenterId: string | null;
+  callCenterName: string | null;
   leadName: string;
   leadPhone: string;
   state: string | null;

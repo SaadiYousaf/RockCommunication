@@ -199,6 +199,7 @@ export function ValidateQueuePage() {
       { header: "Premium", value: (s) => formatUsd(shownPremium(s)) },
       { header: "Status", value: (s) => LABEL[s.status] },
       { header: "Agency", value: (s) => s.agencyName },
+      { header: "Call centre", value: (s) => s.callCenterName ?? "" },
     ], `submission-queue-${new Date().toISOString().slice(0, 10)}.csv`);
     toast.success(INTAKE_MSG.exportReadyTitle, INTAKE_MSG.exportRows(chosen.length));
   }
@@ -323,7 +324,7 @@ export function ValidateQueuePage() {
               <THead>
                 <TR>
                   <TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH>
-                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title={INTAKE_MSG.premiumColumnTitle} side="bottom">{INTAKE_MSG.premiumColumnHint}</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
+                  <TH sortDir={dirFor("leadName")} onClick={() => toggle("leadName")}>Customer</TH><TH sortDir={dirFor("agencyName")} onClick={() => toggle("agencyName")}>Agency / call centre</TH><TH sortDir={dirFor("carrier")} onClick={() => toggle("carrier")}>Carrier</TH><TH sortDir={dirFor("monthlyPremium")} onClick={() => toggle("monthlyPremium")}><span className="inline-flex items-center gap-1">Premium<InfoHint title={INTAKE_MSG.premiumColumnTitle} side="bottom">{INTAKE_MSG.premiumColumnHint}</InfoHint></span></TH><TH sortDir={dirFor("closerName")} onClick={() => toggle("closerName")}>Closer</TH>
                   <TH sortDir={dirFor("licenseAgentName")} onClick={() => toggle("licenseAgentName")}>
                     <span className="inline-flex items-center gap-1">
                       Agent
@@ -354,7 +355,13 @@ export function ValidateQueuePage() {
                       <div className="font-medium text-ink-900 whitespace-nowrap">{s.leadName}</div>
                       <div className="font-mono text-xs text-ink-500 whitespace-nowrap tabular-nums">{formatPhone(s.leadPhone)}</div>
                     </TD>
-                    <TD className="text-sm text-ink-600 max-w-[12rem] truncate">{s.agencyName || "—"}</TD>
+                    {/* Agency over call centre in one cell: a submission agent working several
+                        companies needs both, and two columns of near-identical names would push
+                        the carrier and premium off the side of the table. */}
+                    <TD className="text-sm max-w-[13rem]">
+                      <div className="truncate text-ink-700">{s.agencyName || "—"}</div>
+                      <div className="truncate text-xs text-ink-500">{s.callCenterName || INTAKE_MSG.noCallCentre}</div>
+                    </TD>
                     <TD className="text-sm whitespace-nowrap" title={originalIfChanged(s)}>{shownCarrier(s)}</TD>
                     <TD className="text-sm tabular-nums whitespace-nowrap" title={originalIfChanged(s)}>
                       <span className="inline-flex items-center gap-1.5">

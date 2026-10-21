@@ -13,6 +13,7 @@ function aSale(overrides: Partial<ValidatorQueueItem> = {}): ValidatorQueueItem 
   return {
     saleId: "s1", leadId: "l1",
     agencyId: "a1", agencyName: "SMH",
+    callCenterId: "cc1", callCenterName: "MAK BPO",
     leadName: "Rosa Tester", leadPhone: "5551234567", state: "AZ",
     carrier: "Mutual of Omaha",
     policyNumber: "POL-1",

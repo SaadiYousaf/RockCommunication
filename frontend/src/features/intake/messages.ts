@@ -30,6 +30,9 @@ export const INTAKE_MSG = {
   // The submission queue works one MONTH at a time, opening on the month you are in. It used to
   // return "the newest 200 sales, ever", which silently dropped the oldest once the queue spanned
   // every agency — a month is both a bound and the unit the floor actually reconciles against.
+  /** Agency-level sales belong to no call centre — say so rather than leaving the line blank. */
+  noCallCentre: "No call centre",
+
   monthLabel: "Month",
   monthPrevious: "Previous month",
   monthNext: "Next month",

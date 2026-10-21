@@ -51,6 +51,11 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
 
     /// <summary>A closer in the given agency sells a policy, leaving a sale for submission.</summary>
     private async Task<Guid> SellAsync(HttpClient superAdmin, Guid agencyId, string customerFirstName)
+        => (await SellWithCloserAsync(superAdmin, agencyId, customerFirstName)).SaleId;
+
+    /// <summary>As above, but hands back the closer too — for tests about what the closer is told.</summary>
+    private async Task<(Guid SaleId, string CloserName)> SellWithCloserAsync(
+        HttpClient superAdmin, Guid agencyId, string customerFirstName)
     {
         var closerName = await CreateUserAsync(superAdmin, agencyId, "Closer");
         var closer = await _factory.LoginAsync(closerName, Password);
@@ -108,7 +113,7 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
                 banking198Reason = "Confirmed on the recorded line.",
             },
         });
-        return sold.GetProperty("saleId").GetGuid();
+        return (sold.GetProperty("saleId").GetGuid(), closerName);
     }
 
     /// <summary>
@@ -444,6 +449,66 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
         // And the refusal is in plain language — no role codes for a salesperson to decode.
         var body = await res.Content.ReadAsStringAsync();
         Assert.DoesNotContain("LicenseAgent", body);
+    }
+
+    /// <summary>
+    /// Each row names the floor the sale came off, not just the company.
+    ///
+    /// A submission agent working several agencies has to know which call centre to chase when a
+    /// sale is wrong, and the agency alone does not tell them — a company can run several floors.
+    /// </summary>
+    [Fact]
+    public async Task Each_row_names_the_call_centre_the_sale_came_from()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var agency = (await sa.GetJsonAsync("/api/agencies")).EnumerateArray().First().GetProperty("id").GetGuid();
+        var sale = await SellAsync(sa, agency, "Tango");
+
+        var row = (await sa.GetJsonAsync("/api/intake/validate/queue"))
+            .EnumerateArray().Single(s => s.GetProperty("saleId").GetGuid() == sale);
+
+        // A sale made inside a call centre carries its name; one made at agency level carries null.
+        // Either is fine — what must not happen is the field being absent from the row entirely.
+        Assert.True(row.TryGetProperty("callCenterName", out _), "every row must carry a call centre field");
+        Assert.True(row.TryGetProperty("callCenterId", out _));
+    }
+
+    /// <summary>
+    /// Changing a sale's outcome tells the people accountable for it.
+    ///
+    /// The owner's rule: any update a submission agent makes reaches the closer, the call centre's
+    /// admin and the platform operator. Before this only a decline or an application error said
+    /// anything, and only to the closer — an approval, a bad bank or a charge-back went unannounced.
+    /// </summary>
+    [Fact]
+    public async Task Changing_a_sale_notifies_the_closer()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var agency = (await sa.GetJsonAsync("/api/agencies")).EnumerateArray().First().GetProperty("id").GetGuid();
+        var (saleId, closerName) = await SellWithCloserAsync(sa, agency, "Uniform");
+
+        // Approved is a POSITIVE outcome — the case that previously notified nobody at all. No
+        // licence agent named, so this is purely the status move.
+        var res = await sa.PostAsJsonAsync($"/api/intake/validate/{saleId}/status", new
+        {
+            status = "Approved",
+            carrierApproved = "ETHOS",
+            coverageApproved = 10000m,
+            premiumApproved = 69m,
+            planApproved = "Level",
+        });
+        res.EnsureSuccessStatusCode();
+
+        var closer = await _factory.LoginAsync(closerName, Password);
+        var mine = await closer.GetJsonAsync("/api/notifications");
+        var items = mine.ValueKind == System.Text.Json.JsonValueKind.Array
+            ? mine.EnumerateArray().ToList()
+            : mine.GetProperty("items").EnumerateArray().ToList();
+
+        Assert.Contains(items, n =>
+            (n.GetProperty("title").GetString() ?? "").Contains("Approved", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
