@@ -58,7 +58,18 @@ public record ValidatorQueueItem(
 /// Every sale in the agency, newest first — a sale lands here as <see cref="ValidatorStatus.Completed"/>
 /// the moment the closer submits "Complete and Sold".
 /// </summary>
-public record ValidatorQueueQuery(int Take = 200) : IRequest<IReadOnlyList<ValidatorQueueItem>>;
+/// <summary>
+/// <paramref name="Take"/> bounds the response. It was 200, which was ample while a submission
+/// agent saw one agency — and became a silent data-loss bug the moment a central agent began
+/// pooling EVERY agency into one queue. Ordered newest-first, the 201st sale simply stopped being
+/// returned: each new sale pushed an older one off the bottom, with nothing on screen to say the
+/// list had been cut, so sales appeared to vanish while people were working.
+///
+/// Raised rather than removed: the page renders every row it is given, so this still has to be a
+/// number. It is now far above any plausible pending volume, and the real answer — paging, with
+/// the count of what is not shown — is still owed.
+/// </summary>
+public record ValidatorQueueQuery(int Take = 1000) : IRequest<IReadOnlyList<ValidatorQueueItem>>;
 
 /// <summary>Validator sets the status (and approval/decline details) on a submitted sale.</summary>
 public record SetValidatorStatusCommand(
@@ -158,7 +169,9 @@ public class ValidatorQueueHandler :
         var central = DomainRoles.IsCentralSubmissionAgent(_user.AgencyId, _user.Roles);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
-        var take = Math.Clamp(request.Take, 1, 500);
+        // Ceiling raised with the default above: a cross-agency queue pools every agency, and the
+        // old ceiling of 500 would have capped it again just past the new default.
+        var take = Math.Clamp(request.Take, 1, 5000);
 
         var salesQ = _db.Sales.AsNoTracking();
         salesQ = central

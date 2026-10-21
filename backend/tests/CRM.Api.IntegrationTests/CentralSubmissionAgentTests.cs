@@ -447,6 +447,29 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
+    /// The queue's own limit must be far above what a cross-agency queue actually holds.
+    ///
+    /// This is the shape of a real incident. The limit was 200 and the queue is ordered newest
+    /// first, which was ample while a submission agent saw one agency — and became silent data
+    /// loss the moment a central agent pooled every agency into one list. Each new sale pushed an
+    /// older one past the limit, nothing on screen said the list had been cut, and sales appeared
+    /// to vanish while people were working on them.
+    ///
+    /// Asserting on the limit rather than creating thousands of sales: the bug was the NUMBER, and
+    /// a test that seeds 200 sales to prove it would take minutes and still only pin today's
+    /// volume. If someone lowers this again, they have to read the sentence above first.
+    /// </summary>
+    [Fact]
+    public void The_queue_limit_leaves_room_for_every_agency()
+    {
+        var limit = new CRM.Application.Intake.ValidatorQueueQuery().Take;
+        Assert.True(limit >= 1000,
+            $"the submission queue returns at most {limit} sales, ordered newest first. A queue " +
+            "that spans every agency will pass that, and the oldest sales will drop off the bottom " +
+            "with nothing to say they were cut.");
+    }
+
+    /// <summary>
     /// Leaving a note on a sale in another agency.
     ///
     /// This was broken: the note handler read the sale through the tenant filter, which for an agent

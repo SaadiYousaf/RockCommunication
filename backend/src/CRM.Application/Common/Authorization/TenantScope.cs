@@ -28,6 +28,32 @@ public static class TenantScope
         && (user.AgencyId is null || user.AgencyId == Guid.Empty);
 
     /// <summary>
+    /// True when the caller legitimately READS the whole platform rather than one agency: the
+    /// unscoped SuperAdmin above, plus the platform-level agents whose work spans tenants by
+    /// design — a central Submission Agent and a central Commission Agent.
+    ///
+    /// These were being treated as "an agency user whose agency is missing", which is the
+    /// fail-closed case, so they got an empty screen or a 403 on pages their whole job depends on.
+    ///
+    /// IMPORTANT: unlike a SuperAdmin, they do NOT bypass the EF global query filter (see
+    /// <c>AppDbContext.BypassTenantFilter</c>). A handler that trusts this must therefore also call
+    /// <c>IgnoreQueryFilters()</c> and re-add <c>!IsDeleted</c> by hand, or the filter will narrow
+    /// the query to an agency that does not exist and return nothing.
+    /// </summary>
+    public static bool ReadsEveryAgency(ICurrentUser user) =>
+        user is not null
+        && (WorksAcrossAgencies(user)
+            || DomainRoles.IsCentralSubmissionAgent(user.AgencyId, user.Roles)
+            || DomainRoles.IsCentralCommissionAgent(user.AgencyId, user.Roles));
+
+    /// <summary>
+    /// True for a cross-agency reader who still has the query filter applied to them — i.e. one who
+    /// is not a SuperAdmin. Exactly the callers that need <c>IgnoreQueryFilters()</c>.
+    /// </summary>
+    public static bool NeedsFilterBypass(ICurrentUser user) =>
+        ReadsEveryAgency(user) && !WorksAcrossAgencies(user);
+
+    /// <summary>
     /// The agency this caller is confined to, or null when they legitimately span agencies.
     ///
     /// Throws for a NON-SuperAdmin with no agency: that is a malformed token, and the safe response

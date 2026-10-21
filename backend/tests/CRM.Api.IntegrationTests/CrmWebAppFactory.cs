@@ -73,6 +73,18 @@ public class CrmWebAppFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        try { if (File.Exists(_dbFile)) File.Delete(_dbFile); } catch { }
+
+        // The database AND its write-ahead-log sidecars.
+        //
+        // SQLite in WAL mode keeps "<name>-wal" and "<name>-shm" beside the database, and deleting
+        // only the database leaves them behind. Every test class creates its own file, so each run
+        // of the suite stranded a few megabytes of -wal; left alone since August they had grown to
+        // 3,646 files and 4.6 GB inside bin/, which is also why searching this tree had become so
+        // slow. Cleaning up after ourselves is the fix — nothing here is wanted once the host is
+        // gone, and the directory is a build output anyway.
+        foreach (var path in new[] { _dbFile, _dbFile + "-wal", _dbFile + "-shm" })
+        {
+            try { if (File.Exists(path)) File.Delete(path); } catch { /* a locked file is not worth failing a test run over */ }
+        }
     }
 }

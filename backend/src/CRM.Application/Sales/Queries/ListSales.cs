@@ -1,3 +1,4 @@
+using CRM.Application.Common.Authorization;
 using CRM.Application.Common.Exceptions;
 using DomainRoles = CRM.Domain.Enums.Roles;
 using CRM.Application.Common.Interfaces;
@@ -74,9 +75,13 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         // null == "no agency predicate". That is safe rather than a leak: the global tenant filter
         // only bypasses for a SuperAdmin who is unscoped (see AppDbContext.BypassTenantFilter), so
         // for everyone else the filter still narrows to their own agency underneath this.
-        var isSuperAdmin = _user.Roles.Contains(DomainRoles.SuperAdmin);
+        // A central Submission Agent belongs to no agency either, and their job is every agency's
+        // sales — so they are resolved the same way as an unscoped SuperAdmin. Before this they
+        // fell into the else-branch below, which reads "an agency user with no agency" and refuses:
+        // the Sales page returned 403 to the one role that exists to work the whole platform.
+        var readsEverything = TenantScope.ReadsEveryAgency(_user);
         Guid? agencyId;
-        if (isSuperAdmin)
+        if (readsEverything)
         {
             agencyId =
                 request.AgencyId is { } aid && aid != Guid.Empty ? aid
@@ -90,7 +95,13 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
             agencyId = uaid;
         }
 
+        // Only a SuperAdmin bypasses the global tenant filter. A platform-level agent still has it
+        // applied, narrowed to an agency id of all zeroes — which matches nothing — so without this
+        // they would be allowed through the check above and then shown an empty page instead.
+        var bypassFilter = TenantScope.NeedsFilterBypass(_user);
+
         var q = _db.Sales.AsNoTracking();
+        if (bypassFilter) q = q.IgnoreQueryFilters().Where(s => !s.IsDeleted);
         if (agencyId is { } scopeId) q = q.Where(s => s.AgencyId == scopeId);
 
         // Managers/validators/SuperAdmin see the whole agency; everyone else is scoped to the
@@ -140,8 +151,14 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedSalesResult
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 500);
 
+        // The joined side needs the same treatment: a filtered Leads set would match nothing for a
+        // platform-level caller, and an inner join against nothing returns nothing — an empty page
+        // with no error to explain it.
+        var leadsForJoin = _db.Leads.AsNoTracking();
+        if (bypassFilter) leadsForJoin = leadsForJoin.IgnoreQueryFilters().Where(l => !l.IsDeleted);
+
         var rawItems = await q.Skip(skip).Take(take)
-            .Join(_db.Leads.AsNoTracking(),
+            .Join(leadsForJoin,
                 s => s.LeadId, l => l.Id,
                 (s, l) => new
                 {
