@@ -447,6 +447,54 @@ public class CentralSubmissionAgentTests : IClassFixture<CrmWebAppFactory>
     }
 
     /// <summary>
+    /// The queue returns one period, and nothing outside it.
+    ///
+    /// This is what replaced "the newest N sales, ever" — a limit that quietly dropped the oldest
+    /// rows once the queue spanned every agency. A month bounds the result by something the floor
+    /// actually reconciles against, and the figures above the table then describe that whole month
+    /// rather than whatever happened to fit under a number.
+    /// </summary>
+    [Fact]
+    public async Task The_queue_returns_only_the_requested_period()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var agency = await CreateAgencyAsync(sa, $"Period {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, agency, "Romeo");          // sold now
+
+        // The month the sale was made in: first instant of it, first instant of the next.
+        var now = DateTime.UtcNow;
+        var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var nextMonth = thisMonth.AddMonths(1);
+        var lastMonth = thisMonth.AddMonths(-1);
+
+        static string Iso(DateTime d) => d.ToString("o");
+
+        var inPeriod = await sa.GetJsonAsync(
+            $"/api/intake/validate/queue?from={Uri.EscapeDataString(Iso(thisMonth))}&to={Uri.EscapeDataString(Iso(nextMonth))}");
+        Assert.Contains(inPeriod.EnumerateArray(), s => s.GetProperty("saleId").GetGuid() == sale);
+
+        // Last month must not contain a sale made this month — and the end is exclusive, so a sale
+        // made on the first instant of this month belongs to this month, not the one before.
+        var previous = await sa.GetJsonAsync(
+            $"/api/intake/validate/queue?from={Uri.EscapeDataString(Iso(lastMonth))}&to={Uri.EscapeDataString(Iso(thisMonth))}");
+        Assert.DoesNotContain(previous.EnumerateArray(), s => s.GetProperty("saleId").GetGuid() == sale);
+    }
+
+    /// <summary>Asking for no period still returns everything, as it did before.</summary>
+    [Fact]
+    public async Task The_queue_without_a_period_still_returns_everything()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+
+        var agency = await CreateAgencyAsync(sa, $"NoPeriod {Guid.NewGuid():N}"[..20]);
+        var sale = await SellAsync(sa, agency, "Sierra");
+
+        var all = await sa.GetJsonAsync("/api/intake/validate/queue");
+        Assert.Contains(all.EnumerateArray(), s => s.GetProperty("saleId").GetGuid() == sale);
+    }
+
+    /// <summary>
     /// A SuperAdmin sees the submission queue.
     ///
     /// They did not. The queue asked "are you a Validator with no agency?" to decide whether to

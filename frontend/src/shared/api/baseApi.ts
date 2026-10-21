@@ -579,8 +579,10 @@ export const baseApi = createApi({
       invalidatesTags: ["Available", "Leads", "QueueCounts"],
     }),
     // ---- Validator queue ----
-    validatorQueue: b.query<ValidatorQueueItem[], void>({
-      query: () => "/api/intake/validate/queue",
+    // The period is the caller's: from inclusive, to exclusive, as ISO instants. Omitting both
+    // returns every sale, which is what an unscoped caller used to get.
+    validatorQueue: b.query<ValidatorQueueItem[], { from?: string; to?: string } | void>({
+      query: (args) => ({ url: "/api/intake/validate/queue", params: args ?? undefined }),
       providesTags: ["ValidatorQueue"],
     }),
     setValidatorStatus: b.mutation<{ saleId: string; status: string; leadStage: string }, { saleId: string } & SetValidatorStatusInput>({

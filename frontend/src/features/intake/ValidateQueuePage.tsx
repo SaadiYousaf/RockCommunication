@@ -54,10 +54,58 @@ const originalIfChanged = (s: ValidatorQueueItem): string | undefined => {
   return INTAKE_MSG.closerSubmittedTitle(s.carrier, formatUsd(s.monthlyPremium));
 };
 
+/**
+ * The month being viewed, as the "YYYY-MM" an <input type="month"> wants.
+ *
+ * Built from the viewer's LOCAL date, so in October it opens on October for the person reading it,
+ * whatever the server's clock says.
+ */
+const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+/**
+ * The server's own ceiling on one response. Mirrored here only to notice when a month reaches it,
+ * so a truncated list is never shown as if it were the whole month. Keep in step with
+ * ValidatorQueueQuery.
+ */
+const QUEUE_CAP = 5000;
+
+/**
+ * The half-open range for a month: the first instant of it, and the first instant of the next.
+ *
+ * Half-open rather than "last day 23:59:59" — a sale closed at 23:59:59.4 on the 31st belongs to
+ * that month, and an inclusive end either drops it or needs a fractional second nobody remembers
+ * to write. Sent as ISO instants so the server does no calendar arithmetic of its own.
+ */
+function monthRange(key: string): { from: string; to: string } {
+  const [year, month] = key.split("-").map(Number);
+  return {
+    from: new Date(year, month - 1, 1).toISOString(),
+    to: new Date(year, month, 1).toISOString(),
+  };
+}
+
+/** "October 2026", in the viewer's own locale. */
+const monthLabel = (key: string) => {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+};
+
+/** Steps a month key backwards or forwards. */
+function shiftMonth(key: string, by: number): string {
+  const [year, month] = key.split("-").map(Number);
+  return monthKey(new Date(year, month - 1 + by, 1));
+}
+
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {
   // Poll: sales arrive as closers submit them, so the submission queue stays live across users.
-  const { data: queue, isLoading } = useValidatorQueueQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
+  // Opens on the month you are in — October in October, November in November — because that is
+  // the month somebody arriving at this screen is working.
+  const [month, setMonth] = useState(() => monthKey(new Date()));
+  const range = useMemo(() => monthRange(month), [month]);
+  const isThisMonth = month === monthKey(new Date());
+
+  const { data: queue, isLoading } = useValidatorQueueQuery(range, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [active, setActive] = useState<ValidatorQueueItem | null>(null);
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");
@@ -163,15 +211,38 @@ export function ValidateQueuePage() {
         description="Sales submitted by closers. Open a sale to copy its details into the carrier portal, then set its submission status."
       />
       <Stepper steps={INTAKE_PIPELINE} currentIndex={PIPELINE_STEP.submit} className="mb-5 max-w-2xl" />
+
+      {/* The month being worked. Arrows for stepping through recent months, the native picker for
+          jumping further back, and "This month" to return — the queue opens here by default. */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" aria-label={INTAKE_MSG.monthPrevious}
+          title={INTAKE_MSG.monthPrevious} onClick={() => setMonth(shiftMonth(month, -1))}>
+          <Icon name="chevronLeft" size={16} />
+        </Button>
+        <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)}
+          aria-label={INTAKE_MSG.monthLabel} containerClassName="w-44" />
+        <Button variant="ghost" size="sm" aria-label={INTAKE_MSG.monthNext}
+          title={INTAKE_MSG.monthNext} onClick={() => setMonth(shiftMonth(month, 1))}>
+          <Icon name="chevronRight" size={16} />
+        </Button>
+        {!isThisMonth && (
+          <Button variant="secondary" size="sm" onClick={() => setMonth(monthKey(new Date()))}>
+            {INTAKE_MSG.monthThis}
+          </Button>
+        )}
+        <InfoHint title={INTAKE_MSG.monthLabel} side="right">{INTAKE_MSG.monthHint}</InfoHint>
+      </div>
+
       {queue && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
-          <Stat className="stagger-item" label="To submit" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint="Sales in the queue" />
+          {/* Every figure describes the WHOLE month on screen, not a truncated slice of it. */}
+          <Stat className="stagger-item" label="Submitted" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint={INTAKE_MSG.monthStatHint(monthLabel(month))} />
           <Stat className="stagger-item" label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
           <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint={INTAKE_MSG.premiumApprovedHint} />
         </div>
       )}
       <Card>
-        <CardHeader title="Submitted sales" subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
+        <CardHeader title={INTAKE_MSG.queueTitle(monthLabel(month))} subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
           {/* Counts come from the whole queue, not the search result, so the chips keep telling the
@@ -225,9 +296,28 @@ export function ValidateQueuePage() {
               )}
             </div>
           )}
+          {/* If a month ever did hit the server's ceiling, say so on screen.
+              The whole incident this page is recovering from was a limit that truncated silently;
+              a cut list must never again look like a complete one. */}
+          {total >= QUEUE_CAP && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <Icon name="shield" size={15} className="mt-0.5 shrink-0" />
+              <span>{INTAKE_MSG.queueTruncated(total)}</span>
+            </div>
+          )}
           {isLoading ? <Skeleton className="h-40" /> : !filtered || filtered.length === 0 ? (
-            <EmptyState icon={<Icon name="inbox" size={20} />} title={INTAKE_MSG.validateEmptyTitle}
-              description={q || statusFilter || agentFilter || agencyFilter ? INTAKE_MSG.noMatches : INTAKE_MSG.validateEmptyDesc} />
+            <EmptyState icon={<Icon name="inbox" size={20} />}
+              title={INTAKE_MSG.validateEmptyTitle}
+              // An empty month is not the same as an empty queue — say which month is empty, or
+              // somebody looking at September in October concludes the data is gone.
+              description={
+                q || statusFilter || agentFilter || agencyFilter
+                  ? INTAKE_MSG.noMatches
+                  : INTAKE_MSG.monthEmpty(monthLabel(month))
+              }
+              action={!isThisMonth
+                ? <Button size="sm" variant="secondary" onClick={() => setMonth(monthKey(new Date()))}>{INTAKE_MSG.monthThis}</Button>
+                : undefined} />
           ) : (
             <Table>
               <THead>

@@ -60,17 +60,24 @@ public record ValidatorQueueItem(
 /// the moment the closer submits "Complete and Sold".
 /// </summary>
 /// <summary>
-/// <paramref name="Take"/> bounds the response. It was 200, which was ample while a submission
-/// agent saw one agency — and became a silent data-loss bug the moment a central agent began
-/// pooling EVERY agency into one queue. Ordered newest-first, the 201st sale simply stopped being
-/// returned: each new sale pushed an older one off the bottom, with nothing on screen to say the
-/// list had been cut, so sales appeared to vanish while people were working.
+/// The submission queue for one period — by default whichever month the caller asks for.
 ///
-/// Raised rather than removed: the page renders every row it is given, so this still has to be a
-/// number. It is now far above any plausible pending volume, and the real answer — paging, with
-/// the count of what is not shown — is still owed.
+/// It used to be "the newest 200 sales, ever", which was ample while a submission agent saw one
+/// agency and became silent data loss the moment a central agent pooled every agency into one
+/// list: each new sale pushed an older one past the limit, with nothing on screen to say the list
+/// had been cut, so sales appeared to vanish while people were working on them.
+///
+/// A month is the honest unit. It is what the floor reconciles against, it bounds the response by
+/// something meaningful rather than an arbitrary number, and the figures above the table then
+/// describe a whole month instead of whatever happened to fit.
+///
+/// <paramref name="From"/> inclusive, <paramref name="To"/> exclusive — the caller sends the first
+/// instant of the month and the first instant of the next, so month length and local time are the
+/// client's business, not this handler's. Both null means every sale, which is what an unfiltered
+/// caller used to get.
 /// </summary>
-public record ValidatorQueueQuery(int Take = 1000) : IRequest<IReadOnlyList<ValidatorQueueItem>>;
+public record ValidatorQueueQuery(DateTime? From = null, DateTime? To = null, int Take = 5000)
+    : IRequest<IReadOnlyList<ValidatorQueueItem>>;
 
 /// <summary>Validator sets the status (and approval/decline details) on a submitted sale.</summary>
 public record SetValidatorStatusCommand(
@@ -164,10 +171,10 @@ public class ValidatorQueueHandler :
 
     public async Task<IReadOnlyList<ValidatorQueueItem>> Handle(ValidatorQueueQuery request, CancellationToken ct)
     {
-        // A "central" (SMH-level) Submission Agent validates sales across ALL agencies; an
-        // agency-scoped validator only sees their own. Central reads bypass the tenant query
-        // filter, so we must re-add the soft-delete predicate by hand (IgnoreQueryFilters drops it too).
-        // Everyone who works the whole platform, not just the central Submission Agent.
+        // Everyone who works the whole platform — a central (SMH-level) Submission Agent validates
+        // sales across ALL agencies, an agency-scoped validator only sees their own. Those reads
+        // bypass the tenant query filter, so the soft-delete predicate is re-added by hand
+        // (IgnoreQueryFilters drops that too).
         //
         // This asked only "are you a Validator with no agency?", which a SuperAdmin is not — they
         // hold no Validator role. So they fell to the agency-scoped branch and were filtered to an
@@ -176,14 +183,22 @@ public class ValidatorQueueHandler :
         var central = TenantScope.ReadsEveryAgency(_user);
         if (!central && _user.AgencyId is null) throw new ForbiddenAccessException();
 
-        // Ceiling raised with the default above: a cross-agency queue pools every agency, and the
-        // old ceiling of 500 would have capped it again just past the new default.
+        // A backstop now, not the scoping mechanism — the period below is what bounds the result.
         var take = Math.Clamp(request.Take, 1, 5000);
 
         var salesQ = _db.Sales.AsNoTracking();
         salesQ = central
             ? salesQ.IgnoreQueryFilters().Where(s => !s.IsDeleted)
             : salesQ.Where(s => s.AgencyId == _user.AgencyId);
+
+        // The period, by the date the sale was MADE.
+        //
+        // SoldAt rather than any of the validator timestamps: "October's sales" means the ones
+        // closed in October, and that is the figure the floor reconciles against. Scoring a sale by
+        // when a submission agent happened to touch it would move it between months depending on
+        // how long it sat in the queue.
+        if (request.From is { } from) salesQ = salesQ.Where(s => s.SoldAt >= from);
+        if (request.To is { } to) salesQ = salesQ.Where(s => s.SoldAt < to);
 
         // A sale flagged BadCustomer leaves this queue. There is no submission work left on it, and
         // leaving it in means a submission agent re-reads the same dead row every morning. It is not

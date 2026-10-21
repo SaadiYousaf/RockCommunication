@@ -94,10 +94,16 @@ public class IntakeController : ControllerBase
     }
 
     // ---- Validator ----
+    /// <summary>
+    /// The submission queue, scoped to a period. The client sends the month it is showing —
+    /// <c>from</c> inclusive, <c>to</c> exclusive — so month length and the viewer's local time
+    /// stay the client's business. Omitting both returns every sale, as before.
+    /// </summary>
     [HttpGet("validate/queue")]
     [Authorize(Roles = Roles.Validator + "," + Roles.Admin + "," + Roles.SuperAdmin)]
-    public async Task<ActionResult<IReadOnlyList<ValidatorQueueItem>>> ValidatorQueue(CancellationToken ct)
-        => Ok(await _mediator.Send(new ValidatorQueueQuery(), ct));
+    public async Task<ActionResult<IReadOnlyList<ValidatorQueueItem>>> ValidatorQueue(
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+        => Ok(await _mediator.Send(new ValidatorQueueQuery(from, to), ct));
 
     /// <summary>Submission agent opens the full lead + application to copy into the carrier portal.</summary>
     [HttpGet("validate/{leadId:guid}")]

@@ -27,6 +27,21 @@ export const INTAKE_MSG = {
   badCustomerNotesPlaceholder: "What happened? e.g. abusive on the call, gave false banking details twice",
   premiumApprovedHint: "Approved sales only",
 
+  // The submission queue works one MONTH at a time, opening on the month you are in. It used to
+  // return "the newest 200 sales, ever", which silently dropped the oldest once the queue spanned
+  // every agency — a month is both a bound and the unit the floor actually reconciles against.
+  monthLabel: "Month",
+  monthPrevious: "Previous month",
+  monthNext: "Next month",
+  monthThis: "This month",
+  monthHint:
+    "The queue shows one month at a time and opens on the current one. The figures above describe that whole month, not just the rows on screen.",
+  monthStatHint: (month: string) => `Submitted in ${month}`,
+  queueTitle: (month: string) => `Submitted sales · ${month}`,
+  monthEmpty: (month: string) => `No sales were submitted in ${month}.`,
+  queueTruncated: (shown: number) =>
+    `Showing the first ${shown} sales of this month. Narrow the month or use a filter to see the rest.`,
+
   // The submission queue's agent filter. One control covers all three roles a submitted sale
   // carries, because "show me everything involving this person" is the actual question.
   agentFilterLabel: "Agent",
