@@ -81,13 +81,20 @@ public class LeadsController : ControllerBase
             stage, assignedUserId, disposition, state, campaignId, leadSourceId,
             minScore, createdAfter, createdBefore, sort, skip, take, search), ct));
 
+    /// <summary>
+    /// The caller's own workload. <c>from</c>/<c>to</c> optionally narrow it by when the lead
+    /// arrived; omitting them returns everything still assigned to them, which is the default —
+    /// a queue of work owed must not hide older leads somebody is still waiting on.
+    /// </summary>
     [HttpGet("mine")]
     [HasPermission(Permissions.QueueRead)]
     public async Task<ActionResult<IReadOnlyList<LeadDto>>> Mine(
         [FromQuery] WorkflowStage? stage,
-        [FromQuery] int take = 50,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] int take = 2000,
         CancellationToken ct = default)
-        => Ok(await _mediator.Send(new MyQueueQuery(stage, take), ct));
+        => Ok(await _mediator.Send(new MyQueueQuery(stage, from, to, take), ct));
 
     [HttpGet("{id:guid}/timeline")]
     [HasPermission(Permissions.LeadsRead)]

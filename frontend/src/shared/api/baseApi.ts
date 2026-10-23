@@ -213,7 +213,9 @@ export const baseApi = createApi({
       query: (body) => ({ url: "/api/leads/bulk/enroll-cadence", method: "POST", body }),
       invalidatesTags: ["Leads", "CadenceEnrollments"],   // new enrollments must show in the enrollments list
     }),
-    myLeads: b.query<Lead[], { stage?: WorkflowStage; take?: number } | void>({
+    // from/to optionally narrow by when the lead arrived. Omitting them returns the whole
+    // workload, which is the default — a queue of work owed must not hide older leads.
+    myLeads: b.query<Lead[], { stage?: WorkflowStage; from?: string; to?: string; take?: number } | void>({
       query: (params) => ({ url: "/api/leads/mine", params: params ?? undefined }),
       providesTags: ["Leads"],
     }),

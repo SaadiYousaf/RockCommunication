@@ -23,6 +23,7 @@ import { formatUsd, formatPhone } from "../../shared/lib/format";
 import { INTAKE_PIPELINE, PIPELINE_STEP } from "../../shared/constants/pipeline";
 import { INTAKE_MSG } from "./messages";
 import { StatusFilterBar } from "../../shared/components/StatusFilterBar";
+import { monthKey, monthLabel, monthRange, shiftMonth } from "../../shared/lib/months";
 
 /**
  * The carrier and premium this queue SHOWS: the approved figures once the submission agent has
@@ -55,46 +56,11 @@ const originalIfChanged = (s: ValidatorQueueItem): string | undefined => {
 };
 
 /**
- * The month being viewed, as the "YYYY-MM" an <input type="month"> wants.
- *
- * Built from the viewer's LOCAL date, so in October it opens on October for the person reading it,
- * whatever the server's clock says.
- */
-const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-
-/**
- * The server's own ceiling on one response. Mirrored here only to notice when a month reaches it,
- * so a truncated list is never shown as if it were the whole month. Keep in step with
+ * The server's own ceiling on one response. Mirrored here only to notice when a month reaches
+ * it, so a truncated list is never shown as if it were the whole month. Keep in step with
  * ValidatorQueueQuery.
  */
 const QUEUE_CAP = 5000;
-
-/**
- * The half-open range for a month: the first instant of it, and the first instant of the next.
- *
- * Half-open rather than "last day 23:59:59" — a sale closed at 23:59:59.4 on the 31st belongs to
- * that month, and an inclusive end either drops it or needs a fractional second nobody remembers
- * to write. Sent as ISO instants so the server does no calendar arithmetic of its own.
- */
-function monthRange(key: string): { from: string; to: string } {
-  const [year, month] = key.split("-").map(Number);
-  return {
-    from: new Date(year, month - 1, 1).toISOString(),
-    to: new Date(year, month, 1).toISOString(),
-  };
-}
-
-/** "October 2026", in the viewer's own locale. */
-const monthLabel = (key: string) => {
-  const [year, month] = key.split("-").map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
-};
-
-/** Steps a month key backwards or forwards. */
-function shiftMonth(key: string, by: number): string {
-  const [year, month] = key.split("-").map(Number);
-  return monthKey(new Date(year, month - 1 + by, 1));
-}
 
 /** Submission queue — every submitted sale, worked through the validator statuses. */
 export function ValidateQueuePage() {

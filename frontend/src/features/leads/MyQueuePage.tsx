@@ -6,7 +6,7 @@ import {
 } from "../../shared/api/baseApi";
 import type { LeadDisposition, WorkflowStage } from "../../shared/api/types";
 import {
-  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, PageHeader,
+  Avatar, Badge, BulkActionBar, Button, Card, CardBody, Checkbox, EmptyState, ErrorState, Icon, InfoHint, Input, PageHeader,
   Pager, RowMenu, SearchInput, Skeleton, Stat, Table, TBody, TD, TH, THead, TR, Tabs, usePagination, useToast,
 } from "../../shared/ui";
 import { useConfirm } from "../../shared/components/ConfirmDialog";
@@ -17,6 +17,7 @@ import { formatPhone } from "../../shared/lib/format";
 import { useTableSort } from "../../shared/hooks/useTableSort";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
+import { monthLabel, monthRange, shiftMonth, thisMonth } from "../../shared/lib/months";
 import { LEADS_MSG } from "./messages";
 
 const NEXT_STAGES: Record<WorkflowStage, WorkflowStage[]> = {
@@ -40,11 +41,26 @@ const QUICK_DISPOSITIONS: { kind: WorkflowStage; disp: LeadDisposition; label: s
   { kind: "Lost", disp: "WrongNumber", label: "Wrong #" },
 ];
 
+/**
+ * The server's ceiling on one response. Mirrored here only to notice when it is reached, so a cut
+ * list is never shown as if it were the whole queue. Keep in step with MyQueueQuery.
+ */
+const QUEUE_CAP = 5000;
+
 export function MyQueuePage() {
   const navigate = useNavigate();
   const toast = useToast();
+  // The month being looked at, or "" for the whole workload.
+  //
+  // Defaults to EVERYTHING, unlike the submission queue which opens on the current month. A
+  // submitted sale belongs to the month it was made in and is read as a monthly ledger; this is a
+  // list of work still owed, and a lead from three weeks ago that somebody is waiting on a call
+  // about must not disappear because the calendar turned over.
+  const [month, setMonth] = useState("");
+  const range = useMemo(() => (month ? monthRange(month) : undefined), [month]);
+
   // Poll: managers/round-robin can assign leads to me while I'm on this page.
-  const { data: leads, isLoading, isError, error, refetch } = useMyLeadsQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
+  const { data: leads, isLoading, isError, error, refetch } = useMyLeadsQuery(range, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
   const [transition] = useTransitionLeadMutation();
   const [release] = useReleaseLeadMutation();
   const confirm = useConfirm();
@@ -161,6 +177,27 @@ export function MyQueuePage() {
         breadcrumbs={[{ label: "Workspace" }, { label: LEADS_MSG.myTitle }]}
       />
 
+      {/* Narrow by when the lead arrived. "All time" is the default and the way back — this is a
+          list of work still owed, so nothing is hidden unless somebody asks for it. */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" aria-label={LEADS_MSG.monthPrevious} title={LEADS_MSG.monthPrevious}
+          onClick={() => setMonth(shiftMonth(month || thisMonth(), -1))}>
+          <Icon name="chevronLeft" size={16} />
+        </Button>
+        <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
+          aria-label={LEADS_MSG.monthLabel} containerClassName="w-44" />
+        <Button variant="ghost" size="sm" aria-label={LEADS_MSG.monthNext} title={LEADS_MSG.monthNext}
+          onClick={() => setMonth(shiftMonth(month || thisMonth(), 1))}>
+          <Icon name="chevronRight" size={16} />
+        </Button>
+        {month && (
+          <Button variant="secondary" size="sm" onClick={() => setMonth("")}>{LEADS_MSG.monthAll}</Button>
+        )}
+        <span className="text-sm text-ink-500">
+          {month ? LEADS_MSG.monthShowing(monthLabel(month)) : LEADS_MSG.monthShowingAll}
+        </span>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         <Stat label="Active"   value={counts.Active}        icon={<Icon name="inbox" size={16} />}    tone="brand"    hint="Still in play — excludes Lost & Funded" onClick={() => setFilter("Active")} />
         <Stat label="Total"    value={counts.All}           icon={<Icon name="rows" size={16} />}     tone="neutral"  onClick={() => setFilter("All")} />
@@ -179,6 +216,15 @@ export function MyQueuePage() {
           <Tabs<typeof filter> value={filter} onChange={setFilter} items={tabItems} />
         </div>
       </Card>
+
+      {/* If the server's ceiling is ever reached, say so. A queue that was silently cut at fifty
+          is what sent a closer's newest leads out of sight in the first place. */}
+      {(leads?.length ?? 0) >= QUEUE_CAP && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <Icon name="inbox" size={15} className="mt-0.5 shrink-0" />
+          <span>{LEADS_MSG.queueTruncated(leads!.length)}</span>
+        </div>
+      )}
 
       {isLoading ? (
         <Card><CardBody>

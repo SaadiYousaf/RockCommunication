@@ -83,6 +83,17 @@ export const LEADS_MSG = {
 
   // Search placeholders (no user-facing copy inline).
   myQueueSearchPlaceholder: "Search my queue by name, phone, or email…",
+
+  // The month filter on your own queue. Unlike the submission queue it starts on "all time":
+  // this is work still owed, and a lead from last month is still somebody waiting for a call.
+  monthLabel: "Month",
+  monthPrevious: "Previous month",
+  monthNext: "Next month",
+  monthAll: "All time",
+  monthShowing: (month: string) => `Showing leads that came in during ${month}.`,
+  monthShowingAll: "Showing your whole queue.",
+  queueTruncated: (shown: number) =>
+    `Showing the first ${shown} leads. Pick a month to narrow this down.`,
   leadsSearchPlaceholder: "Search by name, phone, or email…",
   // ---- Shared across leads pages ----
   exportReadyTitle: "Export ready",
