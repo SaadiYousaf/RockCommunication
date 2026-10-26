@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import {
   useListSubmissionAgentsQuery, useCreateSubmissionAgentMutation,
   useSetUserActiveMutation, useResetUserPasswordMutation, useResendInvitationMutation,
+  useSetUserAgencyMutation,
 } from "../../shared/api/baseApi";
 import type { SubmissionAgent } from "../../shared/api/types";
 import {
@@ -32,6 +33,7 @@ export function SubmissionAgentsPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState<{ id: string; name: string } | null>(null);
 
   const [setActive, { isLoading: settingActive }] = useSetUserActiveMutation();
+  const [setUserAgency, { isLoading: widening }] = useSetUserAgencyMutation();
   const [resendInvite, { isLoading: resending }] = useResendInvitationMutation();
   const toast = useToast();
   const confirm = useConfirm();
@@ -87,6 +89,29 @@ export function SubmissionAgentsPage() {
       toast.error(ADMIN_MSG.common.deactivateFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     } finally {
       setDeactivating(false);
+    }
+  }
+
+
+  /**
+   * Lift an agency-scoped submission agent to the whole platform.
+   *
+   * This is the one-click version of what previously meant knowing to go to the Users screen and
+   * change a dropdown nobody could find. An agent confined to one company is the single most
+   * common reason for "the submission agent cannot see other call centres".
+   */
+  async function workAllAgencies(a: SubmissionAgent) {
+    if (!(await confirm({
+      title: ADMIN_MSG.submissionAgents.widenTitle(a.name),
+      description: ADMIN_MSG.submissionAgents.widenDesc(a.agencyName ?? ""),
+      consequences: ADMIN_MSG.submissionAgents.widenConsequences,
+      confirmLabel: ADMIN_MSG.submissionAgents.widenConfirm,
+    }))) return;
+    try {
+      await setUserAgency({ userId: a.id, agencyId: null }).unwrap();
+      toast.success(ADMIN_MSG.submissionAgents.widened, ADMIN_MSG.submissionAgents.widenedDesc(a.name));
+    } catch (err: unknown) {
+      toast.error(ADMIN_MSG.submissionAgents.widenFailed, getErrorDetail(err) ?? MESSAGES.tryAgain);
     }
   }
 
@@ -153,7 +178,7 @@ export function SubmissionAgentsPage() {
             <>
             <Table>
               <THead>
-                <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
+                <TR><TH className="w-10"><Checkbox aria-label="Select all" {...sel.allCheckboxProps} /></TH><TH sortDir={dirFor("name")} onClick={() => toggle("name")}>Name</TH><TH sortDir={dirFor("email")} onClick={() => toggle("email")}>Email</TH><TH><span className="inline-flex items-center gap-1">Sees<InfoHint title="What this agent can work" side="top">A central agent belongs to no company and works every company’s sales. One tied to a single company can only ever see that company’s — which is the usual reason a submission agent cannot see other call centres.</InfoHint></span></TH><TH sortDir={dirFor("status")} onClick={() => toggle("status")}><span className="inline-flex items-center gap-1">Status<InfoHint title="Status" side="top">Active agents can sign in and validate sales; Inactive ones are blocked. "Awaiting sign-in" means the invite was sent but the agent hasn't signed in and set their password yet.</InfoHint></span></TH><TH className="text-right">Actions</TH></TR>
               </THead>
               <TBody>
                 {pg.pageItems.map((a) => (
@@ -167,6 +192,11 @@ export function SubmissionAgentsPage() {
                       </span>
                     </TD>
                     <TD className="whitespace-nowrap">
+                      {a.agencyName
+                        ? <Badge tone="warning" variant="soft" size="sm">Only {a.agencyName}</Badge>
+                        : <Badge tone="success" variant="soft" size="sm">All agencies</Badge>}
+                    </TD>
+                    <TD className="whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1">
                         <StatusBadge status={statusOf(a.isActive)} />
                         {a.isActive && a.pendingInvite && (
@@ -178,6 +208,15 @@ export function SubmissionAgentsPage() {
                     </TD>
                     <TD>
                       <div className="flex items-center justify-end gap-1">
+                        {a.agencyName && (
+                          <Button
+                            variant="ghost" size="sm" disabled={widening}
+                            className="text-brand-700 hover:bg-brand-50"
+                            title={ADMIN_MSG.submissionAgents.widenTitle(a.name)}
+                            aria-label={ADMIN_MSG.submissionAgents.widenTitle(a.name)}
+                            onClick={() => workAllAgencies(a)}
+                          ><Icon name="globe" size={15} /></Button>
+                        )}
                         <Button
                           variant="ghost" size="sm" title="Reset password" aria-label="Reset password"
                           onClick={() => setResetting({ id: a.id, name: a.name })}

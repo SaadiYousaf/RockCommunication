@@ -25,7 +25,18 @@ public record LicenseAgentDto(Guid Id, string Name, string Email, bool IsActive)
 /// True until the agent accepts the invitation (they still have a must-change temp password and
 /// haven't signed in / enrolled in 2FA). Drives the "Awaiting sign-in" badge and gates Resend.
 /// </param>
-public record SubmissionAgentDto(Guid Id, string Name, string Email, bool IsActive, bool PendingInvite);
+/// <summary>
+/// A submission agent, central or not.
+///
+/// <paramref name="AgencyName"/> is null for a CENTRAL agent — one belonging to no agency, which
+/// is what lets them work every company's sales. An agency-scoped submission agent is listed too,
+/// named by the one company they can see, because the whole problem was that they looked identical
+/// from here: the page showed only central agents, so an agent quietly confined to one agency was
+/// invisible on the very screen meant to manage them.
+/// </summary>
+public record SubmissionAgentDto(
+    Guid Id, string Name, string Email, bool IsActive, bool PendingInvite,
+    Guid? AgencyId = null, string? AgencyName = null);
 
 /// <summary>Lightweight agency list for the approval popup's Agency picker (SuperAdmin or a central Submission Agent).</summary>
 public record ListAgencyOptionsQuery() : IRequest<IReadOnlyList<AgencyOptionDto>>;
@@ -272,16 +283,34 @@ public class AgencyPanelHandler :
     {
         Guard.AgainstNull(request);
         EnsureSuperAdmin();
-        // Central Submission Agents are SMH-level: no agency (Guid.Empty) + the Validator role,
-        // excluding the SuperAdmin(s) who also sit at that level.
-        var users = await _identity.ListUsersAsync(Guid.Empty, ct);
+
+        // EVERY submission agent, not only the central ones.
+        //
+        // A central agent is SMH-level: no agency (Guid.Empty) plus the Validator role. This page
+        // used to list only those, which hid the failure it exists to prevent — an agent created
+        // inside an agency holds the same role, looks like a submission agent to everyone, and can
+        // only ever see that one company's sales. Nothing on this screen said so, so "the
+        // submission agent cannot see other call centres" had no visible cause.
+        var users = await _identity.ListUsersAsync(null, ct);
+
+        var agencyNames = (await _db.Agencies.AsNoTracking().IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted)
+                .Select(a => new { a.Id, a.Name }).ToListAsync(ct))
+            .ToDictionary(a => a.Id, a => a.Name);
+
         return users
             .Where(u => u.Roles.Contains(DomainRoles.Validator, StringComparer.OrdinalIgnoreCase)
                      && !u.Roles.Contains(DomainRoles.SuperAdmin, StringComparer.OrdinalIgnoreCase))
-            .OrderBy(u => u.UserName)
+            // Central agents first: they are the working ones, and a confined agent reads as the
+            // exception it is.
+            .OrderBy(u => u.AgencyId == Guid.Empty ? 0 : 1).ThenBy(u => u.UserName)
             // MustChangePassword is our "hasn't accepted the invite yet" signal: it's set at
             // invite time and cleared the moment the agent chooses their own password on first login.
-            .Select(u => new SubmissionAgentDto(u.Id, u.UserName, u.Email, u.IsActive, PendingInvite: u.MustChangePassword))
+            .Select(u => new SubmissionAgentDto(
+                u.Id, u.UserName, u.Email, u.IsActive, PendingInvite: u.MustChangePassword,
+                AgencyId: u.AgencyId == Guid.Empty ? null : u.AgencyId,
+                AgencyName: u.AgencyId == Guid.Empty ? null
+                    : agencyNames.TryGetValue(u.AgencyId, out var n) ? n : null))
             .ToList();
     }
 

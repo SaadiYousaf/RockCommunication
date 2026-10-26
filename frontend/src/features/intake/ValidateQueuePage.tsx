@@ -345,13 +345,19 @@ export function ValidateQueuePage() {
                             setCommentDraft(s.submissionComment ?? "");
                           }}
                           className={cn(
-                            "rounded p-1 transition-colors",
+                            // A real, hittable control rather than a hint. At 14px in the lightest
+                            // grey the note button was all but invisible against the premium beside
+                            // it, and nobody clicks what they cannot see — so an optional field
+                            // went unused. Bordered and sized like a button now, with a filled
+                            // note standing out in brand colour down the column.
+                            "inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40",
                             s.submissionComment
-                              ? "text-brand-600 hover:bg-brand-50"
-                              : "text-ink-300 hover:text-ink-600 hover:bg-ink-100",
+                              ? "border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100"
+                              : "border-ink-200 text-ink-500 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-700",
                           )}
                         >
-                          <Icon name="chat" size={14} />
+                          <Icon name="chat" size={17} />
                         </button>
                       </span>
                     </TD>

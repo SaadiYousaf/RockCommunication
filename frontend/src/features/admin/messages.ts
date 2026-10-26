@@ -213,6 +213,20 @@ export const ADMIN_MSG = {
     agentDeactivated: "Agent deactivated",
     agentAdded: "Submission agent added",
     agentAddFailed: "Couldn't add submission agent",
+    // Lifting an agency-scoped submission agent to the whole platform. The commonest cause of
+    // "the submission agent cannot see other call centres" is an agent quietly tied to one company.
+    widenTitle: (name: string) => `Let ${name} work every company?`,
+    widenDesc: (agency: string) =>
+      `Right now they can only see ${agency}'s sales. This gives them every company's submission queue.`,
+    widenConsequences: [
+      "They will see and verify sales from every company on the platform.",
+      "They stop belonging to a single company, so their team and call centre are cleared.",
+      "They'll be signed out and will need to sign in again for this to take effect.",
+    ],
+    widenConfirm: "Give access to all",
+    widened: "Now working every company",
+    widenedDesc: (name: string) => `${name} will see every company's sales after signing in again.`,
+    widenFailed: "Couldn't widen this agent",
     searchPlaceholder: "Search by name or email…",
     noMatchTitle: "No matching agents",
     noMatchDesc: "No submission agents match your search. Try a different name or email.",

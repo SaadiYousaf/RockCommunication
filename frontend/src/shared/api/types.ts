@@ -708,6 +708,12 @@ export interface SubmissionAgent {
   isActive: boolean;
   /** True until the agent accepts their invite (still on a temp password, not signed in / 2FA-enrolled). */
   pendingInvite: boolean;
+  /**
+   * Null for a CENTRAL agent — one belonging to no agency, which is what lets them work every
+   * company's sales. A name here means this agent is confined to that one company.
+   */
+  agencyId: string | null;
+  agencyName: string | null;
 }
 
 export interface IntakeQueueItem {
