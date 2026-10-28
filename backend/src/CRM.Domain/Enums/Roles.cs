@@ -94,7 +94,8 @@ public static class Roles
     /// Admin stays excluded, as originally requested. The CEO already required it; ProgramManager and
     /// CallCenterAdmin are here because they are admin-equivalent (they hold <c>users.manage</c> and
     /// can reshape their part of the org), so cross-user power without 2FA was the real audit gap.
-    /// Central (cross-agency) Submission Agents are also forced, via <see cref="IsCentralSubmissionAgent"/>.
+    /// Central Submission Agents were once forced too; that was removed at the owner's request
+    /// (28 Oct 2026) because it blocked floor staff on shared machines. See AuthEnforcementClaims.
     /// </summary>
     public static readonly string[] RequireTwoFactor = { SuperAdmin, CEO, ProgramManager, CallCenterAdmin };
 
@@ -144,7 +145,7 @@ public static class Roles
     /// <summary>
     /// A "central" (SMH-level) Submission Agent: holds the <see cref="Validator"/> role but is
     /// bound to no agency (empty/none). These validate and approve sales across ALL agencies and
-    /// read cross-tenant PII, so 2FA is mandatory for them (unlike agency-scoped validators).
+    /// read cross-tenant PII. 2FA is NOT forced on them any more — see AuthEnforcementClaims.
     /// </summary>
     public static bool IsCentralSubmissionAgent(Guid? agencyId, IEnumerable<string> roles) =>
         (agencyId is null || agencyId == Guid.Empty) &&

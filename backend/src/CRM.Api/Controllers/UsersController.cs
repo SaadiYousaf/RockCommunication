@@ -62,7 +62,18 @@ public class UsersController : ControllerBase
     {
         // Use the lightweight name projection (one query) — ListUsersAsync fans out ~5 identity/module
         // queries per user (N+1) only to discard everything but id/userName on this hot, permission-free path.
-        var agencyFilter = ResolveAgencyFilter(agencyId);
+        //
+        // A caller who works ACROSS agencies gets the whole directory. This is what the chat
+        // member picker reads, and a central Submission Agent carries an empty agency — so the
+        // ordinary filter narrowed them to platform-level accounts and the "New conversation" list
+        // showed four SuperAdmins and nobody they actually work with. They verify every company's
+        // sales; they have to be able to message the closers who made them.
+        //
+        // Deliberately only this endpoint, which is names and ids. The full /api/users list carries
+        // email, roles and modules, and stays scoped.
+        var agencyFilter = TenantScope.ReachesOtherAgencies(_user) && agencyId is null
+            ? null
+            : ResolveAgencyFilter(agencyId);
         var names = await _identity.ListUserNamesAsync(agencyFilter, ct);
         return Ok(names.Select(kv => new { id = kv.Key, userName = kv.Value }).ToList());
     }
