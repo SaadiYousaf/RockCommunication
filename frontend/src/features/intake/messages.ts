@@ -38,8 +38,14 @@ export const INTAKE_MSG = {
   monthNext: "Next month",
   monthThis: "This month",
   monthHint:
-    "The queue shows one month at a time and opens on the current one. The figures above describe that whole month, not just the rows on screen.",
-  monthStatHint: (month: string) => `Submitted in ${month}`,
+    "Sets which month the Approved and Premium figures cover. The queue underneath always shows every outstanding sale, whatever month it came in — so nothing waiting on you disappears when the calendar turns.",
+  // The month governs the APPROVED figures only. The queue itself shows every outstanding sale,
+  // whatever month it came from — a sale submitted in September and still untouched must not
+  // disappear on 1 October just because the calendar turned.
+  submittedHint: "Every sale still in the queue",
+  approvedMonthHint: (month: string) => `Approved or active paid in ${month}`,
+  premiumMonthHint: (month: string) => `Approved sales in ${month}`,
+  queueTitleAll: "Submitted sales",
   queueTitle: (month: string) => `Submitted sales · ${month}`,
   monthEmpty: (month: string) => `No sales were submitted in ${month}.`,
   queueTruncated: (shown: number) =>

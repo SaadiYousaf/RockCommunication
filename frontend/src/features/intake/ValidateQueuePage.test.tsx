@@ -25,7 +25,10 @@ function aSale(overrides: Partial<ValidatorQueueItem> = {}): ValidatorQueueItem 
     validatorUserId: null, validatorName: null,
     licenseAgentUserId: null, licenseAgentName: null,
     licenseAgentAgencyId: null, licenseAgentAgencyName: null,
-    soldAt: "2026-10-01T00:00:00Z", validatedAt: null,
+    // The CURRENT month, because the premium card reports on the selected month and the page
+    // opens on today's. A hard-coded date silently zeroed the card the moment the month rolled.
+    soldAt: new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12).toISOString(),
+    validatedAt: null,
     ...overrides,
   };
 }
@@ -122,6 +125,35 @@ describe("the submission queue's carrier and premium", () => {
     render([aSale({ carrierApproved: "   " })]);
 
     expect(table().getByText("Mutual of Omaha")).toBeInTheDocument();
+  });
+
+
+  /**
+   * The month governs the PREMIUM card, not the list.
+   *
+   * The queue used to fetch only the selected month, which turned a work queue into a monthly
+   * report: a sale submitted in September and still untouched vanished on 1 October. Now the list
+   * carries everything outstanding while the money figure reports on the month being reconciled.
+   */
+  it("keeps an older sale in the list but out of the month's premium", () => {
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    render([
+      aSale({ saleId: "s1", leadName: "Thismonth Customer", status: "Approved", premiumApproved: 61 }),
+      aSale({
+        saleId: "s2", leadName: "Lastmonth Customer", status: "Approved", premiumApproved: 999,
+        soldAt: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 15, 12).toISOString(),
+      }),
+    ]);
+
+    // Still workable — it is outstanding, whatever month it came from.
+    expect(table().getByText("Lastmonth Customer")).toBeInTheDocument();
+
+    // But it is not this month's money: the card must not have added the 999 to the 61.
+    // Asserting the absence of the COMBINED figure, because $61.00 itself appears twice — once
+    // in the card and once in its own row.
+    expect(screen.queryByText("$1,060.00")).not.toBeInTheDocument();
   });
 
   /**

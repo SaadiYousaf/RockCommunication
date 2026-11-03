@@ -8,7 +8,7 @@ import {
 import type { ValidatorQueueItem, ValidatorStatusValue, ClosingApplicationView } from "../../shared/api/types";
 import {
   Badge, BulkActionBar, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Icon, InfoHint, Input, Modal, PageHeader,
-  SearchInput, Select, SensitiveValue, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, useToast,
+  Pager, SearchInput, Select, SensitiveValue, Skeleton, Stat, Stepper, Table, TBody, TD, TH, THead, TR, Textarea, cn, usePagination, useToast,
 } from "../../shared/ui";
 import { useRowSelection } from "../../shared/hooks/useRowSelection";
 import { exportRowsToCsv } from "../../shared/lib/csv";
@@ -71,7 +71,20 @@ export function ValidateQueuePage() {
   const range = useMemo(() => monthRange(month), [month]);
   const isThisMonth = month === monthKey(new Date());
 
-  const { data: queue, isLoading } = useValidatorQueueQuery(range, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
+  // The whole queue, every month of it.
+  //
+  // This used to fetch only the selected month, which quietly turned a WORK queue into a monthly
+  // report: a sale submitted in September and still untouched simply vanished on 1 October, and
+  // nobody working the list could see it existed. The month now governs the approved figures
+  // only — see `approved` and `premiumTotal` below — while the list itself shows everything
+  // outstanding, which is what a queue is for.
+  const { data: queue, isLoading } = useValidatorQueueQuery(undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true });
+
+  /** The sales that fall inside the month being reported on. */
+  const inMonth = useMemo(
+    () => (queue ?? []).filter((s) => s.soldAt >= range.from && s.soldAt < range.to),
+    [queue, range],
+  );
   const [active, setActive] = useState<ValidatorQueueItem | null>(null);
   const [viewing, setViewing] = useState<ValidatorQueueItem | null>(null);
   const [q, setQ] = useState("");
@@ -134,6 +147,8 @@ export function ValidateQueuePage() {
     // a carrier name should find the sale whichever of the two the person remembers.
     (!q.trim() || `${s.leadName} ${s.leadPhone} ${s.carrier} ${s.carrierApproved ?? ""} ${s.closerName ?? ""}`
       .toLowerCase().includes(q.trim().toLowerCase())));
+  // Paged, now that the list spans every month rather than one. Three hundred rows was already
+  // a long scroll; the whole backlog rendered at once is a page nobody can use.
   const { sorted, dirFor, toggle } = useTableSort(filtered, {
     // Carrier and premium sort by the figure ON SCREEN, not the closer's original. Without these
     // the column would order itself by numbers nobody can see.
@@ -143,14 +158,18 @@ export function ValidateQueuePage() {
       monthlyPremium: (s) => shownPremium(s),
     },
   });
+  const pg = usePagination(sorted, 50);
+
   const total = queue?.length ?? 0;
-  const approved = (queue ?? []).filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
+  // Approved and the premium below are the MONTH's figures — they are what the floor reconciles
+  // against. Everything else on this screen describes the whole outstanding queue.
+  const approved = inMonth.filter((s) => s.status === "Approved" || s.status === "ActivePaid").length;
   // Approved sales only (owner's instruction, 11 Oct 2026 — this started as the whole queue, then
   // briefly included Referred to HO). Nothing short of approval counts: a decline, a bad bank or a
   // sale still sitting with Head Office is not money anyone is going to see.
   //
   // The amount is the carrier's APPROVED premium — see shownPremium.
-  const premiumTotal = (queue ?? [])
+  const premiumTotal = inMonth
     .filter((s) => s.status === "Approved")
     .reduce((sum, s) => sum + (shownPremium(s) ?? 0), 0);
   const toast = useToast();
@@ -203,13 +222,13 @@ export function ValidateQueuePage() {
       {queue && total > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5 stagger-children">
           {/* Every figure describes the WHOLE month on screen, not a truncated slice of it. */}
-          <Stat className="stagger-item" label="Submitted" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint={INTAKE_MSG.monthStatHint(monthLabel(month))} />
-          <Stat className="stagger-item" label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint="Approved or active paid" />
-          <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint={INTAKE_MSG.premiumApprovedHint} />
+          <Stat className="stagger-item" label="Submitted" value={total} icon={<Icon name="inbox" size={16} />} tone="brand" hint={INTAKE_MSG.submittedHint} />
+          <Stat className="stagger-item" label="Approved" value={approved} icon={<Icon name="check" size={16} />} tone="success" hint={INTAKE_MSG.approvedMonthHint(monthLabel(month))} />
+          <Stat className="stagger-item" label="Premium / mo" value={formatUsd(premiumTotal)} icon={<Icon name="dollar" size={16} />} tone="accent" hint={INTAKE_MSG.premiumMonthHint(monthLabel(month))} />
         </div>
       )}
       <Card>
-        <CardHeader title={INTAKE_MSG.queueTitle(monthLabel(month))} subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
+        <CardHeader title={INTAKE_MSG.queueTitleAll} subtitle={queue ? <span className="tabular-nums">{filtered.length} of {queue.length} {queue.length === 1 ? "sale" : "sales"}</span> : undefined}
           action={<SearchInput value={q} onChange={setQ} placeholder={INTAKE_MSG.queueSearchPlaceholder} className="w-56" />} />
         <CardBody>
           {/* Counts come from the whole queue, not the search result, so the chips keep telling the
@@ -280,12 +299,11 @@ export function ValidateQueuePage() {
               description={
                 q || statusFilter || agentFilter || agencyFilter
                   ? INTAKE_MSG.noMatches
-                  : INTAKE_MSG.monthEmpty(monthLabel(month))
+                  : INTAKE_MSG.validateEmptyDesc
               }
-              action={!isThisMonth
-                ? <Button size="sm" variant="secondary" onClick={() => setMonth(monthKey(new Date()))}>{INTAKE_MSG.monthThis}</Button>
-                : undefined} />
+              />
           ) : (
+            <>
             <Table>
               <THead>
                 <TR>
@@ -314,7 +332,7 @@ export function ValidateQueuePage() {
                 </TR>
               </THead>
               <TBody>
-                {sorted.map((s) => (
+                {pg.pageItems.map((s) => (
                   <TR key={s.saleId} className={sel.isSelected(s.saleId) ? "bg-brand-50/40" : undefined}>
                     <TD><Checkbox aria-label={`Select ${s.leadName}`} {...sel.checkboxProps(s.saleId)} /></TD>
                     <TD>
@@ -384,6 +402,8 @@ export function ValidateQueuePage() {
                 ))}
               </TBody>
             </Table>
+            <Pager {...pg} onPage={pg.setPage} unit="sales" />
+            </>
           )}
           <BulkActionBar count={sel.selectedCount} itemNoun="sale" onClear={sel.clear}
             actions={[{ key: "csv", label: "Export CSV", icon: "download", onClick: exportSelected }]} />
