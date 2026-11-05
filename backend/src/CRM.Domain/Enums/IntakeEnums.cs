@@ -84,7 +84,17 @@ public enum ValidatorStatus
     /// <summary>The call ended at the signature step — the application was never completed.</summary>
     CallDroppedOnSignature = 13,
     /// <summary>No carrier available to write this policy in the customer's state.</summary>
-    StateNotAvailable = 14
+    StateNotAvailable = 14,
+    /// <summary>
+    /// Approved by the carrier, but the first premium has not landed: the initial draft date has
+    /// come and gone with nothing collected.
+    ///
+    /// Sales arrive here AUTOMATICALLY — see InitialPaymentDueService — rather than waiting for
+    /// somebody to notice a date passing. An approved sale whose first draft fails is not yet
+    /// money, and leaving it sitting in Approved overstates what the floor has actually earned.
+    /// A submission agent can also set it by hand, and move it on once payment clears.
+    /// </summary>
+    PendingInitialPayment = 15
 }
 
 /// <summary>Sub-reason for <see cref="ValidatorStatus.ErrorInApplicationInformation"/>.</summary>

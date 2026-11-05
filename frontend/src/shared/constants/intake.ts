@@ -39,6 +39,7 @@ export const VALIDATOR_STATUSES: { value: ValidatorStatusValue; label: string }[
   { value: "NotInterestedOrDnc", label: "Not interested / DNC" },
   { value: "CallDroppedOnSignature", label: "Call dropped on signature" },
   { value: "StateNotAvailable", label: "State not available" },
+  { value: "PendingInitialPayment", label: "Pending initial payment" },
 ];
 
 /** Sub-reasons for the "Error in application information" submission status. */
@@ -84,4 +85,7 @@ export const VALIDATOR_STATUS_TONE: Record<ValidatorStatusValue, BadgeTone> = {
   NotInterestedOrDnc: "red",               // a hard stop, and DNC carries a compliance weight
   CallDroppedOnSignature: "lime",          // fell over at the last step; the sale was nearly there
   StateNotAvailable: "indigo",             // nobody's fault — no carrier writes in that state
+  // Approved but unpaid. Warning, not danger: the policy is alive and the money may still
+  // arrive — it is a chase, not a loss.
+  PendingInitialPayment: "orange",
 };

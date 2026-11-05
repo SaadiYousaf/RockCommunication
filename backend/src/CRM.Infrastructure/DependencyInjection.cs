@@ -406,6 +406,8 @@ public static class DependencyInjection
         services.AddHostedService<BirthdayNotificationService>();
         services.AddHostedService<InvitationExpiryNotificationService>();
         services.AddHostedService<TrainingReminderService>();
+        // Moves approved sales to Pending initial payment once their draft date has passed.
+        services.AddHostedService<InitialPaymentDueService>();
         services.AddHostedService<AttendanceAutofillService>();
 
         if (useHangfire)

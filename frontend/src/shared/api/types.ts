@@ -609,7 +609,8 @@ export type ValidatorStatusValue =
   | "Completed" | "Approved" | "ActivePaid" | "NoUpdateInCommission"
   | "BadBank" | "Nsf" | "Decline" | "ClientCancelled" | "ErrorInApplicationInformation"
   | "ReferredToHo" | "BadCustomer"
-  | "NotInterestedOrDnc" | "CallDroppedOnSignature" | "StateNotAvailable";
+  | "NotInterestedOrDnc" | "CallDroppedOnSignature" | "StateNotAvailable"
+  | "PendingInitialPayment";
 
 export interface ValidatorQueueItem {
   saleId: string;

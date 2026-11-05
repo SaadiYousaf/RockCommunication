@@ -591,6 +591,7 @@ public class ValidatorQueueHandler :
         ValidatorStatus.NotInterestedOrDnc => "Not interested / do not call",
         ValidatorStatus.CallDroppedOnSignature => "Call dropped on signature",
         ValidatorStatus.StateNotAvailable => "State not available",
+        ValidatorStatus.PendingInitialPayment => "Pending initial payment",
         _ => status.ToString(),
     };
 
