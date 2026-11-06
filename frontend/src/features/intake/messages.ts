@@ -51,6 +51,39 @@ export const INTAKE_MSG = {
   queueTruncated: (shown: number) =>
     `Showing the first ${shown} sales of this month. Narrow the month or use a filter to see the rest.`,
 
+  // What each status bucket covers. They are deliberately NOT all scoped the same way:
+  //
+  //   All                     every sale ever, because a manual duplicate check needs the whole record
+  //   Completed               the chosen month only — this is a working list, not a history
+  //   Approved                all time; approved with the first draft date still ahead of it
+  //   Pending initial payment all time; the draft date has passed with nothing collected
+  //
+  // Set by the owner on 6 Nov 2026. Written on screen rather than left as tribal knowledge,
+  // because a chip that silently counts a different period from its neighbours reads as a bug.
+  statusScopeTitle: "What each status covers",
+  statusScopeAll:
+    "All — every sale ever submitted by a closer, across every month. This is the full record, so a duplicate can be checked by hand against it.",
+  statusScopeCompleted: (month: string) =>
+    `Completed — sales from ${month} that closers have finished and nobody has taken any further yet. This one follows the month above; the rest span all time.`,
+  statusScopeApproved:
+    "Approved — approved by the carrier, with the first draft date still to come.",
+  statusScopePendingInitialPayment:
+    "Pending initial payment — approved, but the first draft date has passed with nothing collected. Sales move here on their own.",
+
+  /**
+   * Completed is the one bucket that follows the month, so an empty one has to say which month it
+   * is empty FOR. "No matches" on a screen somebody knows has completed sales on it reads as lost
+   * data rather than as a filter doing its job.
+   */
+  completedMonthEmpty: (month: string) =>
+    `Nothing is sitting at Completed for ${month}. This is the one status that follows the month above — switch months, or choose All to see every sale ever submitted.`,
+
+  // The first draft date, shown under the status badge on the rows where it decides the bucket.
+  draftDue: (date: string) => `First draft due ${date}`,
+  draftOverdue: (date: string) => `First draft was due ${date}`,
+  draftDueHint:
+    "When the carrier takes the first premium. Once that date passes with nothing collected, the sale moves itself to Pending initial payment.",
+
   // The submission queue's agent filter. One control covers all three roles a submitted sale
   // carries, because "show me everything involving this person" is the actual question.
   agentFilterLabel: "Agent",

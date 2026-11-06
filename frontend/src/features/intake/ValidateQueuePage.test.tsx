@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { anAuthState, aUser, renderWithProviders } from "../../test/renderWithProviders";
 import type { ValidatorQueueItem } from "../../shared/api/types";
 
@@ -29,6 +30,7 @@ function aSale(overrides: Partial<ValidatorQueueItem> = {}): ValidatorQueueItem 
     // opens on today's. A hard-coded date silently zeroed the card the moment the month rolled.
     soldAt: new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12).toISOString(),
     validatedAt: null,
+    initialDraftDate: null,
     ...overrides,
   };
 }
@@ -169,5 +171,134 @@ describe("the submission queue's carrier and premium", () => {
     ]);
 
     expect(screen.getByText("$100.00")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The status buckets, as the owner defined them on 6 Nov 2026.
+ *
+ * They are deliberately not all scoped the same way, which is exactly why these tests exist: the
+ * difference is invisible in the code and reads as a bug on screen unless it is held in place.
+ *
+ *   All                      every sale ever — a duplicate is checked against it by hand
+ *   Completed                the chosen month only; a working list, not a history
+ *   Approved                 all time, first draft date still to come
+ *   Pending initial payment  all time, the draft date has passed with nothing collected
+ */
+describe("the submission queue's status buckets", () => {
+  const lastMonth = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return new Date(d.getFullYear(), d.getMonth(), 15, 12).toISOString();
+  };
+
+  /**
+   * The chip carrying a status, found by its label rather than its position in the row.
+   *
+   * By text content, not accessible name: the label and the count sit in adjacent spans with no
+   * whitespace between them, so the computed name is "Completed1".
+   */
+  const chip = (label: string) => {
+    const found = screen.getAllByRole("button")
+      .find((b) => (b.textContent ?? "").trim().startsWith(label));
+    if (!found) throw new Error(`No status chip labelled "${label}"`);
+    return found;
+  };
+
+  /**
+   * Completed follows the month. An untouched Completed sale from four months ago is history, and
+   * months of them pile up in front of the one bucket somebody is meant to clear each month.
+   */
+  it("leaves an older Completed sale out of the Completed bucket", async () => {
+    const user = userEvent.setup();
+    render([
+      aSale({ saleId: "s1", leadName: "Thismonth Customer", status: "Completed" }),
+      aSale({ saleId: "s2", leadName: "Lastmonth Customer", status: "Completed", soldAt: lastMonth() }),
+    ]);
+
+    // Both are in All — that is the whole record, and it is what a manual duplicate check reads.
+    expect(table().getByText("Lastmonth Customer")).toBeInTheDocument();
+
+    await user.click(chip("Completed"));
+
+    expect(table().getByText("Thismonth Customer")).toBeInTheDocument();
+    expect(table().queryByText("Lastmonth Customer")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Approved is a live financial state, so it does NOT stop at the month boundary. A sale approved
+   * in October whose draft is still ahead of it is money this floor is still expecting.
+   */
+  it("keeps an older Approved sale in the Approved bucket", async () => {
+    const user = userEvent.setup();
+    render([
+      aSale({ saleId: "s1", leadName: "Thismonth Customer", status: "Approved" }),
+      aSale({ saleId: "s2", leadName: "Lastmonth Customer", status: "Approved", soldAt: lastMonth() }),
+    ]);
+
+    await user.click(chip("Approved"));
+
+    expect(table().getByText("Thismonth Customer")).toBeInTheDocument();
+    expect(table().getByText("Lastmonth Customer")).toBeInTheDocument();
+  });
+
+  /**
+   * Same for Pending initial payment: a draft that failed in October is still unpaid in November.
+   */
+  it("keeps an older Pending initial payment sale in its bucket", async () => {
+    const user = userEvent.setup();
+    render([
+      aSale({ saleId: "s2", leadName: "Lastmonth Customer", status: "PendingInitialPayment", soldAt: lastMonth() }),
+    ]);
+
+    await user.click(chip("Pending initial payment"));
+
+    expect(table().getByText("Lastmonth Customer")).toBeInTheDocument();
+  });
+
+  /**
+   * The All chip counts the WHOLE queue, including the Completed sales its own bucket holds back.
+   * Scoping the rows behind the chips without saying so made All under-report the record that a
+   * duplicate check depends on being complete.
+   */
+  it("counts every sale on the All chip, including out-of-month Completed ones", () => {
+    render([
+      aSale({ saleId: "s1", status: "Completed" }),
+      aSale({ saleId: "s2", status: "Completed", soldAt: lastMonth() }),
+      aSale({ saleId: "s3", status: "Approved" }),
+    ]);
+
+    expect(chip("All")).toHaveTextContent("3");
+    // While Completed itself reports only what it will actually show.
+    expect(chip("Completed")).toHaveTextContent("1");
+  });
+
+  /**
+   * The draft date is what decides between the two buckets, so it belongs on the row. Without it
+   * a sale appears to have moved itself for no stated reason.
+   */
+  it("shows the draft date on the statuses it decides", () => {
+    render([
+      aSale({ saleId: "s1", status: "Approved", initialDraftDate: "2026-12-01T00:00:00Z" }),
+    ]);
+
+    expect(table().getByText(/First draft due/)).toBeInTheDocument();
+  });
+
+  it("says the draft date has passed on a pending-payment sale", () => {
+    render([
+      aSale({ saleId: "s1", status: "PendingInitialPayment", initialDraftDate: "2026-10-01T00:00:00Z" }),
+    ]);
+
+    expect(table().getByText(/First draft was due/)).toBeInTheDocument();
+  });
+
+  /** A status the date does not govern must not grow a draft line. */
+  it("does not show a draft date on an unrelated status", () => {
+    render([
+      aSale({ saleId: "s1", status: "Decline", initialDraftDate: "2026-10-01T00:00:00Z" }),
+    ]);
+
+    expect(table().queryByText(/First draft/)).not.toBeInTheDocument();
   });
 });

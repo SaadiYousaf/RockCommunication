@@ -139,7 +139,28 @@ export function ValidateQueuePage() {
     return list;
   }, [queue, agencyFilter]);
 
-  const filtered = (queue ?? []).filter((s) =>
+  /**
+   * The queue with each status held to the period it is actually defined over.
+   *
+   * Completed is a WORKING list — sales a closer has finished that nobody has taken any further —
+   * so it follows the month above. An untouched Completed sale from four months ago is history, and
+   * carrying months of them makes the one bucket somebody is meant to clear each month unusable.
+   *
+   * Every other status spans all time. Approved and Pending initial payment are live financial
+   * states that do not stop mattering when the calendar turns, and All has to stay complete because
+   * a duplicate gets checked against it by hand. Set by the owner on 6 Nov 2026.
+   */
+  const scoped = useMemo(
+    () => (queue ?? []).filter(
+      (s) => s.status !== "Completed" || (s.soldAt >= range.from && s.soldAt < range.to)),
+    [queue, range],
+  );
+
+  // "All" means all: the whole record, every month of it. The per-status period above applies only
+  // once a status is actually chosen.
+  const base = statusFilter === null ? (queue ?? []) : scoped;
+
+  const filtered = base.filter((s) =>
     (statusFilter === null || s.status === statusFilter) &&
     (!agentFilter || involves(s, agentFilter)) &&
     (!agencyFilter || s.agencyName === agencyFilter) &&
@@ -236,7 +257,10 @@ export function ValidateQueuePage() {
           {queue && total > 0 && (
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <StatusFilterBar
-                rows={queue}
+                // Scoped, so the Completed chip's number is the month it will actually show. All
+                // keeps counting the whole queue — see `allCount`.
+                rows={scoped}
+                allCount={total}
                 statusOf={(s) => s.status}
                 options={STATUSES.map((o) => ({ value: o.value, label: o.label, tone: TONE[o.value] }))}
                 value={statusFilter}
@@ -297,9 +321,13 @@ export function ValidateQueuePage() {
               // An empty month is not the same as an empty queue — say which month is empty, or
               // somebody looking at September in October concludes the data is gone.
               description={
-                q || statusFilter || agentFilter || agencyFilter
-                  ? INTAKE_MSG.noMatches
-                  : INTAKE_MSG.validateEmptyDesc
+                // Completed is the only bucket bounded by the month, so an empty one names the
+                // month and the way out. Everything else falls through to the usual wording.
+                statusFilter === "Completed" && !q && !agentFilter && !agencyFilter
+                  ? INTAKE_MSG.completedMonthEmpty(monthLabel(month))
+                  : q || statusFilter || agentFilter || agencyFilter
+                    ? INTAKE_MSG.noMatches
+                    : INTAKE_MSG.validateEmptyDesc
               }
               />
           ) : (
@@ -320,8 +348,14 @@ export function ValidateQueuePage() {
                   <TH sortDir={dirFor("status")} onClick={() => toggle("status")}>
                     <span className="inline-flex items-center gap-1">
                       Status
-                      <InfoHint title="Submission statuses" side="bottom">
-                        Completed (submitted, awaiting review); Approved (validated — approval details captured); Active Paid (funded); No update in commission; Bad Bank; NSF (insufficient funds); Decline; Client Cancelled; Error in application information (banking/payor or identity).
+                      <InfoHint title={INTAKE_MSG.statusScopeTitle} side="bottom">
+                        <span className="block">{INTAKE_MSG.statusScopeAll}</span>
+                        <span className="block mt-1.5">{INTAKE_MSG.statusScopeCompleted(monthLabel(month))}</span>
+                        <span className="block mt-1.5">{INTAKE_MSG.statusScopeApproved}</span>
+                        <span className="block mt-1.5">{INTAKE_MSG.statusScopePendingInitialPayment}</span>
+                        <span className="block mt-1.5 text-ink-500">
+                          The rest: Active Paid (funded); No update in commission; Bad Bank; NSF; Decline; Client Cancelled; Error in application information; Referred to HO; State not available.
+                        </span>
                       </InfoHint>
                     </span>
                   </TH>
@@ -385,6 +419,15 @@ export function ValidateQueuePage() {
                       <Badge tone={TONE[s.status]} variant="soft">{LABEL[s.status]}</Badge>
                       {(s.status === "Decline" || s.status === "ErrorInApplicationInformation" || s.status === "BadCustomer") && s.declineReason && (
                         <div className="text-xs text-ink-500 mt-0.5 max-w-[16rem] truncate" title={s.declineReason}>{s.declineReason}</div>
+                      )}
+                      {/* The date that decides which of these two buckets the sale sits in. On
+                          screen here so the status explains itself, rather than sending somebody
+                          into the sale to work out why it moved. */}
+                      {s.initialDraftDate && (s.status === "Approved" || s.status === "PendingInitialPayment") && (
+                        <div className="text-xs text-ink-500 mt-0.5 whitespace-nowrap tabular-nums" title={INTAKE_MSG.draftDueHint}>
+                          {(s.status === "PendingInitialPayment" ? INTAKE_MSG.draftOverdue : INTAKE_MSG.draftDue)(
+                            new Date(s.initialDraftDate).toLocaleDateString())}
+                        </div>
                       )}
                     </TD>
                     <TD className="text-sm text-ink-500 whitespace-nowrap tabular-nums">{new Date(s.soldAt).toLocaleDateString()}</TD>

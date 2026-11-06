@@ -28,6 +28,7 @@ export function StatusFilterBar<S extends string, T>({
   options,
   value,
   onChange,
+  allCount,
   className,
 }: {
   rows: readonly T[];
@@ -38,6 +39,14 @@ export function StatusFilterBar<S extends string, T>({
   /** The selected status, or null for "all". */
   value: S | null;
   onChange: (next: S | null) => void;
+  /**
+   * What "All" counts, when that is not simply every row passed in.
+   *
+   * A queue may scope one status differently from the rest — the submission queue holds Completed
+   * to the current month while every other status spans all time — which means the rows behind the
+   * chips are not the rows behind All. Left unset, All counts the rows it was given.
+   */
+  allCount?: number;
   className?: string;
 }) {
   const counts = useMemo(() => {
@@ -64,7 +73,7 @@ export function StatusFilterBar<S extends string, T>({
       <Chip
         active={value === null}
         label={STATUS_FILTER_MSG.all}
-        count={rows.length}
+        count={allCount ?? rows.length}
         onClick={() => onChange(null)}
       />
       {shown.map((o) => (

@@ -649,6 +649,12 @@ export interface ValidatorQueueItem {
   licenseAgentAgencyName: string | null;
   soldAt: string;
   validatedAt: string | null;
+  /**
+   * When the carrier takes the first premium, from the closer's application. It is what separates
+   * an approved sale still on track from one whose money never arrived — see the Approved and
+   * Pending initial payment buckets on the submission queue.
+   */
+  initialDraftDate: string | null;
 }
 
 export interface SetValidatorStatusInput {

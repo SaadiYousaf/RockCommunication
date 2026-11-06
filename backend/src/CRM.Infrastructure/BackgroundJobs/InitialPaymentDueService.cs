@@ -31,8 +31,19 @@ public class InitialPaymentDueService : BackgroundService
     private readonly IServiceProvider _sp;
     private readonly ILogger<InitialPaymentDueService> _logger;
 
-    /// <summary>Hourly. The trigger is a calendar date, so minutes do not matter.</summary>
-    private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
+    /// <summary>
+    /// Every quarter of an hour. The trigger is a calendar date, so the sweep does not need to be
+    /// prompt for its own sake — but the submission queue defines Approved as "approved and the
+    /// draft date has NOT yet come due". Whatever this interval is, it is how long a past-due sale
+    /// can sit in Approved contradicting that rule on screen. An hour was long enough to notice.
+    /// </summary>
+    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// A short wait before the first sweep rather than a full interval, so a restart does not leave
+    /// the queue stale for a whole cycle. Long enough to stay out of the way of startup and seeding.
+    /// </summary>
+    private static readonly TimeSpan StartupDelay = TimeSpan.FromMinutes(2);
 
     /// <summary>A bound per tick, so a first run over a long backlog cannot monopolise the database.</summary>
     private const int BatchSize = 200;
@@ -45,12 +56,13 @@ public class InitialPaymentDueService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Wait before the first sweep, so this never contends with startup and seeding for a
+        // connection — but only briefly, so a restart converges in minutes rather than an hour.
+        try { await Task.Delay(StartupDelay, stoppingToken); }
+        catch (OperationCanceledException) { return; }
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            // Wait first, so this never contends with startup and seeding for a connection.
-            try { await Task.Delay(Interval, stoppingToken); }
-            catch (OperationCanceledException) { break; }
-
             try { await TickAsync(stoppingToken); }
             catch (Exception ex)
             {
@@ -58,6 +70,9 @@ public class InitialPaymentDueService : BackgroundService
                 // quietly stay in Approved again, which is the very thing this exists to prevent.
                 _logger.LogError(ex, "Initial-payment-due sweep failed");
             }
+
+            try { await Task.Delay(Interval, stoppingToken); }
+            catch (OperationCanceledException) { break; }
         }
     }
 

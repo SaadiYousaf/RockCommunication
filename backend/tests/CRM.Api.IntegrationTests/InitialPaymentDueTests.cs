@@ -161,4 +161,25 @@ public class InitialPaymentDueTests : IClassFixture<CrmWebAppFactory>
 
         Assert.Equal("ActivePaid", await StatusOfAsync(sa, saleId));
     }
+
+    /// <summary>
+    /// The queue carries the draft date itself, not just the status it produced.
+    ///
+    /// Approved and Pending initial payment are defined BY this date — approved with the first
+    /// draft still to come, against approved with the draft passed and nothing collected. A queue
+    /// that does not carry it leaves a submission agent unable to see what is about to come due,
+    /// or why a sale moved itself overnight.
+    /// </summary>
+    [Fact]
+    public async Task The_queue_carries_the_initial_draft_date()
+    {
+        var sa = await _factory.LoginSuperAdminAsync();
+        var due = DateTime.UtcNow.Date.AddDays(21);
+        var saleId = await ApprovedSaleWithDraftAsync(sa, due);
+
+        var queue = await sa.GetJsonAsync("/api/intake/validate/queue");
+        var row = queue.EnumerateArray().Single(s => s.GetProperty("saleId").GetGuid() == saleId);
+
+        Assert.Equal(due, row.GetProperty("initialDraftDate").GetDateTime().Date);
+    }
 }

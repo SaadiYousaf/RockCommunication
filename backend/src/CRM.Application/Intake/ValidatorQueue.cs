@@ -60,7 +60,16 @@ public record ValidatorQueueItem(
     /// <summary>That agency's name, so the picker never has to show a bare id.</summary>
     string? LicenseAgentAgencyName,
     DateTime SoldAt,
-    DateTime? ValidatedAt);
+    DateTime? ValidatedAt,
+    /// <summary>
+    /// When the first premium is due to be drafted, taken from the closer's application.
+    ///
+    /// This is the line between an approved sale still on track and one whose money never arrived:
+    /// it is the date <c>InitialPaymentDueService</c> watches. The queue carries it so a submission
+    /// agent can see what is about to come due, and why a sale moved to Pending initial payment,
+    /// without opening every row to find out.
+    /// </summary>
+    DateTime? InitialDraftDate = null);
 
 /// <summary>
 /// Every sale in the agency, newest first — a sale lands here as <see cref="ValidatorStatus.Completed"/>
@@ -223,6 +232,19 @@ public class ValidatorQueueHandler :
             .ToListAsync(ct);
         var leadById = leads.ToDictionary(l => l.Id);
 
+        // The initial draft date lives on the application, not the sale. It is what sorts an
+        // approved sale that is still on track from one whose first premium never landed, so the
+        // queue has to show it rather than send a submission agent into each sale to find it.
+        // A lead can carry more than one application; the earliest due date is the one that governs.
+        var appsQ = _db.LeadApplications.AsNoTracking();
+        if (central) appsQ = appsQ.IgnoreQueryFilters().Where(a => !a.IsDeleted);
+        var draftByLead = (await appsQ
+                .Where(a => leadIds.Contains(a.LeadId) && a.InitialDraftDate != null)
+                .Select(a => new { a.LeadId, a.InitialDraftDate })
+                .ToListAsync(ct))
+            .GroupBy(a => a.LeadId)
+            .ToDictionary(g => g.Key, g => g.Min(a => a.InitialDraftDate));
+
         // Cross-agency queues need names from every agency; scoped queues only their own.
         var users = await _identity.ListUsersAsync(central ? null : _user.AgencyId, ct);
         var byId = users.ToDictionary(u => u.Id);
@@ -284,7 +306,8 @@ public class ValidatorQueueHandler :
                 s.ValidatorUserId, Name(s.ValidatorUserId),
                 s.LicenseAgentUserId, Name(s.LicenseAgentUserId),
                 AgencyOf(s.LicenseAgentUserId), AgencyNameOf(AgencyOf(s.LicenseAgentUserId)),
-                s.SoldAt, s.ValidatedAt);
+                s.SoldAt, s.ValidatedAt,
+                draftByLead.TryGetValue(s.LeadId, out var draft) ? draft : null);
         }).ToList();
     }
 
