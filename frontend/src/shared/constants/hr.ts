@@ -9,7 +9,7 @@ export type Designation = (typeof DESIGNATIONS)[number];
 export const GENDERS = ["Male", "Female", "Other"] as const;
 export const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"] as const;
 export const EMPLOYMENT_STATUSES = [
-  "Probation", "Permanent", "Contract", "Intern", "Resigned", "Terminated",
+  "Probation", "Permanent", "Contract", "Intern", "Resigned", "Terminated", "PostPayrollAbsconding",
 ] as const;
 export const GUARDIAN_RELATIONSHIPS = [
   "Father", "Mother", "Spouse", "Brother", "Sister", "Son", "Daughter", "Guardian", "Other",
@@ -35,6 +35,7 @@ export const ATTENDANCE_TONE: Record<string, "success" | "warning" | "info" | "d
 const LABELS: Record<string, string> = {
   SubmissionAgent: "Submission Agent",
   OfficeBoy: "Office Boy",
+  PostPayrollAbsconding: "Post Payroll Absconding",
   HalfDay: "Half day",
   Ncns: "NCNS",
   OnHold: "On hold",
@@ -49,4 +50,5 @@ export const EMPLOYMENT_TONE: Record<string, "success" | "warning" | "danger" | 
   Intern: "warning",
   Resigned: "danger",
   Terminated: "danger",
+  PostPayrollAbsconding: "danger",
 };

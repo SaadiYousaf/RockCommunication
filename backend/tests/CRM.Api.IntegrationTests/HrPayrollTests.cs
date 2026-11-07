@@ -250,4 +250,34 @@ public class HrPayrollTests : IClassFixture<CrmWebAppFactory>
         var mine = rows.First(r => r.GetProperty("fullName").GetString() == name);
         Assert.Equal("OfficeBoy", mine.GetProperty("designation").GetString());
     }
+
+    /// <summary>
+    /// Somebody who took the month's pay and never came back.
+    ///
+    /// It is its own employment status rather than a flavour of Resigned or Terminated — nobody
+    /// gave notice and nobody was dismissed — and HR has to be able to record and count it. The
+    /// status is stored as a NUMBER, so this also pins the value: if anybody renumbers the enum to
+    /// tidy the exits together, every employee already carrying one quietly becomes something else.
+    /// </summary>
+    [Fact]
+    public async Task An_employee_can_be_recorded_as_post_payroll_absconding()
+    {
+        var admin = await _factory.LoginAdminAsync();
+
+        var name = $"Absconder {Guid.NewGuid():N}"[..18];
+        var created = await admin.PostJsonAsync("/api/hr/employees", new
+        {
+            fullName = name,
+            agentCode = $"ab{Guid.NewGuid():N}"[..12],
+            designation = "Closer",
+            employmentStatus = "PostPayrollAbsconding",
+        });
+        var employeeId = created.GetProperty("id").GetGuid();
+
+        var list = await admin.GetJsonAsync("/api/hr/employees");
+        var row = list.EnumerateArray().Single(e => e.GetProperty("id").GetGuid() == employeeId);
+        Assert.Equal("PostPayrollAbsconding", row.GetProperty("employmentStatus").GetString());
+
+        Assert.Equal(6, (int)CRM.Domain.Enums.EmploymentStatus.PostPayrollAbsconding);
+    }
 }

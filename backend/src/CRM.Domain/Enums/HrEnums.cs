@@ -39,6 +39,18 @@ public enum EmploymentStatus
     Intern = 3,
     Resigned = 4,
     Terminated = 5,
+    /// <summary>
+    /// The employee stopped coming in without notice AFTER their salary was paid out — they took
+    /// the month's pay and did not come back.
+    ///
+    /// Kept apart from Resigned and Terminated because it is neither: nobody gave notice and nobody
+    /// was dismissed, and HR needs to be able to count it on its own. It carries a cost the other
+    /// two do not, so folding it into either would hide the thing worth measuring.
+    ///
+    /// Appended rather than slotted in beside the other exits, because the value is stored as its
+    /// number — renumbering would silently reassign every employee already on the record.
+    /// </summary>
+    PostPayrollAbsconding = 6,
 }
 
 /// <summary>Where a job candidate sits in the hiring pipeline.</summary>
